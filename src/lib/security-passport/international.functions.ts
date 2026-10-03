@@ -66,8 +66,18 @@ export interface InternationalPassportMetadata {
      *  its market's legal review is pending (20261220090000). */
     pilot_state?: string | null;
   }[];
-  /** `sp_certification_definitions.abbreviation` — search only ("CPP", "CISSP"). */
-  abbreviations?: readonly { credential_code: string; abbreviation: string | null }[];
+  /** `sp_certification_definitions`: the abbreviation ("CPP", "CISSP" — searched and shown
+   *  beside the name) and the SHAPE of the programme's maintenance. The shape informs
+   *  a label. It never produces a date, and "not published" is never "does not expire". */
+  abbreviations?: readonly {
+    credential_code: string;
+    abbreviation: string | null;
+    maintenance_policy_type?: string | null;
+    maintenance_cycle_months?: number | null;
+  }[];
+  /** `sp_certification_definition_aliases` (20270206090000): a former or alternative
+   *  name of a definition. Search only, never rendered. Read tolerantly. */
+  definitionAliases?: readonly { credential_code: string; alias: string }[];
   /** Approved issuer aliases — search only, never rendered ("(ISC)²"). */
   issuerAliases?: readonly { issuer_id: string; alias: string }[];
   organisationRoles?: readonly CredentialOrganisationRole[];
@@ -102,6 +112,7 @@ export const getInternationalPassportMetadata = createServerFn({ method: "GET" }
       scopes,
       abbreviations,
       issuerAliases,
+      definitionAliases,
       versions,
       statedVersions,
     ] = await Promise.all([
@@ -141,8 +152,11 @@ export const getInternationalPassportMetadata = createServerFn({ method: "GET" }
       // Search aids only. A failure here must not take the whole wizard down, so
       // these two are read tolerantly below: no abbreviation means a weaker
       // search, never a missing catalogue.
-      db.from("sp_certification_definitions").select("credential_code,abbreviation"),
+      db
+        .from("sp_certification_definitions")
+        .select("credential_code,abbreviation,maintenance_policy_type,maintenance_cycle_months"),
       db.from("sp_certification_issuer_aliases" as never).select("issuer_id,alias"),
+      db.from("sp_certification_definition_aliases").select("credential_code,alias"),
       // Versions and the holder's stated version: catalogue facts and the
       // holder's own rows (RLS). Tolerant, like the search aids: without them the
       // form simply offers no version question.
@@ -180,9 +194,12 @@ export const getInternationalPassportMetadata = createServerFn({ method: "GET" }
     const claimOf = new Map((requests.data ?? []).map((r) => [r.id, r.claim_id]));
     return {
       definitionScopes: scopes.data as unknown as InternationalPassportMetadata["definitionScopes"],
-      abbreviations: (abbreviations.error ? [] : (abbreviations.data ?? [])) as unknown as {
+      abbreviations: (abbreviations.error
+        ? []
+        : (abbreviations.data ?? [])) as unknown as InternationalPassportMetadata["abbreviations"],
+      definitionAliases: (definitionAliases.error ? [] : (definitionAliases.data ?? [])) as {
         credential_code: string;
-        abbreviation: string | null;
+        alias: string;
       }[],
       issuerAliases: (issuerAliases.error ? [] : (issuerAliases.data ?? [])) as unknown as {
         issuer_id: string;

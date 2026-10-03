@@ -15,6 +15,11 @@ import {
   assessSavedCredential,
   getHayatAvailability,
 } from "@/lib/security-passport/hayat/hayat.functions";
+import {
+  listMyCatalogueRequests,
+  requestCatalogueDefinition,
+  searchUnavailableDefinitions,
+} from "@/lib/security-passport/catalogue-requests.functions";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 
 export const Route = createFileRoute("/_authenticated/passport/credentials/new")({
@@ -43,6 +48,9 @@ function NewCredentialRoute() {
   const assess = useServerFn(assessCredentialEvidence);
   const hayatAvailability = useServerFn(getHayatAvailability);
   const assessSaved = useServerFn(assessSavedCredential);
+  const searchUnavailable = useServerFn(searchUnavailableDefinitions);
+  const requestDefinition = useServerFn(requestCatalogueDefinition);
+  const listRequests = useServerFn(listMyCatalogueRequests);
   const [draft, setDraft] = useState<InternationalCredentialInput | undefined>();
   const [metadata, setMetadata] = useState<InternationalPassportMetadata | null>(null);
   const [failed, setFailed] = useState(false);
@@ -106,6 +114,9 @@ function NewCredentialRoute() {
           onAssess={(data) => assess({ data })}
           onLoadAvailability={hayatAvailability}
           onAssessSaved={(data) => assessSaved({ data })}
+          onSearchUnavailable={(search) => searchUnavailable({ data: { search } })}
+          onRequestDefinition={(data) => requestDefinition({ data })}
+          onListRequests={() => listRequests()}
         />
       )}
     </div>

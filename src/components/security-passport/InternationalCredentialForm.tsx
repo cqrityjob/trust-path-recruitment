@@ -1,7 +1,7 @@
 import { CredentialDateInput } from "./CredentialDateInput";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { Globe2, MapPin, ArrowRight, Lock, Check, FileCheck2 } from "lucide-react";
+import { ArrowRight, Lock, Check, FileCheck2 } from "lucide-react";
 import type {
   InternationalCredentialInput,
   InternationalPassportMetadata,
@@ -10,7 +10,7 @@ import {
   EVIDENCE_ALLOWED_MIME,
   EVIDENCE_MAX_BYTES,
 } from "@/lib/security-passport/evidence.functions";
-import { CREDENTIAL_CLASSES, type CredentialClass } from "@/lib/security-passport/international";
+import { credentialClassLabel } from "@/lib/security-passport/international";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import { PublicPilotStatus } from "./PublicPilotStatus";
 import { NOT_OPEN_FOR_REGISTRATION } from "@/lib/security-passport/market-access";
@@ -42,6 +42,21 @@ import {
 } from "./hayat/HayatPanel";
 import { useHayatReading } from "./hayat/use-hayat-reading";
 import { trackFunnelOnce } from "@/lib/india-entry/analytics";
+import type {
+  CatalogueRequestInput,
+  MyCatalogueRequest,
+  UnavailableDefinition,
+} from "@/lib/security-passport/catalogue-requests.functions";
+import {
+  draftAfterDefinitionChange,
+  headlineOf,
+  kindLabel,
+  maintenanceLabel,
+  SCOPE_FILTERS,
+  type PickerLang,
+} from "@/lib/security-passport/credential-picker";
+import { CatalogueRequestPanel, type RequestSeed } from "./CatalogueRequestPanel";
+import { CredentialResultList, RESULT_PAGE, UnavailableGroup } from "./CredentialResultList";
 import {
   buildCatalogueIndex,
   changeFilter,
@@ -60,6 +75,10 @@ const DOMAIN_LABELS: Record<string, { sv: string; en: string }> = {
   information_security: { sv: "Informationssäkerhet", en: "Information security" },
   investigation: { sv: "Utredning", en: "Investigation" },
   financial_crime: { sv: "Finansiell brottslighet", en: "Financial crime" },
+  // 20270206090000: the research integration's areas.
+  insurance: { sv: "Försäkring", en: "Insurance" },
+  risk_compliance: { sv: "Risk och regelefterlevnad", en: "Risk and compliance" },
+  resilience_safety: { sv: "Resiliens och säkerhet", en: "Resilience and safety" },
 };
 
 // The organisation-role model's four roles, named as what they ARE. A regulator
@@ -82,6 +101,9 @@ export function InternationalCredentialForm({
   onAssess,
   onLoadAvailability,
   onAssessSaved,
+  onSearchUnavailable,
+  onRequestDefinition,
+  onListRequests,
   accountName,
   documentReader,
 }: {
@@ -116,6 +138,12 @@ export function InternationalCredentialForm({
   onLoadAvailability?: () => Promise<{
     linkSources: readonly { id: string; name: string; definitionCodes: readonly string[] }[];
   }>;
+  /** What the research knows of but the catalogue has not approved, for a search
+   *  term. Absent or failing: the picker simply has no "not available yet" group. */
+  onSearchUnavailable?: (search: string) => Promise<readonly UnavailableDefinition[]>;
+  /** "Cannot find your certification?": sends a REQUEST. Absent: the panel is not offered. */
+  onRequestDefinition?: (input: CatalogueRequestInput) => Promise<{ id: string }>;
+  onListRequests?: () => Promise<readonly MyCatalogueRequest[]>;
   /** The account's display name, for comparison with the name on the document. */
   accountName?: string | null;
   /** Replaceable document reader; defaults to the in-browser pdf.js + OCR reader. */
@@ -126,15 +154,30 @@ export function InternationalCredentialForm({
   const navigate = useNavigate();
   const definitions = metadata?.definitions;
   const preselected = definitions?.find((d) => d.code === preselectCode);
-  const [step, setStep] = useState(initial || preselected ? 4 : 1);
+  // Three steps: find the credential, your details, review and save. A holder who
+  // arrives with a credential already chosen (a correction, a ?code= link) starts
+  // at the details.
+  const [step, setStep] = useState(initial || preselected ? 2 : 1);
   const startCountry = initial?.market_country || preselected?.country || preselectCountry || "";
+  // Read ONCE, as the starting state. The scope and country are the holder's own
+  // choice from here on: a later change of the work country, a re-render or the
+  // arrival of the catalogue never rewrites them.
   const [filters, setFilters] = useState<CatalogueFilterState>({
     ...EMPTY_FILTERS,
-    scope: startCountry ? "national" : "international",
+    // The India setup hands over "IN": a starting point for national credentials.
+    // Without it the picker searches EVERYTHING, so a holder who does not know
+    // whether their credential is international or national still finds it.
+    scope: startCountry ? "national" : "all",
     country: startCountry,
     // Every OPTIONAL filter starts at "all": the catalogue is never narrowed to a
     // first organisation, area or type the holder did not choose.
   });
+  const [limit, setLimit] = useState(RESULT_PAGE);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [unavailable, setUnavailable] = useState<readonly UnavailableDefinition[]>([]);
+  const [requestSeed, setRequestSeed] = useState<RequestSeed | null>(null);
+  const searchUnavailable = useRef(onSearchUnavailable);
+  searchUnavailable.current = onSearchUnavailable;
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -191,9 +234,10 @@ export function InternationalCredentialForm({
       ? j[lang === "sv" ? "name_sv" : "name_en"]
       : code || copy("Internationellt", "International");
   };
-  const className = (value: string) =>
-    CREDENTIAL_CLASSES[value as CredentialClass]?.[lang] || value;
-  const domainName = (value: string) => DOMAIN_LABELS[value]?.[lang] || value;
+  // A class or area this build does not know is named generically, never as a raw code.
+  const className = (value: string) => credentialClassLabel(value, lang);
+  const domainName = (value: string) =>
+    DOMAIN_LABELS[value]?.[lang] || copy("Annat yrkesområde", "Other area");
   // ONE index over governed catalogue relationships; every filter, count and
   // search result below is derived from it. See credential-catalogue-filters.ts.
   const index = useMemo(
@@ -205,6 +249,7 @@ export function InternationalCredentialForm({
         definitionFacts: metadata?.definitionScopes ?? [],
         abbreviations: metadata?.abbreviations ?? [],
         issuerAliases: metadata?.issuerAliases ?? [],
+        definitionAliases: metadata?.definitionAliases ?? [],
         organisations: (metadata?.issuers ?? []).map((i) => ({ id: i.id, name: i.name })),
       }),
     [metadata],
@@ -238,10 +283,14 @@ export function InternationalCredentialForm({
       .filter((role) => byRole.has(role))
       .map((role) => ({ role, label: ROLE_LABELS[role][lang], name: byRole.get(role) as string }));
   };
-  /** Apply one filter change; dependents that are no longer valid are cleared. */
+  /**
+   * Apply one filter change; dependents that are no longer valid are cleared.
+   * Searching and filtering NARROW THE LIST and nothing else: the chosen
+   * credential, and everything typed about it, is left alone.
+   */
   const change = (patch: Partial<CatalogueFilterState>) => {
     setFilters((current) => changeFilter(index, current, patch));
-    reset();
+    setLimit(RESULT_PAGE);
   };
   const scopeLabel =
     selected?.country === "AE"
@@ -262,11 +311,21 @@ export function InternationalCredentialForm({
     setNotices({});
     setAssessment({ state: "none" });
   };
-  const reset = () => {
+  /**
+   * Choose a different credential (or none). What DEPENDS on the credential is
+   * cleared — the issuer named on the document, the scope, the version, a
+   * no-expiry choice the new definition may not allow, and whatever HAYAT read
+   * against the old one. What does NOT depend on it is kept: the identifier, the
+   * dates and the attached file are the holder's own and are still theirs.
+   */
+  const chooseDefinition = (code: string) => {
+    if (code === draft.definition_code) return;
+    const next = definitions?.find((d) => d.code === code);
     forgetReading();
-    setDraft(blank);
-    setFile(null);
+    // A badge link names a source for THIS credential; it does not outlive it.
+    setBadgeLink("");
     setError(null);
+    setDraft((current) => draftAfterDefinitionChange(current, blank, code, next));
   };
   const readingContext = (): ReadingContext | null => {
     if (!selected) return null;
@@ -379,6 +438,34 @@ export function InternationalCredentialForm({
     // render would re-ask the server for the same file.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settled, signedCredential]);
+  // The credential changed under an attached file (the holder went back and chose
+  // another): the old reading was taken against the old credential and was
+  // forgotten, so the file is read again against the new one when the details
+  // are shown. Nothing is read twice for the same credential.
+  useEffect(() => {
+    if (step === 2 && file && selected && hayat.state.phase === "idle") readDocument(file);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, selected?.code]);
+  // "Not available yet": what the research knows of for this search. Debounced,
+  // best-effort, and never able to take the picker down.
+  useEffect(() => {
+    const term = filters.search.trim();
+    const search = searchUnavailable.current;
+    if (!search || term.length < 2) {
+      setUnavailable([]);
+      return;
+    }
+    let active = true;
+    const timer = window.setTimeout(() => {
+      void search(term)
+        .then((rows) => active && setUnavailable(rows))
+        .catch(() => active && setUnavailable([]));
+    }, 250);
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+    };
+  }, [filters.search]);
   const readBy = (field: SuggestibleField) =>
     isReadByHayat(draft, marks, field) ? <HayatBadge /> : null;
   const inputClass =
@@ -403,9 +490,7 @@ export function InternationalCredentialForm({
       .join(" · ");
   const awardingBodies = [...new Set(selectedVersions.map((v) => v.awarding_body))];
   const steps = [
-    copy("Omfattning", "Scope"),
-    copy("Plats och kategori", "Location & category"),
-    copy("Merit", "Credential"),
+    copy("Hitta din merit", "Find your credential"),
     copy("Dina uppgifter", "Your details"),
     copy("Granska och spara", "Review & save"),
   ];
@@ -536,6 +621,129 @@ export function InternationalCredentialForm({
       setBusy(false);
     }
   }
+  const regulatorOf = (d: IndexedDefinition) =>
+    d.organisations.find((o) => o.role === "regulator")?.name ?? null;
+  const selectedMaintenance = metadata?.abbreviations?.find(
+    (a) => a.credential_code === selected?.code,
+  );
+  // The governed facts of the chosen credential. The holder never types any of
+  // these: they come from the approved catalogue, and the form asks only for what
+  // is the holder's own.
+  const facts = selected && (
+    <div
+      data-credential-facts
+      className="relative overflow-hidden rounded-lg border border-border bg-secondary/40 p-5 pl-6"
+    >
+      <div aria-hidden="true" className="absolute inset-y-0 left-0 w-1 bg-accent" />
+      <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+        {copy("Från den godkända katalogen", "From the approved catalogue")}
+      </p>
+      <p className="mt-1 break-words text-lg font-semibold" data-credential-headline>
+        {headlineOf(selected, lang as PickerLang).text}
+      </p>
+      <p className="mt-1 text-sm text-muted-foreground" data-credential-kind>
+        {kindLabel(selected, lang, locationName)}
+      </p>
+      <p className="mt-2 text-sm" data-credential-territory>
+        {selected.scope_code === "global_professional"
+          ? copy("Internationell · inget land", "International · no country")
+          : `${copy("Gäller i", "Valid in")}: ${
+              selected.region === "AE-DU"
+                ? credentialTerritoryLabel(selected.country, selected.region, lang)
+                : locationName(selected.region ?? selected.country)
+            }`}
+      </p>
+      {selected.scope_code === "global_professional" && (
+        <p className="mt-1 text-xs text-muted-foreground" data-credential-international-note>
+          {copy(
+            "Internationell betyder att meriten inte är knuten till ett land. Det säger ingenting om var du får arbeta.",
+            "International means the credential is not tied to one country. It does not say where you may work.",
+          )}
+        </p>
+      )}
+      <dl className="mt-3 grid gap-x-6 gap-y-1 text-sm sm:grid-cols-2" data-credential-roles>
+        {rolesOf(selected).map((r) => (
+          <div key={r.role} className="min-w-0">
+            <dt className="text-xs text-muted-foreground">{r.label}</dt>
+            <dd className="break-words">{r.name}</dd>
+          </div>
+        ))}
+        {selected.domain && (
+          <div className="min-w-0" data-credential-domain>
+            <dt className="text-xs text-muted-foreground">
+              {copy("Yrkesområde", "Professional area")}
+            </dt>
+            <dd className="break-words">{domainName(selected.domain)}</dd>
+          </div>
+        )}
+        {awardingBodies.length > 0 && (
+          <div className="min-w-0" data-credential-awarding-body>
+            <dt className="text-xs text-muted-foreground">
+              {copy("Examinerande organ (enligt standarden)", "Awarding body (per the standard)")}
+            </dt>
+            <dd className="break-words">{awardingBodies.join(", ")}</dd>
+          </div>
+        )}
+        {maintenanceLabel(
+          selectedMaintenance?.maintenance_policy_type,
+          selectedMaintenance?.maintenance_cycle_months,
+          lang,
+        ) && (
+          <div className="min-w-0 sm:col-span-2" data-credential-maintenance>
+            <dt className="text-xs text-muted-foreground">
+              {copy("Förnyelse enligt utfärdaren", "Renewal, as the issuer publishes it")}
+            </dt>
+            <dd className="break-words">
+              {maintenanceLabel(
+                selectedMaintenance?.maintenance_policy_type,
+                selectedMaintenance?.maintenance_cycle_months,
+                lang,
+              )}
+              <span className="block text-xs text-muted-foreground">
+                {copy(
+                  "Ditt slutdatum är det som står på ditt intyg. Katalogen räknar aldrig fram ett.",
+                  "Your expiry date is the one on your certificate. The catalogue never works one out.",
+                )}
+              </span>
+            </dd>
+          </div>
+        )}
+      </dl>
+      {selected.scope_code === "national_qualification" && (
+        <p className="mt-2 text-xs text-muted-foreground" data-national-qualification-note>
+          {copy(
+            "En nationell yrkeskvalifikation. Den är inte en licens och ger ingen rätt att arbeta, i det här landet eller någon annanstans.",
+            "A national qualification. It is not a licence and gives no right to work, in this country or anywhere else.",
+          )}
+        </p>
+      )}
+      {selectedIsPublicPilot && <PublicPilotStatus className="mt-3" />}
+      {selectedRow?.official_url && (
+        <a
+          className="mt-2 inline-flex min-h-11 items-center text-sm text-accent underline"
+          href={selectedRow?.official_url}
+          target="_blank"
+          rel="noreferrer"
+        >
+          {copy("Officiell källa", "Official source")}
+        </a>
+      )}
+    </div>
+  );
+  const filterPanelActive = !!filters.domain || !!filters.category || !!filters.organisation;
+  const summary = (
+    <FilterSummary
+      shown={visible.length}
+      total={answer.total}
+      narrowed={answer.narrowed}
+      needsCountry={filters.scope === "national" && !filters.country}
+      lang={lang}
+      onClear={() => {
+        setFilters((current) => clearOptionalFilters(current));
+        setLimit(RESULT_PAGE);
+      }}
+    />
+  );
   return (
     <section
       data-international-credential-form
@@ -567,7 +775,7 @@ export function InternationalCredentialForm({
         </p>
         <ol
           aria-label={copy("Steg", "Steps")}
-          className="relative mt-7 grid grid-cols-5 gap-2 border-t border-primary-foreground/15 pt-5"
+          className="relative mt-7 grid grid-cols-3 gap-2 border-t border-primary-foreground/15 pt-5"
         >
           {steps.map((label, i) => (
             <li key={label} aria-current={step === i + 1 ? "step" : undefined}>
@@ -576,69 +784,73 @@ export function InternationalCredentialForm({
               >
                 {step > i + 1 ? <Check size={14} aria-hidden="true" /> : i + 1}
               </span>
-              <span className="mt-2 hidden text-[11px] sm:block">{label}</span>
+              <span className="mt-2 block text-[11px]">{label}</span>
             </li>
           ))}
         </ol>
       </header>
-      <form
-        className="space-y-6 p-5 sm:p-7"
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (step === 4) setDraft(settleDates(draft));
-          if (step < 5) setStep(step + 1);
-          else void save();
-        }}
-      >
-        <div className="border-b border-border pb-4">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-            {copy("Professionell dokumentation", "Professional record")}
-          </p>
-          <h3 className="mt-1 text-xl font-semibold">{steps[step - 1]}</h3>
-        </div>
-        {step === 1 && (
-          <div className="grid gap-3 sm:grid-cols-2">
-            {["international", "national"].map((value) => {
-              const Icon = value === "international" ? Globe2 : MapPin;
-              return (
-                <label
-                  key={value}
-                  className={`cursor-pointer rounded-lg border p-5 transition-colors ${filters.scope === value ? "border-accent bg-accent/5" : "border-border bg-background"}`}
-                >
-                  <input
-                    type="radio"
-                    name="scope"
-                    value={value}
-                    checked={filters.scope === value}
-                    onChange={() => change({ scope: value as CatalogueFilterState["scope"] })}
-                  />
-                  <Icon className="my-3" size={24} aria-hidden="true" />
-                  <span className="block font-medium">
-                    {value === "international"
-                      ? copy("Internationellt", "International")
-                      : copy("Nationellt eller regionalt", "National or regional")}
-                  </span>
-                  <span className="mt-2 block text-sm text-muted-foreground">
-                    {value === "international"
-                      ? copy(
-                          "Certifieringar från professionella organisationer.",
-                          "Certifications from professional organisations.",
-                        )
-                      : copy(
-                          "Meriter för ett visst land eller område.",
-                          "Credentials for a particular country or region.",
-                        )}
-                  </span>
-                </label>
-              );
-            })}
+      {step === 1 && (
+        <div className="space-y-6 p-5 sm:p-7" data-credential-picker>
+          <div className="border-b border-border pb-4">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+              {copy("Professionell dokumentation", "Professional record")}
+            </p>
+            <h3 className="mt-1 text-xl font-semibold">{steps[0]}</h3>
           </div>
-        )}
-        {step === 2 && (
-          <div className="space-y-5" data-credential-filters>
-            <div className="grid gap-5 sm:grid-cols-2">
+          {preselectCode && !preselected && definitions && (
+            <p
+              role="status"
+              className="rounded-lg border border-border bg-muted p-4 text-sm"
+              data-preselect-unavailable
+            >
+              {copy(
+                "Meriten du öppnade finns inte att välja för ditt konto just nu: den är inte godkänd i katalogen, eller så är dess marknad inte öppen för dig. Sök efter den här — eller skicka en förfrågan längst ned.",
+                "The credential you opened cannot be selected for your account right now: it is not approved in the catalogue, or its market is not open to you. Search for it here — or send a request at the bottom.",
+              )}
+            </p>
+          )}
+          {!selected ? (
+            <div className="space-y-5" data-credential-filters>
+              <label className="block">
+                {copy(
+                  "Sök på namn, förkortning eller organisation",
+                  "Search by name, abbreviation or organisation",
+                )}
+                <input
+                  type="search"
+                  autoComplete="off"
+                  className={inputClass}
+                  data-filter="search"
+                  value={filters.search}
+                  onChange={(e) => change({ search: e.target.value })}
+                  placeholder={copy(
+                    "T.ex. CPP, Certified Protection Professional eller ASIS",
+                    "e.g. CPP, Certified Protection Professional or ASIS",
+                  )}
+                />
+              </label>
+              <fieldset data-filter="scope">
+                <legend className="text-sm font-medium">{copy("Visa", "Show")}</legend>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {SCOPE_FILTERS.map((o) => (
+                    <label
+                      key={o.value}
+                      className={`inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full border px-4 text-sm ${filters.scope === o.value ? "border-accent bg-accent/10 font-medium" : "border-border bg-background"}`}
+                    >
+                      <input
+                        type="radio"
+                        name="scope"
+                        value={o.value}
+                        checked={filters.scope === o.value}
+                        onChange={() => change({ scope: o.value })}
+                      />
+                      {o[lang]}
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
               {filters.scope === "national" && (
-                <>
+                <div className="grid gap-5 sm:grid-cols-2">
                   <label>
                     {copy("Land", "Country")}
                     <select
@@ -687,570 +899,560 @@ export function InternationalCredentialForm({
                       </span>
                     </label>
                   )}
+                </div>
+              )}
+              <details
+                data-filter-panel
+                open={filtersOpen || filterPanelActive}
+                onToggle={(e) => setFiltersOpen(e.currentTarget.open)}
+                className="rounded-lg border border-border"
+              >
+                <summary className="flex min-h-11 cursor-pointer items-center px-4 text-sm font-medium">
+                  {copy(
+                    "Filtrera på ämne, organisation och typ",
+                    "Filter by subject, organisation and type",
+                  )}
+                  {filterPanelActive && (
+                    <span className="ml-2 rounded-full bg-accent/15 px-2 text-xs">
+                      {copy("aktiva", "active")}
+                    </span>
+                  )}
+                </summary>
+                <div className="grid gap-5 p-4 pt-1 sm:grid-cols-3">
+                  <label>
+                    {copy("Yrkesområde", "Professional area")}
+                    <select
+                      data-filter="domain"
+                      className={inputClass}
+                      value={filters.domain}
+                      onChange={(e) => change({ domain: e.target.value })}
+                    >
+                      <option value="">{copy("Alla yrkesområden", "All areas")}</option>
+                      {answer.domains.map((d) => (
+                        <option key={d.value} value={d.value}>
+                          {domainName(d.value)} ({d.count})
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    {copy("Typ av merit", "Credential type")}
+                    <select
+                      data-filter="category"
+                      className={inputClass}
+                      value={filters.category}
+                      onChange={(e) => change({ category: e.target.value })}
+                    >
+                      <option value="">{copy("Alla typer", "All types")}</option>
+                      {answer.categories.map((c) => (
+                        <option key={c.value} value={c.value}>
+                          {className(c.value)} ({c.count})
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    {copy("Organisation", "Organisation")}
+                    <select
+                      data-filter="organisation"
+                      className={inputClass}
+                      value={filters.organisation}
+                      onChange={(e) => change({ organisation: e.target.value })}
+                    >
+                      <option value="">{copy("Alla organisationer", "All organisations")}</option>
+                      {answer.organisations.map((o) => (
+                        <option key={o.value} value={o.value}>
+                          {o.name} ({o.count})
+                        </option>
+                      ))}
+                    </select>
+                    <span className="mt-1 block text-xs text-muted-foreground">
+                      {copy(
+                        "Tillsynsmyndighet eller utfärdare. Du behöver inte känna till den för att hitta din merit.",
+                        "A regulator or an issuer. You do not need to know it to find your credential.",
+                      )}
+                    </span>
+                  </label>
+                </div>
+              </details>
+              {summary}
+              <CredentialResultList
+                lang={lang}
+                results={visible}
+                selectedCode={draft.definition_code}
+                limit={limit}
+                regulatorOf={regulatorOf}
+                placeName={locationName}
+                onSelect={chooseDefinition}
+                onMore={() => setLimit((n) => n + RESULT_PAGE)}
+              />
+              {!visible.length && (
+                <>
+                  <p role="status" className="rounded-xl bg-muted p-4 text-sm" data-catalogue-empty>
+                    {copy(
+                      "Din merit är för närvarande inte tillgänglig i CQrityjob Security Passport.",
+                      "Your credential is not currently available in CQrityjob Security Passport.",
+                    )}
+                  </p>
+                  <p className="text-sm text-muted-foreground" data-catalogue-empty-reason>
+                    {answer.narrowed
+                      ? copy(
+                          "Inget matchar de valda filtren eller sökningen. Rensa filtren för att se hela katalogen — eller skicka en förfrågan nedan.",
+                          "Nothing matches the chosen filters or the search. Clear the filters to see the whole catalogue — or send a request below.",
+                        )
+                      : filters.scope === "national" && filters.country
+                        ? copy(
+                            "Inga meriter är tillgängliga för dig i det här landet ännu. Marknaden är antingen inte öppnad för ditt konto eller så är dess meriter inte godkända än.",
+                            "No credentials are available to you in this country yet. Either the market is not open to your account or its credentials are not approved yet.",
+                          )
+                        : copy(
+                            "Katalogen är stängd: du kan inte lägga till en egen merittyp. Saknas din certifiering kan du skicka en förfrågan nedan.",
+                            "The catalogue is closed: you cannot add a credential type of your own. If your certification is missing you can send a request below.",
+                          )}
+                  </p>
                 </>
               )}
-              <label>
-                {copy("Yrkesområde", "Professional area")}
-                <select
-                  data-filter="domain"
-                  className={inputClass}
-                  value={filters.domain}
-                  onChange={(e) => change({ domain: e.target.value })}
-                >
-                  <option value="">{copy("Alla yrkesområden", "All areas")}</option>
-                  {answer.domains.map((d) => (
-                    <option key={d.value} value={d.value}>
-                      {domainName(d.value)} ({d.count})
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                {copy("Typ av merit", "Credential type")}
-                <select
-                  data-filter="category"
-                  className={inputClass}
-                  value={filters.category}
-                  onChange={(e) => change({ category: e.target.value })}
-                >
-                  <option value="">{copy("Alla typer", "All types")}</option>
-                  {answer.categories.map((c) => (
-                    <option key={c.value} value={c.value}>
-                      {className(c.value)} ({c.count})
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                {copy("Organisation", "Organisation")}
-                <select
-                  data-filter="organisation"
-                  className={inputClass}
-                  value={filters.organisation}
-                  onChange={(e) => change({ organisation: e.target.value })}
-                >
-                  <option value="">{copy("Alla organisationer", "All organisations")}</option>
-                  {answer.organisations.map((o) => (
-                    <option key={o.value} value={o.value}>
-                      {o.name} ({o.count})
-                    </option>
-                  ))}
-                </select>
-                <span className="mt-1 block text-xs text-muted-foreground">
-                  {copy(
-                    "Tillsynsmyndighet eller utfärdare. Du behöver inte känna till den för att hitta din merit.",
-                    "A regulator or an issuer. You do not need to know it to find your credential.",
-                  )}
-                </span>
-              </label>
-            </div>
-            <FilterSummary
-              shown={visible.length}
-              total={answer.total}
-              narrowed={answer.narrowed}
-              needsCountry={filters.scope === "national" && !filters.country}
-              lang={lang}
-              onClear={() => {
-                setFilters((current) => clearOptionalFilters(current));
-                reset();
-              }}
-            />
-          </div>
-        )}
-        {step === 3 && (
-          <>
-            <label className="block">
-              {copy("Sök i katalogen", "Search catalogue")}
-              <input
-                type="search"
-                className={inputClass}
-                data-filter="search"
-                value={filters.search}
-                onChange={(e) => change({ search: e.target.value })}
-                placeholder={copy(
-                  "Namn, förkortning, kod eller organisation…",
-                  "Name, abbreviation, code or organisation…",
-                )}
-              />
-            </label>
-            <label className="block">
-              {copy("Godkänd merit", "Approved credential")}
-              <select
-                required
-                className={inputClass}
-                value={draft.definition_code}
-                onChange={(e) => {
-                  setDraft({ ...blank, definition_code: e.target.value });
-                  setFile(null);
-                }}
-              >
-                <option value="">{copy("Välj merit", "Select credential")}</option>
-                {visible.map((d) => (
-                  <option key={d.code} value={d.code}>
-                    {d[lang === "sv" ? "name_sv" : "name_en"]}
-                    {" — "}
-                    {d.issuer_name ??
-                      d.organisations.find((o) => o.role === "regulator")?.name ??
-                      copy("utfärdare anges på intyget", "issuer stated on the certificate")}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <FilterSummary
-              shown={visible.length}
-              total={answer.total}
-              narrowed={answer.narrowed}
-              needsCountry={filters.scope === "national" && !filters.country}
-              lang={lang}
-              onClear={() => {
-                setFilters((current) => clearOptionalFilters(current));
-                reset();
-              }}
-            />
-            {!visible.length && (
-              <>
-                <p role="status" className="rounded-xl bg-muted p-4 text-sm" data-catalogue-empty>
-                  {copy(
-                    "Din merit är för närvarande inte tillgänglig i CQrityjob Security Passport.",
-                    "Your credential is not currently available in CQrityjob Security Passport.",
-                  )}
-                </p>
-                <p className="text-sm text-muted-foreground" data-catalogue-empty-reason>
-                  {answer.narrowed
-                    ? copy(
-                        "Inget matchar de valda filtren eller sökningen. Rensa filtren för att se hela katalogen.",
-                        "Nothing matches the chosen filters or the search. Clear the filters to see the whole catalogue.",
-                      )
-                    : filters.scope === "national" && filters.country
-                      ? copy(
-                          "Inga meriter är tillgängliga för dig i det här landet ännu. Marknaden är antingen inte öppnad för ditt konto eller så är dess meriter inte godkända än.",
-                          "No credentials are available to you in this country yet. Either the market is not open to your account or its credentials are not approved yet.",
-                        )
-                      : copy(
-                          "Katalogen är stängd: du kan inte lägga till en egen merittyp.",
-                          "The catalogue is closed: you cannot add a credential type of your own.",
-                        )}
-                </p>
-              </>
-            )}
-          </>
-        )}
-        {step >= 4 && selected && (
-          <div className="relative overflow-hidden rounded-lg border border-border bg-secondary/40 p-5 pl-6">
-            <div aria-hidden="true" className="absolute inset-y-0 left-0 w-1 bg-accent" />
-            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-              {copy("Från den godkända katalogen", "From the approved catalogue")}
-            </p>
-            <p className="mt-1 text-lg font-semibold">
-              {selected[lang === "sv" ? "name_sv" : "name_en"]}
-            </p>
-            <p className="mt-1 text-sm" data-credential-territory>
-              {selected.scope_code === "global_professional"
-                ? copy("Internationell · inget land", "International · no country")
-                : `${copy("Gäller i", "Valid in")}: ${
-                    selected.region === "AE-DU"
-                      ? credentialTerritoryLabel(selected.country, selected.region, lang)
-                      : locationName(selected.region ?? selected.country)
-                  }`}
-            </p>
-            <dl className="mt-3 grid gap-x-6 gap-y-1 text-sm sm:grid-cols-2" data-credential-roles>
-              {rolesOf(selected).map((r) => (
-                <div key={r.role} className="min-w-0">
-                  <dt className="text-xs text-muted-foreground">{r.label}</dt>
-                  <dd className="break-words">{r.name}</dd>
-                </div>
-              ))}
-              {awardingBodies.length > 0 && (
-                <div className="min-w-0" data-credential-awarding-body>
-                  <dt className="text-xs text-muted-foreground">
-                    {copy(
-                      "Examinerande organ (enligt standarden)",
-                      "Awarding body (per the standard)",
-                    )}
-                  </dt>
-                  <dd className="break-words">{awardingBodies.join(", ")}</dd>
-                </div>
-              )}
-            </dl>
-            {selected.scope_code === "national_qualification" && (
-              <p className="mt-2 text-xs text-muted-foreground" data-national-qualification-note>
-                {copy(
-                  "En nationell yrkeskvalifikation. Den är inte en licens och ger ingen rätt att arbeta, i det här landet eller någon annanstans.",
-                  "A national qualification. It is not a licence and gives no right to work, in this country or anywhere else.",
-                )}
-              </p>
-            )}
-            {selectedIsPublicPilot && <PublicPilotStatus className="mt-3" />}
-            {selectedRow?.official_url && (
-              <a
-                className="mt-2 inline-flex min-h-11 items-center text-sm text-accent underline"
-                href={selectedRow?.official_url}
-                target="_blank"
-                rel="noreferrer"
-              >
-                {copy("Officiell källa", "Official source")}
-              </a>
-            )}
-          </div>
-        )}
-        {step === 4 && selected && (
-          <div className="grid gap-5 sm:grid-cols-2">
-            {selected.issuerStatedOnDocument && (
-              <label className="sm:col-span-2">
-                {copy("Utfärdare enligt intyget", "Issuer stated on the certificate")}
-                {readBy("issuer_name")}
-                <input
-                  required
-                  data-field="issuer-name"
-                  className={inputClass}
-                  minLength={2}
-                  maxLength={160}
-                  value={draft.issuer_name ?? ""}
-                  onChange={(e) => setDraft({ ...draft, issuer_name: e.target.value })}
-                />
-                <span className="mt-1 block text-xs text-muted-foreground">
-                  {copy(
-                    "Utbildningsföretaget eller examensutfärdaren som står på ditt intyg. Tillsynsmyndigheten är inte utbildare.",
-                    "The training company or awarding organisation printed on your certificate. The regulator is not the trainer.",
-                  )}
-                </span>
-                <HayatFieldNote
-                  field="issuer_name"
-                  notice={notices.issuer_name}
-                  onAccept={accept}
-                />
-              </label>
-            )}
-            {selectedVersions.length > 0 && (
-              <label className="sm:col-span-2">
-                {copy("Version enligt intyget (valfritt)", "Version on the certificate (optional)")}
-                <select
-                  data-field="definition-version"
-                  className={inputClass}
-                  value={draft.definition_version ?? ""}
-                  onChange={(e) => setDraft({ ...draft, definition_version: e.target.value })}
-                >
-                  <option value="">{copy("Vet inte / står inte", "Not sure / not stated")}</option>
-                  {selectedVersions.map((v) => (
-                    <option key={v.version_key} value={v.version_key}>
-                      {versionLabel(v)}
-                    </option>
-                  ))}
-                </select>
-                <span className="mt-1 block text-xs text-muted-foreground">
-                  {copy(
-                    "Versionen gäller standarden. En tidigare version gör inte ditt intyg ogiltigt, och standardens granskningsdatum är inte ditt intygs slutdatum.",
-                    "The version is about the standard. An earlier version does not make your certificate invalid, and the standard’s review date is not your certificate’s expiry.",
-                  )}
-                </span>
-              </label>
-            )}
-            {selected.requiresScope && (
-              <label className="sm:col-span-2">
-                {scopeLabel}
-                <input
-                  required
-                  data-field="authorisation-scope"
-                  className={inputClass}
-                  maxLength={200}
-                  value={draft.authorisation_scope ?? ""}
-                  onChange={(e) => setDraft({ ...draft, authorisation_scope: e.target.value })}
-                />
-                <span className="mt-1 block text-xs text-muted-foreground">
-                  {copy(
-                    "Obligatoriskt: den här behörigheten gäller bara inom sin omfattning. Texten visas inte i en anonym delning.",
-                    "Required: this authorisation is valid only within its scope. The text is not shown in an anonymous share.",
-                  )}
-                </span>
-              </label>
-            )}
-            <div className="sm:col-span-2">
-              <label>
-                {copy(
-                  "Certifikats- eller licensnummer (valfritt)",
-                  "Credential identifier (optional)",
-                )}
-                {readBy("identifier")}
-                <input
-                  data-field="identifier"
-                  className={inputClass}
-                  maxLength={120}
-                  value={draft.identifier}
-                  onChange={(e) => setDraft({ ...draft, identifier: e.target.value })}
-                />
-              </label>
-              <HayatFieldNote field="identifier" notice={notices.identifier} onAccept={accept} />
-            </div>
-            <div>
-              <label>
-                {copy("Utfärdad", "Issued")}
-                {readBy("issued_on")}
-                <CredentialDateInput
+              {filters.scope !== "national" && (
+                <UnavailableGroup
                   lang={lang}
-                  className={inputClass}
-                  value={draft.issued_on}
-                  onChange={(value) => setDraft({ ...draft, issued_on: value })}
-                />
-              </label>
-              <HayatFieldNote field="issued_on" notice={notices.issued_on} onAccept={accept} />
-            </div>
-            <div>
-              <label>
-                {copy("Giltig till", "Valid until")}
-                {readBy("valid_until")}
-                <CredentialDateInput
-                  lang={lang}
-                  className={inputClass}
-                  min={draft.issued_on || undefined}
-                  required={selectedRow?.requires_valid_until}
-                  disabled={draft.no_expiry === true}
-                  value={draft.valid_until}
-                  onChange={(value) => setDraft({ ...draft, valid_until: value })}
-                />
-              </label>
-              <HayatFieldNote field="valid_until" notice={notices.valid_until} onAccept={accept} />
-            </div>
-            {selectedRow?.allows_no_expiry && !selectedRow?.requires_valid_until && (
-              <label className="flex min-h-11 items-center gap-2 sm:col-span-2">
-                <input
-                  type="checkbox"
-                  checked={draft.no_expiry === true}
-                  onChange={(e) =>
-                    setDraft({
-                      ...draft,
-                      no_expiry: e.target.checked ? true : null,
-                      valid_until: e.target.checked ? "" : draft.valid_until,
+                  items={unavailable}
+                  onAsk={(u) =>
+                    setRequestSeed({
+                      nonce: (requestSeed?.nonce ?? 0) + 1,
+                      name: u.name,
+                      issuer: u.issuer,
+                      abbreviation: u.abbreviation ?? "",
+                      researchId: u.researchId,
                     })
                   }
                 />
-                {copy(
-                  "Utan utgångsdatum enligt definitionen",
-                  "No expiry, as permitted by this definition",
-                )}
-              </label>
-            )}
-            <div className="rounded-lg border border-dashed border-border bg-secondary/20 p-4 sm:col-span-2">
-              {copy("Dokument (valfritt)", "Evidence (optional)")}
-              <input
-                ref={fileInput}
-                aria-label={copy("Dokument (valfritt)", "Evidence (optional)")}
-                type="file"
-                accept="application/pdf,image/jpeg,image/png,image/heic"
-                className="sr-only"
-                onChange={(e) => {
-                  const f = e.target.files?.[0] ?? null;
-                  if (
-                    f &&
-                    (!EVIDENCE_ALLOWED_MIME.includes(f.type) ||
-                      f.size === 0 ||
-                      f.size > EVIDENCE_MAX_BYTES)
-                  ) {
-                    setError(
-                      copy(
-                        "Välj PDF, JPG, PNG eller HEIC, högst 8 MB.",
-                        "Choose PDF, JPG, PNG or HEIC, up to 8 MB.",
-                      ),
-                    );
-                    forgetReading();
-                    setFile(null);
-                    e.target.value = "";
-                  } else {
-                    // A new file, or none: the previous file's reading goes first,
-                    // so nothing it produced can outlive it.
-                    forgetReading();
-                    setFile(f);
-                    setError(null);
-                    if (f) readDocument(f);
-                  }
-                }}
-              />
-              <div className="mt-3 flex flex-wrap items-center gap-3">
-                <button
-                  type="button"
-                  className="min-h-11 rounded-md border border-input bg-background px-4 text-sm"
-                  onClick={() => fileInput.current?.click()}
-                >
-                  {copy("Välj fil", "Choose file")}
-                </button>
-                <span className="min-w-0 break-all text-sm" data-evidence-file-name>
-                  {file?.name ?? copy("Ingen fil vald", "No file chosen")}
-                </span>
-                {file && (
-                  <button
-                    type="button"
-                    data-evidence-remove
-                    className="min-h-11 rounded-md px-3 text-sm underline"
-                    onClick={() => {
-                      forgetReading();
-                      setFile(null);
-                      if (fileInput.current) fileInput.current.value = "";
-                    }}
-                  >
-                    {copy("Ta bort fil", "Remove file")}
-                  </button>
-                )}
-              </div>
-              {selected && linkSources.some((s) => s.definitionCodes.includes(selected.code)) && (
-                <div className="mt-4" data-hayat-link>
-                  <label>
-                    {pt("hayat.link.label")}
-                    <input
-                      type="url"
-                      inputMode="url"
-                      data-field="badge-link"
-                      className={inputClass}
-                      maxLength={400}
-                      placeholder="https://www.credly.com/badges/…"
-                      value={badgeLink}
-                      onChange={(e) => setBadgeLink(e.target.value)}
-                    />
-                  </label>
-                  <span className="mt-1 block text-xs text-muted-foreground">
-                    {pt("hayat.link.help").replace(
-                      "{source}",
-                      linkSources.find((s) => s.definitionCodes.includes(selected.code))?.name ??
-                        "",
-                    )}
-                  </span>
-                  <button
-                    type="button"
-                    disabled={!badgeLink.trim()}
-                    className="mt-2 min-h-11 rounded-md border border-input bg-background px-4 text-sm disabled:opacity-50"
-                    onClick={() => void assess(null, badgeLink.trim())}
-                  >
-                    {pt("hayat.link.check")}
-                  </button>
-                </div>
               )}
-              <HayatPanel
-                reading={hayat.state}
-                notices={notices}
-                assessment={assessment}
-                onRetry={() => file && readDocument(file)}
-                onChooseOther={() => setStep(3)}
-              />
-              <span className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
-                <Lock size={12} aria-hidden="true" />
-                {copy(
-                  "Privat dokument. Högst 8 MB. Delas inte med länken.",
-                  "Private evidence. Up to 8 MB. Not included in the share link.",
-                )}
-              </span>
             </div>
-          </div>
-        )}
-        {step === 5 && selected && (
-          <>
-            <dl className="grid grid-cols-1 gap-4 rounded-lg border border-border bg-secondary/30 p-5 text-sm sm:grid-cols-2">
-              {[
-                ...(selected.issuerStatedOnDocument
-                  ? [
-                      [
-                        copy("Utfärdare enligt intyget", "Issuer on the certificate"),
-                        draft.issuer_name,
-                      ],
-                    ]
-                  : []),
-                ...(selected.requiresScope
-                  ? [[copy("Omfattning", "Scope"), draft.authorisation_scope]]
-                  : []),
-                ...(selectedVersions.length > 0
-                  ? [
-                      [
-                        copy("Version", "Version"),
-                        (() => {
-                          const v = selectedVersions.find(
-                            (x) => x.version_key === draft.definition_version,
-                          );
-                          return v ? versionLabel(v) : "";
-                        })(),
-                      ],
-                    ]
-                  : []),
-                [copy("Certifikats- eller licensnummer", "Identifier"), draft.identifier],
-                [copy("Utfärdad", "Issued"), draft.issued_on],
-                [
-                  copy("Slutdatum", "Expiry"),
-                  draft.valid_until || formatExpiry(null, lang, draft.no_expiry),
-                ],
-                [copy("Dokument", "Evidence"), file?.name],
-              ].map(([label, value]) => (
-                <div className="min-w-0" key={label}>
-                  <dt className="text-muted-foreground">{label}</dt>
-                  <dd className="mt-1 break-words font-medium">
-                    {value || copy("Inte angivet", "Not provided")}
-                  </dd>
-                </div>
-              ))}
-            </dl>
-            <p className="rounded-lg border border-border p-4 text-sm">
-              {copy(
-                "Sparas som registrerat av innehavaren. Ett bifogat dokument är underlag, inte en verifiering.",
-                "Saved as registered by holder. An attached document is evidence, not verification.",
-              )}
-            </p>
-          </>
-        )}
-        {!definitions && <p role="status">{copy("Läser katalogen…", "Loading catalogue…")}</p>}
-        {step >= 4 && definitions && !selected && (
-          <p role="status">
-            {copy(
-              "Meriten är inte tillgänglig för nya uppgifter.",
-              "This definition is unavailable for new claims or corrections.",
-            )}
-          </p>
-        )}
-        {error && (
-          <p role="alert" className="text-sm text-destructive">
-            {error}
-          </p>
-        )}
-        <div className="flex flex-wrap justify-between gap-3 border-t border-border pt-5">
-          {step > (initial ? 4 : 1) && !savedId.current ? (
+          ) : (
+            <>
+              {facts}
+              <button
+                type="button"
+                data-change-credential
+                className="min-h-11 rounded-md border border-input bg-background px-4 text-sm"
+                onClick={() => chooseDefinition("")}
+              >
+                {copy("Välj en annan merit", "Choose a different credential")}
+              </button>
+            </>
+          )}
+          {!selected && (
+            <CatalogueRequestPanel
+              lang={lang}
+              suggestedName={filters.search}
+              seed={requestSeed}
+              onRequest={onRequestDefinition}
+              onList={onListRequests}
+            />
+          )}
+          <div className="flex flex-wrap justify-end gap-3 border-t border-border pt-5">
             <button
               type="button"
-              disabled={busy}
-              className="min-h-11 rounded-md border border-border px-5 text-sm"
+              data-step-continue
+              disabled={!definitions || !selected}
+              className="inline-flex min-h-11 items-center gap-2 rounded-md bg-primary px-5 text-sm font-semibold text-primary-foreground disabled:opacity-50"
               onClick={() => {
-                setStep(step - 1);
                 setError(null);
+                setStep(2);
               }}
             >
-              {copy("Tillbaka", "Back")}
+              {copy("Fortsätt", "Continue")}
+              <ArrowRight size={16} aria-hidden="true" />
             </button>
-          ) : (
-            <span />
-          )}
-          <button
-            type="submit"
-            disabled={busy || !definitions || (step >= 3 && !selected)}
-            className="inline-flex min-h-11 items-center gap-2 rounded-md bg-primary px-5 text-sm font-semibold text-primary-foreground disabled:opacity-50"
-          >
-            {busy
-              ? copy("Sparar…", "Saving…")
-              : step === 5
-                ? copy("Spara merit", "Save credential")
-                : copy("Fortsätt", "Continue")}
-            <ArrowRight size={16} aria-hidden="true" />
-          </button>
+          </div>
+          {!definitions && <p role="status">{copy("Läser katalogen…", "Loading catalogue…")}</p>}
         </div>
-        {savedId.current && error && (
-          <button
-            type="button"
-            className="min-h-11 text-sm underline"
-            onClick={() => {
-              const claimId = savedId.current;
-              if (!claimId) return;
-              void navigate({
-                to: "/passport/entry/$kind/$entryId",
-                params: { kind: "claim", entryId: claimId },
-              });
-            }}
-          >
-            {copy("Öppna sparad merit", "Open saved credential")}
-          </button>
-        )}
-      </form>
+      )}
+      {step >= 2 && (
+        <form
+          className="space-y-6 p-5 sm:p-7"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (step === 2) setDraft(settleDates(draft));
+            if (step < 3) setStep(step + 1);
+            else void save();
+          }}
+        >
+          <div className="border-b border-border pb-4">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+              {copy("Professionell dokumentation", "Professional record")}
+            </p>
+            <h3 className="mt-1 text-xl font-semibold">{steps[step - 1]}</h3>
+          </div>
+          {selected && facts}
+          {step === 2 && selected && (
+            <div className="grid gap-5 sm:grid-cols-2">
+              {selected.issuerStatedOnDocument && (
+                <label className="sm:col-span-2">
+                  {copy("Utfärdare enligt intyget", "Issuer stated on the certificate")}
+                  {readBy("issuer_name")}
+                  <input
+                    required
+                    data-field="issuer-name"
+                    className={inputClass}
+                    minLength={2}
+                    maxLength={160}
+                    value={draft.issuer_name ?? ""}
+                    onChange={(e) => setDraft({ ...draft, issuer_name: e.target.value })}
+                  />
+                  <span className="mt-1 block text-xs text-muted-foreground">
+                    {copy(
+                      "Utbildningsföretaget eller examensutfärdaren som står på ditt intyg. Tillsynsmyndigheten är inte utbildare.",
+                      "The training company or awarding organisation printed on your certificate. The regulator is not the trainer.",
+                    )}
+                  </span>
+                  <HayatFieldNote
+                    field="issuer_name"
+                    notice={notices.issuer_name}
+                    onAccept={accept}
+                  />
+                </label>
+              )}
+              {selectedVersions.length > 0 && (
+                <label className="sm:col-span-2">
+                  {copy(
+                    "Version enligt intyget (valfritt)",
+                    "Version on the certificate (optional)",
+                  )}
+                  <select
+                    data-field="definition-version"
+                    className={inputClass}
+                    value={draft.definition_version ?? ""}
+                    onChange={(e) => setDraft({ ...draft, definition_version: e.target.value })}
+                  >
+                    <option value="">
+                      {copy("Vet inte / står inte", "Not sure / not stated")}
+                    </option>
+                    {selectedVersions.map((v) => (
+                      <option key={v.version_key} value={v.version_key}>
+                        {versionLabel(v)}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="mt-1 block text-xs text-muted-foreground">
+                    {copy(
+                      "Versionen gäller standarden. En tidigare version gör inte ditt intyg ogiltigt, och standardens granskningsdatum är inte ditt intygs slutdatum.",
+                      "The version is about the standard. An earlier version does not make your certificate invalid, and the standard’s review date is not your certificate’s expiry.",
+                    )}
+                  </span>
+                </label>
+              )}
+              {selected.requiresScope && (
+                <label className="sm:col-span-2">
+                  {scopeLabel}
+                  <input
+                    required
+                    data-field="authorisation-scope"
+                    className={inputClass}
+                    maxLength={200}
+                    value={draft.authorisation_scope ?? ""}
+                    onChange={(e) => setDraft({ ...draft, authorisation_scope: e.target.value })}
+                  />
+                  <span className="mt-1 block text-xs text-muted-foreground">
+                    {copy(
+                      "Obligatoriskt: den här behörigheten gäller bara inom sin omfattning. Texten visas inte i en anonym delning.",
+                      "Required: this authorisation is valid only within its scope. The text is not shown in an anonymous share.",
+                    )}
+                  </span>
+                </label>
+              )}
+              <div className="sm:col-span-2">
+                <label>
+                  {copy(
+                    "Certifikats- eller licensnummer (valfritt)",
+                    "Credential identifier (optional)",
+                  )}
+                  {readBy("identifier")}
+                  <input
+                    data-field="identifier"
+                    className={inputClass}
+                    maxLength={120}
+                    value={draft.identifier}
+                    onChange={(e) => setDraft({ ...draft, identifier: e.target.value })}
+                  />
+                </label>
+                <HayatFieldNote field="identifier" notice={notices.identifier} onAccept={accept} />
+              </div>
+              <div>
+                <label>
+                  {copy("Utfärdad", "Issued")}
+                  {readBy("issued_on")}
+                  <CredentialDateInput
+                    lang={lang}
+                    className={inputClass}
+                    value={draft.issued_on}
+                    onChange={(value) => setDraft({ ...draft, issued_on: value })}
+                  />
+                </label>
+                <HayatFieldNote field="issued_on" notice={notices.issued_on} onAccept={accept} />
+              </div>
+              <div>
+                <label>
+                  {copy("Giltig till", "Valid until")}
+                  {readBy("valid_until")}
+                  <CredentialDateInput
+                    lang={lang}
+                    className={inputClass}
+                    min={draft.issued_on || undefined}
+                    required={selectedRow?.requires_valid_until}
+                    disabled={draft.no_expiry === true}
+                    value={draft.valid_until}
+                    onChange={(value) => setDraft({ ...draft, valid_until: value })}
+                  />
+                </label>
+                <HayatFieldNote
+                  field="valid_until"
+                  notice={notices.valid_until}
+                  onAccept={accept}
+                />
+              </div>
+              {selectedRow?.allows_no_expiry && !selectedRow?.requires_valid_until && (
+                <label className="flex min-h-11 items-center gap-2 sm:col-span-2">
+                  <input
+                    type="checkbox"
+                    checked={draft.no_expiry === true}
+                    onChange={(e) =>
+                      setDraft({
+                        ...draft,
+                        no_expiry: e.target.checked ? true : null,
+                        valid_until: e.target.checked ? "" : draft.valid_until,
+                      })
+                    }
+                  />
+                  {copy(
+                    "Utan utgångsdatum enligt definitionen",
+                    "No expiry, as permitted by this definition",
+                  )}
+                </label>
+              )}
+              <div className="rounded-lg border border-dashed border-border bg-secondary/20 p-4 sm:col-span-2">
+                {copy("Dokument (valfritt)", "Evidence (optional)")}
+                <input
+                  ref={fileInput}
+                  aria-label={copy("Dokument (valfritt)", "Evidence (optional)")}
+                  type="file"
+                  accept="application/pdf,image/jpeg,image/png,image/heic"
+                  className="sr-only"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0] ?? null;
+                    if (
+                      f &&
+                      (!EVIDENCE_ALLOWED_MIME.includes(f.type) ||
+                        f.size === 0 ||
+                        f.size > EVIDENCE_MAX_BYTES)
+                    ) {
+                      setError(
+                        copy(
+                          "Välj PDF, JPG, PNG eller HEIC, högst 8 MB.",
+                          "Choose PDF, JPG, PNG or HEIC, up to 8 MB.",
+                        ),
+                      );
+                      forgetReading();
+                      setFile(null);
+                      e.target.value = "";
+                    } else {
+                      // A new file, or none: the previous file's reading goes first,
+                      // so nothing it produced can outlive it.
+                      forgetReading();
+                      setFile(f);
+                      setError(null);
+                      if (f) readDocument(f);
+                    }
+                  }}
+                />
+                <div className="mt-3 flex flex-wrap items-center gap-3">
+                  <button
+                    type="button"
+                    className="min-h-11 rounded-md border border-input bg-background px-4 text-sm"
+                    onClick={() => fileInput.current?.click()}
+                  >
+                    {copy("Välj fil", "Choose file")}
+                  </button>
+                  <span className="min-w-0 break-all text-sm" data-evidence-file-name>
+                    {file?.name ?? copy("Ingen fil vald", "No file chosen")}
+                  </span>
+                  {file && (
+                    <button
+                      type="button"
+                      data-evidence-remove
+                      className="min-h-11 rounded-md px-3 text-sm underline"
+                      onClick={() => {
+                        forgetReading();
+                        setFile(null);
+                        if (fileInput.current) fileInput.current.value = "";
+                      }}
+                    >
+                      {copy("Ta bort fil", "Remove file")}
+                    </button>
+                  )}
+                </div>
+                {selected && linkSources.some((s) => s.definitionCodes.includes(selected.code)) && (
+                  <div className="mt-4" data-hayat-link>
+                    <label>
+                      {pt("hayat.link.label")}
+                      <input
+                        type="url"
+                        inputMode="url"
+                        data-field="badge-link"
+                        className={inputClass}
+                        maxLength={400}
+                        placeholder="https://www.credly.com/badges/…"
+                        value={badgeLink}
+                        onChange={(e) => setBadgeLink(e.target.value)}
+                      />
+                    </label>
+                    <span className="mt-1 block text-xs text-muted-foreground">
+                      {pt("hayat.link.help").replace(
+                        "{source}",
+                        linkSources.find((s) => s.definitionCodes.includes(selected.code))?.name ??
+                          "",
+                      )}
+                    </span>
+                    <button
+                      type="button"
+                      disabled={!badgeLink.trim()}
+                      className="mt-2 min-h-11 rounded-md border border-input bg-background px-4 text-sm disabled:opacity-50"
+                      onClick={() => void assess(null, badgeLink.trim())}
+                    >
+                      {pt("hayat.link.check")}
+                    </button>
+                  </div>
+                )}
+                <HayatPanel
+                  reading={hayat.state}
+                  notices={notices}
+                  assessment={assessment}
+                  onRetry={() => file && readDocument(file)}
+                  onChooseOther={() => setStep(1)}
+                />
+                <span className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
+                  <Lock size={12} aria-hidden="true" />
+                  {copy(
+                    "Privat dokument. Högst 8 MB. Delas inte med länken.",
+                    "Private evidence. Up to 8 MB. Not included in the share link.",
+                  )}
+                </span>
+              </div>
+            </div>
+          )}
+          {step === 3 && selected && (
+            <>
+              <dl className="grid grid-cols-1 gap-4 rounded-lg border border-border bg-secondary/30 p-5 text-sm sm:grid-cols-2">
+                {[
+                  ...(selected.issuerStatedOnDocument
+                    ? [
+                        [
+                          copy("Utfärdare enligt intyget", "Issuer on the certificate"),
+                          draft.issuer_name,
+                        ],
+                      ]
+                    : []),
+                  ...(selected.requiresScope
+                    ? [[copy("Omfattning", "Scope"), draft.authorisation_scope]]
+                    : []),
+                  ...(selectedVersions.length > 0
+                    ? [
+                        [
+                          copy("Version", "Version"),
+                          (() => {
+                            const v = selectedVersions.find(
+                              (x) => x.version_key === draft.definition_version,
+                            );
+                            return v ? versionLabel(v) : "";
+                          })(),
+                        ],
+                      ]
+                    : []),
+                  [copy("Certifikats- eller licensnummer", "Identifier"), draft.identifier],
+                  [copy("Utfärdad", "Issued"), draft.issued_on],
+                  [
+                    copy("Slutdatum", "Expiry"),
+                    draft.valid_until || formatExpiry(null, lang, draft.no_expiry),
+                  ],
+                  [copy("Dokument", "Evidence"), file?.name],
+                ].map(([label, value]) => (
+                  <div className="min-w-0" key={label}>
+                    <dt className="text-muted-foreground">{label}</dt>
+                    <dd className="mt-1 break-words font-medium">
+                      {value || copy("Inte angivet", "Not provided")}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+              <p className="rounded-lg border border-border p-4 text-sm">
+                {copy(
+                  "Sparas som registrerat av innehavaren. Ett bifogat dokument är underlag, inte en verifiering.",
+                  "Saved as registered by holder. An attached document is evidence, not verification.",
+                )}
+              </p>
+            </>
+          )}
+          {!definitions && <p role="status">{copy("Läser katalogen…", "Loading catalogue…")}</p>}
+          {step >= 2 && definitions && !selected && (
+            <p role="status">
+              {copy(
+                "Meriten är inte tillgänglig för nya uppgifter.",
+                "This definition is unavailable for new claims or corrections.",
+              )}
+            </p>
+          )}
+          {error && (
+            <p role="alert" className="text-sm text-destructive">
+              {error}
+            </p>
+          )}
+          <div className="flex flex-wrap justify-between gap-3 border-t border-border pt-5">
+            {step > (initial ? 2 : 1) && !savedId.current ? (
+              <button
+                type="button"
+                disabled={busy}
+                className="min-h-11 rounded-md border border-border px-5 text-sm"
+                onClick={() => {
+                  setStep(step - 1);
+                  setError(null);
+                }}
+              >
+                {copy("Tillbaka", "Back")}
+              </button>
+            ) : (
+              <span />
+            )}
+            <button
+              type="submit"
+              disabled={busy || !definitions || !selected}
+              className="inline-flex min-h-11 items-center gap-2 rounded-md bg-primary px-5 text-sm font-semibold text-primary-foreground disabled:opacity-50"
+            >
+              {busy
+                ? copy("Sparar…", "Saving…")
+                : step === 3
+                  ? copy("Spara merit", "Save credential")
+                  : copy("Fortsätt", "Continue")}
+              <ArrowRight size={16} aria-hidden="true" />
+            </button>
+          </div>
+          {savedId.current && error && (
+            <button
+              type="button"
+              className="min-h-11 text-sm underline"
+              onClick={() => {
+                const claimId = savedId.current;
+                if (!claimId) return;
+                void navigate({
+                  to: "/passport/entry/$kind/$entryId",
+                  params: { kind: "claim", entryId: claimId },
+                });
+              }}
+            >
+              {copy("Öppna sparad merit", "Open saved credential")}
+            </button>
+          )}
+        </form>
+      )}
     </section>
   );
 }
