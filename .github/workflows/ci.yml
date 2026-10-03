@@ -489,6 +489,19 @@ jobs:
       - name: Passport global certification catalogue check
         run: bun run passport-global-certification:check
 
+      # Security Passport certification research integration. The 170 researched
+      # programmes each have ONE explicit outcome (14 matched to an existing
+      # definition, 140 added INACTIVE, 16 retained for review, 0 excluded);
+      # matching needs issuer AND award and never an acronym alone; research
+      # scope never becomes a place, a market or lifetime validity; and every
+      # generated artefact (the import and publication migrations, their
+      # rollbacks, the plate marks, the reconciliation report) is exactly what
+      # the reviewed decisions produce. Its planted controls run in
+      # negative-controls:all; the database half is the research suite in
+      # scripts/db-test.sh.
+      - name: Passport certification research import check
+        run: bun run passport-catalogue-research:check
+
       # `sp_claims.credential_reference` is a lookup key into somebody else's
       # register -- the single most damaging field in the Passport to leak.
       # Relocating it would rewrite real holder data, so the allowlist is

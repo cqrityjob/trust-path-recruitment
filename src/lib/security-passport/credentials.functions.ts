@@ -583,7 +583,8 @@ export interface GlobalCertificationType {
    *  exist for search and never for rendering. */
   readonly issuerDisplayName: string;
   readonly issuerOfficialUrl: string;
-  readonly abbreviation: string;
+  /** NULL where the issuer publishes none: the catalogue never invents one (20270206090000). */
+  readonly abbreviation: string | null;
   readonly programmeUrl: string;
   readonly maintenancePolicyUrl: string;
   readonly maintenancePolicyType: string;

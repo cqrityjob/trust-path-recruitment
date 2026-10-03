@@ -1,0 +1,47 @@
+{
+  "credentials": 170,
+  "issuers": 40,
+  "sources": 117,
+  "by_area": {
+    "cyber": 46,
+    "insurance": 30,
+    "physical": 25,
+    "resilience": 32,
+    "risk": 37
+  },
+  "by_kind": {
+    "person_certification": 102,
+    "professional_qualification": 39,
+    "designation": 21,
+    "course_certificate": 1,
+    "assessed_certificate": 7
+  },
+  "by_priority": {
+    "P1": 51,
+    "P2": 116,
+    "P3": 3
+  },
+  "by_evidence_level": {
+    "issuer_badge_page": 5,
+    "official_page": 153,
+    "official_search_excerpt": 12
+  },
+  "by_research_status": {
+    "catalogue_review_required": 157,
+    "source_recheck_required": 13
+  },
+  "by_research_scope": {
+    "international": 134,
+    "regional": 7,
+    "national": 29
+  },
+  "validation": {
+    "unique_ids": true,
+    "no_duplicate_issuer_name": true,
+    "all_have_https_source_urls": true,
+    "sqlite_integrity": "ok",
+    "foreign_keys": "ok",
+    "all_unpublished": true,
+    "json_csv_sqlite_reconciled": true
+  }
+}
