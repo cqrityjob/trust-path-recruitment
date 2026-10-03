@@ -98,6 +98,21 @@ analysis.
 | Download (print to PDF) of the anonymous result | yes | `onDownloadResult`, `window.print()` |
 | Download (print to PDF) of the **saved** report | **[fixed]** was absent; now the same control, `no-print`, in the report's action bar | `V31ReportView` |
 
+### Where each cell comes from (evidence)
+
+| Cell | Evidence |
+| --- | --- |
+| Anonymous entrance open under `internal_test` / `public`, closed under `paused` | `cd_access_state()` callable by `anon` (`20261222090000`); `getV31Availability` folds it into `available`; `PublicAssessmentFlow` boot; SQL group M2; e2e "paused" route test |
+| Signed-in start: plain account refused under `internal_test`, admitted under `public`, refused under `paused` | `cd_v31_may_start` (SQL M1, nine cells, parsed by the guard); `getV31TesterStatus`; `resolveAnalysisAccess` (guard group 1) |
+| Tester admitted under `internal_test` and `public`, refused under `paused`; admin admitted everywhere at the database | SQL M1.2 and M1.4; `cd_is_internal_tester` includes admins (`20260729090000`) |
+| Result build refused under `paused` for everyone | `previewPublicV31Run` re-reads the control per call; guard 3.7; e2e "signed-out visitor mid-run" |
+| Save of an own run: plain `deny` under `internal_test`/`paused`, `allow_public` under `public` | `resolveSaveGate` (guard 1.2, with the conversion check's existing table) |
+| Claim of an anonymous run: plain `allow_claim` under `internal_test`, `allow_public` under `public`, `deny` under `paused` | `resolveSaveGate`; the claim is resolved before the allowlist in the boot effect (guard 4.1); e2e "a plain account's finished run is saved, never turned away" |
+| The database itself saves a plain account's claimed run in all three states, idempotently, and another account can neither see nor complete it | SQL group M3 (live v3.1 instrument, the six evidence columns the app sends) |
+| Saved report, history, career summary readable in every state | RLS `cd own snapshots select`, `cd_my_report_history` (security_invoker); SQL M3.10-M3.11; e2e "the saved report stays readable" under `paused` |
+| Every CTA derives from one source | guard group 2 (a walk of every file in `src/`), render matrix (236 assertions) |
+| Opening and rollback with the exact calls | SQL group M4; readiness script run by M6 |
+
 ### Indexing
 
 | State | `/security-career-assessment` robots | In `sitemap.xml` |
@@ -176,6 +191,27 @@ The **rollback artifact** for the control
 (`supabase/rollback/20261222090000_cd_access_policy_rollback.sql`) refuses while
 the state is `public`: close first with `cd_set_access_state`, then roll back.
 Dropping the control is never the way to close the analysis.
+
+## Found in surrounding code, deliberately not changed
+
+* **Legacy v2.1 result link.** `src/hooks/useMyCareerDirection.ts` builds the
+  "view report" link for a person whose only result is a legacy v2.1 run as
+  `/security-career-assessment/report/<runId>`, a v3 report route that answers
+  "not found" for a run id (`home-presentation.ts` builds the right one,
+  `/my-career/reports/<runId>`). The career centre's "no roles named" state
+  inherits it. One line, unrelated to availability, so only reported.
+* **`getActiveCareerReport`** defaults `isInternalTest` to `true` when the
+  session row cannot be read. It only drives a history tag, but it is a
+  tester-shaped default; `false` would be the honest one under `public`.
+* **v3.0 session route.** `/security-career-assessment/session` (authenticated)
+  and `getDiscoveryAccess` / `startDiscoverySession` still gate on
+  `cd_is_internal_tester()` regardless of the release control. Nothing links to
+  it; it is the retired v3.0 internal-test flow and stays tester-only.
+* **`AssessmentInvite`** (jobs) is mounted nowhere. It is gated now so mounting
+  it cannot create a dead end.
+* **Database enforcement.** See "Deliberately not changed": the state is an
+  application gate, not a database one.
+* **`my-career-gate:check`** existed but was not wired into CI; it is now.
 
 ## What the readiness checks prove
 
