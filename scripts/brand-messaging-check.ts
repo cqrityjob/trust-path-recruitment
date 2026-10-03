@@ -54,7 +54,7 @@ for (const lang of LANGS) {
   ck(
     `B1 ${lang}: home.hero.slogan is the locked brand line`,
     dict(lang)["home.hero.slogan"] === HERO,
-    dict(lang)["home.hero.title"],
+    dict(lang)["home.hero.slogan"],
   );
 }
 const sections = read("src/components/site/HomeSections.tsx");
@@ -64,7 +64,7 @@ const heroFn = sections.slice(
 );
 const h1 = heroFn.match(/<h1[\s\S]*?<\/h1>/)?.[0] ?? "";
 ck("B1: HomeHero renders home.hero.title as its h1", /\{t\("home\.hero\.title"\)\}/.test(h1), h1);
-ck('B1: the hero h1 carries lang="en"', /<h1\s[^>]*lang="en"/.test(h1), h1);
+ck('B1: the hero slogan carries lang="en"', /lang="en"[\s\S]*?\{t\("home\.hero\.slogan"\)\}/.test(heroFn));
 ck(
   "B1: the hero h1 is never auto-hyphenated (overrides the shared DARK_H1)",
   /\[hyphens:none\]/.test(h1) && !/\[hyphens:auto\]/.test(h1),
@@ -119,7 +119,7 @@ for (const lang of LANGS) {
     .sort();
   ck(
     `B3 ${lang}: only the hero and the homepage title carry the hero sentence`,
-    JSON.stringify(holders) === JSON.stringify(["home.hero.title", "meta.home.title"]),
+    JSON.stringify(holders) === JSON.stringify(["home.hero.slogan", "meta.home.title"]),
     holders,
   );
 }
