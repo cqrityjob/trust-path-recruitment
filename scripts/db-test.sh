@@ -1758,7 +1758,7 @@ if [ "$SR_RC" -ne 0 ] || ! echo "$SR_OUT" | grep -q "ok  SR0.1 REPRODUCTION"; th
   echo "FAIL: the reviewed-content suite exited with code ${SR_RC}." >&2
   exit 1
 fi
-[ "$SR_PASSED" -ge 20 ] || { echo "$SR_OUT"; echo "FAIL: reviewed-content assertion shortfall: $SR_PASSED (floor 20)" >&2; exit 1; }
+[ "$SR_PASSED" -ge 25 ] || { echo "$SR_OUT"; echo "FAIL: reviewed-content assertion shortfall: $SR_PASSED (floor 25)" >&2; exit 1; }
 echo "    ok  $SR_PASSED reviewed-content assertions passed (stale approval reproduced pre-fix, refused post-fix)"
 psql_q -d "$TEST_DB" -f "$SR_RB" >/dev/null
 sr_nc_expect_fail "SR NC1 full rollback"

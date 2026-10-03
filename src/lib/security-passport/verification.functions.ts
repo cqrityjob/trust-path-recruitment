@@ -588,6 +588,10 @@ const decideInput = z.object({
   holderMessage: z.string().max(2000).nullable(),
   validFrom: z.string().refine(isCalendarDate, { message: "SP_INVALID_DATE" }).nullable(),
   validUntil: z.string().refine(isCalendarDate, { message: "SP_INVALID_DATE" }).nullable(),
+  /** The request's `submitted_at` exactly as the decider's page loaded it,
+   *  passed back verbatim. The database refuses the decision (SP_REVIEW_STALE)
+   *  when the candidate has changed the entry since (20270125090000). */
+  reviewedSubmittedAt: z.string().min(1).max(64),
 });
 
 /** The single decision entry point, shared by the CQrityjob verifier and the
@@ -630,8 +634,9 @@ export const decideVerification = createServerFn({ method: "POST" })
     ) {
       throw new Error(`${DECISION_ERROR_PREFIX}holder_message_required`);
     }
-    const { error } = await context.supabase.rpc("sp_verifier_decide", {
+    const { error } = await context.supabase.rpc("sp_verifier_decide_reviewed", {
       _request_id: data.requestId,
+      _reviewed_submitted_at: data.reviewedSubmittedAt,
       _decision: data.decision,
       _method: orNull(data.method),
       _decision_note: orNull(data.decisionNote),
@@ -643,7 +648,7 @@ export const decideVerification = createServerFn({ method: "POST" })
       // The raw refusal stays here, in the server log, where an operator can
       // read the constraint or function that fired. What crosses to the
       // browser is a code from a fixed list — never the database's own words.
-      console.error("[passport] sp_verifier_decide refused", {
+      console.error("[passport] sp_verifier_decide_reviewed refused", {
         requestId: data.requestId,
         decision: data.decision,
         code: error.code,

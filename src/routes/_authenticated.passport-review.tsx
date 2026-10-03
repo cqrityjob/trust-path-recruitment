@@ -149,6 +149,7 @@ const DECLINE_KEY: Record<DecisionErrorCode, PassportCopyKey> = {
   invalid_validity: "vq.decline.invalid_validity",
   issuer_required: "vq.decline.issuer_required",
   entry_not_active: "vq.decline.entry_not_active",
+  review_stale: "vq.decline.review_stale",
   unknown: "vq.decline.unknown",
 };
 
@@ -283,6 +284,13 @@ export function PassportReviewWorkspace() {
 
   async function submitDecision() {
     if (!selected) return;
+    // The decision names the version this page loaded. Without the loaded
+    // detail for THIS request there is no version to name, so there is
+    // nothing to decide on yet (20270125090000).
+    if (!detail || detail.id !== selected || !detail.submittedAt) {
+      setDecisionError(pt(DECLINE_KEY.review_stale));
+      return;
+    }
     // A refusal without a reason is not a decision the holder can act on.
     // Checked here for an immediate answer, in the server function, and in
     // `sp_verifier_decide` — which is the one that actually enforces it. A
@@ -315,6 +323,8 @@ export function PassportReviewWorkspace() {
           holderMessage: holderMessage.trim() || null,
           validFrom: validFrom || null,
           validUntil: validUntil || null,
+          // The version this page shows; a change since then is refused.
+          reviewedSubmittedAt: detail.submittedAt,
         },
       });
       setNotice(pt("vq.decided"));
@@ -329,7 +339,20 @@ export function PassportReviewWorkspace() {
       // decision note and a holder message, and throwing that away on a
       // transient failure would be worse than the failure.
       console.error("[passport] decision failed", err);
-      setDecisionError(pt(DECLINE_KEY[decisionErrorCodeFrom(err)]));
+      const code = decisionErrorCodeFrom(err);
+      setDecisionError(pt(DECLINE_KEY[code]));
+      // The candidate changed the entry after this page loaded it. Load what
+      // it says now, so the reviewer reads the new version before deciding
+      // again; the form keeps what the reviewer typed.
+      if (code === "review_stale") {
+        void loadDetail({ data: { requestId: selected } })
+          .then((d) => setDetail(d))
+          .catch((e: unknown) => {
+            console.error("[passport] verifier detail reload failed", e);
+            setDetail(null);
+            setDetailError(pt("vq.error.detail"));
+          });
+      }
     } finally {
       setBusy(false);
     }
