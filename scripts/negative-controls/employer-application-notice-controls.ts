@@ -52,9 +52,9 @@ const MUTATIONS: Mutation[] = [
     defect:
       "the mail asks to be sent under the organisation's name, though it is CQrityjob writing",
     file: SENDER,
-    find: '      kind: "employer_new_application",\n      to: params.recipientEmail,',
+    find: "      kind: EMPLOYER_NOTICE_EMAIL_KINDS[params.noticeKind],\n      to: params.recipientEmail,",
     replace:
-      '      kind: "employer_new_application",\n      senderName: params.employerName,\n      to: params.recipientEmail,',
+      "      kind: EMPLOYER_NOTICE_EMAIL_KINDS[params.noticeKind],\n      senderName: params.employerName,\n      to: params.recipientEmail,",
     guard: GUARD,
     expect: "FAILED",
   },
@@ -62,9 +62,9 @@ const MUTATIONS: Mutation[] = [
     id: "EN-NC-REPLY-TO",
     defect: "the mail asks for a Reply-To",
     file: SENDER,
-    find: '      kind: "employer_new_application",\n      to: params.recipientEmail,',
+    find: "      kind: EMPLOYER_NOTICE_EMAIL_KINDS[params.noticeKind],\n      to: params.recipientEmail,",
     replace:
-      '      kind: "employer_new_application",\n      replyTo: params.recipientEmail,\n      to: params.recipientEmail,',
+      "      kind: EMPLOYER_NOTICE_EMAIL_KINDS[params.noticeKind],\n      replyTo: params.recipientEmail,\n      to: params.recipientEmail,",
     guard: GUARD,
     expect: "FAILED",
   },
@@ -228,9 +228,9 @@ const MUTATIONS: Mutation[] = [
     defect:
       "a trigger on job_applications queues the notice, so mail can fail or slow the apply request",
     file: MIGRATION,
-    find: "-- 7. Postflight: the migration fails, and rolls back, unless this holds",
+    find: "-- 8. Postflight: the migration fails, and rolls back, unless this holds",
     replace:
-      "CREATE TRIGGER employer_notice_on_apply AFTER INSERT ON public.job_applications FOR EACH ROW EXECUTE FUNCTION public.rec_create_application_receipt();\n-- 7. Postflight: the migration fails, and rolls back, unless this holds",
+      "CREATE TRIGGER employer_notice_on_apply AFTER INSERT ON public.job_applications FOR EACH ROW EXECUTE FUNCTION public.rec_create_application_receipt();\n-- 8. Postflight: the migration fails, and rolls back, unless this holds",
     guard: GUARD,
     expect: "FAILED",
   },
