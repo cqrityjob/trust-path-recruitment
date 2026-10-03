@@ -37,6 +37,7 @@ import { BookOpen, Compass, GraduationCap, ShieldCheck } from "lucide-react";
 import { useT } from "@/i18n/context";
 import { formatDate } from "@/lib/job-intelligence/date-format";
 import { CANONICAL_ASSESSMENT_PATH } from "@/lib/career-discovery/routes";
+import { useCareerAnalysisOpen } from "@/components/career-discovery/use-career-analysis-open";
 import { AssessmentPanel } from "@/components/career-discovery/v31/shell/AssessmentShell";
 import { AssessmentLayout } from "@/components/assessment/AssessmentLayout";
 import { AcademyQueryState } from "@/components/academy/AcademyQueryState";
@@ -55,6 +56,10 @@ export const Route = createFileRoute("/_authenticated/academy/")({
 
 function AcademyHome() {
   const { t, lang } = useT();
+  // The Career Discovery pointer below is a door into the canonical route, so
+  // it reads the one availability hook the route reads. Authenticated route,
+  // so the reader is signed in.
+  const careerAnalysisOpen = useCareerAnalysisOpen(true);
   const qc = useQueryClient();
   const listWork = useServerFn(listAcademyWork);
   const claimFn = useServerFn(claimAssessmentInvitations);
@@ -227,13 +232,26 @@ function AcademyHome() {
           title={t("academy.home.careerDiscovery.title")}
           lede={t("academy.home.careerDiscovery.body")}
         />
-        <Link
-          to={CANONICAL_ASSESSMENT_PATH}
-          data-cta="academy-career-discovery"
-          className="inline-flex h-11 items-center rounded-md border border-border bg-card px-5 text-sm font-semibold text-foreground hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-        >
-          {t("academy.home.careerDiscovery.cta")}
-        </Link>
+        {/* The pointer asks the one availability hook the canonical route
+            asks. A definite "closed" withdraws the link and says so; "not
+            answered yet" keeps it, because the route then asks again and
+            shows its own honest state. */}
+        {careerAnalysisOpen === false ? (
+          <p
+            className="max-w-[62ch] text-sm leading-relaxed text-muted-foreground"
+            data-career-analysis-closed
+          >
+            {t("home.career.closed")}
+          </p>
+        ) : (
+          <Link
+            to={CANONICAL_ASSESSMENT_PATH}
+            data-cta="academy-career-discovery"
+            className="inline-flex h-11 items-center rounded-md border border-border bg-card px-5 text-sm font-semibold text-foreground hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          >
+            {t("academy.home.careerDiscovery.cta")}
+          </Link>
+        )}
       </section>
     </AssessmentLayout>
   );

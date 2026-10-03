@@ -2892,6 +2892,94 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# 5f. Career analysis AVAILABILITY matrix (docs/release/2026-10-03-career-
+# analysis-availability.md): the database half of state x actor, in all three
+# states of cd_access_policy, for an admin, a tester, a plain candidate and an
+# anonymous visitor, plus the claim path. It runs here, where the schema is
+# final, and its readiness script (supabase/readiness/) is executed by it.
+#
+# Planted controls, each of which MUST make the suite fail on the named
+# assertion (each runs inside a transaction the suite's own ROLLBACK ends, so
+# nothing is left behind):
+#   NC1  cd_v31_may_start answers true for everyone           -> M1.2
+#   NC2  the anonymous entrance never reads paused            -> M2.2
+#   NC3  the allowlist is ignored under internal_test         -> M1.2
+#   NC4  any signed-in account may change the state           -> M4.1
+# ---------------------------------------------------------------------------
+echo "==> Running Career Discovery availability matrix (state x actor)"
+set +e
+CDAV_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/cd_availability_matrix_test.sql 2>&1)"
+CDAV_RC=$?
+set -e
+echo "$CDAV_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+CDAV_PASSED="$(echo "$CDAV_OUT" | grep -c "NOTICE:  ok  " || true)"
+if [ "$CDAV_RC" -ne 0 ]; then
+  echo ""; echo "FAIL: the Career Discovery availability matrix exited with code ${CDAV_RC}." >&2
+  echo "$CDAV_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "Career Discovery availability matrix"
+elif [ "$CDAV_PASSED" -lt 36 ]; then
+  echo "FAIL: Career Discovery availability matrix assertion shortfall: ${CDAV_PASSED} (floor 36)" >&2
+  suite_failed "Career Discovery availability matrix (assertion shortfall: floor 36)"
+else
+  echo "    ok  ${CDAV_PASSED} Career Discovery availability assertions passed (three states x admin, tester, plain candidate, anonymous; claim; opening and rollback)"
+  cdav_nc_expect_fail() {
+    local label="$1" expect="$2" mutation="$3"
+    set +e
+    local out
+    out="$(printf 'BEGIN;\n%s\n\\i supabase/tests/cd_availability_matrix_test.sql\n' "$mutation" \
+      | psql -v ON_ERROR_STOP=1 -d "$TEST_DB" 2>&1)"
+    local rc=$?
+    set -e
+    if [ "$rc" -eq 0 ] || ! echo "$out" | grep -q "ASSERTION FAILED: ${expect}"; then
+      echo "FAIL: availability matrix negative control '${label}': the suite did not fail on ${expect} -- it proves nothing" >&2
+      echo "$out" | grep -E "ERROR|FAILED" | head -3 >&2 || true
+      exit 1
+    fi
+    echo "    ok  NC ${label}: the suite fails ($(echo "$out" | grep -o "ASSERTION FAILED: M[0-9A-Za-z.]*" | head -1))"
+  }
+  cdav_nc_expect_fail "NC1 cd_v31_may_start admits everyone" "M1.2" "$(cat <<'SQL'
+CREATE OR REPLACE FUNCTION public.cd_v31_may_start(_user_id uuid)
+RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+  SELECT _user_id IS NOT NULL;
+$$;
+SQL
+)"
+  cdav_nc_expect_fail "NC2 the anonymous entrance never closes" "M2.2" "$(cat <<'SQL'
+CREATE OR REPLACE FUNCTION public.cd_access_state()
+RETURNS text LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+  SELECT CASE WHEN current_setting('role', true) = 'anon' AND p.state = 'paused' THEN 'internal_test' ELSE p.state END
+    FROM public.cd_access_policy p WHERE p.singleton;
+$$;
+SQL
+)"
+  cdav_nc_expect_fail "NC3 the allowlist is ignored under internal_test" "M1.2" "$(cat <<'SQL'
+CREATE OR REPLACE FUNCTION public.cd_v31_may_start(_user_id uuid)
+RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+  SELECT _user_id IS NOT NULL AND CASE public.cd_access_state()
+    WHEN 'public'        THEN true
+    WHEN 'internal_test' THEN public.is_platform_admin(_user_id)
+    ELSE                      public.is_platform_admin(_user_id)
+  END;
+$$;
+SQL
+)"
+  cdav_nc_expect_fail "NC4 any signed-in account may change the state" "M4.1" "$(cat <<'SQL'
+CREATE OR REPLACE FUNCTION public.cd_set_access_state(_state text, _note text DEFAULT NULL)
+RETURNS text LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+  UPDATE public.cd_access_policy SET state = _state, note = _note, changed_by = auth.uid(), changed_at = now() WHERE singleton;
+  RETURN _state;
+END $$;
+SQL
+)"
+  # The mutations ran inside transactions the suite's ROLLBACK ended; prove the
+  # real functions are the ones still in place.
+  cdav_back="$(psql_q -d "$TEST_DB" -Atc "SELECT pg_get_functiondef('public.cd_v31_may_start(uuid)'::regprocedure) LIKE '%cd_is_internal_tester%'")"
+  [ "$cdav_back" = "t" ] || { echo "FAIL: a planted control leaked: cd_v31_may_start no longer consults the allowlist function" >&2; exit 1; }
+  echo "    ok  every planted control was rolled back (the real functions are intact)"
+fi
+
+# ---------------------------------------------------------------------------
 # 5b. The v3.1 personal layer — the frozen 26-question MVP
 #
 # Proves 2 context + 20 Career DNA + 4 Discovery Path are all administrable
@@ -11194,6 +11282,7 @@ echo "              ${CD_PASSED} Career Discovery assertions,"
 echo "              ${CD31_PASSED} Career Discovery v3.1 assertions,"
 echo "              ${CDC_PASSED} v3.1 completion + stability assertions,"
 echo "              ${PUB_PASSED} public v3.1 flow assertions,"
+echo "              ${CDAV_PASSED} Career Discovery availability matrix assertions (4 planted controls),"
 echo "              ${PL_PASSED} v3.1 personal layer assertions,"
 echo "              ${GRAPH_PASSED} Competency Graph assertions,"
 echo "              ${ACAD_PASSED} Academy assertions,"

@@ -60,6 +60,17 @@
 // path asks only the second. See the boot effect below, and resolveSaveGate
 // in v31-public.functions.ts for the server side, which is where it is
 // actually enforced.
+//
+// ── ONE RULE FOR "IS IT OPEN", AND THREE TRUE ANSWERS WHEN IT IS NOT ───
+//
+// This route does not decide "open or closed" itself. It feeds the two server
+// answers to resolveAnalysisAccess (src/lib/career-discovery/analysis-access.ts)
+// — the same function the hook behind every other surface reads — and says
+// the REASON it returns: paused for everyone, not open to this account (the
+// test group), or the instrument unavailable (ClosedAnalysisPanel). It also
+// says where a finished run is still held, and offers no retry that cannot
+// succeed: a run refused at the result or at the save because the control
+// moved mid-run is told as that, not as "something went wrong, try again".
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
@@ -78,6 +89,10 @@ import {
   SelectableAnswer,
 } from "@/components/career-discovery/v31/shell/QuestionCard";
 import { CareerContextStep } from "@/components/career-discovery/v31/CareerContextStep";
+import {
+  ClosedAnalysisPanel,
+  type ClosedKeep,
+} from "@/components/career-discovery/v31/ClosedAnalysisPanel";
 import { ProfileConnectionGate } from "@/components/career-journey/ProfileConnectionGate";
 import {
   getMySecurityCareerProfile,
@@ -98,6 +113,12 @@ import {
 } from "@/lib/career-discovery/v31/career-card-export";
 import { DISCOVER_URL_PATH } from "@/lib/career-discovery/v31/career-card";
 import { CANONICAL_ASSESSMENT_PATH } from "@/lib/career-discovery/routes";
+import {
+  mayStartFrom,
+  resolveAnalysisAccess,
+  type AnalysisAccess,
+  type AnalysisClosedReason,
+} from "@/lib/career-discovery/analysis-access";
 import {
   clearCareerContext,
   EMPTY_CAREER_CONTEXT,
@@ -121,6 +142,7 @@ import {
   clearBuffer,
   clearPendingClaim,
   contextStatusOf,
+  inspectPendingClaim,
   isComplete,
   markComplete,
   readBuffer,
@@ -216,6 +238,18 @@ function permute<T>(items: readonly T[], seed: string): T[] {
   return out;
 }
 
+/** Where a finished run is still held, when the analysis is closed to its
+ *  owner. A staged claim (localStorage, seven days) wins over a tab buffer: it
+ *  is the one that survives the account hop and the confirmation e-mail. The
+ *  answer is a statement about THIS browser only and reads no identity. */
+function closedKeepFor(claimToken: string | null): ClosedKeep {
+  const staged = inspectPendingClaim(claimToken);
+  if (staged.status === "ok") return { kind: "claim", expiresAt: staged.claim.expiresAt };
+  const buffer = readBuffer();
+  if (buffer && isComplete(buffer)) return { kind: "tab" };
+  return null;
+}
+
 export function PublicAssessmentFlow() {
   const { t, lang } = useT();
   const navigate = useNavigate();
@@ -258,6 +292,17 @@ export function PublicAssessmentFlow() {
    *  token decides which session id the save writes to. */
   const [claimToken, setClaimToken] = useState<string | null>(null);
   const [claimNotice, setClaimNotice] = useState<ClaimNotice | null>(null);
+  /** WHY the analysis is closed to this reader, for the "unavailable" phase.
+   *  Resolved through resolveAnalysisAccess — the one rule every surface
+   *  shares — never decided here. */
+  const [closedReason, setClosedReason] = useState<AnalysisClosedReason>("unavailable");
+  /** Where a finished run is still held while it is closed, so the person is
+   *  told whether their answers are safe. See closedKeepFor. */
+  const [closedKeep, setClosedKeep] = useState<ClosedKeep>(null);
+  /** Whether "take it again" may be offered on a claim notice. Only where the
+   *  door is actually open for this reader: a button into a refusal is the
+   *  dead end this route exists to avoid. */
+  const [startOverOffered, setStartOverOffered] = useState(true);
   /** In-flight guard for persistence. See onSaveAndSignIn. */
   const persistingRef = useRef(false);
   /** Transient feedback for the share button — see onShareResult. Cleared on
@@ -284,7 +329,29 @@ export function PublicAssessmentFlow() {
         if (!alive) return;
         const isSignedIn = Boolean(session.data.session);
         setSignedIn(isSignedIn);
-        if (!availability.available) {
+        const urlToken = new URLSearchParams(window.location.search).get("claim");
+
+        // ── CLOSED FOR EVERYONE: THE RELEASE CONTROL, OR THE INSTRUMENT ─
+        //
+        // Decided by the ONE resolver every surface shares
+        // (analysis-access.ts), with no tester answer yet: only `paused` and
+        // an unavailable instrument can close the door before the signed-in
+        // question is asked, and both close it for a claim as well.
+        //
+        // That is the truth, not a gap: resolveSaveGate refuses every non-admin
+        // under `paused`, claim included, so replaying a staged result here
+        // could only end in a refusal. What is NOT acceptable is saying
+        // nothing about the result. A finished run staged by this browser is
+        // untouched (it is cleared only after a confirmed write) and the panel
+        // says where it is held and until when.
+        const preAccess = resolveAnalysisAccess({
+          availability,
+          signedIn: isSignedIn,
+          mayStart: null,
+        });
+        if (preAccess.door === "closed") {
+          setClosedReason(preAccess.reason);
+          setClosedKeep(closedKeepFor(urlToken));
           setPhase("unavailable");
           return;
         }
@@ -303,7 +370,6 @@ export function PublicAssessmentFlow() {
         // in are two different questions. Only the second one is asked of a
         // claim link. See resolveSaveGate in v31-public.functions.ts for the
         // server side of the same separation, which is where it is enforced.
-        const urlToken = new URLSearchParams(window.location.search).get("claim");
         const entry = resolveClaimEntry(urlToken);
 
         // Already saved by this browser. Back button, refresh, or a
@@ -358,6 +424,26 @@ export function PublicAssessmentFlow() {
                   ? "stale"
                   : "notFound",
           );
+          // "Take it again" only where the door is open for this reader. A
+          // signed-in account outside the test group would be walked through
+          // to a refusal; the anonymous entrance and an admitted account are
+          // not. An unanswered read keeps the button: the route asks again.
+          let canStartOver = true;
+          if (isSignedIn) {
+            try {
+              const status = await checkTesterStatus({});
+              canStartOver =
+                resolveAnalysisAccess({
+                  availability,
+                  signedIn: true,
+                  mayStart: mayStartFrom(status),
+                }).door !== "closed";
+            } catch {
+              canStartOver = true;
+            }
+          }
+          if (!alive) return;
+          setStartOverOffered(canStartOver);
           setPhase("claim-notice");
           return;
         }
@@ -372,7 +458,19 @@ export function PublicAssessmentFlow() {
         if (isSignedIn) {
           const status = await checkTesterStatus({});
           if (!alive) return;
-          if (!status.allowed) {
+          const access = resolveAnalysisAccess({
+            availability,
+            signedIn: true,
+            mayStart: mayStartFrom(status),
+          });
+          // A read that did not answer is neither "open" nor "closed": it
+          // takes the same honest, retryable "could not check" screen as any
+          // other failed read, instead of telling the person their account
+          // may not start on the strength of a database hiccup.
+          if (access.door === "unknown") throw new Error("the signed-in gate did not answer");
+          if (access.door === "closed") {
+            setClosedReason(access.reason);
+            setClosedKeep(closedKeepFor(null));
             setPhase("unavailable");
             return;
           }
@@ -657,8 +755,44 @@ export function PublicAssessmentFlow() {
         setPhase("claim-notice");
         return;
       }
+      // The same, for a CLOSED door: the release control moved between the
+      // moment this run began and the moment it was saved (paused, or a
+      // signed-in account outside the test group). A retry cannot succeed, so
+      // none is offered; the person is told why, and that their answers are
+      // still held. See showClosedAfterRefusal.
+      if (v31PublicErrorCode(err) === "not_available") {
+        const access = await readAccessNow();
+        // The door is open again (the control moved back, or the refusal was
+        // a blip): the run is not stuck, and the ordinary retry is the honest
+        // answer.
+        if (access.door === "open") setPhase("failed");
+        else enterClosed(access);
+        return;
+      }
       setPhase("failed");
     }
+  }
+
+  /** The server refused work this reader had already begun — the saved report
+   *  or the canonical result — with `not_available`. Ask the ONE resolver why,
+   *  so the sentence is true. A read that cannot be made is "unknown", which
+   *  `enterClosed` says in the generic closed words. */
+  async function readAccessNow(): Promise<AnalysisAccess> {
+    try {
+      const availability = await checkAvailability({});
+      const mayStart = signedIn ? mayStartFrom(await checkTesterStatus({})) : null;
+      return resolveAnalysisAccess({ availability, signedIn, mayStart });
+    } catch {
+      return { door: "unknown" };
+    }
+  }
+
+  /** Show the closed state for a run already in hand, with where its answers
+   *  are held. No retry is offered: it cannot succeed until the door opens. */
+  function enterClosed(access: AnalysisAccess) {
+    setClosedReason(access.door === "closed" ? access.reason : "unavailable");
+    setClosedKeep(closedKeepFor(claimToken));
+    setPhase("unavailable");
   }
 
   /** The secondary route for somebody who already has an account.
@@ -770,8 +904,36 @@ export function PublicAssessmentFlow() {
     staleTime: Infinity,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
-    retry: 1,
+    // One retry for a transient fault. NOT for `not_available`: that is the
+    // release control saying the analysis is closed, and the same call a
+    // second later says the same thing.
+    retry: (failureCount, error) =>
+      v31PublicErrorCode(error) !== "not_available" && failureCount < 1,
   });
+
+  // ── THE RESULT BUILD WAS REFUSED BECAUSE THE ANALYSIS CLOSED ─────────
+  //
+  // `previewPublicV31Run` re-reads the release control on every call, so a
+  // visitor who is mid-run when it is paused is turned away at the result.
+  // That used to read as "we could not fetch your result, try again" — a retry
+  // that fails in exactly the same way, for a reason nobody named. Now the
+  // refusal is told as what it is, with where the answers are held. If the
+  // reads say the door is open again, nothing changes here and the ordinary
+  // retry beside the result stays the way on.
+  const previewRefusedAt =
+    v31PublicErrorCode(previewQuery.error) === "not_available" ? previewQuery.errorUpdatedAt : 0;
+  useEffect(() => {
+    if (phase !== "result" || previewRefusedAt === 0) return;
+    let alive = true;
+    void readAccessNow().then((access) => {
+      if (alive && access.door !== "open") enterClosed(access);
+    });
+    return () => {
+      alive = false;
+    };
+    // readAccessNow / enterClosed close over state the effect does not own.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, previewRefusedAt]);
 
   const canonicalSnapshot: ReportSnapshot | null = previewQuery.data?.snapshot ?? null;
 
@@ -849,28 +1011,13 @@ export function PublicAssessmentFlow() {
     );
   }
 
+  // The analysis is closed to this reader. Three different true sentences
+  // (paused for everyone / not open to this account / instrument unavailable),
+  // where a finished run is held, and what they CAN do — never a retry.
   if (phase === "unavailable") {
     return (
       <CareerDiscoveryShell>
-        <AssessmentPanel role="status">
-          <h1
-            className="flex items-center gap-2.5 text-lg font-semibold tracking-tight text-foreground"
-            style={{ fontFamily: "var(--font-display)" }}
-          >
-            <AlertTriangle className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden="true" />
-            {t("cd.public.unavailableTitle")}
-          </h1>
-          <p className="mt-3 max-w-[56ch] text-sm leading-relaxed text-muted-foreground">
-            {t("cd.public.unavailableBody")}
-          </p>
-          <Link
-            to="/career-center"
-            className="mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-accent underline-offset-4 hover:underline"
-          >
-            {t("cd.public.exploreInstead")}
-            <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-          </Link>
-        </AssessmentPanel>
+        <ClosedAnalysisPanel reason={closedReason} signedIn={signedIn} keep={closedKeep} />
       </CareerDiscoveryShell>
     );
   }
@@ -1179,8 +1326,13 @@ export function PublicAssessmentFlow() {
                 would walk a signed-in candidate outside the test group
                 through twenty-eight questions to a refusal at the end. Going
                 back to the route without the token re-asks everything, in
-                order, and lands them wherever they actually belong. */}
-            {notice !== "alreadyClaimed" && (
+                order, and lands them wherever they actually belong.
+
+                And only where that door is OPEN for this reader
+                (startOverOffered, from the one resolver): an account the test
+                group does not include would be offered a button into a
+                refusal, which is the dead end this route exists to avoid. */}
+            {notice !== "alreadyClaimed" && startOverOffered && (
               <button
                 type="button"
                 onClick={() => {

@@ -17,6 +17,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { AssessmentLayout } from "@/components/assessment/AssessmentLayout";
 import { EngineResultView } from "@/components/assessment/result/engine-view";
 import { PrimaryButton } from "@/components/site/PrimaryButton";
+import { useCareerAnalysisOpen } from "@/components/career-discovery/use-career-analysis-open";
 import { useT } from "@/i18n/context";
 import { getMySavedReport } from "@/lib/career-intelligence-engine/report.functions";
 
@@ -35,6 +36,10 @@ function SavedReportPage() {
   const { runId } = Route.useParams();
   const { t, lang } = useT();
   const navigate = useNavigate();
+  // Both retake controls below are doors into the canonical route, so they
+  // ask the one availability hook the route asks and are withdrawn on a
+  // definite "closed". Authenticated route, so the reader is signed in.
+  const analysisOpen = useCareerAnalysisOpen(true);
   const fetchReport = useServerFn(getMySavedReport);
 
   const query = useQuery({
@@ -68,9 +73,11 @@ function SavedReportPage() {
       <AssessmentLayout narrow chrome={false}>
         <p className="text-sm text-foreground">{t("sca.report.legacyEmpty")}</p>
         <div className="mt-6 flex flex-wrap gap-3">
-          <PrimaryButton onClick={() => navigate({ to: "/security-career-assessment" })}>
-            {t("sca.report.retake")}
-          </PrimaryButton>
+          {analysisOpen !== false && (
+            <PrimaryButton onClick={() => navigate({ to: "/security-career-assessment" })}>
+              {t("sca.report.retake")}
+            </PrimaryButton>
+          )}
           <Link
             to="/my-career"
             className="inline-flex h-11 items-center justify-center rounded-md border border-border bg-transparent px-5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
@@ -122,7 +129,9 @@ function SavedReportPage() {
       <EngineResultView
         result={report.engineResult}
         lang={lang}
-        onRetake={() => navigate({ to: "/security-career-assessment" })}
+        onRetake={
+          analysisOpen === false ? undefined : () => navigate({ to: "/security-career-assessment" })
+        }
         mode="saved"
         compareEnrichment={report.compareEnrichment}
       />

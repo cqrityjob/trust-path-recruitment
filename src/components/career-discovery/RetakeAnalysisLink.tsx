@@ -10,39 +10,26 @@
 // result, so it lives where the result is, as a quiet third link under the
 // two that matter.
 //
-// ── AND IT ASKS THE SAME TWO QUESTIONS THE DOOR ASKS ───────────────────
+// ── AND IT ASKS THE SAME QUESTION THE DOOR ASKS ────────────────────────
 //
 // The assessment is gated (v31-public.functions.ts), and offering a link
 // the product will refuse is worse than offering none. So this renders
-// nothing at all unless availability AND the tester gate both say yes —
-// `undefined` while the queries are in flight renders nothing either, which
-// is the honest state of "we have not asked yet".
+// nothing at all unless the one availability hook says the analysis is open
+// to this reader — `undefined` while the query is in flight renders nothing
+// either, which is the honest state of "we have not asked yet". It used to
+// carry a private copy of that query; it reads the shared hook now, so a
+// state change reaches it exactly when it reaches every other surface.
 
 import { Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
 import { useT } from "@/i18n/context";
-import {
-  getV31Availability,
-  getV31TesterStatus,
-} from "@/lib/career-discovery/v31-public.functions";
+import { useCareerAnalysisOpen } from "@/components/career-discovery/use-career-analysis-open";
 
 export function RetakeAnalysisLink({ className }: { className?: string }) {
   const { t } = useT();
-  const checkAvailability = useServerFn(getV31Availability);
-  const checkTesterStatus = useServerFn(getV31TesterStatus);
-  const openQ = useQuery({
-    queryKey: ["my-career", "assessment-open"],
-    queryFn: async () => {
-      const availability = await checkAvailability({});
-      if (!availability.available) return false;
-      const status = await checkTesterStatus({});
-      return status.allowed;
-    },
-    staleTime: 60_000,
-  });
+  // Rendered only on an owner-scoped, signed-in page.
+  const open = useCareerAnalysisOpen(true);
 
-  if (openQ.data !== true) return null;
+  if (open !== true) return null;
 
   return (
     <Link

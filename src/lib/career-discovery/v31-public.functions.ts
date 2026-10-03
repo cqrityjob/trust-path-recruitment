@@ -94,6 +94,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabase as publicClient } from "@/integrations/supabase/client";
 
+import { readV31AccessState, type V31AccessState } from "./analysis-access";
 import { deriveClaimSessionId } from "./v31-claim-id";
 import { CORE_ITEM_BY_ID, CORE_ITEMS } from "./v31/core-items";
 import {
@@ -348,16 +349,14 @@ export function v31PublicErrorCode(err: unknown): V31PublicErrorCode | null {
   return null;
 }
 
-/** The release control (20261222090000_cd_access_policy): who may start and
- *  save a run right now. Technical availability only -- separate from the
- *  definition's lifecycle and review gates, which stay governance. */
-export type V31AccessState = "internal_test" | "public" | "paused";
-
-export function readV31AccessState(value: unknown): V31AccessState {
-  // Fails closed: an unknown or missing answer reads as paused, which is what
-  // the database function itself returns for a missing policy row.
-  return value === "internal_test" || value === "public" ? value : "paused";
-}
+// The release control (20261222090000_cd_access_policy): who may start and
+// save a run right now. Technical availability only -- separate from the
+// definition's lifecycle and review gates, which stay governance. The type and
+// its fail-closed reader live in ./analysis-access, beside the one resolver
+// that turns this answer into a decision for every surface; they are
+// re-exported here so no caller's import changes.
+export { readV31AccessState } from "./analysis-access";
+export type { V31AccessState } from "./analysis-access";
 
 export interface V31Availability {
   /** True only when a real candidate could actually complete and save a run. */
@@ -429,19 +428,34 @@ export const getV31Availability = createServerFn({ method: "GET" }).handler(
  */
 export const getV31TesterStatus = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }): Promise<{ readonly allowed: boolean }> => {
-    const ctx = context as Ctx;
-    // One database decision, cd_v31_may_start (20261222090000): under
-    // `public` every signed-in user; under `internal_test` the allowlist
-    // (cd_is_internal_tester, which includes platform admins); under `paused`
-    // platform admins only. The allowlist is still read -- by that function.
-    const { data, error } = await ctx.supabase.rpc("cd_v31_may_start", { _user_id: ctx.userId });
-    if (error) {
-      console.error("[career-discovery] cd_v31_may_start failed", error);
-      return { allowed: false };
-    }
-    return { allowed: Boolean(data) };
-  });
+  .handler(
+    async ({
+      context,
+    }): Promise<{
+      readonly allowed: boolean;
+      /** False when the database did not answer. `allowed: false` then means
+       *  "unknown", not "refused": the reader treats it as a failed read
+       *  (mayStartFrom -> null -> resolveAnalysisAccess "unknown"), so a
+       *  database hiccup under `public` never tells a signed-in person that
+       *  their account may not start. The save itself is gated again, on the
+       *  server, by resolveSaveGate. */
+      readonly answered: boolean;
+    }> => {
+      const ctx = context as Ctx;
+      // One database decision, cd_v31_may_start (20261222090000): under
+      // `public` every signed-in user; under `internal_test` the allowlist
+      // (cd_is_internal_tester, which includes platform admins); under `paused`
+      // platform admins only. The allowlist is still read -- by that function.
+      const { data, error } = await ctx.supabase.rpc("cd_v31_may_start", {
+        _user_id: ctx.userId,
+      });
+      if (error) {
+        console.error("[career-discovery] cd_v31_may_start failed", error);
+        return { allowed: false, answered: false };
+      }
+      return { allowed: Boolean(data), answered: true };
+    },
+  );
 
 /**
  * MAY THIS SAVE HAPPEN — the one place the two gates are told apart.
