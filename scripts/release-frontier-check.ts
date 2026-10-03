@@ -380,8 +380,16 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // the interview-case policy names scp_iv_can_read_case. No production write
 // probe was run.
 // Evidence: docs/release/2026-10-03-report-access-hosted-verification.md.
-// Nothing is pending.
-const expectedPending: string[] = [];
+// Pending by design (written, replayed on the full chain, recorded `pending` in
+// release-state.json, none applied hosted): the employer e-mail on a new
+// application (docs/release/2026-10-03-employer-new-application-notification.md:
+// the outbox, the recipient rules, claim and settle; apply it BEFORE the
+// transactional-email function is redeployed and before the application is
+// published; docs/release/2026-10-03-release-order.md, step 4). Its name comes
+// OFF this list in the change that records its production evidence.
+const expectedPending: string[] = [
+  "20270205090000_employer_new_application_notices.sql",
+];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
   "20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql",

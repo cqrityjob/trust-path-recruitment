@@ -2905,6 +2905,43 @@
       "rollback": "supabase/rollback/20270204090000_interview_case_access_model_rollback.sql",
       "verify": "SELECT p.oid::regprocedure::text, md5(p.prosrc) FROM pg_proc p WHERE p.pronamespace='public'::regnamespace AND p.proname IN ('scp_iv_can_read_case','scp_iv_can_write_case','scp_iv_case_row_visible') ORDER BY 1; -- scp_iv_can_read_case(uuid) 2571ec0fbacf29e84e4b4a320321c711; scp_iv_can_write_case(uuid) f309ce0cf2a8407f32dd200a745e5182; scp_iv_case_row_visible(uuid, uuid) edb41c614a1908cff5ed7df27e6bf6eb. COMPARE THE HOSTED md5s BEFORE APPLYING: the bodies this builds on are scp_iv_can_read_case e60a8e8a9741d6241cdd98005fbd4094, scp_iv_can_write_case 1249ebde36e1743a717050ab48573a61, scp_iv_case_row_visible b6f6f202675bddc95a6e2e83cba67bf6 (20270111090000). SELECT qual FROM pg_policies WHERE schemaname='public' AND policyname='scp_iv_corrections_employer'; -- scp_iv_can_read_case(case_id). Requires 20270203090000 (employer_reports_readable). Behaviour: interview_case_access_model_test IC1-IC6 (a plain member who is not the creator, on the panel or authorised reads and writes nothing; the candidate who is a member reads nothing; a vetting-restricted case, its corrections included, stays closed without bcp access; IC0.6 records that the pre-fix corrections policy was already hidden by the case row policy).",
       "note": "docs/release/2026-10-03-report-access-security-finding.md (the interview half and finding a) and docs/release/2026-10-03-employer-report-access-design.md section 3.3. scp_iv_can_read_case, scp_iv_case_row_visible and every child-table policy admitted any active member, and scp_iv_can_write_case admitted owner, admin AND member. The three gates now ask employer_reports_readable with the case as context: owner/admin, the case's creator, a member of its panel, a recruitment reviewer, or the responsible recruiter of its vacancy; the candidate or applicant who is a member is excluded; writes keep their own conditions and follow the same predicate. bcp_case_access_ok stays in both gates (the vetting restriction only narrows) and scp_iv_corrections_employer now reads through scp_iv_can_read_case, so the vetting restriction no longer depends on RLS inside its sub-select (finding a, defence in depth: MEASURED, the pre-fix policy was already hidden by the case row policy, suite IC0.6). The BESKT conduct functions and two bcp_* member-read policies inherit the narrower gates; no bcp_* object is edited. No object introduced, no row touched. The application works unchanged before this is applied. Rollback restores the three bodies (md5 pinned) and the policy."
+    },
+    {
+      "file": "20270205090000_employer_new_application_notices.sql",
+      "hostedState": "pending",
+      "introduces": [
+        {
+          "kind": "table",
+          "object": "recruitment_employer_notices"
+        },
+        {
+          "kind": "function",
+          "object": "rec_employer_notice_recipients"
+        },
+        {
+          "kind": "function",
+          "object": "rec_enqueue_employer_new_application_notices"
+        },
+        {
+          "kind": "function",
+          "object": "rec_claim_employer_notices"
+        },
+        {
+          "kind": "function",
+          "object": "rec_settle_employer_notice"
+        },
+        {
+          "kind": "function",
+          "object": "rec_employer_notice_backoff"
+        },
+        {
+          "kind": "function",
+          "object": "rec_purge_employer_notices"
+        }
+      ],
+      "rollback": "supabase/rollback/20270205090000_employer_new_application_notices_rollback.sql",
+      "verify": "SELECT c.relrowsecurity, c.relforcerowsecurity FROM pg_class c WHERE c.oid = 'public.recruitment_employer_notices'::regclass; -- true, true. SELECT count(*) FROM pg_policy WHERE polrelid = 'public.recruitment_employer_notices'::regclass; -- 0. SELECT has_table_privilege('anon','public.recruitment_employer_notices','SELECT,INSERT,UPDATE,DELETE'), has_table_privilege('authenticated','public.recruitment_employer_notices','SELECT,INSERT,UPDATE,DELETE'), has_table_privilege('service_role','public.recruitment_employer_notices','INSERT,UPDATE,DELETE'); -- false, false, false. SELECT p.proname, md5(p.prosrc), has_function_privilege('anon', p.oid, 'EXECUTE'), has_function_privilege('authenticated', p.oid, 'EXECUTE'), has_function_privilege('service_role', p.oid, 'EXECUTE') FROM pg_proc p WHERE p.pronamespace = 'public'::regnamespace AND p.proname IN ('rec_employer_notice_recipients','rec_enqueue_employer_new_application_notices','rec_claim_employer_notices','rec_settle_employer_notice','rec_employer_notice_backoff','rec_purge_employer_notices') ORDER BY 1; -- rec_claim_employer_notices 0fa89f23d04d5ba24e9af6742fc62eac; rec_employer_notice_backoff 592882928f58355fb8bb465bd8035a70; rec_employer_notice_recipients 17528f0b956dedb7459e0a8099607a74; rec_enqueue_employer_new_application_notices 72f34824a4ac10db4b7e5e3c50494c59; rec_purge_employer_notices 537e33913d1539c276c75d6a444eb687; rec_settle_employer_notice 7a3d025492ad3273f60a9f8ebc532136; anon and authenticated false on all six; service_role true on all but rec_employer_notice_backoff. SELECT count(*) FROM public.recruitment_employer_notices; -- 0 before the application change is published (nothing queues until then). Behaviour: employer_new_application_notices_test (EN1-EN9, 108 assertions), the seventeen planted controls and the four two-session races in scripts/db-test.sh.",
+      "note": "Employer e-mail on a NEW application (owner requirement, alternative A). Adds the outbox recruitment_employer_notices (one row per application, recipient and kind; RLS enabled and forced, no policy, no grant to anon/authenticated, service_role may only SELECT; holds the recipient's user id, never an address) and six functions, all SECURITY DEFINER with an explicit REVOKE from PUBLIC/anon/authenticated and a GRANT to service_role only (the backoff helper has no grant at all): rec_employer_notice_recipients (the responsible recruiter when an active member of an active organisation, else all active owners and admins, at most 10; the address from auth.users, confirmed and not disabled), rec_enqueue_employer_new_application_notices (set-once per application and kind, only for a 'submitted' application under an hour old), rec_claim_employer_notices (atomic: FOR UPDATE SKIP LOCKED plus a 3-minute lease; re-checks eligibility; attempt cap 6, backoff 5 min to 4 h, nothing after 23 hours), rec_settle_employer_notice (only a claimed row, only for the attempt it names), rec_purge_employer_notices (retention: deletes SETTLED rows -- sent, skipped, failed past their retries -- whose settled_at is older than 90 days, never under one day, at most 1000 per call, never a pending, claimed or retryable row). Kind-aware: kind is part of the unique key and of an allow-list CHECK (today 'new_application'); no function but the enqueue names a kind, so a later migration widens the CHECK and nothing here is rewritten. No trigger, nothing sends by itself: the application calls enqueue after the application committed and drives claim/settle; the receipts sweep also applies the retention. EXPAND/CONTRACT: the migration is safe before the application change (nothing calls it), and the application change is safe before the migration (a missing function or table is a logged no-op in the apply path and in the sweep). Apply this migration FIRST, then redeploy the transactional-email edge function (kind employer_new_application), then publish the application."
     }
   ], 
   "policyVersion": 2, 
