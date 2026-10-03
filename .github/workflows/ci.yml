@@ -1371,6 +1371,14 @@ jobs:
       - name: E-mail transport diagnosis
         run: bun run email-transport-diagnosis:check
 
+      # Employer-written ad text cannot close the page's JSON-LD script element
+      # (stored XSS on every public ad URL): hostile title, description, location
+      # and employer fields leave as \u escapes and parse back unchanged, and no
+      # ld+json head script is built from a bare JSON.stringify. Its planted
+      # controls run in negative-controls:all.
+      - name: Job ad JSON-LD escaping
+        run: bun run job-jsonld-escaping:check
+
       # The Passport card's ONE ground (owner addendum, pilot finish): the CSS
       # mirror matches PASSPORT_CARD_SURFACE, no stripes, grid or engraving sits
       # behind any card, and the homepage panel draws the real shield system

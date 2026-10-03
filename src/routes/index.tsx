@@ -16,6 +16,7 @@ import { employerPortalEnabled } from "@/lib/job-intelligence/feature-flag";
 import { useLocalizedHead } from "@/i18n/context";
 import { dictionaries } from "@/i18n/dictionaries";
 import { PRODUCTION_ORIGIN, siteUrl } from "@/lib/site-origin";
+import { jsonLdScript } from "@/lib/job-intelligence/seo";
 
 /** ── THE PUBLIC HOMEPAGE (locked decisions, 2026-09-30) ────────────────
  *
@@ -86,7 +87,7 @@ export const Route = createFileRoute("/")({
     scripts: [
       {
         type: "application/ld+json",
-        children: JSON.stringify({
+        children: jsonLdScript({
           "@context": "https://schema.org",
           "@type": "Organization",
           name: "CQrityjob",
