@@ -78,6 +78,8 @@ row cannot be told apart from it).
 | a | `scp_iv_corrections_employer` uses the membership predicate only and omits `bcp_case_access_ok`, so a candidate's corrections on a security-vetting case that is hidden from the viewer are readable by any member. No test covers it. | `20270111090000…` ~1135-1138 | P2 |
 | b | A subject who is also an active member (internal applicant, assessed employee) reads their own employer-audience report and findings, and colleagues'. No subject exclusion in `scp_report_snapshot_readable` or `scp_iv_can_read_case`. | same functions | P2 |
 | c | Global content-role holders (`scp_can_author`) read every tenant's candidate responses, attempts, evidence and human reviews through the `*_author_read` policies; migration #51 intended to remove content roles from customer responses but fixed only the queue. Number of holders unknown. | `20260821090000…` ~39-53 | P2 |
+| e | `approve_access_request` reactivates a **removed or suspended** membership (`ON CONFLICT … DO UPDATE`) and refuses only a requester who is ACTIVE; any authenticated user can insert an access request for any employer id (the policy checks only `requester = auth.uid()`). A person a platform admin suspended or removed can file a request via `/employer/join?org=<id>` and the organisation's own owner/admin can approve them straight back in, overriding the platform admin's decision. The migration documents it as intentional; it undermines offboarding ("återkallad åtkomst"). | `approve_access_request`, access-request insert policy | P2 |
+| f | Reviewer grants (`scp_employer_reviewers`) survive suspension and removal. Inert while the membership is inactive (`scp_can_review_for` checks `has_active_employer_role`) but silently return on reactivation. | `scp_can_review_for` | P3 |
 | d | Release is owner/admin only, so a reviewer cannot release; matches the "release" requirement only if that is the intended split. | `20270110090000…` ~75-112 | info |
 
 ## 4. Proposed fix (needs an owner decision on the "ordinary member" scope first)
@@ -105,12 +107,27 @@ Rollback: restore the previous function bodies (the previous migration files are
 
 ## 4a. Tests added in this branch (they pin the CURRENT behaviour, so changing the model changes exactly these assertions)
 
-`supabase/tests/employer_report_access_matrix_test.sql` — logged-out, candidate subject, other
-candidate, owner, admin, reviewer-granted member, plain member, suspended member, removed member,
-company B member and a platform admin who is not a member, against the report read functions, the
-snapshot policy, interview case / notes reads and release / finalise. Plain-member and
-reviewer-granted-member reads are asserted as **allowed** and marked in the test with a pointer to
-this document. (See the completion report for the run result.)
+`supabase/tests/employer_report_access_matrix_test.sql`, wired into `scripts/db-test.sh` right after
+the replay (final chain state): **45 assertions, no deviation from this document's matrix.**
+Principals: anon, candidate subject, other candidate, owner, admin, reviewer-granted member, plain
+member, suspended admin, removed admin, removed member, company B owner, platform admin who is not
+a member. Read paths: `scp_employer_report` / `_v3` / `_identity`, `scp_participant_report` and
+`_for_issuer`, `scp_report_snapshot_readable`, the `scp_report_snapshots` policies,
+`scp_iv_can_read_case`, `scp_interview_cases` / `_case_events` / `_session_notes` / `_notes`;
+actions: release and both finalise variants. Results: suspended and removed members, company B,
+other candidates and a non-member platform admin read nothing; anon is refused before any row is
+looked at; plain and reviewer-granted members read what the owner reads (tagged
+`MEMBER-WIDE-MODEL`, RM5.1–5.3, RM9.1); release and finalise are owner/admin only (RM5.4–5.5);
+RM10 drives the same `update_employer_membership` the new admin UI calls (access follows status on
+the next read, removal keeps the row with `removed_at`, owner/admin cannot call it, the final-owner
+rule still holds). Four planted controls (removed members still count; platform admin reads all;
+case read open to any authenticated user; report narrowed to owner/admin) each fail on a named
+assertion.
+
+Scope note for the fix in section 4: narrowing only `scp_report_snapshot_readable` flips RM5.1–5.3
+and leaves the case, notes and attempt-notes reads member-wide, because `scp_iv_can_read_case`,
+`scp_iv_case_row_visible` and the `scp_interview_notes` / corrections policies call
+`has_active_employer_role(..., NULL)` directly. The test shows that split.
 
 ## 5. Decision requested
 
