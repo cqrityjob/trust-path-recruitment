@@ -209,7 +209,11 @@ SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub','fe221000-0000-4000-8000-000000000003',true);
 SELECT pg_temp.ok(jsonb_array_length(public.sp_verifier_request_detail(:'du_req'::uuid)->'evidence')=2,
  '5.4 the reviewer sees the answer');
-SELECT public.sp_verifier_decide(:'du_req'::uuid,'approved','document_review','Checked against the card','',NULL,NULL);
+-- The reviewer decides on the version the page shows, the one with the added
+-- document (20270126090000: the answer moved the request's version).
+SELECT public.sp_verifier_decide_reviewed(:'du_req'::uuid,
+  (public.sp_verifier_request_detail(:'du_req'::uuid)->>'submitted_at')::timestamptz,
+  'approved','document_review','Checked against the card','',NULL,NULL);
 SELECT public.sp_verifier_decide(:'ni_req'::uuid,'rejected','document_review','Name does not match','The name on the licence does not match your profile.',NULL,NULL);
 RESET ROLE;
 SET LOCAL ROLE authenticated;
