@@ -28,14 +28,16 @@ import { useEffect, useState } from "react";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { Section } from "@/components/site/Section";
 import { PrimaryButton } from "@/components/site/PrimaryButton";
-import { useT } from "@/i18n/context";
+import { useLocalizedHead, useT } from "@/i18n/context";
+import { dictionaries } from "@/i18n/dictionaries";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/reset-password")({
   ssr: false,
   head: () => ({
+    // The Swedish title; useLocalizedHead() swaps in English on the client.
     meta: [
-      { title: "Reset your password — CQrityjob" },
+      { title: dictionaries.sv["meta.resetPassword.title"] },
       { name: "robots", content: "noindex, nofollow" },
     ],
   }),
@@ -49,6 +51,7 @@ function allowedIntent(raw: string | null): "candidate" | "employer" | "admin" {
 
 function ResetPasswordPage() {
   const { t } = useT();
+  useLocalizedHead("meta.resetPassword.title");
   const navigate = useNavigate();
   const [sessionState, setSessionState] = useState<"checking" | "ready" | "invalid">("checking");
   const [password, setPassword] = useState("");

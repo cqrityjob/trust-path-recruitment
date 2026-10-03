@@ -163,6 +163,18 @@ export const dictionaries = {
     "meta.contact.title": "Kontakta oss om rekrytering – CQrityjob",
     "meta.passportPage.title": "Security Passport – dina meriter inom säkerhet – CQrityjob",
     "meta.securityWorkPage.title": "Säkerhetsarbete – stöd för ditt säkerhetsarbete – CQrityjob",
+    // The auth surfaces and the profession guide. The server renders the
+    // Swedish pair; useLocalizedHead() (or the guide's own effect) swaps in
+    // English on the client, so the tab says what the page says.
+    "meta.login.title": "Logga in – CQrityjob",
+    "meta.login.description":
+      "Logga in på CQrityjob – din professionella identitet, karriärutveckling och verifierade meriter på ett ställe.",
+    "meta.signup.title": "Skapa konto – CQrityjob",
+    "meta.signup.description":
+      "Skapa ett CQrityjob-konto – ett konto för din professionella profil, Security Passport, bedömningar och jobbansökningar.",
+    "meta.resetPassword.title": "Återställ ditt lösenord – CQrityjob",
+    "meta.profession.title": "{profession} — yrkesguide | CQrityjob",
+    "meta.profession.unavailable.title": "Yrkesguide — CQrityjob",
 
     // ── THE TWO INDIVIDUAL ENTRY ACTIONS ────────────────────────────
     //
@@ -552,6 +564,8 @@ export const dictionaries = {
     "jobs.card.today": "Idag",
     "jobs.card.posted_days_ago": "Publicerad för {n} dagar sedan",
     "jobs.detail.back": "← Tillbaka till jobben",
+    // The tab title of an ad that carries no title of its own in either language.
+    "jobs.detail.titleFallback": "Säkerhetsjobb",
     "jobs.detail.backToResults": "← Tillbaka till jobben",
     "jobs.detail.apply_external": "Ansök på arbetsgivarens webbplats",
     "jobs.detail.apply_email": "Ansök via e-post",
@@ -9006,6 +9020,15 @@ export const dictionaries = {
     "meta.contact.title": "Contact us about recruitment – CQrityjob",
     "meta.passportPage.title": "Security Passport – your credentials in security – CQrityjob",
     "meta.securityWorkPage.title": "Security work – support for your security work – CQrityjob",
+    "meta.login.title": "Sign in – CQrityjob",
+    "meta.login.description":
+      "Log in to CQrityjob – your professional identity, career development and verified credentials in one place.",
+    "meta.signup.title": "Create account – CQrityjob",
+    "meta.signup.description":
+      "Create a CQrityjob account – one account for your professional profile, Security Passport, assessments and job applications.",
+    "meta.resetPassword.title": "Reset your password – CQrityjob",
+    "meta.profession.title": "{profession} — career guide | CQrityjob",
+    "meta.profession.unavailable.title": "Career guide — CQrityjob",
 
     "cta.passport": "Create my Security Passport",
     "cta.assessment": "Start the Career Analysis",
@@ -9325,6 +9348,7 @@ export const dictionaries = {
     "jobs.card.today": "Today",
     "jobs.card.posted_days_ago": "Posted {n} days ago",
     "jobs.detail.back": "← Back to jobs",
+    "jobs.detail.titleFallback": "Security job",
     "jobs.detail.backToResults": "← Back to jobs",
     "jobs.detail.apply_external": "Apply on the employer's website",
     "jobs.detail.apply_email": "Apply by email",

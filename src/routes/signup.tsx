@@ -16,19 +16,26 @@
 
 import { createFileRoute } from "@tanstack/react-router";
 import { UnifiedAuthForm } from "@/components/auth/UnifiedAuthForm";
+import { useLocalizedHead } from "@/i18n/context";
+import { dictionaries } from "@/i18n/dictionaries";
+
+/** The Swedish pair for the head; useLocalizedHead() swaps in English on the
+ *  client (see /login). */
+const SV = dictionaries.sv;
 
 export const Route = createFileRoute("/signup")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Skapa konto — CQrityjob" },
-      {
-        name: "description",
-        content:
-          "Create a CQrityjob account — one account for your professional profile, Security Passport, assessments and job applications.",
-      },
+      { title: SV["meta.signup.title"] },
+      { name: "description", content: SV["meta.signup.description"] },
       { name: "robots", content: "noindex, nofollow" },
     ],
   }),
-  component: () => <UnifiedAuthForm mode="signup" />,
+  component: SignupPage,
 });
+
+function SignupPage() {
+  useLocalizedHead("meta.signup.title", "meta.signup.description");
+  return <UnifiedAuthForm mode="signup" />;
+}

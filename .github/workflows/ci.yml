@@ -1588,6 +1588,15 @@ jobs:
       - name: Root fallback screens check
         run: bun run root-fallback:check
 
+      # Page titles and descriptions follow the reader's language: /login and
+      # /signup carried a Swedish title over an English description,
+      # /reset-password an English title on the Swedish site, the profession
+      # guide a Swedish-only tab, and an untitled ad fell back to "Security
+      # job". Read-only over committed code, nothing hosted. Its planted
+      # controls run in negative-controls:all.
+      - name: Page head language check
+        run: bun run head-language:check
+
 
       - name: Production build
         run: bun run build
