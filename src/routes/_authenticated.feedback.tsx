@@ -3,7 +3,7 @@
 // employer, admin) can submit; submissions are readable only by platform
 // admins (see /admin/feedback and beta-feedback.functions.ts).
 
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useRouterState } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
@@ -20,7 +20,10 @@ import {
 } from "@/components/ui/select";
 import { PrimaryButton } from "@/components/site/PrimaryButton";
 import { useT } from "@/i18n/context";
-import { submitBetaFeedback } from "@/lib/job-intelligence/beta-feedback.functions";
+import {
+  BETA_FEEDBACK_PAGE_PATH_MAX,
+  submitBetaFeedback,
+} from "@/lib/job-intelligence/beta-feedback.functions";
 
 export const Route = createFileRoute("/_authenticated/feedback")({
   ssr: false,
@@ -38,6 +41,13 @@ function FeedbackPage() {
   const submitFn = useServerFn(submitBetaFeedback);
   const [category, setCategory] = useState<"bug" | "idea" | "other">("bug");
   const [message, setMessage] = useState("");
+  // The router's own location, not `document.referrer`. This is a client-side
+  // app: the referrer is whatever page first loaded it (often another site
+  // entirely, and long enough to exceed the schema's limit, which rejected the
+  // whole submission) and never changes as the person moves around. The path
+  // alone -- no query string or hash, which can carry tokens -- is cut to the
+  // same limit the server enforces.
+  const pagePath = useRouterState({ select: (s) => s.location.pathname });
 
   const submit = useMutation({
     mutationFn: () =>
@@ -45,7 +55,7 @@ function FeedbackPage() {
         data: {
           category,
           message: message.trim(),
-          pagePath: typeof document !== "undefined" ? document.referrer || null : null,
+          pagePath: pagePath.slice(0, BETA_FEEDBACK_PAGE_PATH_MAX) || null,
         },
       }),
     onSuccess: () => setMessage(""),
