@@ -370,17 +370,18 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // exactly one policy, job_cvs_employer_select. No production write probe was
 // run.
 // Evidence: docs/release/2026-10-03-job-board-hosted-verification.md.
-// Pending by design (written, replayed on the full chain, recorded `pending` in
-// release-state.json, none applied hosted): the report-access correction
-// (20270202090000 suspension cannot be bypassed, 20270203090000 who reads an
-// organisation's reports, 20270204090000 who reads an interview case; see
-// docs/release/2026-10-03-release-order.md, step 3). Each name comes OFF this
-// list in the change that records its production evidence.
-const expectedPending: string[] = [
-  "20270202090000_employer_membership_standing_not_bypassable.sql",
-  "20270203090000_employer_report_access_model.sql",
-  "20270204090000_interview_case_access_model.sql",
-];
+// 2026-10-03 ~16:50 UTC: #396 (merge 2b5015d, every mandatory CI job green on
+// e7b5a3d) verified applied read-only: 20270202090000_employer_membership_
+// standing_not_bypassable, 20270203090000_employer_report_access_model and
+// 20270204090000_interview_case_access_model are in the ledger (366 rows,
+// digest ae6f49cb25fa072932ae6aaf8d2b4ddc; the first 363 unchanged); all 25
+// function bodies equal a strict local replay, no function is executable by
+// anon, the two triggers are enabled, the seven policies name the new gate and
+// the interview-case policy names scp_iv_can_read_case. No production write
+// probe was run.
+// Evidence: docs/release/2026-10-03-report-access-hosted-verification.md.
+// Nothing is pending.
+const expectedPending: string[] = [];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
   "20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql",
