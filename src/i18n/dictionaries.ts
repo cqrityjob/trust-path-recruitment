@@ -6980,7 +6980,7 @@ export const dictionaries = {
       "Kandidaten har ännu inget konto på CQrityjob. Bjud in personen från Testbibliotek — inbjudan kopplas automatiskt när kontot skapas.",
     "journey.assignNoApplication": "Ansökan gick inte att hitta i er organisation.",
     "journey.assignNotAuthorised":
-      "Du behöver vara ägare eller administratör för att skicka en bedömning.",
+      "Du kan inte skicka en bedömning just nu. Det kräver aktiv ägar- eller administratörsbehörighet i en organisation som är godkänd och aktiv.",
     "journey.assignNotForRecruitment": "Den här bedömningen är inte öppen för rekrytering.",
     "journey.assignNoBasis": "Er organisation har inte tillgång till den här bedömningen.",
     "journey.assignApplicationNotOpen":
@@ -7066,6 +7066,12 @@ export const dictionaries = {
     "sendTest.sent.openOverview": "Tester & bedömningar",
     "sendTest.error.noTest": "Det finns inget test att skicka för den valda nivån.",
     "sendTest.error.unavailable": "Testbiblioteket kunde inte läsas just nu. Försök igen.",
+    // Orsaken, inte bara att det blev nej. En ägare vars organisation granskas
+    // på nytt hade fått höra att hen "behöver vara ägare" — vilket hen är.
+    "sendTest.refusal.underReview":
+      "Det går inte att skicka tester just nu eftersom organisationen granskas. Det beror på organisationens status, inte på din behörighet. Du kan skicka tester igen när granskningen är klar.",
+    "sendTest.refusal.notActive":
+      "Det går inte att skicka tester just nu eftersom organisationens arbetsyta inte är öppen. Det beror på organisationens status, inte på din behörighet.",
     "sendTest.close": "Stäng",
     "sendTest.cancel": "Avbryt",
     "journey.stage.started": "Pågår",
@@ -15556,7 +15562,7 @@ export const dictionaries = {
     "journey.assignRecruitmentCompleted":
       "The recruitment is completed. No new tests can be sent in it.",
     "journey.assignNotAuthorised":
-      "You need to be an owner or an administrator to send an assessment.",
+      "You cannot send an assessment right now. It requires active owner or administrator access in an organisation that is approved and active.",
     "journey.assignNotForRecruitment": "This assessment is not open for recruitment.",
     "journey.assignNoBasis": "Your organisation does not have access to this assessment.",
     "journey.openBrief": "Open candidate brief",
@@ -15636,6 +15642,12 @@ export const dictionaries = {
     "sendTest.sent.openOverview": "Tests & assessments",
     "sendTest.error.noTest": "There is no test to send for the chosen level.",
     "sendTest.error.unavailable": "The test library could not be read right now. Try again.",
+    // The reason, not just the no. An owner whose organisation is under review
+    // again would otherwise be told they "need to be an owner" -- which they are.
+    "sendTest.refusal.underReview":
+      "Tests cannot be sent right now because the organisation is under review. That is about the organisation's status, not your permission. You can send tests again when the review is complete.",
+    "sendTest.refusal.notActive":
+      "Tests cannot be sent right now because the organisation's workspace is not open. That is about the organisation's status, not your permission.",
     "sendTest.close": "Close",
     "sendTest.cancel": "Cancel",
     "journey.stage.started": "In progress",

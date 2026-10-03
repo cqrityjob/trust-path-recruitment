@@ -22,6 +22,10 @@ import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import {
+  evaluateTestAssignmentAccess,
+  type TestAssignmentAccess,
+} from "@/lib/library/test-assignment-access";
+import {
   isSetupRequired,
   refusalOf,
   type StartRefusal,
@@ -280,21 +284,36 @@ export type SendTestResult = {
  *  Idempotent end to end: the assignment reuses an existing attempt
  *  (20261209090000), the setup refuses only a DIFFERENT setup, and the
  *  message is keyed on the assignment so a retry cannot write a second one. */
-/** Read the same active owner/admin membership required by the assignment RPC.
- * A role label or recruitment responsibility is never an assignment grant. */
+/** Read the same active owner/admin membership required by the assignment RPC,
+ * and the status of the organisation it is a membership of: has_active_employer_role
+ * requires both, so a role alone said "yes" to an owner whose organisation was
+ * under review and the RPC then refused them for a reason this never named.
+ * A role label or recruitment responsibility is never an assignment grant.
+ *
+ * The answer carries WHY a refusal happened (test-assignment-access.ts). It is
+ * still only a read: the RPC refuses on its own whatever this returns. */
 export const getTestAssignmentAccess = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ employerId: z.string().uuid() }).parse(d))
-  .handler(async ({ context, data }): Promise<boolean> => {
+  .handler(async ({ context, data }): Promise<TestAssignmentAccess> => {
+    // The organisation rides on the membership as an embedded read, exactly as
+    // listMyEmployerWorkspaces does it: employers_member_select lets an ACTIVE
+    // member read their own organisation whatever its status.
     const { data: membership, error } = await context.supabase
       .from("employer_memberships")
-      .select("role")
+      .select("role, employers(status)")
       .eq("employer_id", data.employerId)
       .eq("user_id", context.userId)
       .eq("status", "active")
       .maybeSingle();
     if (error) throw new Error("Could not verify assignment access.");
-    return membership?.role === "owner" || membership?.role === "admin";
+    const employer = Array.isArray(membership?.employers)
+      ? membership?.employers[0]
+      : membership?.employers;
+    return evaluateTestAssignmentAccess({
+      role: membership?.role ?? null,
+      organisationStatus: (employer as { status?: string } | null | undefined)?.status ?? null,
+    });
   });
 
 export const sendTestFromSetup = createServerFn({ method: "POST" })

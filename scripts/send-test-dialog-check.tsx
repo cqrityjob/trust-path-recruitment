@@ -234,7 +234,7 @@ await mock.module("@/lib/security-competency/academy-employer.functions", () => 
 }));
 await mock.module("@/lib/library/start.functions", () => ({
   sendTestFromSetup: async () => null,
-  getTestAssignmentAccess: async () => true,
+  getTestAssignmentAccess: async () => ({ allowed: true }),
 }));
 await mock.module("@/components/ui/dialog", () => ({
   Dialog: ({ children }: { children: unknown }) => <div>{children as never}</div>,
@@ -254,8 +254,9 @@ function render(
   lang: "sv" | "en",
   sent: ReadonlyArray<{ assessmentSlug: string; attemptStatus: string }>,
   library: readonly OfferableAssessment[] = [VAKTARE],
+  access: unknown = { allowed: true },
 ) {
-  queries.set(JSON.stringify(["employer", EMPLOYER, "test-assignment-access"]), true);
+  queries.set(JSON.stringify(["employer", EMPLOYER, "test-assignment-access"]), access);
   queries.set(JSON.stringify(["employer", EMPLOYER, "library", "recruitment"]), library);
   queries.set(
     JSON.stringify(["employer", EMPLOYER, "application", APPLICATION, "assessments"]),
@@ -379,6 +380,49 @@ for (const lang of ["sv", "en"] as const) {
   ck(
     `${lang}: an abandoned attempt frees the level again`,
     /data-testid="send-test-level-operational"[^>]*data-state="sendable"/.test(abandoned),
+  );
+
+  // The refusal says WHY. An owner whose organisation went back to review is an
+  // owner, and used to be told they needed to be one (has_active_employer_role
+  // also requires the organisation to be active; getTestAssignmentAccess read the
+  // role alone).
+  const underReview = render(lang, [], [VAKTARE], {
+    allowed: false,
+    reason: "organisation_under_review",
+  });
+  ck(
+    `${lang}: an owner of an organisation under review is told the organisation is the reason`,
+    underReview.includes(esc(d["sendTest.refusal.underReview"])) &&
+      /data-refusal="organisation_under_review"/.test(underReview) &&
+      !/ägar- eller administratörsbehörighet|owner or administrator access/.test(underReview) &&
+      !/data-testid="send-test-submit"/.test(underReview),
+  );
+  const notActive = render(lang, [], [VAKTARE], {
+    allowed: false,
+    reason: "organisation_not_active",
+  });
+  ck(
+    `${lang}: a suspended, rejected or archived organisation is not called "under review"`,
+    notActive.includes(esc(d["sendTest.refusal.notActive"])) &&
+      !notActive.includes(esc(d["sendTest.refusal.underReview"])) &&
+      !/data-testid="send-test-submit"/.test(notActive),
+  );
+  const notOwner = render(lang, [], [VAKTARE], { allowed: false, reason: "not_owner_admin" });
+  ck(
+    `${lang}: a member who may not send still gets the role explanation`,
+    /ägar- eller administratörsbehörighet|owner or administrator access/.test(notOwner) &&
+      !notOwner.includes(esc(d["sendTest.refusal.underReview"])) &&
+      !/data-testid="send-test-submit"/.test(notOwner),
+  );
+  ck(
+    `${lang}: the three refusal sentences differ, and the Swedish and English copy differ`,
+    new Set([
+      d["sendTest.refusal.underReview"],
+      d["sendTest.refusal.notActive"],
+      d["journey.assignNotAuthorised"],
+    ]).size === 3 &&
+      dictionaries.sv["sendTest.refusal.underReview"] !==
+        dictionaries.en["sendTest.refusal.underReview"],
   );
 }
 
