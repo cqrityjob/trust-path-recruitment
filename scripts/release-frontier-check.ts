@@ -388,6 +388,7 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // published; docs/release/2026-10-03-release-order.md, step 4). Its name comes
 // OFF this list in the change that records its production evidence.
 const expectedPending: string[] = [
+  "20270206090000_interview_access_expand.sql",
   "20270205090000_employer_new_application_notices.sql",
 ];
 const hostedIdentities = [

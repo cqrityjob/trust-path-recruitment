@@ -1,4 +1,4 @@
--- All production USING(true) client-read tables: 45 observed 2026-09-27, 41
+-- All production USING(true) client-read tables: 45 observed 2026-09-27, 40
 -- after 20270101090000_catalogue_read_hardening narrowed four of them
 -- (cd_professions, scp_behaviour_versions, scp_role_versions,
 -- scp_interview_guide_prompts -- covered by catalogue_read_hardening_test.sql).
@@ -41,7 +41,6 @@ INSERT INTO audit_catalogue VALUES
 ('scp_role_competency_map',false),
 ('scp_role_weight_profiles',false),
 ('scp_roles',false),
-('scp_scenario_versions',false),
 ('scp_scenarios',false),
 ('sp_certification_definitions',false),
 ('sp_certification_issuer_aliases',false),
@@ -69,7 +68,7 @@ INSERT INTO public.employer_memberships(employer_id,user_id,role,status) VALUES
 
 -- A future unreviewed allow-all policy cannot silently join the allowlist.
 -- Five legacy catalogue tables have no migration seeds. Add synthetic rows
--- so all 41 read/write checks exercise data rather than empty-table success.
+-- so all 40 read/write checks exercise data rather than empty-table success.
 DO $seed$
 DECLARE prof uuid; cf uuid; mf uuid; cd uuid; md uuid; cv uuid; mv uuid;
   cform uuid; mform uuid; bundle uuid; scenario uuid;
@@ -99,12 +98,12 @@ BEGIN
 END $seed$;
 
 SELECT pg_temp.audit_ok(
- (SELECT count(*)=41 FROM pg_policies WHERE schemaname='public' AND cmd='SELECT'
+ (SELECT count(*)=40 FROM pg_policies WHERE schemaname='public' AND cmd='SELECT'
    AND qual='true' AND ('anon'=ANY(roles) OR 'authenticated'=ANY(roles)))
  AND NOT EXISTS (SELECT FROM pg_policies p WHERE schemaname='public' AND cmd='SELECT'
    AND qual='true' AND ('anon'=ANY(roles) OR 'authenticated'=ANY(roles))
    AND NOT EXISTS (SELECT FROM audit_catalogue a WHERE a.name=p.tablename)),
- 'exact production catalogue inventory: 41 tables');
+ 'exact production catalogue inventory: 40 tables');
 
 DO $checks$
 DECLARE t record; r text; uid text; baseline bigint; actual bigint; affected bigint; col text; cmd text;
@@ -168,7 +167,7 @@ BEGIN
 END $checks$;
 
 -- Check effective privileges, including PUBLIC/inherited grants, on EVERY
--- application relation, not just the 41 catalogues.
+-- application relation, not just the 40 catalogues.
 DO $privileges$
 DECLARE t record; r text; p text;
 BEGIN
