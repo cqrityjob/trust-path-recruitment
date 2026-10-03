@@ -147,7 +147,7 @@ group("GROUP 3 — acceptance at signup");
   ck(
     "3.2 the box is its own, required, and links the terms",
     /data-testid="signup-terms"\s+required/.test(panel) &&
-      panel.includes('withLink(t("auth.terms.accept"), "{terms}"') &&
+      /withLink\(\s*t\("auth\.terms\.accept"\),\s*"\{terms\}"/.test(panel) &&
       panel.includes("href={TERMS_PATH}"),
   );
   ck(
