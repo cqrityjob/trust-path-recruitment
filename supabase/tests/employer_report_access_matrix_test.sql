@@ -44,7 +44,15 @@
 \set ON_ERROR_STOP on
 SET client_min_messages TO NOTICE;
 
+-- Existing history tests use the pre-launch contract. The new final-state
+-- runner explicitly enables the owner decision while reusing this full matrix.
+\if :{?participant_launch_gate}
+\else
+\set participant_launch_gate false
+\endif
 BEGIN;
+CREATE TEMP TABLE rm_launch AS SELECT :'participant_launch_gate'::boolean AS enabled;
+GRANT SELECT ON rm_launch TO PUBLIC;
 
 \ir employer_report_access_fixture.sql
 
@@ -231,7 +239,8 @@ BEGIN
     'v3_r1', (_x.atts @> ARRAY['r1'])::int, 'v3_v1', (_x.atts @> ARRAY['v1'])::int,
     'identity_r1', (_x.atts @> ARRAY['r1'])::int, 'identity_v1', (_x.atts @> ARRAY['v1'])::int,
     'participant_for_issuer_r1', _x.iss::int,
-    'participant_own_r1', (_who = 'p')::int, 'participant_other_r3', (_who = 'p2')::int,
+    'participant_own_r1', (_who = 'p' AND NOT (SELECT enabled FROM rm_launch))::int,
+    'participant_other_r3', (_who = 'p2' AND NOT (SELECT enabled FROM rm_launch))::int,
     'readable_r1', (_x.atts @> ARRAY['r1'])::int, 'readable_ws', (_x.atts @> ARRAY['ws'])::int,
     'readable_v1', (_x.atts @> ARRAY['v1'])::int, 'readable_vs', (_x.atts @> ARRAY['vs'])::int,
     'readable_v2', (_x.atts @> ARRAY['v2'])::int,
@@ -241,7 +250,7 @@ BEGIN
     'policy_r1', (_x.atts @> ARRAY['r1'])::int, 'policy_ws', (_x.atts @> ARRAY['ws'])::int,
     'policy_v1', (_x.atts @> ARRAY['v1'])::int, 'policy_vs', (_x.atts @> ARRAY['vs'])::int,
     'policy_v2', (_x.atts @> ARRAY['v2'])::int,
-    'policy_participant_r1', (_who = 'p')::int);
+    'policy_participant_r1', (_who = 'p' AND NOT (SELECT enabled FROM rm_launch))::int);
   _q := _q || jsonb_build_object(
     'decisions_r1', (_x.atts @> ARRAY['r1'])::int, 'decisions_v1', (_x.atts @> ARRAY['v1'])::int,
     'decisions_v2', (_x.atts @> ARRAY['v2'])::int,
@@ -264,11 +273,11 @@ BEGIN
     'review_board', (SELECT count(*) FROM unnest(_x.atts) a WHERE a IN ('w','v2w')),
     -- the released attempts of a subject: every one of them must be readable
     -- (a subject keeps their participant branch: their own progress and recommendations)
-    'progress_r1', ((_x.atts @> ARRAY['r1']) OR (_x.own @> ARRAY['r1']))::int,
+    'progress_r1', ((_x.atts @> ARRAY['r1']) OR (_x.own @> ARRAY['r1'] AND NOT (SELECT enabled FROM rm_launch)))::int,
     'progress_v1', ((_x.atts @> ARRAY['v1']) OR (_x.own @> ARRAY['v1']))::int,
     'progress_vs', ((_x.atts @> ARRAY['vs']) OR (_x.own @> ARRAY['vs']))::int,
-    'progress_ws', ((_x.atts @> ARRAY['ws']) OR (_x.own @> ARRAY['ws']))::int,
-    'recommendations_r1', CASE WHEN _x.atts @> ARRAY['r1','r2'] OR _x.own @> ARRAY['r1'] THEN
+    'progress_ws', ((_x.atts @> ARRAY['ws']) OR (_x.own @> ARRAY['ws'] AND NOT (SELECT enabled FROM rm_launch)))::int,
+    'recommendations_r1', CASE WHEN _x.atts @> ARRAY['r1','r2'] OR (_x.own @> ARRAY['r1'] AND NOT (SELECT enabled FROM rm_launch)) THEN
         (SELECT (pg_temp.reads_as_cached('ow') ->> 'recommendations_r1')::int) ELSE 0 END,
     'training', _x.train::int, 'rls_training', (_x.train OR _who = 'p')::int,
     'rls_training_progress', CASE WHEN _x.train OR _who = 'p'

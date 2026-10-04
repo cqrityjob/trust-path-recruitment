@@ -1,0 +1,111 @@
+ok  PB1 workforce report is withheld even from its own participant
+ok  PB2 workforce progression is withheld
+ok  PB3 workforce recommendations are withheld
+ok  PB4 candidate report and progression remain readable
+ok  PB5 candidate-only recommendations remain available
+ok  PB6 another candidate cannot read report, progression or recommendations
+ok  PB7 anonymous API calls are denied
+ok  PB8 snapshot table SELECT is still revoked for both client roles
+ok  PB9 RLS itself filters workforce even with the fixture temporary SELECT grant
+ok  PB10 employer workforce report, progression and recommendations remain nonempty
+ok  PB11 commissioning issuer preview remains available; other issuer denied
+ok  PB12 historical missing/null/unknown/workforce context fails closed on RPC and RLS: {}
+ok  PB12 historical missing/null/unknown/workforce context fails closed on RPC and RLS: {"person_context": null}
+ok  PB12 historical missing/null/unknown/workforce context fails closed on RPC and RLS: {"person_context": "unknown"}
+ok  PB12 historical missing/null/unknown/workforce context fails closed on RPC and RLS: {"person_context": "employee"}
+ok  PB13 mixed history keeps candidate report and progress only, withholds aggregate recommendations
+ok  PB14 empty payload with missing context still blocks aggregate recommendations
+ok  PB15 unresolvable evidence fails closed even with candidate-only snapshots
+ok  PB16 employer projections stay byte-equivalent
+ok  PB17 client funnel RPC denied; service role retained
+ok  PB18 real anonymous and authenticated test feedback still writes
+ok  RM-F.1 seven attempts are released (workforce r1 r2 r3 ws, recruitment v1 vs v2); two are waiting for review (w, v2w)
+ok  RM-F.2 an ADMIN released r2: the release gate admits an admin (the employer document exists)
+ok  RM-F.3 su is suspended, rv and rmm are removed -- by update_employer_membership, as a platform administrator
+ok  RM-F.4 before this suite granted it, neither authenticated nor anon could SELECT scp_report_snapshots
+ok  RM-F.5 three cases; case A was opened by a plain member (cr) and has a panel with pn on it
+ok  RM-F.6 the owner reads nine attempts, three invitations, three cases, recommendations and training progress: the fixture has something to withhold
+ok  RM0.1 PRE-FIX: a PLAIN MEMBER reads every released report of either use case and either vacancy, their identity, decisions and notes
+ok  RM0.2 PRE-FIX: and every list and count: nine participants, nine pipeline rows, three invitations, nine assignments, two attempts waiting, one training assignment
+ok  RM0.3 PRE-FIX: and reads AND WRITES every interview case, with its session notes
+ok  RM0.4 PRE-FIX: the admin who is the SUBJECT of the V1 assessment and of case B reads the employer document and the case about themselves
+ok  RM0.5 the savepoint was undone: the single definition and its resolvers are back in place
+ok  RM1.1 anon: every read is refused outright (no EXECUTE, no table grant): {"v3_r1": -1, "v3_v1": -1, "notes_r1": -1, "notes_v1": -1, "notes_v2": -1, "pipeline": -1, "training": -1, "case_rows": -1, "policy_r1": -1, "policy_v1": -1, "policy_v2": -1, "policy_vs": -1, "policy_ws": -1, "report_r1": -1, "report_v1": -1, "report_v2": -1, "report_vs": -1, "report_ws": -1, "rls_notes": -1, "identity_r1": -1, "identity_v1": -1, "invitations": -1, "progress_r1": -1, "progress_v1": -1, "progress_vs": -1, "progress_ws": -1, "readable_r1": -1, "readable_v1": -1, "readable_v2": -1, "readable_vs": -1, "readable_ws": -1, "decisions_r1": -1, "decisions_v1": -1, "decisions_v2": -1, "participants": -1, "review_board": -1, "rls_training": -1, "rls_decisions": -1, "case_events_c0": -1, "case_events_cA": -1, "review_blocked": -1, "person_notes_v1": -1, "rls_assignments": -1, "rls_invitations": -1, "case_readable_c0": -1, "case_readable_cA": -1, "case_readable_cB": -1, "case_writable_c0": -1, "case_writable_cA": -1, "case_writable_cB": -1, "session_notes_c0": -1, "session_notes_cA": -1, "participant_own_r1": -1, "recommendations_r1": -1, "review_awaiting_any": -1, "participant_other_r3": -1, "readable_unscoped_r1": -1, "person_assessments_v1": -1, "policy_participant_r1": -1, "rls_training_progress": -1, "person_applications_v1": -1, "readable_participant_r1": -1, "participant_for_issuer_r1": -1, "application_assessments_ap1": -1}
+ok  RM1.2 anon cannot release or finalise: no EXECUTE
+ok  RM1.3 none of the report, case, list, count and gate functions is executable by anon
+ok  RM2.1 the subject p reads their OWN participant document (function, helper and row policy), their own training row, and nothing of the employer's: 
+ok  RM2.2 the subject cannot release their own report or finalise a case
+ok  RM3.1 the other candidate reads their own R3 document and nothing of p's: 
+ok  RM3.2 neither can the other candidate
+ok  RM3.3 an applicant (not a member) reads nothing as an employer: 
+ok  RM4.1 the owner reads every attempt, list, count and case, the issuer-admin participant document included: 
+ok  RM4.2 the admin reads exactly what the owner reads: 
+ok  RM4.3 owner and admin pass the release gate (stopped only by the sitting still being unreviewed)
+ok  RM4.4 owner and admin pass the finalise gate, both variants (stopped only by the case not being ready)
+ok  RM5.1 a PLAIN MEMBER reads no report, identity, decision, note, list, count, invitation, assignment, training row or case -- every read is empty: 
+ok  RM5.1b and the plain member's answer is exactly an outsider's -- zero everywhere -- except the application rows of the recruitment pipeline, which are not part of this model
+ok  RM5.2 a reviewer with BOTH grants reads every workforce and recruitment attempt and invitation, and every case, but not the issuer-admin participant document: 
+ok  RM5.3 a WORKFORCE reviewer reads the workforce attempts, the workforce invitation and training -- and not one recruitment attempt, invitation or case: 
+ok  RM5.4 a RECRUITMENT reviewer reads both vacancies' recruitment attempts, invitations and the cases -- and nothing workforce, no training: 
+ok  RM5.5 the plain member who is the named responsible recruiter of V1 reads V1's recruitment attempts (v1, vs), its invitation and its cases -- not V2's, not a workforce one, not a case without that vacancy: 
+ok  RM5.6 and the responsible recruiter of V2 reads V2's (v2, v2w) and nothing of V1: 
+ok  RM5.7 the creator of case A and a member of its panel read and write that case only: no report, no list, no count, no other case: cr  pn 
+ok  RM5.8 a plain member, a reviewer, a responsible recruiter and a case creator cannot RELEASE a report (owner/admin only)
+ok  RM5.9 nor FINALISE an interview report, either variant, whatever their basis (owner/admin only)
+ok  RM5s.1 an ADMIN who is the subject of the V1 assessment and of case B reads everything of the organisation's EXCEPT what is about them (attempt vs, its decisions-free progress, case B): 
+ok  RM5s.2 a reviewer with both grants who is the subject of a workforce assessment reads the rest, but not the one about them (attempt ws): 
+ok  RM5s.3 the exclusion cuts through R1: the owner-level admin sm reads r1 and not vs, by function, helper and row policy alike
+ok  RM6.1 a SUSPENDED admin of A reads nothing: 
+ok  RM6.2 a REMOVED admin of A reads nothing: 
+ok  RM6.3 a REMOVED member of A reads nothing: 
+ok  RM6.4 none of them can release (a suspended or removed ADMIN holds the role and not the standing)
+ok  RM6.5 nor finalise, either variant
+ok  RM6.6 the primitives agree: has_active_employer_role and has_employer_role are false for all three
+ok  RM7.1 the owner of company B reads nothing of A's: 
+ok  RM7.2 and releases and finalises nothing of A's, although an owner of their own company
+ok  RM8.0 the principal really is a platform administrator
+ok  RM8.1 through the report functions, the snapshot policies, the lists and the interview reads a platform admin who is not a member reads nothing -- bar the raw assignment table, which the platform-admin policy still admits (unchanged): 
+ok  RM8.2 and releases and finalises nothing: platform administration is not an employer role
+ok  RM9.1 neither snapshot gate decides on membership any more: the employer branch asks employer_reports_readable
+ok  RM9.2 scp_report_snapshots has exactly two policies, both authenticated, the employer one routed through the attempt-aware gate
+ok  RM9.3 an unknown audience is never readable
+ok  RM9.4 the three interview-case gates ask employer_reports_readable and do not decide on membership
+ok  RM10.1 a reviewer SUSPENDED by a platform admin reads exactly what an outsider reads, at once
+ok  RM10.2 and REACTIVATED, reads nothing: the grant was revoked with the suspension and did not return
+ok  RM10.2b the grant row is kept as history, revoked
+ok  RM10.3 a fresh grant by the owner restores exactly the reviewer's reads: 
+ok  RM10.4 an admin REMOVED by a platform admin reads nothing at once
+ok  RM10.4b and the row is kept, with removed_at set (removed is a status, never a delete)
+ok  RM10.5 reactivating the admin restores exactly their reads (the role, not a grant, is what made them an admin): 
+ok  RM10.6 an OWNER and an ADMIN cannot call update_employer_membership: only a platform admin can end a membership today
+ok  RM10.6b and nothing changed
+ok  RM10.7 the ONLY active owner cannot be removed, suspended or demoted -- and the refusal says "it is the only active owner" (what membershipRpcFailure recognises)
+ok  RM10.7b and the owner is unchanged
+ok  RM10.8 with a second ACTIVE owner appointed, the first can be removed; they then read nothing
+ok negative control report caught on PB1
+ok negative control progress caught on PB2
+ok negative control recommendations caught on PB3
+ok negative control rls caught on PB9
+ok negative control funnel caught on PB17
+ok  PB1 workforce report is withheld even from its own participant
+ok  PB2 workforce progression is withheld
+ok  PB3 workforce recommendations are withheld
+ok  PB4 candidate report and progression remain readable
+ok  PB5 candidate-only recommendations remain available
+ok  PB6 another candidate cannot read report, progression or recommendations
+ok  PB7 anonymous API calls are denied
+ok  PB8 snapshot table SELECT is still revoked for both client roles
+ok  PB9 RLS itself filters workforce even with the fixture temporary SELECT grant
+ok  PB10 employer workforce report, progression and recommendations remain nonempty
+ok  PB11 commissioning issuer preview remains available; other issuer denied
+ok  PB12 historical missing/null/unknown/workforce context fails closed on RPC and RLS: {}
+ok  PB12 historical missing/null/unknown/workforce context fails closed on RPC and RLS: {"person_context": null}
+ok  PB12 historical missing/null/unknown/workforce context fails closed on RPC and RLS: {"person_context": "unknown"}
+ok  PB12 historical missing/null/unknown/workforce context fails closed on RPC and RLS: {"person_context": "employee"}
+ok  PB13 mixed history keeps candidate report and progress only, withholds aggregate recommendations
+ok  PB14 empty payload with missing context still blocks aggregate recommendations
+ok  PB15 unresolvable evidence fails closed even with candidate-only snapshots
+ok  PB16 employer projections stay byte-equivalent
+ok  PB17 client funnel RPC denied; service role retained
+ok  PB18 real anonymous and authenticated test feedback still writes
+ok rollback reopens old access, reapply closes it, stored rows unchanged

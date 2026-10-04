@@ -1,6 +1,10 @@
 # Participant report availability after the owner decision
 
-The current participant flow does not offer employee/workforce development reports. This is an **application availability gate**, not a database authorization change. No migration, grant, SQL function or RLS policy is changed by this gate. The separately approved F09 application-Passport migration does not address this report boundary.
+The current participant flow does not offer employee/workforce development reports.
+
+**Follow-up prepared:** [the API-boundary migration and verification](../release/2026-10-04-participant-report-api-boundary.md) now implement this decision in RPC/RLS and close direct client funnel writes. Production application still needs explicit approval; the description below records the #428 baseline.
+
+At #428, This is an **application availability gate**, not a database authorization change. No migration, grant, SQL function or RLS policy is changed by this gate. The separately approved F09 application-Passport migration does not address this report boundary.
 
 ## Application behavior
 

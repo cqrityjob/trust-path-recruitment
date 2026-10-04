@@ -214,6 +214,15 @@ for f in supabase/migrations/*.sql; do
 done
 echo "    ok  ${REPLAYED} migrations applied cleanly, in filename order"
 # STRICT-REPLAY-CONTRACT END
+
+# #428 launch decision: verify the final API policy and each negative control.
+# Older suites below deliberately exercise the previous participant/funnel
+# contracts, including their original rollback proofs. Keep those historical
+# assertions intact, in an explicit pre-launch-policy phase. The focused gate
+# above proves rollback/reapply and returns to the final state before this phase.
+TEST_DB="$TEST_DB" bash scripts/participant-report-api-db-check.sh
+psql_q -d "$TEST_DB" -f supabase/rollback/20270216090000_participant_report_api_boundary_rollback.sql
+
 echo "==> Interview configuration contract regression"
 psql_q -d "$TEST_DB" -f supabase/tests/interview_ai_config_contract_test.sql
 echo "==> Interview access expand regression"

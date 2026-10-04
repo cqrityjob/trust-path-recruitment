@@ -66,14 +66,11 @@ const MIGRATIONS = join(ROOT, "supabase/migrations");
  *   employer_is_active_status   named inside the jobs_public_active_select RLS
  *                               policy. Policy expressions DO check EXECUTE, so
  *                               without this the public job board goes blank.
- *   cd_record_funnel_event      anonymous funnel tracking. No user_id parameter
- *                               exists; it is derived from auth.uid().
  *   cd_submit_test_feedback     anonymous test-group feedback. Same rule.
  */
 const ANON_EXECUTABLE_ALLOWLIST = new Set([
   "cd_get_shared_report",
   "employer_is_active_status",
-  "cd_record_funnel_event",
   "cd_submit_test_feedback",
   // 20261222090000: the Career Discovery release-control state. Returns one
   // of three release words (internal_test / public / paused) from a
