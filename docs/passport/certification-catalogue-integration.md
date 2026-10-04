@@ -215,12 +215,15 @@ change, request limits against the database's own, structure, plate marks, unkno
 `passport-catalogue-admin:check` (32: administrator-only, own session, no approval path, labels and fallbacks), with 24 planted
 controls in `negative-controls:passport-credential-picker` (one of them found an assertion that could not fail). Browser: a
 stubbed picker suite at desktop, 375px and 390px in Swedish and English (48 tests), the existing wizard specs updated to the
-three-step flow, and `e2e/passport-catalogue-integration-local.spec.ts`, an eight-test journey against **real** PostgreSQL,
+three-step flow, and `e2e/passport-catalogue-integration-local.spec.ts`, a nine-test journey against **real** PostgreSQL,
 PostgREST and RLS: search, select, fill, evidence, save, reload, Passport, a request for an unavailable credential, research and
 request decisions, a verification review decided by an administrator, a selective share, a logged-out recipient, revocation,
 an international certification held by a UK-based holder with no dates, local issuer details, and unapproved, forged and direct
 writes refused. It found one real defect the stubbed suites could not: the admin definitions page selected a column that does
-not exist on `sp_credential_types` and so failed against a real database (fixed and pinned).
+not exist on `sp_credential_types` and so failed against a real database (fixed and pinned). The journey reads from the
+database whether the 140 researched definitions are published and asserts the matching behaviour (70 or 210 credentials
+offered, OSCP and OSCP+ absent or two distinct results, 140 or 0 awaiting approval); its ninth test, registering a researched
+certification with no country and no inferred lifetime, runs only once they are. It passed in both states.
 
 **Local-stack changes** (named in `scripts/local-stack/README.md`): each sign-in now persists its `auth.sessions` row (the
 Passport refuses writes from a session the database cannot find), logout deletes it, an in-memory Storage substitute serves the

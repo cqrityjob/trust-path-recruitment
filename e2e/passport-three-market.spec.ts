@@ -1013,13 +1013,15 @@ test.describe("three markets — the write path", () => {
       "en",
       "/passport/credentials/new?code=UK_SIA_LICENCE_DS",
     );
-    await page.getByRole("radio", { name: /National or regional/ }).check();
-    await page.getByRole("button", { name: "Continue", exact: true }).click();
-    await page.getByRole("combobox", { name: "Country", exact: true }).selectOption("GB");
-    await page.getByRole("button", { name: "Continue", exact: true }).click();
-    await expect(page.getByRole("status")).toContainText(
+    // The deep link names a definition this account cannot select: the picker says so
+    // and selects nothing, in the list or by its link.
+    await expect(page.locator("[data-preselect-unavailable]")).toBeVisible();
+    await page.locator('[data-filter="scope"] input[value="national"]').check();
+    await page.locator('[data-filter="country"]').selectOption("GB");
+    await expect(page.locator("[data-catalogue-empty]")).toContainText(
       "Your credential is not currently available",
     );
+    await expect(page.locator("[data-selected-credential]")).toHaveCount(0);
     await expect(
       page.getByRole("button", { name: /^(Continue|Fortsätt)$/, exact: true }),
     ).toBeDisabled();
@@ -1069,11 +1071,10 @@ test.describe("three markets — the write path", () => {
       "en",
       "/passport/credentials/new?code=AE_DU_SIRA_CARD_GUARD",
     );
-    await page.getByRole("radio", { name: /National or regional/ }).check();
-    await page.getByRole("button", { name: "Continue", exact: true }).click();
-    await page.getByRole("combobox", { name: "Country", exact: true }).selectOption("AE");
-    await page.getByRole("button", { name: "Continue", exact: true }).click();
-    await expect(page.getByRole("status")).toContainText(
+    await expect(page.locator("[data-preselect-unavailable]")).toBeVisible();
+    await page.locator('[data-filter="scope"] input[value="national"]').check();
+    await page.locator('[data-filter="country"]').selectOption("AE");
+    await expect(page.locator("[data-catalogue-empty]")).toContainText(
       "Your credential is not currently available",
     );
     await expect(page.getByLabel(/Issuer|Authorisation scope/)).toHaveCount(0);
@@ -1131,9 +1132,10 @@ test.describe("three markets — the write path", () => {
     await page.getByRole("combobox", { name: "Country", exact: true }).selectOption("SE");
     await page.locator('[data-result][data-credential-code="OV"]').click();
     await page.getByRole("button", { name: "Continue", exact: true }).click();
-    // What the holder typed about their own certificate is kept; nothing the market governed is.
+    // What the holder typed about their own certificate is kept; the market's own facts are not
+    // asked for at all (the Swedish appointment names its issuer itself).
     await expect(page.getByLabel("Valid until", { exact: true })).toHaveValue("2030-01-01");
-    await expect(page.locator('[data-field="issuer-name"]')).toHaveValue("");
+    await expect(page.locator('[data-field="issuer-name"]')).toHaveCount(0);
   });
 
   test("E · Swedish approved definition sends only personal fields and governed market", async ({
@@ -1191,11 +1193,10 @@ test.describe("three markets — the real routes", () => {
 
     await section.locator('[data-credential-code="UK_SIA_LICENCE_DS"]').click();
     await expect(page).toHaveURL(/credentials\/new\?code=UK_SIA_LICENCE_DS/);
-    await page.getByRole("button", { name: "Fortsätt", exact: true }).click();
-    await page.getByRole("button", { name: "Fortsätt", exact: true }).click();
-    await expect(page.getByRole("combobox", { name: "Godkänd merit", exact: true })).toHaveValue(
-      "",
-    );
+    // The link's credential is not one this stubbed catalogue approves: the picker says so
+    // and nothing is selected, so there is nothing to continue with.
+    await expect(page.locator("[data-preselect-unavailable]")).toBeVisible();
+    await expect(page.locator("[data-selected-credential]")).toHaveCount(0);
     await expect(
       page.getByRole("button", { name: /^(Continue|Fortsätt)$/, exact: true }),
     ).toBeDisabled();
@@ -1230,11 +1231,8 @@ test.describe("three markets — the real routes", () => {
     await shoot(page, "en-information-dubai-pilot", info.project.name);
 
     await section.locator('[data-credential-code="AE_DU_SIRA_CARD_GUARD"]').click();
-    await page.getByRole("button", { name: "Continue", exact: true }).click();
-    await page.getByRole("button", { name: "Continue", exact: true }).click();
-    await expect(
-      page.getByRole("combobox", { name: "Approved credential", exact: true }),
-    ).toHaveValue("");
+    await expect(page.locator("[data-preselect-unavailable]")).toBeVisible();
+    await expect(page.locator("[data-selected-credential]")).toHaveCount(0);
     await expect(page.getByLabel(/Authorisation scope/)).toHaveCount(0);
     await expect(
       page.getByRole("button", { name: /^(Continue|Fortsätt)$/, exact: true }),
