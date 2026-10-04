@@ -1159,8 +1159,10 @@ console.log("\n10. Another kind is a table entry; the retention and its one call
           : [],
     );
   const files = everySrc("src");
+  // Generated Args declarations name the RPC but cannot invoke it. Count
+  // runtime RPC-name literals, including callers outside the approved module.
   const enqueueCallers = files.filter((f) =>
-    /rec_enqueue_employer_new_application_notices/.test(strip(read(f))),
+    /["'`]rec_enqueue_employer_new_application_notices["'`]/.test(strip(read(f))),
   );
   const notifyCallers = files.filter((f) =>
     /notifyEmployerOfNewApplication\(/.test(strip(read(f))),

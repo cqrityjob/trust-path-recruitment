@@ -68,6 +68,8 @@ GitHub main and Lovable both report `13502d130d8715f0fc3605e60ef383f08c77cb94`. 
 
 The other generated changes were reviewed against existing migrations and read-only hosted metadata: employer-notices table and six RPCs (`20270205090000`), three inferred catalogue-view relationships, optional nullable certification `abbreviation` (`20270212090000`), and ordering/formatting-only changes to research fields and the case-capabilities RPC. No further generated-type patch is needed. The security PR branch is not yet Lovable's connected main or its published version.
 
+The generated enqueue RPC declaration exposed a false positive in the existing employer-notice caller guard: it counted a type declaration as a caller. The guard now counts runtime RPC-name string literals, and one added negative control proves that a direct enqueue call from the sweep still fails the caller-boundary assertion. No email runtime or generated type was changed.
+
 ## Real launch blockers and separate operations
 
 For this security delivery: (1) approved production application and postflight of this prepared migration, (2) the remaining Google, two-context email and published Passport tests above. Code success is not production enforcement or external-provider proof.

@@ -322,6 +322,16 @@ const MUTATIONS: Mutation[] = [
     expect: "FAILED",
   },
   {
+    id: "EN-NC-DIRECT-ENQUEUE-FROM-SWEEP",
+    defect: "the sweep invokes the enqueue RPC directly outside the approved module",
+    file: ROUTE,
+    find: "const employerNotices = await sweepEmployerNotices({ limit });",
+    replace:
+      'await supabase.rpc("rec_enqueue_employer_new_application_notices", { _application_id: String(limit) });\n        const employerNotices = await sweepEmployerNotices({ limit });',
+    guard: GUARD,
+    expect: "enqueue is reached only",
+  },
+  {
     id: "EN-NC-PURGE-DELETES-A-PENDING-ROW",
     defect: "the retention may delete a pending row",
     file: MIGRATION,
