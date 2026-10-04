@@ -13,8 +13,8 @@
   ],
   "source": "Supabase connector read-only SQL, explicit project wrygicdfxwjnrugduxnt",
   "projectRef": "wrygicdfxwjnrugduxnt",
-  "readAt": "2026-10-04T08:46:00+00:00",
-  "readBy": "Read-only production verification after #410 merged (certification catalogue integration, release 1: research records and schema; nothing selectable). All 370 previous ledger identities preserved (their digest is still 538769fe5724a0d4561a645d3faf79d6); the two new rows are 20270212090000 and 20270213090000, applied by the official integration in version order. md5 of version:name joined by newline over all 372 rows 868e9c610f78ced1c5f529596ca273c2, equal on the connector read and on this file. See docs/release/2026-10-04-catalogue-schema-hosted-verification.md.",
+  "readAt": "2026-10-04T09:47:00+00:00",
+  "readBy": "Read-only production verification after #412 merged (certification catalogue integration, release 3: the publication of the 140 researched definitions). All 372 previous ledger identities preserved (their digest is still 868e9c610f78ced1c5f529596ca273c2); the new row is 20270214090000, applied by the official integration. md5 of version:name joined by newline over all 373 rows 339b270ff57e60c0e7e024081e3102bd, equal on the connector read and on this file. See docs/release/2026-10-04-catalogue-publication-hosted-verification.md.",
   "versions": [
     {
       "version": "20260716153446",
@@ -1503,6 +1503,10 @@
     {
       "version": "20270213090000",
       "name": "sp_catalogue_research_import"
+    },
+    {
+      "version": "20270214090000",
+      "name": "sp_catalogue_research_publish"
     }
   ]
 }

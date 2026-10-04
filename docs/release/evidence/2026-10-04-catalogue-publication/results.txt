@@ -1,0 +1,59 @@
+Read-only verification of production (wrygicdfxwjnrugduxnt), verify.sql, run before the #412 merge (2026-10-04 ~09:40 UTC,
+ledger 372 rows) and after the official integration applied 20270214090000 (2026-10-04 ~09:46 UTC, ledger 373 rows).
+Lines marked CHANGED are the intended effect of the migration; every other line is byte-identical.
+Changed lines: 01 ledger, 02 publish_row, 03 researched_active, 05 intl_active, 06 types_total_active
+
+01 ledger                          CHANGED  before: 372 868e9c610f78ced1c5f529596ca273c2
+                                            after:  373 339b270ff57e60c0e7e024081e3102bd
+02 publish_row                     CHANGED  before: (null)
+                                            after:  20270214090000:sp_catalogue_research_publish
+03 researched_active               CHANGED  before: 0 of 140
+                                            after:  140 of 140
+04 researched_shape                same     before: 140 ok=140
+                                            after:  140 ok=140
+05 intl_active                     CHANGED  before: 14
+                                            after:  154
+06 types_total_active              CHANGED  before: 217 active=26
+                                            after:  217 active=166
+07 active_outside_intl_unchanged   same     before: 6c67688960f2b1a7192c1a6455493d82 n=12
+                                            after:  6c67688960f2b1a7192c1a6455493d82 n=12
+08 old_active_intl_unchanged       same     before: ef7bc0d9601bfca363fe54beb62076b9 n=14
+                                            after:  ef7bc0d9601bfca363fe54beb62076b9 n=14
+09 types_all_cols_except_active    same     before: 217 ab34065c83c88db277b03104ed55d94b
+                                            after:  217 ab34065c83c88db277b03104ed55d94b
+10 old_types_fp                    same     before: 0666aa9258ba1b21e58d62dc9588f6cb n=77
+                                            after:  0666aa9258ba1b21e58d62dc9588f6cb n=77
+11 market_packs                    same     before: 5 40a9e86ea61f703771488d5861fa470c
+                                            after:  5 40a9e86ea61f703771488d5861fa470c
+12 pilot_members                   same     before: 9 9ccea362c524f3e5179c92b74be96c76
+                                            after:  9 9ccea362c524f3e5179c92b74be96c76
+13 def_metadata                    same     before: 66 4f8061bd3a4dcf83315526576c1b3b1a
+                                            after:  66 4f8061bd3a4dcf83315526576c1b3b1a
+14 def_reviews                     same     before: 210 4652454ce7d800bfb252b708c8bf14e4
+                                            after:  210 4652454ce7d800bfb252b708c8bf14e4
+15 cert_sources                    same     before: 171 664d07335e59e330abcdeddae20e2612
+                                            after:  171 664d07335e59e330abcdeddae20e2612
+16 org_roles                       same     before: 221 c6ff511d005775b32c5131f99a7dc863
+                                            after:  221 c6ff511d005775b32c5131f99a7dc863
+17 def_versions                    same     before: 10 00d7e602a75ec5c5a70bbf4035d3e27a
+                                            after:  10 00d7e602a75ec5c5a70bbf4035d3e27a
+18 adapter_mappings                same     before: 0 d41d8cd98f00b204e9800998ecf8427e
+                                            after:  0 d41d8cd98f00b204e9800998ecf8427e
+19 def_jurisdictions               same     before: 8 51e257de3bb754c865ecacd1424caf0c
+                                            after:  8 51e257de3bb754c865ecacd1424caf0c
+20 cert_defs                       same     before: 154 37ba8c12ef8c11055131cd61ad504fd4
+                                            after:  154 37ba8c12ef8c11055131cd61ad504fd4
+21 issuers                         same     before: 36 fd030654da18cdf489a05e0b889c4ab9
+                                            after:  36 fd030654da18cdf489a05e0b889c4ab9
+22 aliases                         same     before: 2 458ed8c6186c72db84e65070e7da71d0
+                                            after:  2 458ed8c6186c72db84e65070e7da71d0
+23 research_records                same     before: 170 5dd5b4fe4e7d227ec407acfec20ee507
+                                            after:  170 5dd5b4fe4e7d227ec407acfec20ee507
+24 requests                        same     before: 0
+                                            after:  0
+25 claims                          same     before: 51 fc460b1d610f2918c9371c2c0a58b5b3
+                                            after:  51 fc460b1d610f2918c9371c2c0a58b5b3
+26 claims_on_new_codes             same     before: 0
+                                            after:  0
+27 details_evidence_disclosures    same     before: 7/12/40
+                                            after:  7/12/40
