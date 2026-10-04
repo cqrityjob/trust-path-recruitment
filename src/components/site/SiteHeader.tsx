@@ -16,6 +16,7 @@ import {
 import { useT } from "@/i18n/context";
 import { cn } from "@/lib/utils";
 import { Container } from "./Container";
+import { BrandLogo } from "./BrandLogo";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { resolveCandidateNav, type CandidateNavKey } from "./candidate-app-nav";
 import { EMPLOYER_NAV, EMPLOYER_REGISTER_NAV, publicNav } from "./public-nav";
@@ -296,8 +297,7 @@ export function SiteHeader() {
             style={{ fontFamily: "var(--font-display)" }}
             onClick={() => setOpen(false)}
           >
-            <ShieldCheck className="h-5 w-5 shrink-0 text-accent" strokeWidth={1.75} />
-            <span className="text-base leading-none">{t("brand.name")}</span>
+            <BrandLogo />
           </Link>
 
           {appMode ? (
