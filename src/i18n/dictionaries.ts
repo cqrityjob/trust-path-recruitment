@@ -225,11 +225,11 @@ export const dictionaries = {
     "home.hero.title": "Din karriär, din kompetens, ditt säkerhetsarbete.",
     "home.hero.slogan": "Security careers, without limits.",
     "home.hero.subtitle":
-      "Jobb, kompetens, Security Passport och AI-stöd för ditt säkerhetsarbete. Rekryteringsverktyg för arbetsgivare – på samma plats.",
+      "Karriär, säkerhetsjobb och verifierbara meriter på ett ställe. Rekryteringsverktyg för arbetsgivare – på samma plats.",
     "home.hero.audience.label": "Välj var du vill börja",
     "home.hero.individual.title": "För dig i säkerhetsbranschen",
     "home.hero.individual.body":
-      "Hitta jobb, utveckla din kompetens, bygg ditt Security Passport och utforska AI-stöd för ditt säkerhetsarbete.",
+      "Hitta jobb, utveckla din kompetens och bygg ditt Security Passport.",
     "home.hero.employer.title": "För arbetsgivare",
     "home.hero.employer.body":
       "Hitta, bedöm och rekrytera säkerhetskompetens – lokalt eller internationellt.",
@@ -833,7 +833,7 @@ export const dictionaries = {
       "CQrityjob grundades av Mostafa Alshawi, som har lång erfarenhet av säkerhetsarbete – från polisen och internationella säkerhetsuppdrag till personskydd, säkerhetsledning och företagssäkerhet. Den erfarenheten präglar plattformen: den är byggd kring de yrken, krav och beslut som faktiskt finns i branschen.",
     "about.trust.title": "Where trust comes first",
     "about.trust.body":
-      "Förtroende binder ihop allt vi bygger: din professionella identitet, dina meriter, rekryteringen, bedömningarna, AI-stödet och säkerhetsarbetet. Därför är vi tydliga med vad som är kontrollerat och vad som inte är det, du bestämmer själv vad du delar – och AI stödjer arbetet, medan människor ansvarar för besluten.",
+      "Förtroende binder ihop allt vi bygger: din professionella identitet, dina meriter, rekryteringen, bedömningarna och säkerhetsarbetet. Därför är vi tydliga med vad som är kontrollerat och vad som inte är det, du bestämmer själv vad du delar – och människor ansvarar för besluten.",
     "about.cta.individuals": "För dig i säkerhetsbranschen",
     "about.cta.employers": "För arbetsgivare",
     "assessment.title": "Karriäranalys, rekryteringstester och kompetensutveckling",
@@ -8668,7 +8668,8 @@ export const dictionaries = {
     "iin.el.whichRole": "Vilken roll eller ansökan det gäller",
     "iin.el.purpose": "Varför uppgifterna samlas in",
     "iin.el.whatIsRecorded": "Vilka slags uppgifter som kan registreras",
-    "iin.el.aiProposes": "Att AI kan strukturera och föreslå material",
+    "iin.el.aiProposes":
+      "Att arbetsgivaren använder ett strukturerat metodstöd för intervjun och bedömningen",
     "iin.el.humanConfirms": "Att en människa måste granska och bekräfta uppgifterna",
     "iin.el.aiDoesNotDecide": "Att AI inte fattar anställningsbeslutet",
     "iin.el.whoCanAccess": "Vem som kan komma åt materialet",
@@ -9250,11 +9251,11 @@ export const dictionaries = {
     "home.hero.title": "Your career, your expertise, your security work.",
     "home.hero.slogan": "Security careers, without limits.",
     "home.hero.subtitle":
-      "Jobs, expertise, Security Passport and AI support for your security work. Recruitment tools for employers – all in one place.",
+      "Careers, security jobs and verifiable credentials in one place. Recruitment tools for employers – all in one place.",
     "home.hero.audience.label": "Choose where to start",
     "home.hero.individual.title": "For security professionals",
     "home.hero.individual.body":
-      "Find jobs, develop your expertise, build your Security Passport and explore AI support for your security work.",
+      "Find jobs, develop your expertise and build your Security Passport.",
     "home.hero.employer.title": "For employers",
     "home.hero.employer.body":
       "Find, assess and recruit security talent – locally or internationally.",
@@ -9799,7 +9800,7 @@ export const dictionaries = {
       "CQrityjob was founded by Mostafa Alshawi, who has long experience across security – from policing and international security assignments to close protection, security management and corporate security. That experience shapes the platform: it is built around the roles, requirements and decisions that actually exist in the profession.",
     "about.trust.title": "Where trust comes first",
     "about.trust.body":
-      "Trust connects everything we build: your professional identity, your credentials, recruitment, assessment, AI support and security work. So we are clear about what has been checked and what has not, you decide what you share – and AI supports the work, while people remain responsible for the decisions.",
+      "Trust connects everything we build: your professional identity, your credentials, recruitment, assessment and security work. So we are clear about what has been checked and what has not, you decide what you share – and people remain responsible for the decisions.",
     "about.cta.individuals": "For people in security",
     "about.cta.employers": "For employers",
     "assessment.title": "Career analysis, recruitment assessments and learning",
@@ -17349,7 +17350,8 @@ export const dictionaries = {
     "iin.el.whichRole": "Which role or application it concerns",
     "iin.el.purpose": "Why the information is being collected",
     "iin.el.whatIsRecorded": "Which kinds of information may be recorded",
-    "iin.el.aiProposes": "That AI may structure and propose material",
+    "iin.el.aiProposes":
+      "That the employer uses a structured method aid for the interview and the assessment",
     "iin.el.humanConfirms": "That a human must review and confirm the evidence",
     "iin.el.aiDoesNotDecide": "That AI does not make the employment decision",
     "iin.el.whoCanAccess": "Who can access the material",

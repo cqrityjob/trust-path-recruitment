@@ -116,8 +116,8 @@ export const CV = {
   /* -- language ------------------------------------------------------ */
   languageTitle: c("Språk", "Language"),
   languageHelp: c(
-    "Styr rubriker, datumord och verifieringsrader. Din egen text och AI-utkastets text översätts inte — de står kvar på det språk de skrevs.",
-    "Sets the headings, the date words and the verification lines. Your own text and any AI-drafted text are not translated — they stay in the language they were written in.",
+    "Styr rubriker, datumord och verifieringsrader. Din egen text översätts inte — den står kvar på det språk den skrevs.",
+    "Sets the headings, the date words and the verification lines. Your own text is not translated — it stays in the language it was written in.",
   ),
   languageSv: c("Svenska", "Swedish"),
   languageEn: c("Engelska", "English"),
@@ -184,8 +184,8 @@ export const CV = {
 
   /* -- what leaves this product ------------------------------------- */
   aiNotice: c(
-    "Om du väljer ett AI-utkast skickas de uppgifter du valt ovan till den AI-tjänst som är konfigurerad för CQrityjob, för att formuleras om. Kontaktuppgifter skickas aldrig. Utan AI byggs CV:t direkt av dina uppgifter.",
-    "If you choose an AI draft, the entries you selected above are sent to the AI service configured for CQrityjob, to be rephrased. Contact details are never sent. Without AI the CV is built directly from your own information.",
+    "Ditt CV byggs direkt av de uppgifter du valt ovan. Inga uppgifter skickas till någon AI-tjänst.",
+    "Your CV is built directly from the entries you selected above. No information is sent to any AI service.",
   ),
   awaiting: c(
     "Ditt CV visas här när du har skapat det. Du väljer själv om du vill spara det.",
@@ -297,7 +297,12 @@ export const CV = {
   ),
 
   /* -- regeneration ------------------------------------------------- */
-  regenerate: c("Skapa nytt AI-utkast", "Create a new AI draft"),
+  // Version 1: a link to the creator, which builds a draft from the person's own
+  // facts and saves nothing until they choose to. The button that asked an AI
+  // service to rephrase a saved CV is only shown when generative AI is on
+  // (src/lib/ai/generative-ai-gate.ts), and keeps its own, AI-specific wording.
+  regenerate: c("Skapa nytt CV-utkast", "Create a new CV draft"),
+  regenerateAssisted: c("Skapa nytt AI-utkast", "Create a new AI draft"),
   proposalTitle: c("Förslag — inte sparat ännu", "Suggestion — not saved yet"),
   proposalBody: c(
     "Så här skulle AI-stödet formulera ditt CV nu. Ditt sparade CV är oförändrat tills du väljer att använda förslaget.",
@@ -484,9 +489,13 @@ export const CV_STATUS_NOTE: Readonly<Record<CvGenerationStatus, Copy>> = {
   // operator has configured a credential is our business, not theirs, and
   // "no AI engine is configured in this environment" is an internal sentence
   // that reads like a fault on a page where nothing is wrong.
+  // Version 1 has no AI draft, so this is the ordinary state and says nothing
+  // about an assistant that is "not available right now". Neither screen shows
+  // it as a notice (see cvStatusNeedsNote); the sentence is for anything that
+  // does render the note.
   provider_unavailable: c(
-    "AI-stödet är inte tillgängligt just nu. Ditt CV nedan är byggt direkt av dina uppgifter — det är komplett och går att använda.",
-    "The AI assistant is not available right now. Your CV below is built directly from your own information — it is complete and usable.",
+    "Ditt CV nedan är byggt direkt av dina uppgifter — det är komplett och går att använda.",
+    "Your CV below is built directly from your own information — it is complete and usable.",
   ),
   provider_error: c(
     "AI-stödet gick inte att nå. Ditt CV nedan är byggt direkt av dina uppgifter.",

@@ -1,6 +1,7 @@
 import "@tanstack/react-start/server-only";
 import { createHash } from "node:crypto";
 import { z } from "zod";
+import { externalAiAllowed, externalAiFetch } from "../../ai/generative-ai-gate";
 import {
   analysisInputSchema,
   analysisOutputSchema,
@@ -378,6 +379,8 @@ export async function dispatchSwAiOnce(
   } = {},
 ): Promise<DispatchResult> {
   if (typeof window !== "undefined") throw new SwAiError("server_only");
+  // Version 1 offers no generative AI: refuse before any state, timer or request.
+  if (!externalAiAllowed()) throw new SwAiError("generative_ai_disabled");
   let dispatched = false;
   let inputHash: string | null = null;
   let withheldSegmentIds: string[] = [];
@@ -429,7 +432,9 @@ export async function dispatchSwAiOnce(
       "x-api-key": configuration.apiKey,
       "anthropic-version": "2023-06-01",
     };
-    const preflight = await fetchImpl(
+    const preflight = await externalAiFetch(
+      "security-work.preflight",
+      fetchImpl,
       `https://api.anthropic.com/v1/models/${encodeURIComponent(activation.model)}`,
       { method: "GET", headers, signal, redirect: "error" },
     );
@@ -448,15 +453,20 @@ export async function dispatchSwAiOnce(
     if (Date.parse(activation.expiresAt) <= Date.now()) throw new SwAiError("activation_expired");
     // Nothing after this line may dispatch again for this reservation.
     dispatched = true;
-    const response = await fetchImpl("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers,
-      signal,
-      redirect: "error",
-      body: JSON.stringify(
-        buildAnalysisRequest(permitted, activation.model, activation.maxOutputTokens),
-      ),
-    });
+    const response = await externalAiFetch(
+      "security-work.dispatch",
+      fetchImpl,
+      "https://api.anthropic.com/v1/messages",
+      {
+        method: "POST",
+        headers,
+        signal,
+        redirect: "error",
+        body: JSON.stringify(
+          buildAnalysisRequest(permitted, activation.model, activation.maxOutputTokens),
+        ),
+      },
+    );
     if (!response.ok) {
       void response.body?.cancel();
       const unknown = response.status >= 500 || [408, 409].includes(response.status);

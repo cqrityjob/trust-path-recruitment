@@ -1,5 +1,6 @@
 import "@tanstack/react-start/server-only";
 import { z } from "zod";
+import { externalAiFetch } from "../../ai/generative-ai-gate";
 import type { Json } from "@/integrations/supabase/types";
 import { AnalysisFailure, checked } from "../analysis-services";
 import { requireWorkspace, type SecurityWorkCaller } from "../services";
@@ -230,17 +231,22 @@ async function callProvider(
   signal: AbortSignal,
   fetchImpl: typeof fetch,
 ): Promise<{ text: string; model: string }> {
-  const response = await fetchImpl("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      "x-api-key": configuration.apiKey,
-      "anthropic-version": "2023-06-01",
+  const response = await externalAiFetch(
+    "security-work.assistant",
+    fetchImpl,
+    "https://api.anthropic.com/v1/messages",
+    {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-api-key": configuration.apiKey,
+        "anthropic-version": "2023-06-01",
+      },
+      signal,
+      redirect: "error",
+      body: JSON.stringify(body),
     },
-    signal,
-    redirect: "error",
-    body: JSON.stringify(body),
-  });
+  );
   if (!response.ok) {
     void response.body?.cancel();
     throw new AnalysisFailure("AI_PROVIDER_FAILED");

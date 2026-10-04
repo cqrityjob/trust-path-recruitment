@@ -1,5 +1,6 @@
 import "@tanstack/react-start/server-only";
 import { z } from "zod";
+import { externalAiAllowed } from "../../ai/generative-ai-gate";
 import { AnalysisFailure, checked } from "../analysis-services";
 import type { ProcessingJob } from "../analysis-types";
 import { requireWorkspace, type SecurityWorkCaller } from "../services";
@@ -18,6 +19,9 @@ type Env = Readonly<Record<string, string | undefined>>;
 export type WorkAiStatus = { enabled: boolean; reason: string | null };
 
 function configurationReason(env: Env): string | null {
+  // Version 1 offers no generative AI (ai/generative-ai-gate.ts): reported as not
+  // enabled whatever the environment says, so no screen offers what cannot run.
+  if (!externalAiAllowed()) return "AI_NOT_ENABLED";
   if (env.SW_AI_ENABLED !== "true") return "AI_NOT_ENABLED";
   if (
     env.SW_AI_PROVIDER !== "anthropic" ||
