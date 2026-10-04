@@ -1,8 +1,11 @@
 # Interview configuration and scenario access
 
-Status: expand implemented and tested locally; application and contract are separate
-releases. No production mutation, merge or deployment. Owner requested implementation
-and a separate worktree; Claude coordinates releases through the owner.
+Status as of 2026-10-03: #404 is merged and its expand migration is applied
+and verified read-only in production; see [hosted evidence](expand-hosted-verification.md).
+#405 is ready for merge after current-head CI; #406 remains gated on the app
+being published and verified. The owner authorised fixing and merging #404–#406.
+Application publication remains separately pending; no Lovable publication or
+manual production SQL write was performed by this task.
 
 Baseline: origin/main d2c02b8a963f512747a45b8add5b7a7ae754d76e (PR #392).
 
@@ -25,12 +28,13 @@ The reservation is recorded in PR #404. Expand depends on the case access model 
 `20270205090000` in canonical ordering. Contract requires the application
 change to be published and verified, not merely merged. These are separate
 schema/application/contract PRs to preserve the currently deployed interview
-screen across the transition. Do not merge or deploy this draft.
+screen across the transition. Merge only after the corresponding release gates
+are satisfied; the contract must wait for verified application publication.
 
 ## Established callers and access model
 
 - `getInterviewCase` authenticates the caller, reads a case under RLS and stops
-  with `INTERVIEW_CASE_NOT_FOUND` if it is unavailable. It currently reads only
+  with `INTERVIEW_CASE_NOT_FOUND` if it is unavailable. At baseline it read only
   two booleans from `scp_interview_ai_config`, but the underlying table grants
   and unconditional read policy expose every column to every signed-in user.
 - `scp_iv_can_read_case` enforces active employer standing, excludes the subject,
@@ -50,7 +54,8 @@ screen across the transition. Do not merge or deploy this draft.
   contract and item bank, not direct scenario-table reads. Test that contract
   and its answer-key boundary with synthetic assignments.
 - The five `sp_` tables are shared definition/source/issuer/scope/recognition
-  catalogues. Keep their policies unchanged; content review is still pending.
+  catalogues. Their policies remain unchanged; the completed point-in-time
+  content review is recorded below.
 
 ## Required evidence and release gates
 
@@ -62,7 +67,7 @@ full database replay, typecheck, build and CI. Catalogue free-text review must
 report its scope and limitations without copying private information.
 
 Read-only production verification is a post-application release gate. It cannot
-be marked complete before Claude applies the change. No real candidate data
+be marked complete before the official integration applies the change. No real candidate data
 will be used as test fixtures.
 
 ## Catalogue content review, production read-only, 2026-10-03
@@ -126,4 +131,46 @@ contract and read-only hosted verification.
   Unmodified main d2c02b8 reproduced the same failure. The BSD sed command used
   by `pa_plant_fn` captures the rollback postflight after the desired function
   instead of stopping at `END; $function$`. This is not a passing full suite;
-  Linux CI / a GNU-sed run remains required. No assertion has been removed.
+  The subsequent GNU-BRE-compatible local run passed in full; see the final
+  validation below. No assertion has been removed.
+
+## Review and reproduction
+
+PRs: [expand #404](https://github.com/cqrityjob/trust-path-recruitment/pull/404),
+[application #405](https://github.com/cqrityjob/trust-path-recruitment/pull/405),
+[contract #406](https://github.com/cqrityjob/trust-path-recruitment/pull/406).
+See [reproduce.md](reproduce.md) for local SQL, HTTP and application checks.
+The application schema-first gate now passes with verified expand evidence.
+Neither a green schema check nor an app merge proves application publication.
+
+## Final local validation, 2026-10-03
+
+Full `scripts/db-test.sh` passed with exit 0 on PostgreSQL 17 at source commit
+`f9579d82fe057bb7038a1a94775f7d0c43065cf0`: all 369 migrations replayed strictly,
+both new access suites passed, existing interview runtime (85) and integrity
+(99) assertions passed, and full historical rollback verification passed.
+See [the saved summary](evidence/full-db-summary.txt). CI status is recorded on
+the PRs for each head SHA; local success is not labelled as CI success.
+
+HTTP: 224 assertions passed before and after contract. Actual app reader: 8 actor
+cases passed in each stage; deterministic reader: 30 assertions passed. Typecheck,
+production build, SQL-security, migration policy and affected interview checks
+passed. Recruiter workflow: 1,438; finalisation capability: 91; method tenant-read:
+117; interview start: 16 assertions. No full browser recruiter journey was run
+for this task. Expand production metadata verification is complete. Application
+publication, contract application/production verification and the independent
+post-release check remain pending; no positive production customer journey is claimed.
+
+## Separate lineage view review
+
+Astra independently reviewed `public.scp_scoring_version_lineage` read-only on
+2026-10-03. The view exposes nine global version-metadata columns only; no
+weights, answer keys, authors, candidate/company fields or joins. Anonymous
+SELECT and client writes are denied. Draft metadata is intentionally visible
+to all signed-in users, including removed employer members with valid logins.
+The production definition matched the local synthetic replay (45 assertions).
+Under the documented global metadata decision this is not a new launch blocker.
+Actual report consumption of the view was not verified: no direct application
+or database caller was found beyond generated types. See the independent
+[review record on #406](https://github.com/cqrityjob/trust-path-recruitment/pull/406#issuecomment-5973381644).
+The Security Definer View warning is documented, not suppressed by a cosmetic change.

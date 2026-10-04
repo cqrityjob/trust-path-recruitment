@@ -212,7 +212,7 @@ research record, or declining it with a reason. Both decisions are audited and f
 
 **Tests this release added.** `passport-credential-picker:check` (72 assertions: ranking, headline and byline, scope, selection
 change, request limits against the database's own, structure, plate marks, unknown-type fallbacks) and
-`passport-catalogue-admin:check` (32: administrator-only, own session, no approval path, labels and fallbacks), with 24 planted
+`passport-catalogue-admin:check` (33: administrator-only, own session, no approval path, labels and fallbacks), with 24 planted
 controls in `negative-controls:passport-credential-picker` (one of them found an assertion that could not fail). Browser: a
 stubbed picker suite at desktop, 375px and 390px in Swedish and English (48 tests), the existing wizard specs updated to the
 three-step flow, and `e2e/passport-catalogue-integration-local.spec.ts`, a nine-test journey against **real** PostgreSQL,
