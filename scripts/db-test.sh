@@ -220,6 +220,8 @@ echo "==> Interview access expand regression"
 psql_q -d "$TEST_DB" -f supabase/tests/interview_access_expand_test.sql
 echo "==> Running complete client catalogue and privilege audit"
 psql_q -d "$TEST_DB" -f supabase/tests/client_table_privilege_hardening_test.sql
+echo "==> Manual retention routines (docs/legal/retention-runbook-v1.md), run as written on synthetic data"
+psql_q -d "$TEST_DB" -f supabase/tests/retention_manual_routines_test.sql
 
 # ---------------------------------------------------------------------------
 # 20270202090000 / 20270203090000 / 20270204090000: who may read what an

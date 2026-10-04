@@ -1,5 +1,14 @@
 # Ägarbeslut 2026-10-04: juridik och lansering
 
+> **Uppdatering, andra leveransen (2026-10-04).** Det som den här anteckningen kallade "inte gjort" är nu gjort i egna PR:er:
+> AI-spärren (#419), de tre texterna (#420), mätningen av (#421) och beviset för kontoradering (#425). I den här PR:en
+> är retention-planen avstämd mot ägarens beslut (tre rader är förslag, inte beslut), manuella gallringsrutiner med ansvarig,
+> intervall och logg finns (`retention-runbook-v1.md`), texterna om nyhetsbrev, mätning och automatisk vidarebefordran är
+> borttagna, och biträdesavtalet har förslag på frister och inga hänvisningar till ett företagsavtal som inte finns.
+> Beslutet om #7 (kvarstående fakta) är ersatt av den korta frågelistan i `open-facts-2026-10-04.md`.
+> Matrisen `2026-10-04-text-function-verification.md` är uppdaterad rad för rad.
+
+
 **Status: besluten och textinriktningen är godkända av ägaren. Det är inte ett intyg om verifierad drift och
 inte ett godkännande av den slutliga publiceringsversionen.** `OWNER_APPROVED` i `src/lib/legal/status.ts`
 är fortfarande `false` för både villkor och policy. Texten ska verifieras mot funktionen av en oberoende

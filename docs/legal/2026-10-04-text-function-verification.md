@@ -5,6 +5,12 @@ biträdesavtalet mot produkten **före publicering**. Författaren har läst kod
 databas 2026-10-04. Författaren är inte oberoende av texten. Varje rad nedan ska därför avgöras av granskaren, inte
 tas för givet.
 
+**Uppdaterad 2026-10-04, andra leveransen.** Raderna B, C, E, F och I följer nu de PR:er som löser avvikelserna
+mellan text och funktion. Läget "efter #N" betyder att raden stämmer när den PR:en är sammanslagen, inte förr.
+Ordning före publicering: #419 (AI-spärr), #420 (AI-texter), #421 (mätning av), #417 (denna PR, texterna), #425
+(bevis för kontoradering, ändrar ingen kod). Verifierat klart, förberett för publicering, kvarstående fakta och
+faktiska hinder redovisas i slutrapporten.
+
 **Vad som gäller:** ingenting här är skrivet till produktion. Siffror är antal och datum, aldrig innehåll.
 Texten är ett utkast (`OWNER_APPROVED` är `false`). Beslutsunderlaget är
 `docs/legal/2026-10-04-owner-decisions.md`.
@@ -29,26 +35,26 @@ lika med planen, inget slutgiltigt dokument medan en rutin saknas) men säger in
 | A1 | Villkor (inledning), policy §1: tjänsten tillhandahålls av **Cqrityjobb AB**, organisationsnummer 559261-0249, varumärket CQrityjob | Ägarbeslutet. En källa: `src/lib/legal/company.ts`. Samma uppgifter i webbtexterna `legal.provider` (sv och en) och i biträdesavtalet | `launch-legal:check` 1.0 till 1.3b. Numret mot Bolagsverkets register | ◐ Uppgiften är ägarens, registerkontrollen återstår |
 | A2 | Bolagets adress | Saknas. Visas som synlig öppen punkt i villkor, policy och avtal | `open-facts` punkt 1 | ? |
 | A3 | info@cqrityjob.com är kontakt, support och integritet | `src/lib/site-contact.ts`, sidfot, `/contact`, registreringens integritetsnotis. Mejlfunktionen har en egen kopia som `transactional-email:check` jämför | CI-kontrollen. Brevlådan bevakas av Mostafa (ägarbeslut), inte kontrollerbart i kod | ✔ kod, ◐ bevakning |
-| A4 | Villkor §7 och policy §1: svar på arbetsgivarens mejl går till job@cqrityjob.com, och vi vidarebefordrar det | Mejlfunktionen sätter Reply-To `job@` på ansökningskvitto, rekryteringsmeddelande och testinbjudan (`docs/release/2026-10-03-launch-legal-and-contact.md` §2). Mejlens sidfot säger samma sak (`src/lib/email/send-recruitment-message-email.server.ts`). **Vidarebefordran är en mänsklig rutin, ingen funktion** | Läs rubrikerna i ett T4/T5-mejl. Fråga ägaren hur svar vidarebefordras och av vem | ◐ |
+| A4 | Villkor §7 och policy §1: svar på arbetsgivarens mejl går till job@cqrityjob.com, som hanteras av CQrityjob. Svaret förs inte automatiskt vidare till arbetsgivaren | Mejlfunktionen sätter Reply-To `job@` på ansökningskvitto, rekryteringsmeddelande och testinbjudan (`docs/release/2026-10-03-launch-legal-and-contact.md` §2). Ingen funktion vidarebefordrar något: hanteringen är en mänsklig rutin (`docs/legal/mailbox-and-gdpr-routine.md`: Mostafa ansvarig, bevakning varje arbetsdag). Texten lovar inte längre vidarebefordran | `launch-legal:check` 1.14. Läs rubrikerna i ett T4/T5-mejl | ✔ text, ◐ bevakning (ägarens rutin) |
 | A5 | Ingen offentlig svarstid | Texterna innehåller inte ordet "arbetsdag". Två arbetsdagar är ett internt mål | `launch-legal:check` 1.11 | ✔ |
-| A6 | Policy §10: begäranden besvaras "utan onödigt dröjsmål och senast inom en månad", förlängning högst två månader med besked inom första månaden | Texten följer artikel 12.3 GDPR. Det finns ingen verktygsstödd hantering: begäran kommer till info@ och hanteras manuellt | Fråga ägaren vem som tar emot, hur identitet kontrolleras och hur frister bevakas | ✔ text, ◐ rutin |
+| A6 | Policy §10: begäranden besvaras "utan onödigt dröjsmål och senast inom en månad", förlängning högst två månader med besked inom första månaden | Texten följer artikel 12.3 GDPR. Ingen verktygsstödd hantering: begäran kommer till info@ och hanteras manuellt. **Frister följs upp separat** i begärandelogg med veckokontroll (`docs/legal/mailbox-and-gdpr-routine.md`, R9) | Granska rutinen. Första begäran loggas | ✔ text, ◐ rutin (inte körd, inga begäranden än) |
 
 ## B. AI
 
 | ID | Text | Funktion eller underlag | Så kontrolleras det | Läge |
 |---|---|---|---|---|
 | B1 | Villkor §6 och §10, policy §5: generativa AI-funktioner är avstängda i den här versionen | Produktion 2026-10-04: `scp_ai_providers` har Anthropic `is_enabled = false` och bara "Null provider (human review only)" aktiv. `scp_interview_ai_config.ai_enabled = false`. `scp_interview_ai_runs`, `scp_ai_scoring_runs`, `sw_ai_runs` och `sw_ai_activations` har 0 rader. `cv_documents` har 5 rader, alla med tom `provider_mode` och utan `model_id` | SQL i bilagan | ✔ för vägar med databasspärr |
-| B2 | Policy §5: "Vi använder i dag inga AI-leverantörer, och dina uppgifter skickas inte till någon AI-tjänst" | Fem kodvägar kan nå `api.anthropic.com`: intervju (`interview-intelligence/runtime.functions.ts`: miljö och databasflaggan `ai_enabled`), rekrytering (`recruitment/ai.functions.ts`: miljö och spärr), Säkerhetsarbete (`security-work/processing` och `programme/assistant.server.ts`: `SW_ANTHROPIC_API_KEY` och en aktiv rad i `sw_ai_activations`, 0 rader), kompetensgranskning (`scp_ai_providers`, avstängd) och **CV-utkast** (`professional-identity/cv/generation.ts`, anropas av `generateMyCv`). **CV-utkastet styrs bara av miljön**: `INTERVIEW_AI_PROVIDER` och `ANTHROPIC_API_KEY`. Är båda satta i Lovables servermiljö skickas personens karriäruppgifter (med ordningsnycklar i stället för id, utan namn) till Anthropic när hen trycker på "Skapa nytt AI-utkast". Är de inte satta avvisar `selectProvider()` anropet och personen får det faktabaserade CV:t. Servermiljön kan inte läsas härifrån | Fråga ägaren: är variablerna satta? (`open-facts` punkt 6.) Föreslagen rättning: en kodspärr som förbjuder det externa anropet i version 1 oavsett miljö, i en separat PR | ◐ Sant om miljön är rensad. Inga sparade CV bär spår av en modell (`provider_mode` och `model_id` är tomma) |
-| B3 | Villkor §6, policy §5 och ägarbeslut 4 säger att AI är avstängt | Tre texter i produkten säger motsatsen: (1) startsidans hero, `home.hero.subtitle` och `home.hero.individual.body`: "AI-stöd för ditt säkerhetsarbete" (Lovables text, live 2026-10-04). (2) CV-knappen "Skapa nytt AI-utkast" (`src/components/professional-identity/cv-copy.ts`). (3) Kandidatens intervjusida (`src/routes/_authenticated.my-career.interviews.$caseId.tsx`): "Ett AI-stöd hjälper arbetsgivaren att strukturera underlaget …", utan villkor | Läs de tre ställena. Förslag på sanna ordval i `owner-decisions` | ✘ Inte ändrat i den här PR:en (se skälen där) |
+| B2 | Policy §5: "Vi använder i dag inga AI-leverantörer, och dina uppgifter skickas inte till någon AI-tjänst" | Fem kodvägar kunde nå `api.anthropic.com`. **CV-utkastet styrdes bara av miljön** (`INTERVIEW_AI_PROVIDER`, `ANTHROPIC_API_KEY`). #419 flyttar alla fem genom `externalAiFetch` (`src/lib/ai/generative-ai-gate.ts`), som nekar **före** `fetch`. Spärren är en konstant, inte en miljöinställning. Servermiljön behöver därför inte läsas för att texten ska vara sann | `bun run generative-ai-gate:check`: leverantör konfigurerad (`INTERVIEW_AI_PROVIDER=anthropic`, produktionsmiljö, syntetisk nyckel), `fetch` ersatt av en inspelare: **noll anrop** på selektorn, adaptern, `generateCvPresentation`, Säkerhetsarbetets körning och assistent. Positiv kontroll: med laboratoriespärren öppen når samma anrop inspelaren. Källskanning: ingen leverantörsvärd, inget leverantörshuvud, inget AI-bibliotek utanför spärren. 11 planterade kontroller | ✔ efter #419 |
+| B3 | Villkor §6, policy §5 och ägarbeslut 4 säger att AI är avstängt | De tre texterna är rättade i #420: startsidans hero ("Karriär, säkerhetsjobb och verifierbara meriter på ett ställe."), CV-knappen ("Skapa nytt CV-utkast", nu en länk till skaparen, eftersom knappen i version 1 inte gav något utkast) och kandidatens intervjusida ("Arbetsgivaren använder ett strukturerat metodstöd …"). Samma löfte fanns också i Om-sidans förtroendetext och i kandidatmeddelandets element `aiProposes`; båda rättade. Engelska är skrivna av författaren och ska läsas | `bun run generative-ai-texts:check` och `public-homepage:check`. Läs de tre ställena på svenska och engelska | ✔ efter #420 |
 | B4 | Villkor §10: version 2 erbjuder AI som separata betaltjänster med beställning, prisinformation och aktivering | Inget är byggt, och det finns ingen betalintegration i koden (sökt efter betalleverantörer och betalningsflöden utan träff) | `grep` i `src` och `supabase` | ✔ |
 
 ## C. Kakor, lagring och mätning
 
 | ID | Text | Funktion eller underlag | Så kontrolleras det | Läge |
 |---|---|---|---|---|
-| C1 | Policy §11: bara kakor och lagring som behövs: inloggning, språkval, sidopanelens läge, delningslänk (en kaka på 30 minuter) | Kakor: `sidebar_state` (`document.cookie`, sju dagar, `src/components/ui/sidebar.tsx`) och två `HttpOnly`-kakor för Security Passport-delning, `SameSite=Lax`, `Max-Age=1800`, sökväg `/_serverFn` (`src/lib/security-passport/share-transport.ts`). Webbläsarlagring: inloggningssessionen (Supabase, `localStorage`), språk (`cqrityjob.lang`), jobbutkast (`cqj.job-draft.new`) och navigeringshjälp (`jobs-restore` m.fl.) | Läs filerna. I en webbläsare: lagring och kakor efter ett besök | ✔ kod |
-| C2 | Policy §11: anonym mätning, inga kakor, registrerar inte namn, e-post eller konto, med en markering i sessionslagringen | `cd_v31_funnel_events`: 339 rader 2026-08-15 till 2026-10-03, **`user_id` och `session_id` tomma i varje rad**, 19 olika händelsenamn. Markeringen är `cqj:funnel:once:*` i `sessionStorage` (`src/lib/india-entry/analytics.ts`). Schemat tillåter ett valfritt, validerat `session_id`, men ingen rad använder det | SQL i bilagan. Bedöm om en sessionsmarkering för statistik kräver samtycke enligt 6 kap. 18 § LEK. Texten säger öppet vad som sker | ✔ data, ◐ rättslig bedömning |
-| C3 | Policy §11: inga kakor för analys eller marknadsföring | Inga analys- eller spårningsskript och inga externa skript- eller typsnittsvärdar finns i koden (sökt utan träff). Sidans CSP begränsar bara inbäddning | `grep` i `src` och `index.html` | ✔ |
+| C1 | Policy §11: bara kakor och lagring som behövs: inloggning, språkval, sidopanelens läge, delningslänk (en kaka på 30 minuter) | Kakor: `sidebar_state` (`document.cookie`, sju dagar, `src/components/ui/sidebar.tsx`) och två `HttpOnly`-kakor för Security Passport-delning, `SameSite=Lax`, `Max-Age=1800`, sökväg `/_serverFn` (`src/lib/security-passport/share-transport.ts`). Webbläsarlagring: inloggningssessionen, språk (`cqrityjob.lang`), jobbutkast, navigeringshjälp och oavslutad bedömning. **Den fullständiga listan över lagringsnycklar är fastlåst av `funnel-measurement:check` (#421)**: en ny nyckel stoppar bygget tills någon har bedömt den | Läs filerna. I en webbläsare: lagring och kakor efter ett besök | ✔ kod |
+| C2 | Policy §11: "Vi mäter inte hur du använder tjänsten, och vi lagrar ingen statistikmarkering i webbläsaren" | Den valfria mätningen (`cd_v31_funnel_events`) och dess markering `cqj:funnel:once:*` är avstängda (#421): ingen webbläsaranrop, ingen sessionslagring, och servern skriver inte ens om en gammal sida skickar. **De 339 raderna 2026-08-15 till 2026-10-03 finns kvar** (tomma `user_id` och `session_id`, men det gör dem inte anonyma: de har tid, namn och detalj). Radering kräver ägarens godkännande; satsen är förberedd | `funnel-measurement:check`, `e2e/india-landing.spec.ts` (inga serveranrop, ingen `cqj:funnel`-nyckel; körd i webbläsare lokalt, 6/6, och faller med strömbrytaren på). SQL i bilagan | ✔ efter #421, ◐ de 339 raderna (ägarens beslut) |
+| C3 | Policy §11: inga kakor för analys eller marknadsföring | Inga analys- eller spårningsskript och inga externa skript- eller typsnittsvärdar i koden. **Fastlåst** av `funnel-measurement:check`: inga analysvärdar, inga beacons, inga analysbibliotek | `bun run funnel-measurement:check` | ✔ efter #421 |
 
 ## D. Leverantörer och överföringar
 
@@ -61,36 +67,53 @@ lika med planen, inget slutgiltigt dokument medan en rutin saknas) men säger in
 
 ## E. Lagringstider (policy §9, byggd från `src/lib/legal/retention-plan.ts`)
 
-Planen är godkänd som produktbeslut. Ägarens villkor är att rutinerna kontrolleras och genomförs innan tiderna publiceras som
-fungerande åtaganden. **Ingen rad är verifierad i dag**, och policyn kan därför inte bli slutgiltig. Bevis per rad står i
-fältet `evidence` i `retention-plan.ts`.
+Planen är godkänd som produktbeslut, med tre undantag som ägaren uttryckligen har sagt inte ska behandlas som
+beslut: **13 månaders användningsstatistik, 24 månaders granskningsloggar och en allmän anonymisering efter 24
+månader.** De är nu förslag (`approval: "proposed"`): inget tal i den publika texten, en öppen punkt i stället, och
+talet står bara internt i `proposal`. Ägarens villkor är att rutinerna kontrolleras och **genomförs** innan tiderna
+publiceras som fungerande åtaganden. Den minsta fungerande lösningen, med namngiven ansvarig (Mostafa), kontrollintervall
+och logg, finns i `docs/legal/retention-runbook-v1.md`. **Ingen rad är `live` i dag**, eftersom ingen rutin har körts och
+loggats, och policyn kan därför inte bli slutgiltig. Inget har raderats i produktion.
 
-| Rad | Tid i texten | Rutin i dag | Läge |
-|---|---|---|---|
-| `account` | Raderas inom 30 dagar efter begäran. Inaktiv 24 månader: påminnelse, radering 30 dagar senare | Manuell (`admin_delete_user_if_safe`). **Avbryts med `ERASURE_INCOMPLETE` för konton med `sp_credential_details` eller `sp_evidence_extractions` (4 innehavare)**. Rättelsen `20270208090000` granskas. Påminnelse och radering av inaktiva konton är inte byggda | ✘ |
-| `recruitment` | 24 månader efter avslutad rekrytering, därefter anonymisering | Ingen schemalagd anonymisering. Den äldre `sweep_application_retention()` **raderar efter 12 månader** (tillbakadragen ansökan eller stängd annons), körs aldrig och måste anpassas innan den används | ✘ |
-| `info-mailbox` | 12 månader efter senaste kontakt | Manuell månatlig rensning, inte nedskriven eller tilldelad | ✘ |
-| `job-mailbox` | 24 månader efter avslutad rekrytering | Samma | ✘ |
-| `feedback` | 12 månader | Ingen rutin (`beta_feedback` 0 rader, `cd_test_feedback` 4 rader) | ✘ |
-| `usage-statistics` | 13 månader | Ingen rutin för `cd_v31_funnel_events`. `sweep_analytics_retention()` gäller `job_analytics_events` (tom, 90 dagar och 24 månader) | ✘ |
-| `admin-audit` | 24 månader | Ingen rutin (`audit_logs` 27, `job_audit_events` 66, `employer_moderation_events` 5, `sw_audit_events` 5 rader, äldst 2026-07-19) | ✘ |
-| `platform-logs`, `mail-logs`, `backups` | Öppna punkter | Leverantörens egen tid, ska läsas i kontona | ? |
-| `sessions` | Tills utloggning eller utgång | Supabase Auth. Inställningarna finns inte i repot | ? |
-| `notice-outbox` | 90 dagar efter avslutat utskick | **Byggd** (`rec_purge_employer_notices`), men körs av svepningen, som inte är konfigurerad: senaste schemalagda körningen 2026-10-04 02:44 UTC skrev `NOT CONFIGURED`. 1 rad finns | ✘ |
-| `accounting` | Sju år efter räkenskapsårets utgång | Utanför produkten. Ett tillägg som inte fanns i den godkända planen | ◐ |
+### Avvikelser mellan `retention-plan.ts` och ägarens beslut, uttryckligen
 
-Inget i produktionen är ännu äldre än någon period i planen: äldsta datan är från 2026-07, så ingen uppgift sparas
-längre än vad texten lovar i dag. Det ändrar inget i att rutinerna saknas.
+| # | Avvikelse | Åtgärd |
+|---|---|---|
+| 1 | `usage-statistics` (13 månader) stod som godkänd | Förslag. Raden är borta ur policyn (mätningen är av i version 1). De 339 gamla raderna väntar på ägarens beslut |
+| 2 | `admin-audit` (24 månader) stod som godkänd | Förslag. Policyn visar en öppen punkt |
+| 3 | `recruitment`: "24 månader efter avslutad rekrytering och anonymiseras därefter" stod som godkänd | Förslag. Policyn säger bara "enligt arbetsgivarens dokumenterade regler och biträdesavtalet, kortare tid på begäran" och visar en öppen punkt för standardtiden. Biträdesavtalet likadant |
+| 4 | `accounting` var ett tillägg av författaren, inte en del av planen | Markerad förslag. Visas som lagstadgad tid; ägaren bekräftar |
+| 5 | `cd_sessions` (egna testresultat, 48 rader) låg under anonym användningsstatistik | Klassade som kontouppgifter: hör till `account`, raderas med kontot (`ON DELETE CASCADE`) |
+| 6 | `sweep_application_retention()` raderar efter 12 månader och körs aldrig | Avviker från varje version av planen. Får inte köras eller schemaläggas. Ingen ändring i produktion |
+| 7 | **Nytt fynd:** raden i granskningsloggen för en raderad person behåller personens e-postadress (`audit_logs`, `user_deleted`) | Policyn lovar inte mer. Ägaren avgör granskningsloggens tid eller om en senare migration slutar skriva adressen. Se `docs/release/2026-10-04-account-erasure-full-path-evidence.md` |
+| 8 | **Nytt fynd:** ett raderat konto blir en gravsten i `auth.users` (adress ersatt, ingen identitet). Lösenordshashen rensas inte | Kan inte logga in. Ändras inte här |
+| 9 | Feedback (`beta_feedback`, `cd_test_feedback`) överlever kontoradering, länkad bara till gravstenen | Följer sin egen rad på 12 månader. Texten säger det |
 
-Klassningen i planen: `cd_sessions` (48 rader, alla med användar-id) listades i planen som användningshändelser. Det är
-användarnas egna testkörningar och hör till kontots lagringstid, inte till de 13 månaderna.
+### Rader
+
+| Rad | Godkänd? | Tid i texten | Rutin (runbook) | Läge |
+|---|---|---|---|---|
+| `account` | ja | Raderas inom 30 dagar efter begäran. Inaktiv 24 månader: påminnelse, radering 30 dagar senare | R1 (på begäran) och R2 (kvartalsvis, ingen förfaller före 2028-07). #416 sammanslagen och tillämpad. Databasdelen och vägen genom adminkonsolen bevisade lokalt med syntetiskt konto med Passport-underlag (PR #425). **Lagringssteget och produktion inte verifierade** | ◐ `pending` tills ägarens produktionsprov (steg i bevisdokumentet) är loggat |
+| `recruitment` | **förslag** | Enligt arbetsgivarens regler. Öppen punkt för standardtid | R7, per begäran. Ingen standardrutin | ✘ ägarens beslut |
+| `info-mailbox` | ja | 12 månader efter senaste kontakt | R5, månadsvis, manuell | ◐ dokumenterad, ej körd |
+| `job-mailbox` | ja | 24 månader efter avslutad rekrytering | R6, månadsvis, manuell. Inget förfaller före 2028-10 | ◐ dokumenterad, ej körd |
+| `feedback` | ja | 12 månader | R3, månadsvis. SQL i `supabase/retention/`, **provad på syntetiska data** i `supabase/tests/retention_manual_routines_test.sql`. Utgångsläge 2026-10-04: 0 förfallna. Första förfallodag 2027-08-15 | ◐ provad, ej körd |
+| `usage-statistics` | **förslag** | Inte i policyn | Ägaren: radera de 339 raderna eller besluta en tid | ✘ ägarens beslut |
+| `admin-audit` | **förslag** | Öppen punkt | Ingen före beslut | ✘ ägarens beslut |
+| `platform-logs`, `mail-logs`, `backups` | ja (struktur) | Öppna punkter | R8, ägaren läser leverantörens inställning. Supabase-organisationen har plan Pro (läst 2026-10-04): dagliga kopior i 7 dagar om inte återställning till tidpunkt är på (Supabase-dokumentationen) | ? ägarens uppgift |
+| `sessions` | ja | Tills utloggning eller utgång | R8. Supabase Auth: en session varar som standard tills utloggning, tidsgräns kan ställas in på plan Pro | ? ägarens uppgift |
+| `notice-outbox` | ja | 90 dagar efter avslutat utskick | R4, månadsvis (`select public.rec_purge_employer_notices();`) tills svepningen är konfigurerad. Funktionen provad i `employer_new_application_notices_test.sql` (EN8). Utgångsläge: 0 förfallna | ◐ provad, ej körd |
+| `accounting` | **förslag** | Sju år efter räkenskapsårets utgång | Utanför produkten | ◐ ägaren bekräftar |
+
+Inget i produktionen är äldre än någon period i planen (äldsta konto 2026-07-17, 22 konton): ingen uppgift sparas längre än
+texten lovar. Det ändrar inget i att rutinerna ännu inte är körda.
 
 ## F. Rättigheter och radering
 
 | ID | Text | Funktion eller underlag | Så kontrolleras det | Läge |
 |---|---|---|---|---|
-| F1 | Villkor §13: du kan avsluta ditt konto genom att skriva till info@ | En administratör raderar eller anonymiserar kontot manuellt. Se `account` ovan: raderingen avbryts för konton med Security Passport-detaljer | Granska `20270208090000` när den är klar. Kör raderingen på ett syntetiskt testkonto med sådana detaljer, i en transaktion som rullas tillbaka | ✘ tills rättelsen är tillämpad och verifierad |
-| F2 | Policy §10: tillgång, rättelse, radering, begränsning, portabilitet | Allt via info@, manuellt. Det finns ingen självbetjäning för export eller radering | Fråga ägaren om rutinen | ◐ texten säger "kontakta oss" och stämmer |
+| F1 | Villkor §13: du kan avsluta ditt konto genom att skriva till info@ | En administratör raderar kontot manuellt i adminkonsolen (R1). **#416 är sammanslagen och tillämpad.** Hela anropsvägen är körd lokalt i en riktig webbläsare med ett syntetiskt konto med Passport-underlag (kontouppgifter, ett uppladdat dokument och en avläsning av det): allt databasen äger försvinner, kontot blir en gravsten, filen köas. Med migrationen återrullad faller samma prov. **Lagringsradering och produktion är inte verifierade** | PR #425 och `docs/release/2026-10-04-account-erasure-full-path-evidence.md`. Ägarens produktionsprov med testkontot (steg i dokumentet) | ◐ **inte markerad verifierad** |
+| F2 | Policy §10: tillgång, rättelse, radering, begränsning, portabilitet | Allt via info@, manuellt, med frister i en separat begärandelogg (R9). Det finns ingen självbetjäning för export eller radering | Granska rutinen | ◐ texten säger "kontakta oss" och stämmer |
 | F3 | Policy §9: radering av ditt konto raderar inte det en arbetsgivare redan fått | Ansökningar hör till arbetsgivarens behandling | Designen | ✔ |
 
 ## G. Arbetsgivare och åtkomst
@@ -111,7 +134,7 @@ användarnas egna testkörningar och hör till kontots lagringstid, inte till de
 
 | ID | Text | Funktion eller underlag | Så kontrolleras det | Läge |
 |---|---|---|---|---|
-| I1 | Policy §4: "Frivilliga nyhetsbrev och samtyckeskrävande spårning" med samtycke som grund | Produkten har inga nyhetsbrev och ingen spårning (inga skript, inget marknadssamtycke, `launch-legal:check` 3.6). Raden beskriver en behandling som inte finns | Ägaren avgör om raden ska stå kvar som framtida behandling eller tas bort. Texten är inte ändrad | ◐ |
+| I1 | Policy §4: "Frivilliga nyhetsbrev och samtyckeskrävande spårning" med samtycke som grund | Raden beskrev en behandling som inte finns. **Borttagen** (ägaren: ta bort text om behandling som inte används). Likaså meningen om direktmarknadsföring i §10, och "teknik som kräver samtycke får användas först efter ditt aktiva val" i §11 | `launch-legal:check` 1.14 | ✔ |
 | I2 | Villkor §10: pris och villkor ska framgå före köp av en betaltjänst | Inga betaltjänster finns i version 1 (B4). Påståendet gäller framtiden | – | ✔ |
 
 ## Bilaga: skrivskyddade frågor (kör mot produktion)

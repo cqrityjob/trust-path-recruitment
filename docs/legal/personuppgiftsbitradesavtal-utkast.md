@@ -29,8 +29,9 @@ personuppgiftsbiträde enligt dataskyddsförordningen (EU) 2016/679 (GDPR) och d
 till exempel kandidatens eget konto, Security Passport och plattformens säkerhet. Den beskrivs i
 integritetspolicyn.
 
-1.3 Avtalet gäller tillsammans med användarvillkoren och företagsavtalet. För behandling av
-personuppgifter går detta avtal före, om villkoren skiljer sig åt.
+1.3 Avtalet gäller tillsammans med användarvillkoren. För behandling av personuppgifter går detta avtal
+före, om villkoren skiljer sig åt. Något separat företagsavtal finns inte i dag, och avtalet hänvisar
+inte till något. Om ett sådant ingås senare ska det hänvisa till det här avtalet och inte ändra det.
 
 ## 2. Definitioner
 
@@ -99,7 +100,7 @@ gäller.
 8.1 Biträdet hjälper Kunden, med hänsyn till behandlingens art, att besvara begäranden från
 registrerade om tillgång, rättelse, radering, begränsning, invändning och dataportabilitet.
 Biträdet vidarebefordrar en sådan begäran som kommit till Biträdet [Ange tid, förslag: utan
-onödigt dröjsmål] och besvarar den inte själv utan Kundens instruktion.
+onödigt dröjsmål och senast inom 3 arbetsdagar] och besvarar den inte själv utan Kundens instruktion.
 
 8.2 Biträdet hjälper Kunden med säkerhet, anmälan av personuppgiftsincidenter, konsekvensbedömningar
 och förhandssamråd enligt artiklarna 32–36 GDPR, i den utsträckning uppgifterna finns hos Biträdet.
@@ -116,9 +117,10 @@ Kunden med anmälan till tillsynsmyndigheten och information till de registrerad
 
 ## 10. Radering och återlämnande
 
-10.1 Kunden bestämmer hur länge Kunddata sparas. Om Kunden inte har bestämt något annat sparas
-rekryteringsmaterial i 24 månader efter avslutad rekrytering och anonymiseras därefter. Kunden kan
-instruera en kortare tid. Detta motsvarar lagringsplanen i integritetspolicyn.
+10.1 Kunden bestämmer hur länge Kunddata sparas. Kunden kan instruera en kortare tid. Om Kunden inte har
+bestämt något annat gäller [Ange hur länge rekryteringsmaterial sparas när Kunden inte har bestämt något
+annat. Förslag: 24 månader efter avslutad rekrytering, därefter anonymisering. Ägaren har inte beslutat
+detta, och integritetspolicyn visar samma öppna punkt].
 
 10.2 När avtalet upphör, eller tidigare på Kundens begäran, raderar eller återlämnar Biträdet
 Kunddata [Ange tid, förslag: inom 30 dagar] enligt Kundens val. Återlämnande sker i ett vanligt
@@ -141,8 +143,10 @@ genom rapporter och dokumentation. Kostnader fördelas [Ange: förslag att var o
 
 ## 12. Ansvar
 
-Ansvar för skada regleras i företagsavtalet. Inget i detta avtal begränsar ett ansvar som enligt lag
-inte får begränsas, till exempel enligt artikel 82 GDPR.
+Ansvar för skada regleras i användarvillkoren (avsnitt 14) och i tillämplig lag. Parterna kan avtala en
+särskild ansvarsbegränsning skriftligt: [Ange om en särskild ansvarsbegränsning ska gälla för behandlingen
+enligt detta avtal, och i så fall vilken. Förslag: ingen särskild begränsning]. Inget i detta avtal
+begränsar ett ansvar som enligt lag inte får begränsas, till exempel enligt artikel 82 GDPR.
 
 ## 13. Avtalstid, ändringar och tillämplig lag
 
@@ -160,7 +164,7 @@ eller återlämnats enligt punkt 10.
 | | |
 |---|---|
 | **Ändamål** | Att tillhandahålla CQrityjob till Kunden: publicera jobbannonser och ta emot ansökningar, genomföra och dokumentera rekrytering, skicka tester, intervjuer och bedömningar och kommunicera med kandidater. |
-| **Behandlingens art** | Lagring, strukturering och visning för Kundens behöriga användare. Utskick av systemmejl, till exempel kvitton på ansökan och notiser om nya ansökningar. Vidarebefordran av kandidatsvar som kommer till job@cqrityjob.com. Framställning av rapporter och exportfiler. Radering och anonymisering. Loggning av åtgärder. |
+| **Behandlingens art** | Lagring, strukturering och visning för Kundens behöriga användare. Utskick av systemmejl, till exempel kvitton på ansökan och notiser om nya ansökningar. Manuell hantering av kandidatsvar som kommer till job@cqrityjob.com: inget förs automatiskt vidare till Kunden, och ett svar lämnas till Kunden bara efter ett medvetet beslut hos Biträdet, på Kundens uppdrag. Framställning av rapporter och exportfiler. Radering och anonymisering. Loggning av åtgärder. |
 | **Kategorier av registrerade** | Kandidater och sökande. Deltagare i tester och intervjuer. Kundens användare, det vill säga medarbetare med behörighet i tjänsten. |
 | **Typer av personuppgifter** | Namn och e-postadress. CV och andra ansökningsdokument. Svar i ansökan. Meddelanden mellan Kunden och kandidaten. Testsvar och resultat. Intervjuunderlag och bedömningar. Uppgifter i ett Security Passport som kandidaten väljer att dela med Kunden: certifieringar, utbildning, verifieringsstatus. För Kundens användare: namn, e-postadress, roll och behörighet. Loggar över åtgärder. |
 | **Känsliga uppgifter** | Tjänsten är inte avsedd för personnummer, känsliga personuppgifter eller uppgifter om lagöverträdelser. Kunden ska inte instruera Biträdet att registrera sådana. Fritext kan ändå innehålla dem, och Kunden ansvarar för sina rutiner för det. |
@@ -207,3 +211,32 @@ Samma förteckning som i integritetspolicyn, avsnitt 6. Ett fält i hakparentes 
 | Google | Inloggning med Google, bara om kandidaten väljer det | [Ange plats för Googles behandling] | [Ange överföringsstöd] | [Ange: Googles roll, självständigt ansvarig eller underbiträde] |
 
 Ändringar i förteckningen meddelas enligt punkt 6.2.
+
+---
+
+## Förslag på frister och återstående punkter, med kort motivering
+
+För ägarens beslut. Förslagen är inte ifyllda i avtalet, och tabellen tas bort i den slutliga versionen.
+
+| Punkt | Förslag | Motivering |
+|---|---|---|
+| 6.2 Förvarning om nytt underbiträde | 30 dagar | Kunden hinner bedöma underbiträdet och invända innan ändringen börjar gälla. |
+| 6.2 Kundens invändning | 14 dagar | Hälften av förvarningen: parterna hinner lösa en invändning innan ändringen gäller. |
+| 8.1 Vidarebefordra en registrerads begäran | utan onödigt dröjsmål, senast 3 arbetsdagar | Kunden har en månad på sig mot den registrerade (art. 12.3). 3 arbetsdagar lämnar nästan hela månaden kvar och ligger över det interna målet på två arbetsdagar för första svar. |
+| 9.1 Meddela en personuppgiftsincident | senast 48 timmar | Kunden ska anmäla till tillsynsmyndigheten inom 72 timmar efter att ha fått kännedom (art. 33.1). 48 timmar lämnar Kunden minst en dag att bedöma och anmäla. |
+| 10.1 Standardtid för rekryteringsmaterial | 24 månader efter avslutad rekrytering, därefter anonymisering | Täcker en normal tid för invändningar och tvister kring ett rekryteringsbeslut. **Ägaren har inte beslutat detta.** Ett beslut ändrar också integritetspolicyns öppna punkt. |
+| 10.2 Radering eller återlämning när avtalet upphör | 30 dagar | Samma tid som policyn lovar när en person avslutar sitt konto. Säkerhetskopiorna skrivs över enligt sin rotation (Supabase Pro behåller dagliga kopior i 7 dagar, om inte tilläggstjänsten för återställning till en tidpunkt är på: se `open-facts-2026-10-04.md`). |
+| 11.2 Revision, frekvens och förvarning | högst en gång per år, 30 dagars förvarning | Proportionerligt för en liten tjänst. Biträdet kan i första hand visa efterlevnad med rapporter, så en granskning på plats behövs sällan. |
+| 11.2 Kostnader | var och en bär sina egna | Enkelt och undviker tvist. Kunden kan ersätta Biträdet för orimligt merarbete om parterna avtalar det särskilt. |
+| 12 Ansvarsbegränsning | ingen särskild begränsning utöver användarvillkorens avsnitt 14 | Ägaren och en jurist bestämmer. Något företagsavtal att hänvisa till finns inte. |
+| 13.3 Domstol | tingsrätten på Cqrityjobb ABs säte | Svensk rätt gäller redan. Bolagets säte (adressen) är en öppen uppgift. |
+| Bilaga 2 punkt 14 Incidentrutin | Ansvarig: Mostafa Alshawi. Notera tidpunkten för kännedom, bedöm, meddela Kunden inom 48 timmar, anmäl till Integritetsskyddsmyndigheten inom 72 timmar när Cqrityjobb AB är ansvarig. Allt i en logg. | Gör att tiderna ovan går att hålla. Ägaren bekräftar rutinen. |
+
+## Hänvisningar som kontrollerats
+
+| Hänvisning | Läge |
+|---|---|
+| "företagsavtalet" i avtalets punkt 1.3 och 12 | **fanns inte.** Borttagen. Avtalet gäller tillsammans med användarvillkoren. |
+| "företagsavtalet" i användarvillkorens avsnitt 14 | **fanns inte.** Ändrad till "Särskilda ansvarsbegränsningar för företagskunder gäller bara om de har avtalats skriftligt." |
+| Användarvillkorens avsnitt 8 och 9 ("vi tillhandahåller ett personuppgiftsbiträdesavtal på begäran") | Stämmer: det här utkastet är avtalet, men det är inte godkänt eller undertecknat. Tillhandahålls först när ägaren har godkänt det. |
+| Integritetspolicyns avsnitt 9 (lagringstid för rekryteringsmaterial) | Policyn visar en öppen punkt, avtalet likadant. De ändras tillsammans. |

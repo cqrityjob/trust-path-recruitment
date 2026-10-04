@@ -24,7 +24,7 @@
 // Inline markup in the strings: **bold** only.
 
 import { COMPANY } from "./company";
-import { RETENTION_PLAN } from "./retention-plan";
+import { RETENTION_POLICY_ROWS } from "./retention-plan";
 import { VENDORS } from "./vendors";
 
 export type LegalBlock =
@@ -225,7 +225,7 @@ export const TERMS: LegalDocument = {
         },
         {
           type: "p",
-          text: `Meddelanden från en arbetsgivare om din ansökan skickas via ${COMPANY.brand}. Om du svarar på ett sådant mejl går svaret till ${COMPANY.recruitmentEmail}, och vi vidarebefordrar det till arbetsgivaren.`,
+          text: `Meddelanden från en arbetsgivare om din ansökan skickas via ${COMPANY.brand}. Om du svarar på ett sådant mejl går svaret till ${COMPANY.recruitmentEmail}. Den adressen hanteras av ${COMPANY.brand}, och svaret förs inte automatiskt vidare till arbetsgivaren.`,
         },
       ],
     },
@@ -365,7 +365,7 @@ export const TERMS: LegalDocument = {
         },
         {
           type: "p",
-          text: "Dessa villkor begränsar inte rättigheter enligt GDPR, tvingande konsumentskydd eller ansvar som enligt lag inte får begränsas. Eventuella särskilda ansvarsbegränsningar för företagskunder ska framgå av företagsavtalet.",
+          text: "Dessa villkor begränsar inte rättigheter enligt GDPR, tvingande konsumentskydd eller ansvar som enligt lag inte får begränsas. Särskilda ansvarsbegränsningar för företagskunder gäller bara om de har avtalats skriftligt.",
         },
       ],
     },
@@ -448,7 +448,7 @@ export const PRIVACY: LegalDocument = {
         },
         {
           type: "p",
-          text: `Meddelanden från en arbetsgivare om din ansökan skickas via ${COMPANY.brand}. Svar på ett sådant mejl går till ${COMPANY.recruitmentEmail}, och vi vidarebefordrar det till arbetsgivaren på arbetsgivarens uppdrag.`,
+          text: `Meddelanden från en arbetsgivare om din ansökan skickas via ${COMPANY.brand}. Svar på ett sådant mejl går till ${COMPANY.recruitmentEmail}, som hanteras av ${COMPANY.brand} på arbetsgivarens uppdrag. Svaret förs inte automatiskt vidare till arbetsgivaren.`,
         },
       ],
     },
@@ -524,7 +524,6 @@ export const PRIVACY: LegalDocument = {
             ],
             ["Uppfylla lagkrav, exempelvis bokföring", "Rättslig förpliktelse"],
             ["Hantera rättsliga anspråk", "Berättigat intresse av att tillvarata våra rättigheter"],
-            ["Frivilliga nyhetsbrev och samtyckeskrävande spårning", "Samtycke"],
           ],
         },
         {
@@ -676,7 +675,7 @@ export const PRIVACY: LegalDocument = {
         {
           type: "table",
           head: ["Uppgifter", "Lagringstid"],
-          rows: RETENTION_PLAN.map((r) => [r.data, r.period]),
+          rows: RETENTION_POLICY_ROWS.map((r) => [r.data, r.period]),
         },
         {
           type: "p",
@@ -693,7 +692,7 @@ export const PRIVACY: LegalDocument = {
         },
         {
           type: "p",
-          text: "Du kan alltid invända mot direktmarknadsföring och återkalla samtycke för framtida behandling. Återkallandet påverkar inte lagligheten av tidigare behandling.",
+          text: "Du kan alltid återkalla ett samtycke för framtida behandling. Återkallandet påverkar inte lagligheten av tidigare behandling.",
         },
         {
           type: "p",
@@ -716,17 +715,16 @@ export const PRIVACY: LegalDocument = {
           type: "p",
           text: "Vi använder bara kakor och lagring i webbläsaren som behövs för att tjänsten ska fungera, till exempel för inloggning, språkval, sidopanelens läge och för att öppna en delningslänk till ett Security Passport (en kaka som gäller i 30 minuter). Vi använder inga kakor för analys eller marknadsföring, och därför behövs inget samtycke.",
         },
-        // Found in the 2026-10-04 text-to-function check: the product records
-        // anonymous usage events (cd_v31_funnel_events, no user or session id
-        // in any production row), with a once-per-visit flag in the browser's
-        // session storage. The text said nothing about it.
+        // Owner decision 2026-10-04: usage measurement is off in version 1
+        // (FUNNEL_MEASUREMENT_ENABLED, src/lib/analytics/funnel-measurement.ts),
+        // so the policy says so instead of describing a measurement that does
+        // not run. An event with no user or session id is not "anonymous" on
+        // that ground alone, and no text says it is. The newsletter and the
+        // consent-based tracking that used to be described here are not in the
+        // product either.
         {
           type: "p",
-          text: "Vi mäter anonymt hur ofta vissa sidor och steg används. Mätningen använder inga kakor och registrerar inte ditt namn, din e-postadress eller ditt konto. En markering i webbläsarens sessionslagring gör att samma steg inte räknas två gånger under ett besök, och den försvinner när du stänger fliken.",
-        },
-        {
-          type: "p",
-          text: "Teknik som kräver samtycke får användas först efter ditt aktiva val. Du ska kunna neka och återkalla samtycke lika enkelt som du lämnar det.",
+          text: "Vi mäter inte hur du använder tjänsten, och vi lagrar ingen statistikmarkering i webbläsaren. Vi använder ingen teknik som kräver samtycke.",
         },
       ],
     },

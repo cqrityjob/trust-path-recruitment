@@ -35,7 +35,11 @@ import { existsSync, readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { COMPANY } from "../src/lib/legal/company";
 import { PRIVACY, TERMS, type LegalDocument } from "../src/lib/legal/documents";
-import { RETENTION_PLAN, RETENTION_READY } from "../src/lib/legal/retention-plan";
+import {
+  RETENTION_PLAN,
+  RETENTION_POLICY_ROWS,
+  RETENTION_READY,
+} from "../src/lib/legal/retention-plan";
 import { VENDORS } from "../src/lib/legal/vendors";
 import {
   ACCEPTED_TERMS_VERSION,
@@ -162,14 +166,25 @@ group("GROUP 1 — the owner's documents and decisions");
     String(gaps(terms)),
   );
   ck(
-    "1.7 the privacy policy's 15 undecided points are still open: date, address, supplier facts, platform retention periods",
-    gaps(privacy) === 15 && openPoints(PRIVACY).length === 15,
+    "1.7 the privacy policy's 17 undecided points are still open: date, address, supplier facts, platform retention periods, and the two retention periods the owner has not decided",
+    gaps(privacy) === 17 && openPoints(PRIVACY).length === 17,
     String(gaps(privacy)),
   );
   ck(
     "1.8 section 9 is the approved retention plan, row for row, and the untrue 7-day promise is not back",
     !privacy.includes("7 dagar") &&
-      RETENTION_PLAN.every((r) => privacy.includes(`${r.data}\n${r.period}`)),
+      RETENTION_POLICY_ROWS.every((r) => privacy.includes(`${r.data}\n${r.period}`)),
+  );
+  ck(
+    "1.14 nothing is described that the product does not do: no newsletter, no consent-based tracking, no measurement, and no automatic forwarding of replies from job@",
+    !/nyhetsbrev|direktmarknadsföring|samtyckeskrävande spårning/i.test(`${terms}\n${privacy}`) &&
+      !privacy.includes("Vi mäter anonymt") &&
+      privacy.includes("Vi mäter inte hur du använder tjänsten") &&
+      !/vidarebefordrar (?:det|svaret) till arbetsgivaren/.test(`${terms}\n${privacy}`) &&
+      terms.includes("svaret förs inte automatiskt vidare till arbetsgivaren") &&
+      privacy.includes("Svaret förs inte automatiskt vidare till arbetsgivaren") &&
+      terms.includes("Den adressen hanteras av CQrityjob") &&
+      privacy.includes("som hanteras av CQrityjob på arbetsgivarens uppdrag"),
   );
   ck(
     "1.9 acceptance of the terms is not consent to processing (terms §9)",
@@ -393,31 +408,79 @@ group("GROUP 5 — drafts are drafts, and every account accepts");
 group("GROUP 6 — the retention plan is the policy, and the policy waits for it");
 /* ================================================================== */
 {
+  const privacy = allText(PRIVACY);
   const ids = RETENTION_PLAN.map((r) => r.id);
   ck(
-    "6.1 every row has an id, a public text, a period and the evidence behind it; ids are unique",
+    "6.1 every row has an id, a public text, a period, an approval, a routine and the evidence behind it; ids are unique",
     RETENTION_PLAN.length >= 13 &&
       new Set(ids).size === ids.length &&
       RETENTION_PLAN.every(
-        (r) => r.id && r.data.length > 10 && r.period.length > 5 && r.evidence.length > 40,
+        (r) =>
+          r.id &&
+          r.data.length > 10 &&
+          r.period.length > 5 &&
+          r.evidence.length > 40 &&
+          r.routine.length > 10 &&
+          (r.approval === "approved" || r.approval === "proposed"),
       ),
   );
+  // What the owner approved (decision 3, 2026-10-04): these periods, as the
+  // owner's retention plan states them.
   const approved: Record<string, readonly string[]> = {
     account: ["30 dagar", "24 månader"],
-    recruitment: ["24 månader"],
     "info-mailbox": ["12 månader"],
     "job-mailbox": ["24 månader"],
     feedback: ["12 månader"],
-    "usage-statistics": ["13 månader"],
-    "admin-audit": ["24 månader"],
     "notice-outbox": ["90 dagar"],
   };
   ck(
-    "6.2 the periods are the owner's approved ones (a change is a decision, so it must change this guard too)",
+    "6.2 the approved periods are the owner's (a change is a decision, so it must change this guard too)",
     Object.entries(approved).every(([id, parts]) => {
       const row = RETENTION_PLAN.find((r) => r.id === id);
-      return !!row && parts.every((part) => row.period.includes(part));
+      return (
+        !!row && row.approval === "approved" && parts.every((part) => row.period.includes(part))
+      );
     }),
+  );
+  // Owner instruction, 2026-10-04 (second message): 13 months of usage
+  // statistics, 24 months of audit logs and a general anonymisation after 24
+  // months are NOT decisions already made. They are proposals: no number in the
+  // public text, an open point instead, and the number only in `proposal`.
+  const proposed = ["recruitment", "usage-statistics", "admin-audit", "accounting"];
+  ck(
+    "6.2b usage statistics (13 months), audit logs (24 months) and a general 24-month anonymisation are proposals, not decisions: no such number or anonymisation in the public text, an open point instead",
+    ["recruitment", "usage-statistics", "admin-audit"].every((id) => {
+      const row = RETENTION_PLAN.find((r) => r.id === id);
+      return (
+        !!row &&
+        row.approval === "proposed" &&
+        !!row.proposal &&
+        /\[Ange [^\]]*Väntar på ägarens beslut\.?\]/.test(row.period) &&
+        !/\d+ månader/.test(row.period) &&
+        !/anonymis/i.test(row.period)
+      );
+    }) &&
+      RETENTION_PLAN.filter((r) => r.approval === "proposed")
+        .map((r) => r.id)
+        .sort()
+        .join() === [...proposed].sort().join() &&
+      !privacy.includes("13 månader") &&
+      !/anonymiseras därefter/.test(
+        privacy.replace("raderas eller anonymiseras därefter, såvida inte", ""),
+      ),
+  );
+  const usage = RETENTION_PLAN.find((r) => r.id === "usage-statistics");
+  const acct = RETENTION_PLAN.find((r) => r.id === "account");
+  ck(
+    "6.2c the candidate's own test results are account data, not usage statistics; version 1 has no usage statistics in the policy",
+    !!usage &&
+      !!acct &&
+      !usage.inPolicy &&
+      /cd_sessions/.test(usage.evidence) &&
+      /account data/.test(usage.evidence) &&
+      acct.data.includes("egna tester") &&
+      /cd_sessions/.test(acct.evidence) &&
+      !/användningsstatistik/i.test(privacy),
   );
   ck(
     "6.3 a period only the supplier knows is an open point, never a number invented by the code",
@@ -429,19 +492,63 @@ group("GROUP 6 — the retention plan is the policy, and the policy waits for it
   const statusSrc = code("src/lib/legal/status.ts");
   const planSrc = code("src/lib/legal/retention-plan.ts");
   ck(
-    "6.4 the policy cannot be final while a period has no verified routine",
+    "6.4 the policy cannot be final while a period is undecided or has no carried-out, verified routine",
     /export const PRIVACY_FINAL =\s*openPoints\(PRIVACY\)\.length === 0 && OWNER_APPROVED\.privacy && RETENTION_READY;/.test(
       statusSrc,
     ) &&
-      planSrc.includes(
-        'export const RETENTION_READY = RETENTION_PLAN.every((r) => r.mechanism !== "pending");',
+      /export const RETENTION_READY = RETENTION_PLAN\.every\(\s*\(r\) => r\.approval === "approved" && r\.mechanism !== "pending",\s*\);/.test(
+        planSrc,
       ) &&
       PRIVACY_FINAL ===
-        (openPoints(PRIVACY).length === 0 && OWNER_APPROVED.privacy && RETENTION_READY),
+        (openPoints(PRIVACY).length === 0 && OWNER_APPROVED.privacy && RETENTION_READY) &&
+      !RETENTION_READY,
   );
   ck(
     "6.5 a row is only live or confirmed with a document that proves it",
     RETENTION_PLAN.filter((r) => r.mechanism !== "pending").every((r) => /docs\//.test(r.evidence)),
+  );
+
+  // The smallest working routine behind every row (owner, 2026-10-04): a named
+  // person, a control interval, a simple log, tested steps; no promise the
+  // routines cannot keep.
+  const runbook = read("docs/legal/retention-runbook-v1.md");
+  const log = read("docs/legal/retention-execution-log.md");
+  const mailbox = read("docs/legal/mailbox-and-gdpr-routine.md");
+  ck(
+    "6.6 the runbook names the person responsible, the control intervals and the log, and the log exists",
+    runbook.includes("**Mostafa Alshawi**") &&
+      /Första arbetsdagen varje månad/.test(runbook) &&
+      /varje kvartal/.test(runbook) &&
+      runbook.includes("docs/legal/retention-execution-log.md") &&
+      log.includes("| Datum | Rutin | Utförd av |") &&
+      mailbox.includes("Mostafa är ansvarig") &&
+      mailbox.includes("Inget vidarebefordras automatiskt") &&
+      mailbox.includes("Mottagen + 1 månad"),
+  );
+  ck(
+    "6.7 every row that is not supplier-controlled or undecided points at a runbook routine that exists",
+    RETENTION_PLAN.every((r) => {
+      const m = /Runbook (R\d)/.exec(r.routine);
+      return r.id === "accounting" || r.id === "usage-statistics" || r.id === "admin-audit"
+        ? true
+        : !!m && new RegExp(`^## ${m[1]}\\.`, "m").test(runbook);
+    }),
+  );
+  const files = [
+    "supabase/retention/feedback-12-months.dry-run.sql",
+    "supabase/retention/feedback-12-months.delete.sql",
+    "supabase/retention/inactive-accounts-24-months.list.sql",
+  ];
+  const dbTest = read("supabase/tests/retention_manual_routines_test.sql");
+  ck(
+    "6.8 the routine SQL in the runbook is the file's text, and the database test runs those files on synthetic data and is part of the database suite",
+    files.every((f) => runbook.includes(read(f).trim()) && dbTest.includes(`cat ${f}`)) &&
+      read("scripts/db-test.sh").includes("supabase/tests/retention_manual_routines_test.sql"),
+  );
+  ck(
+    "6.9 the destructive statements are never run by the guard or the build: they are documents for the owner",
+    !/supabase\/retention/.test(read("package.json")) &&
+      /Claude-sessionerna kör inga raderingar i produktion/.test(runbook),
   );
 }
 
@@ -481,6 +588,43 @@ group("GROUP 7 — the processor agreement draft, and the historical records");
   ck(
     "7.3 its sub-processor annex lists every supplier of the privacy policy",
     have && VENDORS.every((v) => dpa.includes(v.name)) && dpa.includes("Bilaga 3"),
+  );
+  // The agreement and the terms refer to no document that does not exist (owner,
+  // 2026-10-04: check references to company agreements). There is no company
+  // agreement; the proposals table at the end of the draft says so and is not
+  // part of the agreement's text.
+  const clauses = dpa.split("## Förslag på frister")[0];
+  ck(
+    "7.5 neither the terms, the policy nor the agreement's clauses refer to a company agreement that does not exist",
+    !/företagsavtal/i.test(allText(TERMS)) &&
+      !/företagsavtal/i.test(allText(PRIVACY)) &&
+      !/företagsavtal/i.test(clauses.replace("Något separat företagsavtal finns inte i dag", "")) &&
+      allText(TERMS).includes(
+        "Särskilda ansvarsbegränsningar för företagskunder gäller bara om de har avtalats skriftligt.",
+      ),
+  );
+  ck(
+    "7.6 job@ is manual handling in the agreement too, with no automatic forwarding promised; and the retention default is an open point that matches the policy",
+    clauses.includes("Manuell hantering av kandidatsvar som kommer till job@cqrityjob.com") &&
+      !/Vidarebefordran av kandidatsvar/.test(clauses) &&
+      /10\.1[\s\S]*\[Ange hur länge rekryteringsmaterial sparas när Kunden inte har bestämt något\s+annat/.test(
+        clauses,
+      ) &&
+      !/Detta motsvarar lagringsplanen/.test(clauses),
+  );
+  ck(
+    "7.7 every deadline left open in the agreement has a concrete proposal and a short reason in the table at the end",
+    /## Förslag på frister och återstående punkter, med kort motivering/.test(dpa) &&
+      [
+        "6.2 Förvarning",
+        "8.1 Vidarebefordra",
+        "9.1 Meddela",
+        "10.1 Standardtid",
+        "10.2 Radering",
+        "11.2 Revision",
+        "12 Ansvarsbegränsning",
+        "13.3 Domstol",
+      ].every((row) => dpa.includes(`| ${row}`)),
   );
   const decisions = "docs/legal/2026-10-04-owner-decisions.md";
   const records = [
