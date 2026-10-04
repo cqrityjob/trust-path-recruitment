@@ -1,0 +1,17 @@
+Rolled-back probe on production, after the publication (2026-10-04 ~09:50 UTC), as an ordinary non-administrator holder,
+exactly probe-rolled-back.sql as committed. Nothing persisted: afterwards 51 claims (fingerprint
+fc460b1d610f2918c9371c2c0a58b5b3), 7 details, 0 requests, 373 ledger rows.
+
+Output (RAISE EXCEPTION payload):
+
+  {"failures": null, "unknown_code": "SP_APPROVED_DEFINITION_REQUIRED", "offered_total": 210,
+   "oscp_no_expiry": "SP_NO_EXPIRY_NOT_APPROVED", "offered_of_the_140": 140, "saved_and_read_back": 140,
+   "cafs_still_unavailable": 1}
+
+Earlier exploratory runs of the same probe on production, folded into the script above:
+  - a first draft looped over sp_catalogue_research_records AFTER switching to the holder role and registered nothing
+    (a holder reads 0 rows of that table under RLS, which is correct); the script captures the codes first;
+  - Abu Dhabi offered to the holder: 0; OffSec offered: INTL_OFFSEC_OSCP, _OSCP_PLUS, _OSDA, _OSEP, _OSWE;
+    OSCP+ saved with no end date: saved, self_declared, no country, no inferred valid_until;
+  - all 140 read back self_declared, active, no country, scope null, the definition's own issuer
+    (33 distinct issuers across them).
