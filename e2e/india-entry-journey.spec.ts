@@ -118,10 +118,14 @@ test("India: landing → confirmed account → setup → credential → review �
   await expect(page.locator("main")).toContainText("Security Guard");
   await expect(page.locator("main")).toContainText("MEP/Q7101");
   await expect(page.locator("main")).toContainText("does not replace SIRA training or licensing");
-  // Interactive: the arrival effect has run (it records the page view).
-  await expect
-    .poll(() => page.evaluate(() => sessionStorage.getItem("cqj:funnel:once:india_landing_viewed")))
-    .toBe("1");
+  // Interactive: the arrival effect has run. Version 1 measures nothing, so it
+  // wrote no "once" marker to sessionStorage and made no funnel request.
+  await page.waitForLoadState("networkidle");
+  expect(
+    await page.evaluate(() =>
+      Object.keys(sessionStorage).filter((key) => key.startsWith("cqj:funnel")),
+    ),
+  ).toEqual([]);
   expect(await page.evaluate(() => localStorage.getItem("cqrityjob.lang"))).toBe("en");
   await page.getByRole("link", { name: "See an example" }).click();
   await expect(page).toHaveURL(/#example$/);

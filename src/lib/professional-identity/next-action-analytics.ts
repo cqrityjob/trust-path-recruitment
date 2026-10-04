@@ -41,6 +41,7 @@ import {
   FUNNEL_EVENT_NAMES,
   trackV31FunnelEvent,
 } from "@/lib/career-discovery/v31-feedback.functions";
+import { FUNNEL_MEASUREMENT_ENABLED } from "@/lib/analytics/funnel-measurement";
 import type { NextActionStateKey } from "./next-best-action";
 
 /** The two names this surface needs on the funnel allowlist. */
@@ -76,7 +77,8 @@ export function useNextActionAnalytics() {
 
   const record = useCallback(
     (event: NextActionEvent, detail: NextActionEventDetail) => {
-      if (!eventsEnabled()) return;
+      // Version 1 measures nothing (src/lib/analytics/funnel-measurement.ts).
+      if (!FUNNEL_MEASUREMENT_ENABLED || !eventsEnabled()) return;
       void track({
         data: {
           // Safe: `eventsEnabled` has just confirmed the name is on the
