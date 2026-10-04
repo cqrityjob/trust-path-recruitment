@@ -32,9 +32,9 @@
 // off from here. The owner turned it off in the hosting project's settings on
 // 2026-10-04 and the release session checked the live site afterwards
 // (deployment 7b19bf27: no script, no analytics call, no cookie, empty browser
-// storage). The privacy policy says so as a dated check, not as a promise, and
-// the check is repeated after the next publication
-// (docs/release/2026-10-04-version-1-launch-status.md).
+// storage). The privacy policy says so as a dated check and says the check is
+// repeated after every publication (runbook R8 and
+// docs/release/2026-10-04-version-1-launch-status.md, B6).
 
 /** Version 1: no usage measurement. */
 export const FUNNEL_MEASUREMENT_ENABLED = false;

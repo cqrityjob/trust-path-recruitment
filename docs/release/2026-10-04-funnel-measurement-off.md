@@ -69,18 +69,20 @@ product names, so a new statistics marker cannot arrive unnoticed.
   (Cloudflare, bot management, HttpOnly, Secure, 30 minutes) and `__dpl`
   (Lovable, keeps the visitor on the published version, not HttpOnly, about 24
   hours); the policy names both. The policy states this as a dated check
-  ("kontrollerat den 4 oktober 2026"), not as a promise, and never says "Vi
-  mäter inte". The owner wants it checked again after the next publication
-  (open item in `docs/release/2026-10-04-version-1-launch-status.md`).
+  ("Det kontrollerades den 4 oktober 2026") with the statement that the check is
+  repeated after every publication, and never says "Vi mäter inte". The owner wants it checked again after the next publication
+  (open item B6 in `docs/release/2026-10-04-version-1-launch-status.md`, and the policy says it is repeated after every publication).
   `launch-legal:check` 1.14 requires that wording. Security Passport share
   links are still built so that the share key never reaches a page load
   (`src/lib/security-passport/share-transport.ts`), which keeps that design
   independent of whether such a script is present.
 - **The privacy policy.** Its sentence about anonymous measurement is replaced in
-  this same PR by "Vår egen användningsmätning och driftleverantörens besöksstatistik
-  är avstängda (kontrollerat den 4 oktober 2026), och vi lagrar ingen
-  statistikmarkering i webbläsaren." `launch-legal:check` 1.14 holds that sentence
-  only while the constant is `false`.
+  this same PR by "Vi har stängt av vår egen mätning av hur tjänsten används, och vi
+  lagrar ingen statistikmarkering i webbläsaren." and, for the hosting layer, "Vår
+  driftleverantör Lovables inbyggda besöksstatistik är avstängd. Det kontrollerades den
+  4 oktober 2026: ingen besöksstatistik skickades och ingen kaka för den sattes. Vi
+  kontrollerar det igen efter varje publicering." `launch-legal:check` 1.14 holds
+  the first sentence only while the constant is `false`.
 
 ## Not decided: classify first, then decide (the 339 rows)
 

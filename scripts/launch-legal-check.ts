@@ -182,14 +182,18 @@ group("GROUP 1 — the owner's documents and decisions");
       RETENTION_POLICY_ROWS.every((r) => privacy.includes(`${r.data}\n${r.period}`)),
   );
   ck(
-    '1.14 nothing is described that the product does not do: no newsletter, no consent-based tracking, our own measurement and the hosting supplier\'s visitor analytics said to be off only as checked on 4 October 2026 and only while the measurement constant is false (never "Vi mäter inte"), and no automatic forwarding of replies from job@',
+    '1.14 nothing is described that the product does not do: no newsletter, no consent-based tracking, our own measurement said to be off only while the measurement constant is false, the hosting supplier\'s visitor analytics said to be off only as checked on 4 October 2026 with the re-check after every publication (never "Vi mäter inte", never "being switched off"), and no automatic forwarding of replies from job@',
     !/nyhetsbrev|direktmarknadsföring|samtyckeskrävande spårning/i.test(`${terms}\n${privacy}`) &&
       !privacy.includes("Vi mäter anonymt") &&
       !/Vi mäter inte/.test(privacy) &&
       FUNNEL_MEASUREMENT_ENABLED === false &&
       privacy.includes(
-        "Vår egen användningsmätning och driftleverantörens besöksstatistik är avstängda (kontrollerat den 4 oktober 2026), och vi lagrar ingen statistikmarkering i webbläsaren.",
+        "Vi har stängt av vår egen mätning av hur tjänsten används, och vi lagrar ingen statistikmarkering i webbläsaren.",
       ) &&
+      privacy.includes(
+        "Vår driftleverantör Lovables inbyggda besöksstatistik är avstängd. Det kontrollerades den 4 oktober 2026: ingen besöksstatistik skickades och ingen kaka för den sattes. Vi kontrollerar det igen efter varje publicering.",
+      ) &&
+      !privacy.includes("håller på att stänga av") &&
       !/vidarebefordrar (?:det|svaret) till arbetsgivaren/.test(`${terms}\n${privacy}`) &&
       terms.includes("svaret förs inte automatiskt vidare till arbetsgivaren") &&
       privacy.includes("Svaret förs inte automatiskt vidare till arbetsgivaren") &&
@@ -229,9 +233,10 @@ group("GROUP 1 — the owner's documents and decisions");
       !privacy.includes("Vi sätter inga kakor för analys") &&
       !privacy.includes("Vi använder inga kakor för analys") &&
       privacy.includes(
-        "__cf_bm från Cloudflare, som skyddar mot automatiserad trafik och gäller i 30 minuter, och __dpl från Lovable, som håller dig på rätt publicerad version och gäller i ungefär 24 timmar. Ingen av dem används för analys eller marknadsföring.",
+        "Dessutom sätter våra driftleverantörer två tekniskt nödvändiga kakor: __cf_bm (Cloudflare, skyddar mot automatiserad trafik, gäller i 30 minuter) och __dpl (Lovable, ser till att du får den senast publicerade versionen av webbplatsen, gäller i ett dygn). De används inte för analys eller marknadsföring.",
       ) &&
       !privacy.includes("session-id") &&
+      !privacy.includes("håller på att stänga av") &&
       VENDORS.some((v) => v.id === "cloudflare" && v.location.startsWith("[Ange ")) &&
       !VENDORS.some((v) => (v.id as string) === "tinybird"),
   );

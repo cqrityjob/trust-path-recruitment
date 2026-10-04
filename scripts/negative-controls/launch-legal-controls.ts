@@ -144,7 +144,7 @@ const MUTATIONS: readonly Mutation[] = [
     id: "LEGAL-NC-MEASUREMENT-DESCRIBED",
     defect: "the policy describes an anonymous measurement again",
     file: DOCS,
-    find: "Vår egen användningsmätning och driftleverantörens besöksstatistik är avstängda (kontrollerat den 4 oktober 2026), och vi lagrar ingen statistikmarkering i webbläsaren.",
+    find: "Vi har stängt av vår egen mätning av hur tjänsten används, och vi lagrar ingen statistikmarkering i webbläsaren.",
     replace: "Vi mäter anonymt hur ofta vissa sidor och steg används.",
     guard: GUARD,
     expect: "FAIL 1.14 nothing is described that the product does not do",
@@ -173,9 +173,20 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the policy says nothing is measured and no technology needing consent is used, in place of the checked, dated statement about what is off",
     file: DOCS,
-    find: "Vår egen användningsmätning och driftleverantörens besöksstatistik är avstängda (kontrollerat den 4 oktober 2026), och vi lagrar ingen statistikmarkering i webbläsaren.",
+    find: "Vår driftleverantör Lovables inbyggda besöksstatistik är avstängd. Det kontrollerades den 4 oktober 2026: ingen besöksstatistik skickades och ingen kaka för den sattes. Vi kontrollerar det igen efter varje publicering.",
     replace:
       "Vi mäter inte hur du använder tjänsten. Vi använder ingen teknik som kräver samtycke.",
+    guard: GUARD,
+    expect: "FAIL 1.14 nothing is described that the product does not do",
+  },
+  {
+    id: "LEGAL-NC-ANALYTICS-STILL-ON-WORDING",
+    defect:
+      "the policy says the hosting supplier's statistics are being switched off and that a cookie is set, although they are off and no such cookie is set",
+    file: DOCS,
+    find: "Vår driftleverantör Lovables inbyggda besöksstatistik är avstängd. Det kontrollerades den 4 oktober 2026: ingen besöksstatistik skickades och ingen kaka för den sattes. Vi kontrollerar det igen efter varje publicering.",
+    replace:
+      "Vår driftleverantör Lovable har en inbyggd besöksstatistik som vi håller på att stänga av. Lovable sätter en kaka med namnet session-id.",
     guard: GUARD,
     expect: "FAIL 1.14 nothing is described that the product does not do",
   },
@@ -184,7 +195,7 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the policy no longer names the two cookies of the hosting layer that were measured on the live site",
     file: DOCS,
-    find: "Driften av tjänsten sätter dessutom två kakor: __cf_bm från Cloudflare, som skyddar mot automatiserad trafik och gäller i 30 minuter, och __dpl från Lovable, som håller dig på rätt publicerad version och gäller i ungefär 24 timmar. Ingen av dem används för analys eller marknadsföring.",
+    find: "Dessutom sätter våra driftleverantörer två tekniskt nödvändiga kakor: __cf_bm (Cloudflare, skyddar mot automatiserad trafik, gäller i 30 minuter) och __dpl (Lovable, ser till att du får den senast publicerade versionen av webbplatsen, gäller i ett dygn). De används inte för analys eller marknadsföring.",
     replace: "Vi sätter inga andra kakor.",
     guard: GUARD,
     expect: "FAIL 1.10b the policy's cookie sentence matches what the share transport sets",
