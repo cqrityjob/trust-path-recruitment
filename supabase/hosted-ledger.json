@@ -13,8 +13,8 @@
   ],
   "source": "Supabase connector read-only SQL, explicit project wrygicdfxwjnrugduxnt",
   "projectRef": "wrygicdfxwjnrugduxnt",
-  "readAt": "2026-10-04T16:40:53.968433+00:00",
-  "readBy": "Owner-authorized single F09 migration through Supabase connector. Read-only postflight: 374 rows, digest 3bfd11b0037b10a31029b89cd8bc5179; previous 373 identities unchanged, digest 339b270ff57e60c0e7e024081e3102bd. Actual hosted version 20261004164027. Canonical alias 20270215090000 is NOT present. See docs/release/evidence/2026-10-04-application-passport-guard/verification.json.",
+  "readAt": "2026-10-04T17:14:32.01458+00:00",
+  "readBy": "Owner-authorized history-only reconciliation after F09 direct apply. Exactly one canonical alias 20270215090000 with NULL statements; original hosted 20261004164027 body and all previous rows preserved. Read-only snapshot: 375 rows, version:name newline MD5 755d51cb6eb43f68f1e621478a1d0b81; previous 374 identities unchanged, MD5 3bfd11b0037b10a31029b89cd8bc5179. See docs/release/evidence/2026-10-04-application-passport-guard/reconciliation-verification.json.",
   "versions": [
     {
       "version": "20260716153446",
@@ -1511,6 +1511,10 @@
     {
       "version": "20270214090000",
       "name": "sp_catalogue_research_publish"
+    },
+    {
+      "version": "20270215090000",
+      "name": "application_passport_verified_content_guard"
     }
   ]
 }

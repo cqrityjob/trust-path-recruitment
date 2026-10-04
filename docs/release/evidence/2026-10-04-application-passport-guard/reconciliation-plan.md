@@ -1,6 +1,6 @@
-# F09 history reconciliation — prepared, not executed
+# F09 history reconciliation — approved, executed and verified
 
-The migration itself was applied once to project `wrygicdfxwjnrugduxnt` from reviewed commit `d09da624359e9fddf181e86594b81da88e323549`. This plan concerns only its migration-history identities. Running `reconcile-history.sql` requires separate owner approval; this preparation performed no hosted writes.
+The migration itself was applied once to project `wrygicdfxwjnrugduxnt` from reviewed commit `d09da624359e9fddf181e86594b81da88e323549`. This plan concerns only its migration-history identities. The owner separately approved the exact proposed row and the reviewed transaction was executed on 2026-10-04. Read-only verification at 17:14:32 UTC confirmed 375 rows, canonical NULL-statements alias, unchanged original SQL, unchanged guard and unchanged candidate-data fingerprints. See `reconciliation-verification.json`. The preparation/testing below happened before that approval.
 
 ## Exact proposed change
 
@@ -24,7 +24,7 @@ The positive run inserted one NULL-statements alias, preserved original rows and
 
 Existing examples are `docs/release/2026-09-16-pr257-local-history-reconciliation.md` and the comment-only marker `supabase/migrations/20260927124146_client_table_privilege_hardening.sql`. The original hosted identity remains an inert local marker; the unchanged canonical SQL remains in its dependency-safe replay position.
 
-The prepared marker is `supabase/migrations/20261004164027_application_passport_verified_content_guard.sql`. It contains comments only and currently states that alias approval is outstanding. After an approved reconciliation is executed and independently read back:
+The prepared marker is `supabase/migrations/20261004164027_application_passport_verified_content_guard.sql`. It contains comments only and records the verified alias. The following checklist was used after the approved reconciliation:
 
 1. Refresh `supabase/hosted-ledger.json` from a new read-only snapshot of all 375 rows; do not invent the alias in a pre-approval snapshot.
 2. Record actual alias verification in `hostedLedgerOverrides` and release evidence, preserving both identities and the reviewed canonical SQL checksum. Update the marker's approval sentence to the observed result.
@@ -32,4 +32,4 @@ The prepared marker is `supabase/migrations/20261004164027_application_passport_
 4. Run migration safety, release frontier, release parity, deploy-plan check and deploy-plan gate, plus their negative controls. An empty deployment plan follows from both identities actually existing; no assertion or gate is disabled.
 5. Replay all 375 local files on a fresh disposable database: the hosted marker executes nothing and the canonical guard executes once. The mandatory CI rollback test exercises the real rollback and restores the test schema.
 
-Until the alias exists in the actual hosted ledger, deploy-plan must continue to block canonical reapplication. The marker alone cannot make deployment safe.
+Both identities now exist in the actual hosted ledger. The marker alone would not make deployment safe; the independently verified alias is what prevents canonical reapplication. Do not rerun the reconciliation or migration.

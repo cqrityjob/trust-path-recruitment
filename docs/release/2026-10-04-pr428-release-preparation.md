@@ -40,10 +40,14 @@ CLI:s read-only backup-listning nekades med **HTTP 403**. Tillgänglig full back
 
 `release-parity:check --release` passerar: inga unapplied/unverified schemaändringar återstår.
 Den faktiska hosted-versionen är bokförd i `hostedLedgerOverrides`, inte som Lovable-applicering.
-Den kanoniska identiteten `20270215090000` saknas i hosted-ledger. **Deploy-plan spärrar därför release**:
-filnamnsjämförelsen skulle välja redan applicerad SQL igen. Kontrollen får inte stängas av eller klassificera SQL som pending.
-Separat, uttryckligt godkännande krävs för den förberedda historikjusteringen; den ingick inte i den enda godkända SQL-filen.
-Kör aldrig F09-filen en andra gång.
+Ägaren godkände därefter separat exakt en historikrad: kanonisk version `20270215090000`, samma namn och
+`NULL` statements. Den granskade, lokalt testade transaktionen genomfördes utan omkörning av migrations-SQL.
+Read-only verifiering 17:14:32 UTC visar **375 rader**, digest `755d51cb6eb43f68f1e621478a1d0b81`;
+de föregående 374 identiteterna har oförändrad digest, och originalradens SQL, installerad funktion/trigger,
+privilegier och kandidatdatas fingeravtryck är oförändrade. Transaktionen kontrollerade även varje komplett
+ursprunglig historikrad före/efter. [Verifieringsbevis](evidence/2026-10-04-application-passport-guard/reconciliation-verification.json).
+Både hosted-identiteten och den kanoniska identiteten finns nu; deploy-plan ska vara tom utan ändrade skyddsregler.
+Kör aldrig F09-filen eller historikkorrigeringen en andra gång. Den tidigare röda CI-körningen räknas inte som godkänd.
 
 ## Övrig hosted-kontroll – endast läsning
 

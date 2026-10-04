@@ -428,7 +428,7 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // That catalogue publication left nothing pending.
 // Evidence: docs/release/2026-10-04-catalogue-publication-hosted-verification.md.
 // F09 applied once as hosted 20261004164027; see 2026-10-04 guard verification.
-// Canonical alias remains absent; deploy-plan independently blocks re-execution.
+// Owner-authorized canonical alias verified; deploy-plan independently proves an empty plan.
 const expectedPending: string[] = [];
 
 const hostedIdentities = [

@@ -15,7 +15,7 @@
       "evidenceSource": "docs/release/evidence/2026-10-04-application-passport-guard/verification.json",
       "rollback": "No executable SQL in this marker. Canonical rollback is 20270215090000_application_passport_verified_content_guard_rollback.sql.",
       "verify": "SELECT version,name FROM supabase_migrations.schema_migrations WHERE version='20261004164027';",
-      "note": "Comment-only marker for the verified original hosted identity. Canonical SQL remains unchanged at 20270215090000. Canonical history alias is not yet authorized or present."
+      "note": "Comment-only marker for the verified original hosted identity. Canonical SQL remains unchanged at 20270215090000. Owner-authorized canonical NULL-statements alias verified 2026-10-04; original hosted row preserved. See docs/release/evidence/2026-10-04-application-passport-guard/reconciliation-verification.json."
     },
     {
       "file": "20270215090000_application_passport_verified_content_guard.sql",
@@ -31,7 +31,7 @@
       ],
       "rollback": "supabase/rollback/20270215090000_application_passport_verified_content_guard_rollback.sql",
       "verify": "SELECT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'sp_application_verified_content' AND tgrelid = 'public.sp_disclosures'::regclass AND NOT tgisinternal); -- expect true. SELECT has_function_privilege('anon', 'public.sp_require_application_verified_content()', 'EXECUTE'), has_function_privilege('authenticated', 'public.sp_require_application_verified_content()', 'EXECUTE'); -- expect false,false.",
-      "note": "F09 application-only admission guard: both submission and later sharing require an active verified claim or employment period included by the selected package. General token sharing is unchanged. No data rewrite. Local synthetic strict replay and sp_application_passport_test validate ownership, recipient selection and refusal without verified content. Applied once with explicit owner authorization on 2026-10-04, hosted version 20261004164027. Installed SQL SHA256, function body, trigger and denied client privileges match the reviewed d09da62 file; all 42 disclosures, 47 claims and 4 experience rows have unchanged fingerprints. Canonical ledger alias is not present: deploy-plan remains blocked until separately authorized history reconciliation; never re-execute this SQL. CLI-generated migration renamed after the current 20270214090000 frontier to preserve ordered deployment."
+      "note": "F09 application-only admission guard: both submission and later sharing require an active verified claim or employment period included by the selected package. General token sharing is unchanged. No data rewrite. Local synthetic strict replay and sp_application_passport_test validate ownership, recipient selection and refusal without verified content. Applied once with explicit owner authorization on 2026-10-04, hosted version 20261004164027. Installed SQL SHA256, function body, trigger and denied client privileges match the reviewed d09da62 file; all 42 disclosures, 47 claims and 4 experience rows have unchanged fingerprints. Owner-authorized history-only reconciliation added canonical 20270215090000 with NULL statements. Original hosted SQL and all previous rows are preserved; 375-row read-only evidence in reconciliation-verification.json. Never re-execute this SQL. CLI-generated migration renamed after the current 20270214090000 frontier to preserve ordered deployment."
     },
     {
       "file": "20260927124146_client_table_privilege_hardening.sql",

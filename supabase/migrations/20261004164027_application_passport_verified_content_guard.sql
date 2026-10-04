@@ -1,5 +1,5 @@
 -- Hosted identity marker only: applied once via Supabase connector on 2026-10-04.
 -- Canonical SQL: 20270215090000_application_passport_verified_content_guard.sql.
--- Original hosted ledger row preserved; canonical alias requires separate owner approval.
+-- Original hosted row preserved; owner-approved canonical NULL-statements alias verified 2026-10-04.
 -- Do not add executable SQL here or move canonical SQL earlier in replay order.
--- Evidence: docs/release/evidence/2026-10-04-application-passport-guard/verification.json.
+-- Evidence: docs/release/evidence/2026-10-04-application-passport-guard/reconciliation-verification.json.
