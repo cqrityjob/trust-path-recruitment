@@ -51,7 +51,7 @@ product names, so a new statistics marker cannot arrive unnoticed.
 
 ```sql
 -- Count first; compare with the 339 rows read on 2026-10-04.
-select count(*), min(created_at), max(created_at) from public.cd_v31_funnel_events;
+select count(*), min(occurred_at), max(occurred_at) from public.cd_v31_funnel_events;
 
 -- Delete (destructive; run once, by the owner or with the owner's explicit approval).
 delete from public.cd_v31_funnel_events;
