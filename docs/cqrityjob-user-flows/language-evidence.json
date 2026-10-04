@@ -1,0 +1,70 @@
+{
+  "kind": "Routed UI on baseline port 3103 and working app port 3102. Browser API calls intercepted; direct catalogue SSR uses the existing public hosted catalogue (read-only). Confirmation state is synthetic pending-registration storage. This is public catalogue SSR plus mocked browser requests, not isolated full-backend proof. No live identity-provider or email delivery verification.",
+  "results": [
+    {
+      "phase": "before",
+      "lang": "sv",
+      "width": 1440,
+      "profession": true,
+      "confirmation": true,
+      "overflow": 0
+    },
+    {
+      "phase": "before",
+      "lang": "sv",
+      "width": 375,
+      "profession": true,
+      "confirmation": true,
+      "overflow": 0
+    },
+    {
+      "phase": "before",
+      "lang": "en",
+      "width": 1440,
+      "profession": true,
+      "confirmation": true,
+      "overflow": 0
+    },
+    {
+      "phase": "before",
+      "lang": "en",
+      "width": 375,
+      "profession": true,
+      "confirmation": true,
+      "overflow": 0
+    },
+    {
+      "phase": "after",
+      "lang": "sv",
+      "width": 1440,
+      "profession": true,
+      "confirmation": true,
+      "overflow": 0
+    },
+    {
+      "phase": "after",
+      "lang": "sv",
+      "width": 375,
+      "profession": true,
+      "confirmation": true,
+      "overflow": 0
+    },
+    {
+      "phase": "after",
+      "lang": "en",
+      "width": 1440,
+      "profession": true,
+      "confirmation": true,
+      "overflow": 0
+    },
+    {
+      "phase": "after",
+      "lang": "en",
+      "width": 375,
+      "profession": true,
+      "confirmation": true,
+      "overflow": 0
+    }
+  ],
+  "script": "/tmp/cqrity-language-evidence.ts"
+}

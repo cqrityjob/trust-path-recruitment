@@ -1,0 +1,133 @@
+{
+  "readAt": "2026-10-04T16:42:38.342Z",
+  "project": "wrygicdfxwjnrugduxnt",
+  "identity": "anonymous public key; no user session",
+  "requests": [
+    {
+      "table": "cig_professions",
+      "select": "id,slug,title_sv,title_en,summary_sv,summary_en,overview_sv,overview_en,ssyk_code,is_regulated,jurisdiction,last_verified,disclaimer_sv,disclaimer_en",
+      "filters": {
+        "slug": "in.(personskyddsvakt,vaktare,ordningsvakt)"
+      },
+      "status": 200,
+      "rowCount": 3
+    },
+    {
+      "table": "cig_profession_formal_requirements",
+      "select": "profession_id,criticality,legal_blocker,jurisdiction,cig_formal_requirements(title_sv,title_en),cig_source_references(organisation,title,url)",
+      "filters": {
+        "profession_id": "in.(56eec5d2-5443-4b05-9a3b-dd34320326e9,6f94f65d-1228-42e3-9fd3-f1c546b80df4,078a05f3-d0a8-4b75-ae53-9fb44b82cb5d)"
+      },
+      "status": 200,
+      "rowCount": 3,
+      "joinedNonNull": {
+        "cig_formal_requirements": 3,
+        "cig_source_references": 3
+      }
+    },
+    {
+      "table": "cig_profession_education_pathways",
+      "select": "profession_id,importance,cig_education_pathways(title_sv,title_en)",
+      "filters": {
+        "profession_id": "in.(56eec5d2-5443-4b05-9a3b-dd34320326e9,6f94f65d-1228-42e3-9fd3-f1c546b80df4,078a05f3-d0a8-4b75-ae53-9fb44b82cb5d)"
+      },
+      "status": 200,
+      "rowCount": 2,
+      "joinedNonNull": {
+        "cig_education_pathways": 2
+      }
+    },
+    {
+      "table": "cig_profession_certification_rel",
+      "select": "profession_id,criticality,cig_certifications(title_sv,title_en)",
+      "filters": {
+        "profession_id": "in.(56eec5d2-5443-4b05-9a3b-dd34320326e9,6f94f65d-1228-42e3-9fd3-f1c546b80df4,078a05f3-d0a8-4b75-ae53-9fb44b82cb5d)"
+      },
+      "status": 200,
+      "rowCount": 0,
+      "joinedNonNull": {
+        "cig_certifications": 0
+      }
+    },
+    {
+      "table": "cig_profession_source_references",
+      "select": "profession_id,cig_source_references(organisation,title,url)",
+      "filters": {
+        "profession_id": "in.(56eec5d2-5443-4b05-9a3b-dd34320326e9,6f94f65d-1228-42e3-9fd3-f1c546b80df4,078a05f3-d0a8-4b75-ae53-9fb44b82cb5d)"
+      },
+      "status": 200,
+      "rowCount": 2,
+      "joinedNonNull": {
+        "cig_source_references": 2
+      }
+    },
+    {
+      "table": "cig_profession_experience_req",
+      "select": "profession_id,criticality,cig_experience_types(title_sv,title_en,description_sv,description_en)",
+      "filters": {
+        "profession_id": "in.(56eec5d2-5443-4b05-9a3b-dd34320326e9,6f94f65d-1228-42e3-9fd3-f1c546b80df4,078a05f3-d0a8-4b75-ae53-9fb44b82cb5d)"
+      },
+      "status": 200,
+      "rowCount": 0,
+      "joinedNonNull": {
+        "cig_experience_types": 0
+      }
+    },
+    {
+      "table": "cig_profession_competency_req",
+      "select": "profession_id,criticality,cig_competencies(title_sv,title_en,description_sv,description_en)",
+      "filters": {
+        "profession_id": "in.(56eec5d2-5443-4b05-9a3b-dd34320326e9,6f94f65d-1228-42e3-9fd3-f1c546b80df4,078a05f3-d0a8-4b75-ae53-9fb44b82cb5d)"
+      },
+      "status": 200,
+      "rowCount": 12,
+      "joinedNonNull": {
+        "cig_competencies": 12
+      }
+    },
+    {
+      "table": "cig_profession_work_environment_rel",
+      "select": "profession_id,cig_work_environments(title_sv,title_en)",
+      "filters": {
+        "profession_id": "in.(56eec5d2-5443-4b05-9a3b-dd34320326e9,6f94f65d-1228-42e3-9fd3-f1c546b80df4,078a05f3-d0a8-4b75-ae53-9fb44b82cb5d)"
+      },
+      "status": 200,
+      "rowCount": 6,
+      "joinedNonNull": {
+        "cig_work_environments": 6
+      }
+    },
+    {
+      "table": "cig_career_transitions",
+      "select": "transition_kind,from_profession_id,to_profession_id,from:cig_professions!cig_career_transitions_from_profession_id_fkey(slug,title_sv,title_en),to:cig_professions!cig_career_transitions_to_profession_id_fkey(slug,title_sv,title_en)",
+      "filters": {
+        "or": "(from_profession_id.in.(56eec5d2-5443-4b05-9a3b-dd34320326e9,6f94f65d-1228-42e3-9fd3-f1c546b80df4,078a05f3-d0a8-4b75-ae53-9fb44b82cb5d),to_profession_id.in.(56eec5d2-5443-4b05-9a3b-dd34320326e9,6f94f65d-1228-42e3-9fd3-f1c546b80df4,078a05f3-d0a8-4b75-ae53-9fb44b82cb5d))"
+      },
+      "status": 200,
+      "rowCount": 5
+    }
+  ],
+  "professions": [
+    {
+      "slug": "vaktare",
+      "titleSv": "Väktare",
+      "titleEn": "Security Officer (Väktare)",
+      "hasOverviewSv": false,
+      "hasOverviewEn": false
+    },
+    {
+      "slug": "ordningsvakt",
+      "titleSv": "Ordningsvakt",
+      "titleEn": "Public Order Guard",
+      "hasOverviewSv": false,
+      "hasOverviewEn": false
+    },
+    {
+      "slug": "personskyddsvakt",
+      "titleSv": "Personskyddsvakt",
+      "titleEn": "Close Protection Officer",
+      "hasOverviewSv": false,
+      "hasOverviewEn": false
+    }
+  ]
+}

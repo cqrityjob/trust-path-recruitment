@@ -275,10 +275,12 @@ group("1a · the shell says nothing about any one product");
     attempt
       .slice(attempt.indexOf("function AcademyAttemptRunner("))
       .match(/<AssessmentShell\b[^>]*>/g) ?? [];
-  const exiting = attemptShells.filter((s) => /\bexit=\{exit\}/.test(s));
+  const exiting = attemptShells.filter((s) => /\bexit=\{(?:exit|pauseExit)\}/.test(s));
   check(
-    "1a.15 the assigned-assessment runner passes an exit on every shell that had one",
-    exiting.length === 4 && attemptShells.every((s) => /deliveryLanguage=\{lang\}/.test(s)),
+    "1a.15 every assigned-assessment phase offers a return or a save-before-exit action",
+    exiting.length === attemptShells.length &&
+      attemptShells.length > 0 &&
+      attemptShells.every((s) => /deliveryLanguage=\{lang\}/.test(s)),
     `${exiting.length} of ${attemptShells.length}`,
   );
   check(

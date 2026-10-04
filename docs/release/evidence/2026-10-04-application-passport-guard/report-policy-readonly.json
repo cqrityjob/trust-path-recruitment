@@ -1,0 +1,37 @@
+{
+  "method": "Read-only hosted pg_proc body MD5 and authenticated EXECUTE; compared with canonical repository definitions. No reports read and no authorization probe or writes.",
+  "functions": [
+    {
+      "proname": "scp_development_recommendations",
+      "arguments": "_subject_id uuid",
+      "body_md5": "b6f770ec9b9191f4949fc0cf0d5075e7",
+      "authenticated_execute": true
+    },
+    {
+      "proname": "scp_participant_report",
+      "arguments": "_attempt_id uuid",
+      "body_md5": "d9ce08b36c1b5820771bce5bfc37613c",
+      "authenticated_execute": true
+    },
+    {
+      "proname": "scp_report_snapshot_readable",
+      "arguments": "_audience text, _subject_id uuid, _issuer_organization_id uuid",
+      "body_md5": "3ca8797f9b0609b69deb2029a9d2390b",
+      "authenticated_execute": true
+    },
+    {
+      "proname": "scp_report_snapshot_readable",
+      "arguments": "_audience text, _subject_id uuid, _issuer_organization_id uuid, _attempt_id uuid",
+      "body_md5": "cc2aaf18f43ec3cc5b0df8bfc448ea77",
+      "authenticated_execute": true
+    },
+    {
+      "proname": "scp_subject_progress",
+      "arguments": "_subject_id uuid",
+      "body_md5": "2968ee4c948d7a5bb859976134ba2073",
+      "authenticated_execute": true
+    }
+  ],
+  "comparison": "All five function bodies match the current repository definitions; direct participant workforce access remains a launch blocker.",
+  "readDate": "2026-10-04"
+}

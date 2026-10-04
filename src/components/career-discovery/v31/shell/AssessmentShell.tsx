@@ -21,7 +21,7 @@
 
 import type { ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
-import { ShieldCheck } from "lucide-react";
+import { BrandLogo } from "@/components/site/BrandLogo";
 import { useT } from "@/i18n/context";
 import type { Lang } from "@/i18n/dictionaries";
 import { LanguageSwitcher } from "@/components/site/LanguageSwitcher";
@@ -37,7 +37,7 @@ export type AssessmentShellExit = { label: string } & (
 );
 
 const EXIT_LINK_CLASS =
-  "rounded-md px-1 text-xs font-medium text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
+  "min-h-11 rounded-md px-1 text-xs font-medium text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
 
 export function AssessmentShell({
   children,
@@ -45,11 +45,15 @@ export function AssessmentShell({
   footerNote,
   wide = false,
   deliveryLanguage,
+  onExit,
+  notice,
 }: {
   children: ReactNode;
   /** Only passed once a run is in progress — there is nothing to leave before
    *  that. Absent means no exit link, never a default one. */
   exit?: AssessmentShellExit;
+  onExit?: () => void;
+  notice?: ReactNode;
   /** A short standing note for the foot of the page, already translated. Absent
    *  means no footer at all: a note about one product must not appear under
    *  another. */
@@ -66,31 +70,22 @@ export function AssessmentShell({
   const { t } = useT();
   return (
     <div className="flex min-h-dvh flex-col bg-[color:var(--surface-subtle)]">
-      <header className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur">
-        <div className="mx-auto grid w-full max-w-[1040px] grid-cols-[minmax(0,1fr)_auto] items-center gap-4 px-5 py-3 sm:px-8">
+      <header className="relative z-30 border-b border-border bg-background/95 backdrop-blur">
+        <div className="mx-auto grid w-full max-w-[1040px] grid-cols-[auto_minmax(0,1fr)] items-center gap-4 px-5 py-3 sm:px-8">
           <Link
             to="/"
             className="inline-flex min-w-0 items-center gap-2.5 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
-            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-md bg-primary text-primary-foreground">
-              <ShieldCheck className="h-4 w-4" strokeWidth={2} aria-hidden="true" />
-            </span>
-            <span className="min-w-0">
-              <span
-                className="block truncate text-sm font-semibold tracking-tight text-foreground"
-                style={{ fontFamily: "var(--font-display)" }}
-              >
-                CQrityjob
-              </span>
-              <span className="hidden text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground sm:block">
-                {t("cd.public.shellEyebrow")}
-              </span>
-            </span>
+            <BrandLogo className="w-24 sm:w-32" />
           </Link>
 
-          <div className="flex shrink-0 items-center gap-3">
+          <div className="flex flex-wrap items-center justify-end gap-2">
             {exit &&
-              (exit.to === "/academy/training/$assignmentId" ? (
+              (onExit ? (
+                <button type="button" className={EXIT_LINK_CLASS} onClick={onExit}>
+                  {exit.label}
+                </button>
+              ) : exit.to === "/academy/training/$assignmentId" ? (
                 <Link to={exit.to} params={exit.params} className={EXIT_LINK_CLASS}>
                   {exit.label}
                 </Link>
@@ -121,6 +116,14 @@ export function AssessmentShell({
 
       <main className="flex-1 px-5 py-8 sm:px-8 sm:py-12">
         <div className={cn("mx-auto w-full", wide ? "max-w-[1040px]" : "max-w-[880px]")}>
+          {notice && (
+            <div
+              role="alert"
+              className="mb-4 rounded-md border border-destructive p-4 text-sm text-destructive"
+            >
+              {notice}
+            </div>
+          )}
           {children}
         </div>
       </main>

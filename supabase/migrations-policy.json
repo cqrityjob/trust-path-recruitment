@@ -438,6 +438,13 @@
   "approvedDuplicateVersions": [],
   "hostedLedgerOverrides": [
     {
+      "file": "20270215090000_application_passport_verified_content_guard.sql",
+      "hostedVersion": "20261004164027",
+      "hostedName": "application_passport_verified_content_guard",
+      "reason": "Owner-authorized direct Supabase connector apply from d09da624359e9fddf181e86594b81da88e323549. Recorded SQL SHA256 0b492098ae86ff8ee19c97efe88de76058deb53ce67bda4dfffc337889d93f82 equals the unchanged canonical file. Owner-authorized history-only reconciliation on 2026-10-04 added canonical 20270215090000 with NULL statements, preserving the complete original hosted row. Read-only evidence: docs/release/evidence/2026-10-04-application-passport-guard/reconciliation-verification.json. Canonical SQL stays at its replay position; generated identity is a comment-only marker; do not execute SQL again. Evidence: docs/release/evidence/2026-10-04-application-passport-guard/verification.json.",
+      "verifyBeforeMerge": "SELECT version,name FROM supabase_migrations.schema_migrations WHERE version IN ('20261004164027','20270215090000');"
+    },
+    {
       "file": "20261218090000_client_table_privilege_hardening.sql",
       "hostedVersion": "20260927124146",
       "hostedName": "client_table_privilege_hardening",

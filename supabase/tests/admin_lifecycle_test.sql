@@ -1012,9 +1012,14 @@ SELECT 'ad100000-6666-0000-0000-0000000000b1','ad100000-4444-0000-0000-000000000
   FROM public.scp_report_versions rv ORDER BY rv.id LIMIT 1;
 
 -- The holder's own Security Passport, and one disclosure of it to the employer.
-INSERT INTO public.sp_claims (id, holder_user_id, claim_type, title, lifecycle_state, credential_code, claimed_issuer_name)
+-- Operator-owned verification fixture; the focused application share below
+-- must have verified content while lifecycle erasure is under test.
+INSERT INTO public.sp_claims
+  (id, holder_user_id, claim_type, title, lifecycle_state, credential_code, claimed_issuer_name,
+   assertion_level, verified_by_user_id, verified_at)
 VALUES ('ad100000-7777-0000-0000-0000000000b1','ad100000-0000-0000-0000-0000000000b1',
-        'certification','Certified Protection Professional (CPP)','active','INTL_ASIS_CPP','ASIS International');
+        'certification','Certified Protection Professional (CPP)','active','INTL_ASIS_CPP','ASIS International',
+        'verified','ad100000-0000-0000-0000-0000000000ad',now());
 
 INSERT INTO public.sp_evidence (holder_user_id, claim_id, storage_path, file_name, mime_type, size_bytes)
 VALUES ('ad100000-0000-0000-0000-0000000000b1','ad100000-7777-0000-0000-0000000000b1',

@@ -228,7 +228,7 @@ async function exploreTopAndComeBack(page: Page, resultPath: RegExp) {
     TOP_DESTINATION!.kind === "career_center" ? TOP_DESTINATION!.href : "",
   );
   await expect(link).toHaveAttribute("aria-label", new RegExp(TOP.titleSv));
-  await expect(link).toHaveText(/Utforska nu/);
+  await expect(link).toHaveText(/Läs om yrket/);
   await expectTarget44(
     page,
     `[data-recommendation-card="${TOP.professionId}"] [data-explore-link]`,
@@ -277,7 +277,7 @@ async function openPolisPage(page: Page, back: RegExp) {
   await expect(chip).toBeVisible();
   await expect(chip).toHaveAttribute("href", "/career-center/yrke/polis");
   await expect(chip).toHaveAttribute("aria-label", /Polis/);
-  await expect(chip).toHaveText(/Utforska nu/);
+  await expect(chip).toHaveText(/Läs om yrket/);
   await expectTarget44(page, '[data-recommendation-card="SP005"] [data-explore-link="SP005"]');
 
   // Keyboard: the chip is focusable and Enter follows it.

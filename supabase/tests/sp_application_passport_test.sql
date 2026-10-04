@@ -431,6 +431,20 @@ BEGIN
   IF _n <> 1 THEN RAISE EXCEPTION 'AC6: the application did not survive'; END IF;
   _asserts := _asserts + 4;
 
+  -- F09: the after-submission RPC must enforce the same rule, even when a
+  -- caller bypasses the UI. A self-declared active credential is not enough.
+  BEGIN
+    PERFORM public.sp_share_passport_with_application(
+      'f0000000-0000-4000-8000-000000000009', 'employer_review', 30, NULL, NULL);
+    RAISE EXCEPTION 'F09: after-submission sharing accepted no verified content';
+  EXCEPTION WHEN check_violation THEN
+    IF SQLERRM <> 'SP_NO_VERIFIED_APPLICATION_CONTENT' THEN RAISE; END IF;
+  END;
+  SELECT count(*) INTO _n FROM public.sp_disclosures
+    WHERE application_id = 'f0000000-0000-4000-8000-000000000009';
+  IF _n <> 0 THEN RAISE EXCEPTION 'F09: refusal left an empty disclosure'; END IF;
+  _asserts := _asserts + 2;
+
   -- =========================================================================
   -- 7. Revocation. The employer loses the content, not just the label.
   -- =========================================================================
@@ -454,6 +468,85 @@ BEGIN
 
   RAISE NOTICE 'sp_application_passport_test: % assertions passed', _asserts;
 END $suite$;
+
+-- F09 referential cleanup must permit erasure without widening a focused share.
+-- These are operator-owned fixtures; the normal RPC rule remains tested above.
+DO $focus_cleanup$
+DECLARE
+  _holder uuid := 'a0000000-0000-4000-8000-000000000006';
+  _first uuid := 'd0000000-0000-4000-8000-000000000021';
+  _second uuid := 'd0000000-0000-4000-8000-000000000022';
+  _app uuid := 'f0000000-0000-4000-8000-000000000009';
+  _share uuid;
+  _payload jsonb;
+BEGIN
+  INSERT INTO public.sp_claims
+    (id, holder_user_id, claim_type, title, credential_code, claimed_issuer_name,
+     assertion_level, lifecycle_state, verified_by_user_id, verified_at)
+  VALUES
+    (_first, _holder, 'certification', 'Certified Protection Professional (CPP)',
+     'INTL_ASIS_CPP', 'ASIS International', 'verified', 'active',
+     'a0000000-0000-4000-8000-000000000002', now()),
+    (_second, _holder, 'certification', 'Physical Security Professional (PSP)',
+     'INTL_ASIS_PSP', 'ASIS International', 'verified', 'active',
+     'a0000000-0000-4000-8000-000000000002', now());
+  INSERT INTO public.sp_disclosures
+    (holder_user_id, package_code, application_id, focus_claim_id, expires_at)
+  VALUES (_holder, 'verified_qualifications', _app, _first, now() + interval '1 day')
+  RETURNING id INTO _share;
+
+  PERFORM set_config('sp.verification_context', 'on', true);
+  UPDATE public.sp_claims SET lifecycle_state = 'expired' WHERE id IN (_first, _second);
+  PERFORM set_config('sp.verification_context', 'off', true);
+  BEGIN
+    UPDATE public.sp_disclosures SET focus_claim_id = NULL WHERE id = _share;
+    RAISE EXCEPTION 'F09-FK: direct clearing accepted no verified active content';
+  EXCEPTION WHEN check_violation THEN
+    IF SQLERRM <> 'SP_NO_VERIFIED_APPLICATION_CONTENT' THEN RAISE; END IF;
+  END;
+  IF NOT EXISTS (SELECT 1 FROM public.sp_disclosures WHERE id = _share AND focus_claim_id = _first) THEN
+    RAISE EXCEPTION 'F09-FK: failed direct update changed the focus';
+  END IF;
+  RAISE NOTICE 'ok  F09-FK1 direct focus clearing still requires verified active content';
+  PERFORM set_config('sp.verification_context', 'on', true);
+  UPDATE public.sp_claims SET lifecycle_state = 'active' WHERE id IN (_first, _second);
+  PERFORM set_config('sp.verification_context', 'off', true);
+
+  PERFORM set_config('request.jwt.claim.sub', 'a0000000-0000-4000-8000-000000000003', true);
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', 'a0000000-0000-4000-8000-000000000003', 'role', 'authenticated',
+                      'session_id', 'a0000000-0000-4000-8000-000000000003')::text, true);
+  _payload := public.sp_application_disclosure(_app);
+  IF _payload->>'status' IS DISTINCT FROM 'active'
+     OR jsonb_array_length(_payload->'verified_claims') IS DISTINCT FROM 1
+     OR _payload->'verified_claims'->0->>'id' IS DISTINCT FROM _first::text THEN
+    RAISE EXCEPTION 'F09-FK: authorized employer did not see exactly the focused merit before deletion';
+  END IF;
+  RAISE NOTICE 'ok  F09-FK0 authorized employer sees focused CPP, not remaining PSP, before deletion';
+
+  DELETE FROM public.sp_claims WHERE id = _first;
+  IF NOT EXISTS (SELECT 1 FROM public.sp_disclosures WHERE id = _share
+                 AND focus_claim_id IS NULL AND revoked_at IS NOT NULL)
+     OR NOT EXISTS (SELECT 1 FROM public.sp_claims WHERE id = _second) THEN
+    RAISE EXCEPTION 'F09-FK: deleting focused merit failed to revoke without deleting other merits';
+  END IF;
+  RAISE NOTICE 'ok  F09-FK2 deleting focused merit revokes instead of broadening consent';
+  IF public.sp_application_disclosure(_app)->>'status' IS DISTINCT FROM 'none' THEN
+    RAISE EXCEPTION 'F09-FK: employer could read remaining merit after focus deletion';
+  END IF;
+  RAISE NOTICE 'ok  F09-FK3 employer loses access after focus deletion';
+
+  INSERT INTO public.sp_disclosures
+    (holder_user_id, package_code, application_id, focus_claim_id, expires_at)
+  VALUES (_holder, 'verified_qualifications', _app, _second, now() + interval '1 day')
+  RETURNING id INTO _share;
+  DELETE FROM public.sp_claims WHERE id = _second;
+  IF NOT EXISTS (SELECT 1 FROM public.sp_disclosures WHERE id = _share
+                 AND focus_claim_id IS NULL AND revoked_at IS NOT NULL) THEN
+    RAISE EXCEPTION 'F09-FK: deleting last focused merit failed to revoke';
+  END IF;
+  RAISE NOTICE 'ok  F09-FK4 last focused merit can be erased with no surviving live share';
+END $focus_cleanup$;
 
 -- ---------------------------------------------------------------------------
 -- 8. Surface-level guarantees, checked without a session.

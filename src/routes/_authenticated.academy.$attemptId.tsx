@@ -20,7 +20,7 @@
 // would imply an access relationship that does not exist.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useBlocker, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { AlertTriangle, CheckCircle2, MessageSquare, ShieldAlert } from "lucide-react";
 import { LanguageScope, useT } from "@/i18n/context";
@@ -49,6 +49,7 @@ import { resolveAttemptLanguage } from "@/lib/security-competency/attempt-langua
 import { createAnswerQueue } from "@/lib/security-competency/answer-queue";
 import {
   MissingAnswersPanel,
+  UnsavedAnswersNotice,
   SaveStatus,
   SubmittedNotice,
   type SaveState,
@@ -65,6 +66,7 @@ type Phase =
   | "running"
   | "submitting"
   | "done"
+  | "paused"
   | "error"
   /** A final submission that did not go through. Deliberately NOT "error":
    *  the run is intact and resumable, and the copy has to say so. */
@@ -150,7 +152,7 @@ function AcademyAttemptRoute() {
   const deliveryLang = resolveAttemptLanguage(resolved.state?.language ?? null, siteLang);
   return (
     <LanguageScope lang={deliveryLang}>
-      <AcademyAttemptRunner attemptId={attemptId} initialState={resolved.state} />
+      <AcademyAttemptRunner key={attemptId} attemptId={attemptId} initialState={resolved.state} />
     </LanguageScope>
   );
 }
@@ -170,6 +172,7 @@ function AcademyAttemptRunner({
   // page: an applicant sitting a recruitment assessment is not "developing
   // their competence", which is what the page's own home title says.
   const exit = { to: "/academy", label: t("academy.attempt.exit") } as const;
+  const pauseExit = { to: "/academy", label: t("academy.pause.label") } as const;
   const loadItems = useServerFn(getAcademyAttemptItems);
   const loadBlocks = useServerFn(getAcademyAttemptBlocks);
   const loadState = useServerFn(getAcademyAttemptState);
@@ -177,6 +180,10 @@ function AcademyAttemptRunner({
   const submitAttempt = useServerFn(submitAcademyAttempt);
   const loadWork = useServerFn(listAcademyWork);
 
+  const failedSaves = useRef(new Set<string>());
+  const [pauseState, setPauseState] = useState<"saving" | "failed" | null>(null);
+  const leaveGeneration = useRef(0);
+  const navigate = useNavigate();
   const [items, setItems] = useState<AcademyItem[]>([]);
   const [blocks, setBlocks] = useState<AcademyBlock[]>([]);
   // Which section introductions this sitting has already shown. A section
@@ -222,6 +229,7 @@ function AcademyAttemptRunner({
   // WHAT IS SENT IS THE WHOLE ANSWER, merged from the item as it stands after
   // the change rather than from this render's closure — see `answer()`.
   const queue = useRef(createAnswerQueue());
+  const disposed = useRef(false);
   // `submittingRef` makes the submit itself single-flight. A ref, not state:
   // it updates synchronously, so a second click that lands before React
   // re-renders still sees it — which is the click that would otherwise run
@@ -237,8 +245,8 @@ function AcademyAttemptRunner({
   // took it, and the participant came back to an empty box.
   //
   // So typing schedules a save, and anything that could end the sitting
-  // flushes it first: moving between questions, submitting, unmounting, and
-  // leaving the page. The debounce is short and is never the thing relied on —
+  // flushes it first: moving between questions, submitting, and explicit
+  // navigation. Identity changes discard buffers instead of writing them. The debounce is short and is never the thing relied on —
   // it exists to avoid a request per keystroke, not to be a deadline.
   const textTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const textDirty = useRef<{ itemId: string; value: string } | null>(null);
@@ -288,7 +296,15 @@ function AcademyAttemptRunner({
         // is answered, the last one is the right place to land: that is where
         // the submit control is.
         const firstUnanswered = rows.findIndex((r) => !isAnswered(r));
-        setIndex(firstUnanswered === -1 ? Math.max(0, rows.length - 1) : firstUnanswered);
+        let resumeIndex = firstUnanswered === -1 ? Math.max(0, rows.length - 1) : firstUnanswered;
+        try {
+          const savedItem = localStorage.getItem(`academy-position:${attemptId}`);
+          const savedIndex = rows.findIndex((row) => row.itemVersionId === savedItem);
+          if (savedIndex >= 0) resumeIndex = savedIndex;
+        } catch {
+          /* Storage is optional; server answers still determine progress. */
+        }
+        setIndex(resumeIndex);
         // An empty list means "not yours, or nothing to answer". The server
         // deliberately does not distinguish those, and neither does this.
         setPhase(rows.length === 0 ? "error" : "intro");
@@ -316,6 +332,7 @@ function AcademyAttemptRunner({
    *  up there as missing rather than being quietly submitted as blank. */
   function persist(itemId: string, a: AcademyItem): Promise<void> {
     return queue.current.enqueue(itemId, async () => {
+      if (disposed.current) return;
       setSaveState((prev) => ({ ...prev, [itemId]: "saving" }));
       try {
         await saveResponse({
@@ -332,8 +349,12 @@ function AcademyAttemptRunner({
         // tell somebody their answer is saved on the strength of having sent
         // it, because the two are different facts and only one of them
         // survives a closed laptop.
+        if (disposed.current) return;
+        failedSaves.current.delete(itemId);
         setSaveState((prev) => ({ ...prev, [itemId]: "saved" }));
       } catch {
+        if (disposed.current) return;
+        failedSaves.current.add(itemId);
         setSaveState((prev) => ({ ...prev, [itemId]: "failed" }));
       }
     });
@@ -384,18 +405,108 @@ function AcademyAttemptRunner({
     return queue.current.drain();
   }
 
+  // Await server acknowledgements before leaving. Failed answers remain in
+  // memory and are retried from the latest value, never replaced by a reread.
+  async function saveBeforeLeaving(): Promise<boolean> {
+    flushText();
+    await flushPendingSaves();
+    if (disposed.current) return false;
+    for (const itemId of [...failedSaves.current]) {
+      const item = itemsRef.current.find((row) => row.itemVersionId === itemId);
+      if (item) void persist(itemId, item);
+    }
+    await flushPendingSaves();
+    if (disposed.current) return false;
+    if (failedSaves.current.size > 0) {
+      return false;
+    }
+    try {
+      const item = itemsRef.current[index];
+      if (item) localStorage.setItem(`academy-position:${attemptId}`, item.itemVersionId);
+    } catch {
+      /* No answer content is stored in the browser. */
+    }
+    return true;
+  }
+
+  async function tryLeaving(onSaved: () => void) {
+    const generation = ++leaveGeneration.current;
+    setPauseState("saving");
+    const saved = await saveBeforeLeaving();
+    // Staying, leaving explicitly, or losing the session cancels the intent.
+    // A late network reply must never navigate the new page or identity.
+    if (disposed.current || generation !== leaveGeneration.current) return;
+    setPauseState(saved ? null : "failed");
+    if (saved) onSaved();
+  }
+
+  function pause() {
+    if (pauseState === "saving" || submittingRef.current) return;
+    void tryLeaving(() => setPhase("paused"));
+  }
+
+  // Resolve the actual router transition (including browser Back) only after
+  // acknowledged saves or an explicit choice to leave unsaved answers.
+  const blocker = useBlocker({
+    disabled: phase === "done" || phase === "loading" || phase === "error",
+    enableBeforeUnload: false,
+    withResolver: true,
+    shouldBlockFn: () =>
+      submittingRef.current ||
+      textDirty.current !== null ||
+      queue.current.size() > 0 ||
+      failedSaves.current.size > 0,
+  });
+  useEffect(() => {
+    if (blocker.status !== "blocked") return;
+    if (submittingRef.current) {
+      blocker.reset();
+      return;
+    }
+    void tryLeaving(blocker.proceed);
+    // One save operation per blocked transition; renders while it runs must
+    // not start another retry. The operation reads current refs, not answers
+    // captured by a render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [blocker.status]);
+
+  const leaveNotice = pauseState ? (
+    <UnsavedAnswersNotice
+      saving={pauseState === "saving"}
+      onRetry={() => {
+        void tryLeaving(blocker.status === "blocked" ? blocker.proceed : () => setPhase("paused"));
+      }}
+      onStay={() => {
+        leaveGeneration.current++;
+        setPauseState(null);
+        if (blocker.status === "blocked") blocker.reset();
+      }}
+      onLeave={() => {
+        leaveGeneration.current++;
+        disposed.current = true;
+        if (textTimer.current) clearTimeout(textTimer.current);
+        textDirty.current = null;
+        if (blocker.status === "blocked") blocker.proceed();
+        else void navigate({ to: "/academy", ignoreBlocker: true });
+      }}
+    />
+  ) : undefined;
+
   // ── THE SITTING ENDING WITHOUT A CLICK ────────────────────────────────
   //
-  // Unmounting (navigating away inside the app) flushes: the save is started
-  // and the browser keeps the request alive. Leaving the page entirely cannot
+  // The router saves before normal navigation. Unmount may also mean an
+  // identity change, so cleanup must never start a write for the old identity.
+  // Leaving the page entirely cannot
   // be made to wait, so the only honest thing is to say so first — and only
   // when something really is unsaved, because a confirmation dialog that
   // appears every time is one people learn to dismiss without reading.
   useEffect(() => {
+    disposed.current = false;
     // `textDirty` is set on every keystroke and cleared only by a flush, so
     // between them it IS the unsaved buffer; the queue holds the writes
     // already on their way. Nothing else can be outstanding.
-    const unsaved = () => textDirty.current !== null || queue.current.size() > 0;
+    const unsaved = () =>
+      textDirty.current !== null || queue.current.size() > 0 || failedSaves.current.size > 0;
     const onBeforeUnload = (e: BeforeUnloadEvent) => {
       if (!unsaved()) return;
       e.preventDefault();
@@ -405,11 +516,23 @@ function AcademyAttemptRunner({
     window.addEventListener("beforeunload", onBeforeUnload);
     return () => {
       window.removeEventListener("beforeunload", onBeforeUnload);
-      flushText();
+      disposed.current = true;
+      if (textTimer.current) clearTimeout(textTimer.current);
+      textDirty.current = null;
     };
   }, [flushText]);
 
   const current = items[index];
+  const currentItemId = current?.itemVersionId;
+  useEffect(() => {
+    if (!currentItemId || (phase !== "running" && phase !== "section")) return;
+    try {
+      localStorage.setItem(`academy-position:${attemptId}`, currentItemId);
+    } catch {
+      /* Server answers remain resumable when browser storage is unavailable. */
+    }
+  }, [attemptId, currentItemId, phase]);
+
   const answered = useMemo(() => items.filter(isAnswered).length, [items]);
   // "cirka 35–45 minuter": only when the form states a range. No figure is
   // invented for a form that does not, and there is still no time limit.
@@ -490,6 +613,7 @@ function AcademyAttemptRunner({
    *  Returns the items with no answer, in form order. */
   async function readMissing(): Promise<AcademyItem[]> {
     const fresh = await loadItems({ data: { attemptId, locale: lang } });
+    if (disposed.current) return [];
     setItems(fresh);
     itemsRef.current = fresh;
     return fresh.filter((i) => !isAnswered(i));
@@ -518,6 +642,12 @@ function AcademyAttemptRunner({
       // submitting past it makes the database correctly report an incomplete
       // attempt for a run that is, a few hundred milliseconds later, complete.
       await flushPendingSaves();
+      if (disposed.current) return;
+      if (failedSaves.current.size > 0) {
+        setPauseState("failed");
+        setPhase("running");
+        return;
+      }
 
       // ── WHAT IS MISSING IS SAID BEFORE THE REFUSAL, NOT AFTER IT ──────
       //
@@ -527,6 +657,7 @@ function AcademyAttemptRunner({
       // to fail for exactly the same reason. Asking first turns the same fact
       // into three named questions and a way to reach the first.
       const gaps = await readMissing();
+      if (disposed.current) return;
       if (gaps.length > 0) {
         setMissing(gaps);
         setPhase("incomplete");
@@ -534,27 +665,20 @@ function AcademyAttemptRunner({
       }
 
       const res = await submitAttempt({ data: { attemptId } });
+      if (disposed.current) return;
       setOutcome({ reviewsOpened: res.reviewsOpened });
       setPhase("done");
     } catch (e) {
+      if (disposed.current) return;
       const code = (e as { code?: string }).code ?? "submit_failed";
       // ── IDEMPOTENCY ────────────────────────────────────────────────────
       //
-      // "not_open" means the attempt is no longer in progress, which after a
-      // submit means it is already IN. That is the success case arriving by
-      // an unusual route (a retry after a dropped response, a double click
-      // whose first call won), and telling the participant it failed would be
-      // false — and would invite them to try again at something that is done.
-      if (code === "not_open") {
-        setOutcome({ reviewsOpened: 0 });
-        setPhase("done");
-        return;
-      }
-      // Otherwise ask the server what actually happened before saying
-      // anything. A response lost on the wire looks identical to a refusal
-      // from here, and only one of those is a failure.
+      // A refusal or dropped response does not establish the final status.
+      // Read it: already submitted is success, while abandoned is closed
+      // without submission and must never claim the answers were handed in.
       try {
         const state = await loadState({ data: { attemptId } });
+        if (disposed.current) return;
         if (state && !state.isOpen) {
           setClosedStatus(state.status);
           setPhase("done");
@@ -570,6 +694,7 @@ function AcademyAttemptRunner({
       if (code === "incomplete" || code === "incomplete_best_worst") {
         try {
           const gaps = await readMissing();
+          if (disposed.current) return;
           if (gaps.length > 0) {
             setMissing(gaps);
             setPhase("incomplete");
@@ -582,6 +707,7 @@ function AcademyAttemptRunner({
       // A genuine refusal, with the attempt still open. NOT the load-failure
       // panel: nothing is lost, the answers are all saved, and the run is
       // resumable — so the participant is told that, and offered the button.
+      if (disposed.current) return;
       setErrorCode(code);
       setPhase("submit-failed");
     } finally {
@@ -591,7 +717,7 @@ function AcademyAttemptRunner({
 
   if (phase === "loading") {
     return (
-      <AssessmentShell deliveryLanguage={lang}>
+      <AssessmentShell exit={exit} deliveryLanguage={lang} notice={leaveNotice}>
         <AssessmentPanel>
           <p className="text-sm text-muted-foreground">{t("academy.loading")}</p>
         </AssessmentPanel>
@@ -607,7 +733,7 @@ function AcademyAttemptRunner({
           ? "academy.error.notOpen"
           : "academy.error.generic";
     return (
-      <AssessmentShell deliveryLanguage={lang}>
+      <AssessmentShell exit={exit} deliveryLanguage={lang} notice={leaveNotice}>
         <AssessmentPanel>
           <h1 className="flex items-center gap-2 text-lg font-semibold text-foreground">
             <AlertTriangle className="h-5 w-5 text-accent" aria-hidden="true" />
@@ -632,7 +758,12 @@ function AcademyAttemptRunner({
   // MissingAnswersPanel for why that distinction is the whole point.
   if (phase === "incomplete") {
     return (
-      <AssessmentShell exit={exit} deliveryLanguage={lang}>
+      <AssessmentShell
+        exit={pauseExit}
+        deliveryLanguage={lang}
+        onExit={() => void pause()}
+        notice={leaveNotice}
+      >
         <AssessmentPanel>
           <MissingAnswersPanel
             missing={missing.map((m) => ({
@@ -657,7 +788,7 @@ function AcademyAttemptRunner({
 
   if (phase === "submit-failed") {
     return (
-      <AssessmentShell deliveryLanguage={lang}>
+      <AssessmentShell exit={exit} deliveryLanguage={lang} notice={leaveNotice}>
         <AssessmentPanel>
           <h1 className="flex items-center gap-2 text-lg font-semibold text-foreground">
             <AlertTriangle className="h-5 w-5 text-accent" aria-hidden="true" />
@@ -687,9 +818,36 @@ function AcademyAttemptRunner({
     );
   }
 
+  if (phase === "paused") {
+    return (
+      <AssessmentShell exit={exit} deliveryLanguage={lang} notice={leaveNotice}>
+        <AssessmentPanel>
+          <p role="status" className="text-sm leading-relaxed">
+            {t("academy.pause.saved")}
+          </p>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <a
+              href="/academy"
+              className="inline-flex min-h-11 items-center rounded-md bg-accent px-5 font-semibold text-accent-foreground"
+            >
+              {t("academy.attempt.exit")}
+            </a>
+            <button
+              type="button"
+              onClick={() => setPhase("running")}
+              className="min-h-11 rounded-md border px-5 focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              {t("academy.resume")}
+            </button>
+          </div>
+        </AssessmentPanel>
+      </AssessmentShell>
+    );
+  }
+
   if (phase === "intro") {
     return (
-      <AssessmentShell deliveryLanguage={lang}>
+      <AssessmentShell exit={exit} deliveryLanguage={lang} notice={leaveNotice}>
         <AssessmentPanel>
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-accent">
             {t(recruitment ? "academy.eyebrowRecruitment" : "academy.eyebrow")}
@@ -698,7 +856,7 @@ function AcademyAttemptRunner({
             className="mt-3 text-[1.75rem] font-semibold leading-[1.15] tracking-tight text-foreground"
             style={{ fontFamily: "var(--font-display)" }}
           >
-            {t("academy.intro.title")}
+            {t(recruitment ? "academy.intro.titleRecruitment" : "academy.intro.title")}
           </h1>
           <p className="mt-5 max-w-[52ch] text-[15px] leading-relaxed text-muted-foreground">
             {t("academy.intro.body")}
@@ -710,9 +868,11 @@ function AcademyAttemptRunner({
               the first question, rather than discovered at the free-text box
               on part five. The reviewer is an authorised person at the
               organisation that asked -- not CQrityjob, and not a model. */}
-          <p className="mt-3 max-w-[52ch] text-[15px] leading-relaxed text-muted-foreground">
-            {t(recruitment ? "academy.intro.reviewRecruitment" : "academy.intro.review")}
-          </p>
+          {items.some((item) => item.itemFormat === "constructed_response") && (
+            <p className="mt-3 max-w-[52ch] text-[15px] leading-relaxed text-muted-foreground">
+              {t(recruitment ? "academy.intro.reviewRecruitment" : "academy.intro.review")}
+            </p>
+          )}
           {/* What the run is made of, before it starts. Fifty tasks with no
               visible structure reads as endless; five named parts, a task
               count and a rough duration reads as a piece of work. The numbers
@@ -778,7 +938,12 @@ function AcademyAttemptRunner({
   if (phase === "section" && currentBlock) {
     const n = blocks.findIndex((b) => b.blockKey === currentBlock.blockKey) + 1;
     return (
-      <AssessmentShell exit={exit} deliveryLanguage={lang}>
+      <AssessmentShell
+        exit={pauseExit}
+        deliveryLanguage={lang}
+        onExit={() => void pause()}
+        notice={leaveNotice}
+      >
         <AssessmentPanel>
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-accent">
             {t("academy.section.eyebrow")} {n} {t("cd.public.of")} {blocks.length}
@@ -790,7 +955,9 @@ function AcademyAttemptRunner({
             {currentBlock.name}
           </h1>
           <p className="mt-4 max-w-[54ch] text-[15px] leading-relaxed text-muted-foreground">
-            {currentBlock.intro}
+            {currentBlock.asks === "your_own_experience"
+              ? t("academy.reflection.intro")
+              : currentBlock.intro}
           </p>
           <p className="mt-4 max-w-[54ch] rounded-[10px] bg-[color:var(--surface-subtle)] p-4 text-[13px] leading-relaxed text-foreground">
             {t(`academy.asks.${currentBlock.asks}`)}
@@ -815,7 +982,12 @@ function AcademyAttemptRunner({
 
   if (phase === "submitting") {
     return (
-      <AssessmentShell exit={exit} deliveryLanguage={lang}>
+      <AssessmentShell
+        exit={pauseExit}
+        deliveryLanguage={lang}
+        onExit={() => void pause()}
+        notice={leaveNotice}
+      >
         <AssessmentPanel>
           <p className="text-sm text-muted-foreground">{t("academy.submitting")}</p>
         </AssessmentPanel>
@@ -825,13 +997,27 @@ function AcademyAttemptRunner({
 
   if (phase === "done") {
     return (
-      <AssessmentShell deliveryLanguage={lang}>
+      <AssessmentShell exit={exit} deliveryLanguage={lang} notice={leaveNotice}>
         <AssessmentPanel>
           <SubmittedNotice
             recruitment={recruitment}
             closedStatus={closedStatus}
             reviewsOpened={outcome?.reviewsOpened ?? 0}
           />
+          <div className="mt-6 flex flex-wrap gap-3">
+            <a
+              href="/academy"
+              className="inline-flex min-h-11 items-center rounded-md bg-accent px-5 font-semibold text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              {t("academy.attempt.exit")}
+            </a>
+            <a
+              href="/my-career"
+              className="inline-flex min-h-11 items-center rounded-md border border-border px-5 font-semibold focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              {t("academy.overview")}
+            </a>
+          </div>
         </AssessmentPanel>
       </AssessmentShell>
     );
@@ -840,8 +1026,23 @@ function AcademyAttemptRunner({
   if (!current) return null;
 
   return (
-    <AssessmentShell exit={exit} deliveryLanguage={lang}>
+    <AssessmentShell
+      exit={pauseExit}
+      deliveryLanguage={lang}
+      onExit={() => void pause()}
+      notice={leaveNotice}
+    >
       <AssessmentCard>
+        <div className="border-b border-border px-5 py-3 sm:px-8">
+          <button
+            type="button"
+            onClick={() => void pause()}
+            disabled={pauseState === "saving"}
+            className="min-h-11 rounded-md border border-border px-4 text-sm font-semibold focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
+          >
+            {t(pauseState === "saving" ? "academy.pause.saving" : "academy.pause.label")}
+          </button>
+        </div>
         <AssessmentProgressBar
           stageLabel={currentBlock ? currentBlock.name : t("academy.stage")}
           current={sectionIndex + 1}

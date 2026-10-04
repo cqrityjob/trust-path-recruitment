@@ -49,6 +49,8 @@ export interface ProfessionLearningItem {
   readonly titleSv: string;
   readonly titleEn: string;
   readonly level: RequirementLevel;
+  readonly descriptionSv?: string | null;
+  readonly descriptionEn?: string | null;
 }
 
 export interface ProfessionPathwayEdge {
@@ -88,6 +90,9 @@ export interface ProfessionDetail {
   readonly requirements: readonly ProfessionRequirement[];
   readonly education: readonly ProfessionLearningItem[];
   readonly certifications: readonly ProfessionLearningItem[];
+  readonly experience: readonly ProfessionLearningItem[];
+  readonly competencies: readonly ProfessionLearningItem[];
+  readonly workEnvironments: readonly { titleSv: string; titleEn: string }[];
   readonly pathway: readonly ProfessionPathwayEdge[];
 }
 
@@ -157,7 +162,16 @@ export const getProfessionDetails = createServerFn({ method: "GET" })
     const slugById = new Map(rows.map((r) => [r.id, r.slug] as const));
     const ids = rows.map((r) => r.id);
 
-    const [formalRes, eduRes, certRes, transRes, sourceRes] = await Promise.all([
+    const [
+      formalRes,
+      eduRes,
+      certRes,
+      transRes,
+      sourceRes,
+      experienceRes,
+      competencyRes,
+      environmentRes,
+    ] = await Promise.all([
       publicClient
         .from("cig_profession_formal_requirements")
         .select(
@@ -182,7 +196,37 @@ export const getProfessionDetails = createServerFn({ method: "GET" })
         .from("cig_profession_source_references")
         .select("profession_id, cig_source_references(organisation, title, url)")
         .in("profession_id", ids),
+      publicClient
+        .from("cig_profession_experience_req")
+        .select(
+          "profession_id, criticality, cig_experience_types(title_sv, title_en, description_sv, description_en)",
+        )
+        .in("profession_id", ids),
+      publicClient
+        .from("cig_profession_competency_req")
+        .select(
+          "profession_id, criticality, cig_competencies(title_sv, title_en, description_sv, description_en)",
+        )
+        .in("profession_id", ids),
+      publicClient
+        .from("cig_profession_work_environment_rel")
+        .select("profession_id, cig_work_environments(title_sv, title_en)")
+        .in("profession_id", ids),
     ]);
+
+    // A failed relation read must not become a claim that no requirements exist.
+    for (const response of [
+      formalRes,
+      eduRes,
+      certRes,
+      transRes,
+      sourceRes,
+      experienceRes,
+      competencyRes,
+      environmentRes,
+    ]) {
+      if (response.error) throw new Error(`CIG detail read failed: ${response.error.message}`);
+    }
 
     const result: Record<string, ProfessionDetail> = {};
     for (const p of rows) {
@@ -204,8 +248,45 @@ export const getProfessionDetails = createServerFn({ method: "GET" })
         requirements: [],
         education: [],
         certifications: [],
+        experience: [],
+        competencies: [],
+        workEnvironments: [],
         pathway: [],
       };
+    }
+
+    for (const r of experienceRes.data ?? []) {
+      const slug = slugById.get(r.profession_id);
+      const entry = r.cig_experience_types;
+      if (!slug || !entry || !result[slug]) continue;
+      (result[slug].experience as ProfessionLearningItem[]).push({
+        titleSv: entry.title_sv,
+        titleEn: entry.title_en,
+        descriptionSv: entry.description_sv,
+        descriptionEn: entry.description_en,
+        level: classifyCertification(r.criticality),
+      });
+    }
+    for (const r of competencyRes.data ?? []) {
+      const slug = slugById.get(r.profession_id);
+      const entry = r.cig_competencies;
+      if (!slug || !entry || !result[slug]) continue;
+      (result[slug].competencies as ProfessionLearningItem[]).push({
+        titleSv: entry.title_sv,
+        titleEn: entry.title_en,
+        descriptionSv: entry.description_sv,
+        descriptionEn: entry.description_en,
+        level: classifyCertification(r.criticality),
+      });
+    }
+    for (const r of environmentRes.data ?? []) {
+      const slug = slugById.get(r.profession_id);
+      const entry = r.cig_work_environments;
+      if (!slug || !entry || !result[slug]) continue;
+      (result[slug].workEnvironments as { titleSv: string; titleEn: string }[]).push({
+        titleSv: entry.title_sv,
+        titleEn: entry.title_en,
+      });
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

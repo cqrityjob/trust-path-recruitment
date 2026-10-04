@@ -443,12 +443,10 @@ for (const lang of LANGS) {
         html.includes(lang === "sv" ? `SKÄL ${p.professionId}` : `REASON ${p.professionId}`),
       ),
     );
-    // "Utforska nu" is the explore_now stage's own chip; every other stage —
-    // an unknown one included — prints a stage badge.
+    // Every entry keeps its stage badge independently of the navigation action.
     ck(
       `4.4 [${lang}] ${mix.name}: the report view prints each entry's own stage wording`,
-      JSON.stringify(badges(html)) ===
-        JSON.stringify(mix.values.filter((v) => v !== "explore_now").map((v) => expected(v, lang))),
+      JSON.stringify(badges(html)) === JSON.stringify(mix.values.map((v) => expected(v, lang))),
       JSON.stringify(badges(html)),
     );
     ck(

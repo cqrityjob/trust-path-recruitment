@@ -1,0 +1,61 @@
+{
+  "baseline": {
+    "digestExpression": "md5(string_agg(version || ':' || name, E'\\n' ORDER BY version))",
+    "identityMd5": "3bfd11b0037b10a31029b89cd8bc5179",
+    "count": 374
+  },
+  "hostedWritesPerformedByThisPreparation": 0,
+  "positive": {
+    "exitCode": 0,
+    "aliasRowsInserted": 1,
+    "aliasStatements": null,
+    "totalRowsBeforeRollback": 375,
+    "originalRowsPreserved": true,
+    "schemaDefinitionsPreserved": true
+  },
+  "sqlSha256": "3d350aff76a2286262bf6901269002cca4c4e8f7dce1a3de15e13a650149f6d3",
+  "afterTests": {
+    "reviewedFunctionBodyRestored": true,
+    "fixtureLedgerAbsent": true
+  },
+  "localFixture": {
+    "statementSource": "only origin row uses exact reviewed canonical SQL; other fixture statements NULL",
+    "container": "codex-interview-access-db",
+    "database": "cqrityjob_userflows_final",
+    "transaction": "same guard/INSERT/postcondition body; outer COMMIT replaced with ROLLBACK for local testing",
+    "identitySource": "supabase/hosted-ledger.json, 374 verified version/name pairs",
+    "productionCompleteRowDigestClaimed": false
+  },
+  "intendedProject": "wrygicdfxwjnrugduxnt",
+  "negativeCases": {
+    "ledger_drift": {
+      "exitCode": 3,
+      "refusal": "F09_HISTORY_BASELINE_MISMATCH"
+    },
+    "function_body_drift": {
+      "exitCode": 3,
+      "refusal": "F09_HISTORY_FUNCTION_MISMATCH"
+    },
+    "trigger_disabled": {
+      "exitCode": 3,
+      "refusal": "F09_HISTORY_TRIGGER_MISMATCH"
+    },
+    "acl_drift": {
+      "exitCode": 3,
+      "refusal": "F09_HISTORY_FUNCTION_MISMATCH"
+    },
+    "already_reconciled": {
+      "exitCode": 3,
+      "refusal": "F09_HISTORY_BASELINE_MISMATCH"
+    },
+    "function_config_drift": {
+      "exitCode": 3,
+      "refusal": "F09_HISTORY_FUNCTION_MISMATCH"
+    },
+    "origin_body_drift": {
+      "exitCode": 3,
+      "refusal": "F09_HISTORY_ORIGIN_MISMATCH"
+    }
+  },
+  "status": "prepared_local_only_requires_separate_owner_approval"
+}

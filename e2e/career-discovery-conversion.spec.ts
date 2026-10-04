@@ -135,6 +135,13 @@ test.describe(
     }
 
     async function openSavedReport(page: Page, expectedId?: string) {
+      if (new URL(page.url()).pathname === "/security-career-assessment") {
+        await page
+          .getByRole("button", {
+            name: /Spara resultatet på det här kontot|Save the result to this account/,
+          })
+          .click();
+      }
       await page.waitForURL(
         (u) =>
           u.pathname.includes("/report/") ||

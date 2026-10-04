@@ -425,8 +425,10 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // 868e9c610f78ced1c5f529596ca273c2). Exactly the 140 researched definitions are active (166
 // credential types active, 154 international), and every other credential-type column, market
 // pack, pilot member, definition table and claim equals its fingerprint from before the apply.
-// Nothing is pending by design now.
+// That catalogue publication left nothing pending.
 // Evidence: docs/release/2026-10-04-catalogue-publication-hosted-verification.md.
+// F09 applied once as hosted 20261004164027; see 2026-10-04 guard verification.
+// Owner-authorized canonical alias verified; deploy-plan independently proves an empty plan.
 const expectedPending: string[] = [];
 
 const hostedIdentities = [
@@ -456,6 +458,7 @@ const retiredCanonicalIdentities = [
   "20261029090000_scp_trust_evidence_report_r3a_contract.sql",
 ];
 const hostedLedgerMarkers = [
+  "20261004164027_application_passport_verified_content_guard.sql",
   "20260927124146_client_table_privilege_hardening.sql",
   "20260904190901_scp_trust_evidence_report_r1_provenance.sql",
   "20260907064303_f8efc1c3-def4-4147-9db1-45a68b1f6a69.sql",

@@ -1,3 +1,4 @@
+import { selectSiteLanguage } from "./support/site-language";
 /**
  * Real browser/auth/RLS/RPC journey with explicitly SYNTHETIC completed AI jobs.
  * psql seeds only new, isolated test actors and signed synthetic receipts. No AI
@@ -181,7 +182,7 @@ async function login(page: Page, email: string, path: string, locale: "sv" | "en
   await page.getByLabel(/^lösenord$|^password$/i).fill("LocalJourney!2026");
   await page.getByRole("button", { name: /^logga in$|^sign in$/i }).click();
   await page.waitForURL((url) => !url.pathname.startsWith("/login"), { timeout: 60_000 });
-  await page.getByRole("button", { name: locale, exact: true }).first().click();
+  await selectSiteLanguage(page, locale);
 }
 async function caller(page: Page) {
   const token = await page.evaluate(

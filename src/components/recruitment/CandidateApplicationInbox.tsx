@@ -1,3 +1,4 @@
+import { InvitationMessageBody } from "./InvitationMessageBody";
 // What an employer has sent a candidate about ONE application: interview
 // invitations they can answer, and messages. Only what was actually sent
 // reaches here -- the database shows a candidate no draft, no planned-but-
@@ -148,7 +149,7 @@ export function CandidateApplicationInbox({
             )}
             <span className="text-xs text-muted-foreground">{formatStamp(m.sentAt, lang)}</span>
           </summary>
-          <pre className="mt-2 whitespace-pre-wrap font-[inherit] text-sm">{m.body}</pre>
+          <InvitationMessageBody body={m.body} />
         </details>
       ))}
     </div>

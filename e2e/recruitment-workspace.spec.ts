@@ -545,7 +545,7 @@ test.describe("recruitment case", () => {
     const kim = await ctx.newPage();
     await signIn(kim, "kim.kandidat@test.local");
     await open(kim, "/jobs/nordvakt-vaktare-uppsala-uat4");
-    await kim.getByRole("button", { name: "Ansök om jobbet" }).click({ timeout: 60_000 });
+    await kim.getByRole("button", { name: "Sök jobbet" }).click({ timeout: 60_000 });
     const dialog = kim.getByRole("dialog");
     // The vacancy's questions load AFTER the dialog opens, and `evaluateAll`
     // does not wait: enumerated while they were still loading, it found no

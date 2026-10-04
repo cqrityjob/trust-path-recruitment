@@ -26,6 +26,7 @@
 //        --project=chromium --project=mobile-375
 
 import { test, expect, type Page } from "@playwright/test";
+import { mkdirSync } from "node:fs";
 import {
   CLAIM_STORAGE_KEY,
   COMPLETED_AT,
@@ -376,6 +377,16 @@ test.describe("the claim of a run finished anonymously", () => {
       await setLang(page, "sv");
       await stageClaim(page, "sv");
       await page.goto(`${BASE}/security-career-assessment?claim=${TOKEN}`);
+      await expect(page.getByTestId("claim-active-account")).toContainText("p@example.test");
+      expect(server.count("persistPublicV31Run"), "no silent claim on a reused session").toBe(0);
+      if (process.env.CQRITY_FLOW_SHOTS && state === "public") {
+        mkdirSync(process.env.CQRITY_FLOW_SHOTS, { recursive: true });
+        await page.getByTestId("claim-active-account").scrollIntoViewIfNeeded();
+        await page.screenshot({
+          path: `${process.env.CQRITY_FLOW_SHOTS}/after-claim-account-${page.viewportSize()?.width}.png`,
+        });
+      }
+      await page.getByRole("button", { name: "Spara resultatet på det här kontot" }).click();
       // Saved, and sent home to the place the result now lives.
       await expect(page).toHaveURL(new RegExp(`/my-career\\?savedReport=${SNAPSHOT_ID}`), {
         timeout: 45_000,
@@ -385,6 +396,35 @@ test.describe("the claim of a run finished anonymously", () => {
       expect(await stagedStill(page)).toBe(false);
     });
   }
+
+  test("an account changed in another tab cannot silently receive the result", async ({ page }) => {
+    const server = new Server("public");
+    server.extra.previewPublicV31Run = ok({
+      snapshot: realSnapshot("sv"),
+      completedAt: COMPLETED_AT,
+    });
+    await stub(page, server);
+    await signIn(page);
+    await setLang(page, "sv");
+    await stageClaim(page, "sv");
+    await page.goto(`${BASE}/security-career-assessment?claim=${TOKEN}`);
+    await expect(page.getByTestId("claim-active-account")).toContainText("p@example.test");
+    await page.route("**/auth/v1/user**", (route) =>
+      route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({
+          id: "00000000-0000-4000-8000-00000000b0b0",
+          aud: "authenticated",
+          email: "other@example.test",
+        }),
+      }),
+    );
+    await page.getByRole("button", { name: "Spara resultatet på det här kontot" }).click();
+    await expect(page.getByRole("alert")).toContainText("Det aktiva kontot har ändrats");
+    await expect(page.getByTestId("claim-active-account")).toContainText("other@example.test");
+    expect(server.count("persistPublicV31Run")).toBe(0);
+    expect(await stagedStill(page)).toBe(true);
+  });
 
   test("paused: the run is kept and the person is told so, with no retry", async ({ page }) => {
     const server = new Server("paused");
@@ -425,6 +465,7 @@ test.describe("the claim of a run finished anonymously", () => {
     await setLang(page, "en");
     await stageClaim(page, "en");
     await page.goto(`${BASE}/security-career-assessment?claim=${TOKEN}`);
+    await page.getByRole("button", { name: "Save the result to this account" }).click();
     const closed = page.getByTestId("cd-closed");
     await expect(closed).toBeVisible({ timeout: 45_000 });
     await expect(closed).toHaveAttribute("data-closed-reason", "paused");

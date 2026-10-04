@@ -1,5 +1,5 @@
 import { createFileRoute, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { Section } from "@/components/site/Section";
@@ -34,29 +34,38 @@ function returnSearch(): { redirect: string } {
 function AuthenticatedLayout() {
   const navigate = useNavigate();
   const [ready, setReady] = useState(false);
-  const [signedIn, setSignedIn] = useState(false);
+  const [signedInUserId, setSignedInUserId] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
+    let identityChanged = false;
     supabase.auth.getSession().then(({ data }) => {
-      if (!mounted) return;
+      if (!mounted || identityChanged) return;
       const session = data.session;
       if (!session) {
-        navigate({ to: "/login", search: returnSearch() as never });
+        // Auth loss must bypass answer-saving blockers: the previous identity
+        // can no longer save, and its local state is being discarded.
+        navigate({ to: "/login", search: returnSearch() as never, ignoreBlocker: true });
       } else {
-        setSignedIn(true);
+        setSignedInUserId(session.user.id);
       }
       setReady(true);
     });
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
-      setSignedIn(!!session);
+      if (event !== "INITIAL_SESSION") {
+        identityChanged = true;
+        setReady(true);
+      }
+      setSignedInUserId(session?.user.id ?? null);
       // INITIAL_SESSION fires while the session is still being restored from
       // storage and can carry a null session for an already-signed-in user.
       // Redirecting on it bounced people out mid-navigation and threw away
       // their query string. getSession() above is the authority for the
       // first decision; this handler only reacts to a real sign-out.
       if (!session && event !== "INITIAL_SESSION") {
-        navigate({ to: "/login", search: returnSearch() as never });
+        // Auth loss must bypass answer-saving blockers: the previous identity
+        // can no longer save, and its local state is being discarded.
+        navigate({ to: "/login", search: returnSearch() as never, ignoreBlocker: true });
       }
     });
     return () => {
@@ -74,12 +83,14 @@ function AuthenticatedLayout() {
       </SiteLayout>
     );
   }
-  if (!signedIn) return null;
+  if (!signedInUserId) return null;
   return (
-    <>
+    // React Query is cleared in the root, but local form/answer state also
+    // belongs to one identity and must be discarded on an account change.
+    <Fragment key={signedInUserId}>
       <EmployerRegistrationCompletion />
       <Outlet />
-    </>
+    </Fragment>
   );
 }
 

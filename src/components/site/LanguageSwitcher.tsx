@@ -1,5 +1,10 @@
 import { useT } from "@/i18n/context";
 import { cn } from "@/lib/utils";
+import {
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+} from "@/components/ui/dropdown-menu";
 
 /** The two-letter language toggle.
  *
@@ -22,6 +27,7 @@ export function LanguageSwitcher({
   className,
   tone = "default",
   compact = false,
+  menu = false,
 }: {
   className?: string;
   tone?: "default" | "onDark";
@@ -30,9 +36,32 @@ export function LanguageSwitcher({
    *  pair and both account actions do not fit side by side there. It names
    *  the language it switches TO, and says so in its accessible name. */
   compact?: boolean;
+  /** Accessible radio items when the language control lives in the account menu. */
+  menu?: boolean;
 }) {
   const { lang, setLang, t } = useT();
   const onDark = tone === "onDark";
+  if (menu) {
+    return (
+      <>
+        <DropdownMenuLabel>{t("lang.switch")}</DropdownMenuLabel>
+        <DropdownMenuRadioGroup
+          value={lang}
+          onValueChange={(value) => {
+            if (value === "sv" || value === "en") setLang(value);
+          }}
+          aria-label={t("lang.switch")}
+        >
+          <DropdownMenuRadioItem value="sv" lang="sv" className="min-h-11 cursor-pointer">
+            Svenska
+          </DropdownMenuRadioItem>
+          <DropdownMenuRadioItem value="en" lang="en" className="min-h-11 cursor-pointer">
+            English
+          </DropdownMenuRadioItem>
+        </DropdownMenuRadioGroup>
+      </>
+    );
+  }
   if (compact) {
     const next = lang === "sv" ? "en" : "sv";
     return (

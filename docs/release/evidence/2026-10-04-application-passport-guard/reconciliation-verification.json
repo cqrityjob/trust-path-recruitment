@@ -1,0 +1,71 @@
+{
+  "project": "wrygicdfxwjnrugduxnt",
+  "authorization": "User explicitly approved exactly this history-only correction on 2026-10-04.",
+  "sqlFile": "reconcile-history.sql",
+  "sqlSha256": "3d350aff76a2286262bf6901269002cca4c4e8f7dce1a3de15e13a650149f6d3",
+  "preflight": {
+    "rows": [
+      {
+        "name": "application_passport_verified_content_guard",
+        "version": "20261004164027",
+        "sql_sha256": "0b492098ae86ff8ee19c97efe88de76058deb53ce67bda4dfffc337889d93f82",
+        "statements_null": false
+      }
+    ],
+    "read_at": "2026-10-04T17:14:00.102607+00:00",
+    "ledger_md5": "3bfd11b0037b10a31029b89cd8bc5179",
+    "ledger_count": 374
+  },
+  "execution": "Committed without error; transaction enforced exactly one alias insertion, complete original-row equality and unchanged guard definitions.",
+  "postflight": {
+    "rows": [
+      {
+        "name": "application_passport_verified_content_guard",
+        "version": "20261004164027",
+        "sql_sha256": "0b492098ae86ff8ee19c97efe88de76058deb53ce67bda4dfffc337889d93f82",
+        "statement_count": 1,
+        "statements_null": false
+      },
+      {
+        "name": "application_passport_verified_content_guard",
+        "version": "20270215090000",
+        "sql_sha256": null,
+        "statement_count": null,
+        "statements_null": true
+      }
+    ],
+    "read_at": "2026-10-04T17:14:32.01458+00:00",
+    "trigger": {
+      "enabled": "O",
+      "definition": "CREATE TRIGGER sp_application_verified_content BEFORE INSERT OR UPDATE OF holder_user_id, application_id, package_code, focus_claim_id ON public.sp_disclosures FOR EACH ROW EXECUTE FUNCTION sp_require_application_verified_content()"
+    },
+    "function": {
+      "acl": "{postgres=X/postgres}",
+      "body_md5": "7bf734a466cd0e99bcf657939b8822db",
+      "search_path": [
+        "search_path=public, pg_temp"
+      ],
+      "anon_execute": false,
+      "security_definer": true,
+      "service_role_execute": false,
+      "authenticated_execute": false
+    },
+    "ledger_md5": "755d51cb6eb43f68f1e621478a1d0b81",
+    "fingerprints": {
+      "claims": {
+        "md5": "9cc0ebe376e6512e1017ef4c97a34e41",
+        "count": 47
+      },
+      "experience": {
+        "md5": "3c11b41810623bd9a845eb87d14c15d1",
+        "count": 4
+      },
+      "disclosures": {
+        "md5": "ad30b4e6267e8747c626ba6ec53a53b7",
+        "count": 42
+      }
+    },
+    "ledger_count": 375,
+    "old_ledger_md5": "3bfd11b0037b10a31029b89cd8bc5179"
+  }
+}

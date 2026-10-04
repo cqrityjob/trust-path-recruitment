@@ -148,6 +148,15 @@ VALUES ('fa000000-0000-0000-0000-000000000003', 'training',
         'Väktargrundutbildning', 'Nordvakt (fiktiv)');
 RESET ROLE; RESET request.jwt.claim.sub;
 
+-- Operator-owned verification fixture alongside the holder's own unverified
+-- entry. A valid application share contains the former and excludes the latter.
+INSERT INTO public.sp_claims
+  (id, holder_user_id, claim_type, title, credential_code, claimed_issuer_name,
+   assertion_level, lifecycle_state, verified_by_user_id, verified_at)
+VALUES ('fa000000-7777-4000-8000-000000000001', 'fa000000-0000-0000-0000-000000000003',
+        'certification', 'Certified Protection Professional (CPP)', 'INTL_ASIS_CPP', 'ASIS International',
+        'verified', 'active', 'fa000000-0000-0000-0000-0000000000ad', now());
+
 \echo '    GROUP L1 -- applying is not consent'
 
 -- =========================================================================
@@ -308,8 +317,10 @@ SELECT pg_temp.ok(
   (SELECT payload ->> 'profession_slug' FROM lb_app_payload) = 'vaktare',
   'L3.3 the disclosed profession is a Career Intelligence slug, not free text');
 SELECT pg_temp.ok(
-  (SELECT payload -> 'verified_claims' FROM lb_app_payload) = '[]'::jsonb,
-  'L3.4 an unverified entry is not disclosed by either path');
+  (SELECT jsonb_array_length(payload -> 'verified_claims') = 1
+          AND payload -> 'verified_claims' -> 0 ->> 'id' = 'fa000000-7777-4000-8000-000000000001'
+     FROM lb_app_payload),
+  'L3.4 only the verified fixture is disclosed; the unverified entry is excluded by both paths');
 
 \echo '    GROUP L4 -- the holder stays in control'
 

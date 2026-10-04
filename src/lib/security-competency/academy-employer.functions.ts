@@ -1,7 +1,8 @@
 // Assessment Center — the employer server surface.
 //
-// Same discipline as academy-delivery.functions.ts: every rule lives in the
-// database, and this file translates. Each function calls exactly one RPC that
+// Same discipline as academy-delivery.functions.ts: authorisation lives in the
+// database. Participant report availability is additionally narrowed by the
+// application launch gate below. Each RPC
 // re-verifies membership and role for itself, so nothing here is trusted to
 // have checked authorisation before calling.
 //
@@ -1032,8 +1033,8 @@ async function subjectOfEmployerAttempt(
 /** The subject behind one released report snapshot, for the audience asking.
  *
  *  Goes through the same audience RPC `getAcademyReport` uses, so "may this
- *  caller see this report" is answered once, by the database, and this cannot
- *  resolve a subject for a report the caller could not have opened. */
+ *  caller see this report" uses database authorisation plus the application
+ *  availability gate, including for recommendations and progress. */
 async function subjectOfReport(
   ctx: Ctx,
   attemptId: string,
@@ -1045,7 +1046,8 @@ async function subjectOfReport(
       : await ctx.supabase.rpc("scp_employer_report", { _attempt_id: attemptId });
   if (error) return null;
   const row = (Array.isArray(rows) ? rows[0] : undefined) as RpcRow | undefined;
-  return row?.subject_id ? String(row.subject_id) : null;
+  if (!row || !reportAvailableInApp(row, audience)) return null;
+  return row.subject_id ? String(row.subject_id) : null;
 }
 
 /**
@@ -1403,6 +1405,14 @@ function mapBrief(b: RpcRow | null): ReportBrief | null {
  * audience rule still lives in ONE place: scp_report_snapshot_readable, which
  * both entry points and both row policies evaluate.
  */
+// Launch availability, separate from database authorisation. Workforce and
+// historical snapshots without explicit candidate context are not offered to
+// participants. Employer reads keep their existing database audience rules.
+// Direct RPC access is NOT disabled by this application gate.
+function reportAvailableInApp(row: RpcRow, audience: "participant" | "employer"): boolean {
+  return audience === "employer" || (row.context as RpcRow | null)?.person_context === "candidate";
+}
+
 export const getAcademyReport = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
@@ -1430,10 +1440,10 @@ export const getAcademyReport = createServerFn({ method: "GET" })
     // getDevelopmentRecommendations below does, and through the same `fail`
     // helper, which logs the detail server-side and hands the client a code
     // rather than a database message. null now means one thing only: there is
-    // no released report for you.
+    // no report available to you in this application.
     if (error) throw fail(error.message, "report_read_failed");
     const row = (Array.isArray(rows) ? rows[0] : undefined) as RpcRow | undefined;
-    if (!row) return null;
+    if (!row || !reportAvailableInApp(row, data.audience)) return null;
     return mapReportSnapshot(row);
   });
 
@@ -1525,6 +1535,33 @@ export const getParticipantReportAsIssuer = createServerFn({ method: "GET" })
     return mapReportSnapshot(row);
   });
 
+/** Recommendations aggregate a subject's evidence and cannot be filtered after
+ * the RPC. Withhold them for a mixed/unknown participant snapshot history.
+ * History also includes snapshots whose empty payload yields no progress row. */
+async function candidateOnlySnapshotHistory(ctx: Ctx, subjectId: string): Promise<boolean> {
+  const { data: history, error } = await ctx.supabase.rpc("scp_my_assessment_history");
+  if (error) throw fail(error.message, "recommendations_failed");
+  const attempts = [
+    ...new Set(
+      ((history ?? []) as RpcRow[])
+        .filter((row) => row.participant_snapshot_id || row.released_at)
+        .map((row) => String(row.attempt_id)),
+    ),
+  ];
+  if (!attempts.length) return false;
+  for (const attemptId of attempts) {
+    const { data: reports, error: reportError } = await ctx.supabase.rpc("scp_participant_report", {
+      _attempt_id: attemptId,
+    });
+    if (reportError) throw fail(reportError.message, "recommendations_failed");
+    const report = (Array.isArray(reports) ? reports[0] : undefined) as RpcRow | undefined;
+    if (!report?.subject_id) return false;
+    if (String(report.subject_id) === subjectId && !reportAvailableInApp(report, "participant"))
+      return false;
+  }
+  return true;
+}
+
 export const getDevelopmentRecommendations = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
@@ -1542,6 +1579,9 @@ export const getDevelopmentRecommendations = createServerFn({ method: "GET" })
     const ctx = context as Ctx;
     const subjectId = await subjectOfReport(ctx, data.attemptId, data.audience);
     if (!subjectId) return [];
+    if (data.audience === "participant" && !(await candidateOnlySnapshotHistory(ctx, subjectId))) {
+      return [];
+    }
     const { data: rows, error } = await ctx.supabase.rpc("scp_development_recommendations", {
       _subject_id: subjectId,
     });
@@ -1579,7 +1619,28 @@ export const getSubjectProgress = createServerFn({ method: "GET" })
       _subject_id: subjectId,
     });
     if (error) throw fail(error.message, "progress_failed");
-    return (rows ?? []).map((r: RpcRow) => ({
+    // Progress is subject-wide in SQL. A candidate report must not expose a
+    // separate workforce snapshot for the same person through this endpoint.
+    let visibleRows = (rows ?? []) as RpcRow[];
+    if (data.audience === "participant") {
+      const allowedAttempts = new Set<string>();
+      for (const attemptId of new Set(visibleRows.map((row) => String(row.attempt_id)))) {
+        const { data: reports, error: reportError } = await ctx.supabase.rpc(
+          "scp_participant_report",
+          { _attempt_id: attemptId },
+        );
+        if (reportError) throw fail(reportError.message, "progress_failed");
+        const report = (Array.isArray(reports) ? reports[0] : undefined) as RpcRow | undefined;
+        if (
+          report &&
+          String(report.subject_id) === subjectId &&
+          reportAvailableInApp(report, "participant")
+        )
+          allowedAttempts.add(attemptId);
+      }
+      visibleRows = visibleRows.filter((row) => allowedAttempts.has(String(row.attempt_id)));
+    }
+    return visibleRows.map((r: RpcRow) => ({
       releasedAt: String(r.released_at),
       attemptId: String(r.attempt_id),
       competencyCode: String(r.competency_code),

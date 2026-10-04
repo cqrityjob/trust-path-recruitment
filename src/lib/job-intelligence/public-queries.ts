@@ -220,6 +220,8 @@ export function isJobExpired(job: {
 // public and a draft's is nobody's outside its organisation.
 
 export type PublicRequirement = {
+  explanation_sv?: string | null;
+  explanation_en?: string | null;
   id: string;
   kind: "mandatory" | "desirable";
   label_sv: string | null;
@@ -254,8 +256,36 @@ export async function getPublicVacancyStructure(
   // submission for answers the candidate was never shown.
   if (r.error) throw r.error;
   if (q.error) throw q.error;
-  return {
-    requirements: (r.data ?? []) as PublicRequirement[],
-    questions: (q.data ?? []) as PublicQuestion[],
-  };
+  const requirements = (r.data ?? []) as PublicRequirement[];
+  if (requirements.length) {
+    const fields = "title_sv, title_en, description_sv, description_en";
+    const [sv, en] = await Promise.all([
+      supabase
+        .from("cig_competencies")
+        .select(fields)
+        .eq("content_status", "published")
+        .in(
+          "title_sv",
+          requirements.flatMap((r) => (r.label_sv ? [r.label_sv] : [])),
+        ),
+      supabase
+        .from("cig_competencies")
+        .select(fields)
+        .eq("content_status", "published")
+        .in(
+          "title_en",
+          requirements.flatMap((r) => (r.label_en ? [r.label_en] : [])),
+        ),
+    ]);
+    // Definitions supplement the employer's unchanged requirement and question.
+    // If this optional read fails, the form still shows its required questions.
+    for (const requirement of requirements) {
+      const definition = [...(sv.data ?? []), ...(en.data ?? [])].find(
+        (c) => c.title_sv === requirement.label_sv || c.title_en === requirement.label_en,
+      );
+      requirement.explanation_sv = definition?.description_sv ?? null;
+      requirement.explanation_en = definition?.description_en ?? null;
+    }
+  }
+  return { requirements, questions: (q.data ?? []) as PublicQuestion[] };
 }

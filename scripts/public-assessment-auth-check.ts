@@ -867,6 +867,18 @@ for (const fine of [
   );
 }
 
+// Account confirmation is a race guard, not a caller-selected owner.
+const { matchesConfirmedAccount } = await import("../src/lib/auth/account-confirmation");
+ok(matchesConfirmedAccount("synthetic-a", "synthetic-a"), "confirmed account may save its result");
+ok(
+  !matchesConfirmedAccount("synthetic-a", "synthetic-b"),
+  "account change before request refuses saving",
+);
+ok(
+  matchesConfirmedAccount(undefined, "synthetic-b"),
+  "legacy clients still use authenticated ownership",
+);
+
 // =========================================================================
 console.log("");
 if (failures > 0) {

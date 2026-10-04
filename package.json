@@ -144,6 +144,7 @@
     "career-discovery-v32-equivalence:check": "bun run scripts/career-discovery-v32-equivalence-check.ts",
     "assessment-assignment:check": "bun run scripts/assessment-assignment-check.ts",
     "assessment-reliability:check": "bun run scripts/assessment-pilot-reliability-check.ts",
+    "participant-report-availability:check": "bun run scripts/participant-report-availability-check.tsx",
     "assessment-panels-render:check": "bun run scripts/assessment-panels-render-check.tsx",
     "assessment-language-contract:check": "bun run scripts/assessment-language-contract-check.tsx",
     "vaktare-pilot-truth:check": "bun run scripts/vaktare-pilot-truth-check.ts",

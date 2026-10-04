@@ -350,14 +350,18 @@ function AssessmentCard({ row, lang }: { row: AcademyWorkItem; lang: string }) {
             <p
               className={
                 "mt-1 text-[13px] " +
-                (Date.parse(row.deadline) < Date.now() ? "text-destructive" : "text-muted-foreground")
+                (Date.parse(row.deadline) < Date.now()
+                  ? "text-destructive"
+                  : "text-muted-foreground")
               }
               data-testid="assessment-deadline"
             >
               {Date.parse(row.deadline) < Date.now()
                 ? t("academy.home.deadlinePassed")
                 : t("academy.home.deadline")}{" "}
-              <span className="font-medium">{formatDate(row.deadline, lang === "en" ? "en" : "sv")}</span>
+              <span className="font-medium">
+                {formatDate(row.deadline, lang === "en" ? "en" : "sv")}
+              </span>
             </p>
           )}
         </div>
@@ -378,7 +382,7 @@ function AssessmentCard({ row, lang }: { row: AcademyWorkItem; lang: string }) {
             {row.progressDone > 0 ? t("academy.resume") : t("academy.start")}
           </Link>
         )}
-        {row.releasedAt && (
+        {row.useCase === "recruitment" && row.releasedAt && (
           <Link
             to="/academy/report/$attemptId"
             params={{ attemptId: row.workId }}
@@ -387,33 +391,18 @@ function AssessmentCard({ row, lang }: { row: AcademyWorkItem; lang: string }) {
             {t("academy.home.openReport")}
           </Link>
         )}
-        {/* Between submitting and the report arriving, the participant used to
-            get one line and no explanation. That gap is where a person decides
-            whether something has gone wrong -- so the steps are named, in
-            order, including the ones that are not theirs to do. No timeframe is
-            promised, because none exists. */}
-        {done && !row.releasedAt && (
+        {/* Workforce reports are not available in this participant flow. */}
+        {done && (row.useCase !== "recruitment" || !row.releasedAt) && (
           <div className="w-full rounded-md bg-[color:var(--surface-subtle)] p-3">
             <p className="text-[13px] font-medium text-foreground">
-              {t("academy.home.awaitingRelease")}
+              {t(
+                row.status === "abandoned"
+                  ? "academy.done.abandonedBody"
+                  : row.useCase === "recruitment"
+                    ? "academy.home.awaitingRelease"
+                    : "academy.done.alreadyBody",
+              )}
             </p>
-            <ol className="mt-2 space-y-1.5">
-              {(
-                [
-                  "academy.home.nextReview",
-                  "academy.home.nextRelease",
-                  "academy.home.nextReport",
-                ] as const
-              ).map((k) => (
-                <li
-                  key={k}
-                  className="flex gap-2 text-[13px] leading-relaxed text-muted-foreground"
-                >
-                  <span aria-hidden="true">·</span>
-                  <span>{t(k)}</span>
-                </li>
-              ))}
-            </ol>
           </div>
         )}
       </div>

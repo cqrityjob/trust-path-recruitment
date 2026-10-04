@@ -262,8 +262,8 @@ console.log("\nE. The truthful disclosure exists where the candidate reads it");
   );
   const home = stripComments(read(HOME));
   check(
-    "E10 the academy home still renders the privacy line and the review step",
-    /academy\.home\.privacyRecruitment/.test(home) && /academy\.home\.nextReview/.test(home),
+    "E10 the academy home discloses who may read answers without claiming an unknown review status",
+    /academy\.home\.privacyRecruitment/.test(home) && !/academy\.home\.nextReview/.test(home),
   );
   const panels = stripComments(read(PANELS));
   check(
@@ -375,9 +375,9 @@ console.log("\nG. Counts and duration come from the form, and the candidate is t
   check(
     "G6 the intro still says answers save as you go and the run can be resumed",
     /sparas medan du arbetar/i.test(sv["academy.intro.body"]) &&
-      /saved as you go/i.test(en["academy.intro.body"]) &&
-      /återuppta/i.test(sv["academy.intro.body"]) &&
-      /pick up again/i.test(en["academy.intro.body"]) &&
+      /saved as you work/i.test(en["academy.intro.body"]) &&
+      sv["academy.intro.body"].includes(sv["academy.pause.label"]) &&
+      en["academy.intro.body"].includes(en["academy.pause.label"]) &&
       Boolean(sv["academy.resume"]) &&
       Boolean(en["academy.resume"]),
   );

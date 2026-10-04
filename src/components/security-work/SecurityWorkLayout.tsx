@@ -1,7 +1,6 @@
+import { SiteHeader } from "@/components/site/SiteHeader";
 import { useEffect, useState, type ReactNode } from "react";
 import { Link, Outlet, useLocation } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
 import {
   BookOpen,
   ArrowLeft,
@@ -14,81 +13,21 @@ import {
   Menu,
   Radio,
   Settings2,
-  ShieldCheck,
   Target,
   TriangleAlert,
   X,
 } from "lucide-react";
-import { AccountMenu } from "@/components/site/AccountMenu";
-import { LanguageSwitcher } from "@/components/site/LanguageSwitcher";
-import { listMyEmployerWorkspaces } from "@/lib/job-intelligence/membership.functions";
-import { countMyReviewQueue } from "@/lib/security-competency/academy-employer.functions";
-import { employerPortalEnabled } from "@/lib/job-intelligence/feature-flag";
-import { supabase } from "@/integrations/supabase/client";
 import { useT } from "@/i18n/context";
 import { cn } from "@/lib/utils";
-import { SecurityIdentityProvider, useSecurityIdentity, useSecurityWorkspace } from "./context";
+import { SecurityIdentityProvider, useSecurityWorkspace } from "./context";
 import { AssistantButton, AssistantProvider, SecurityAssistantPanel } from "./SecurityAssistant";
 import { SafetyNotice, WorkButton } from "./ui";
-
-function SecurityTopBar() {
-  const identity = useSecurityIdentity();
-  const { t } = useT();
-  const getEmployers = useServerFn(listMyEmployerWorkspaces);
-  const getReviews = useServerFn(countMyReviewQueue);
-  // These existing reads only populate the account's navigation. Security
-  // Work authorization never consumes an employer or reviewer relationship.
-  const employers = useQuery({
-    queryKey: ["employer", "my-workspaces"],
-    queryFn: () => getEmployers(),
-    enabled: employerPortalEnabled(),
-    retry: 1,
-  });
-  const reviews = useQuery({
-    queryKey: ["academy", "review-queue-count"],
-    queryFn: () => getReviews(),
-    retry: false,
-  });
-  return (
-    <header className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur">
-      <div className="mx-auto flex min-h-20 max-w-[1600px] items-center justify-between gap-3 px-4 sm:px-6">
-        <Link
-          to="/security-work"
-          className="flex min-h-11 min-w-0 items-center gap-2 rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-        >
-          <ShieldCheck className="size-6 shrink-0 text-accent" aria-hidden="true" />
-          <span className="min-w-0">
-            <span className="block truncate font-display text-sm font-semibold sm:text-base">
-              {t("sw.prog.title")}
-            </span>
-            <span className="hidden text-[11px] text-muted-foreground sm:block">
-              {t("sw.product")}
-            </span>
-          </span>
-        </Link>
-        <div className="flex shrink-0 items-center gap-2">
-          <LanguageSwitcher />
-          <AccountMenu
-            identity={{
-              name: identity.name,
-              email: identity.email,
-              currentContext: "security-work",
-              workspaces: employers.data ?? [],
-              reviewQueueCount: reviews.data ?? 0,
-            }}
-            onSignOut={() => void supabase.auth.signOut()}
-          />
-        </div>
-      </div>
-    </header>
-  );
-}
 
 export function SecurityWorkRoot() {
   return (
     <SecurityIdentityProvider>
       <div className="min-h-screen bg-background" data-security-work>
-        <SecurityTopBar />
+        <SiteHeader />
         <Outlet />
       </div>
     </SecurityIdentityProvider>

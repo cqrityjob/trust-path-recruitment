@@ -37,6 +37,10 @@ export function JobApplicationPanel({
         <ApplyInternalDialog
           key={job.id}
           jobId={job.id}
+          jobTitle={
+            (lang === "en" ? job.title_en || job.title_sv : job.title_sv || job.title_en) ??
+            t("jobs.detail.titleFallback")
+          }
           employerName={job.employer?.name ?? null}
           label={t("jobs.detail.apply_internal")}
           returnTo={returnTo}

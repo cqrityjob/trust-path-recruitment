@@ -1630,8 +1630,8 @@ const sv = {
   "sel.empty.body":
     "Alla aktuella meriter går att dela — även sådana ingen har granskat ännu. Lägg till din första merit, så dyker den upp här.",
   "sel.empty.action": "Till mitt Passport",
-  "sel.preview.lead": "Exakt den sidan mottagaren öppnar, med exakt de uppgifter du har valt.",
-  "sel.preview.show": "Förhandsgranska mottagarens vy",
+  "sel.preview.lead": "Se vilka uppgifter mottagaren kommer att se.",
+  "sel.preview.show": "Förhandsgranska delningen",
   "sel.preview.hide": "Dölj förhandsgranskningen",
   "sel.recommended": "rekommenderat",
   "sel.language": "Mottagarens språk",
@@ -2339,6 +2339,7 @@ const sv = {
   "ad.title": "Dela ditt Passport med den här arbetsgivaren",
   "ad.lead":
     "Att söka jobbet delar ingenting från ditt Passport. Arbetsgivaren ser bara det du uttryckligen väljer här, och du kan återkalla det när du vill.",
+  "ad.noVerified": "Du har inga verifierade uppgifter att dela med den här ansökan.",
   "ad.needPassport":
     "Du har inget Passport ännu. Skapa det först, så kan du välja vad du vill dela.",
   "ad.openPassport": "Öppna Security Passport",
@@ -3880,8 +3881,8 @@ const en: Record<PassportCopyKey, string> = {
   "sel.empty.body":
     "Every current merit can be shared, including ones nobody has reviewed yet. Add your first merit and it will appear here.",
   "sel.empty.action": "Go to my Passport",
-  "sel.preview.lead": "Exactly the page your recipient opens, with exactly the entries you picked.",
-  "sel.preview.show": "Preview the recipient's view",
+  "sel.preview.lead": "See what information the recipient will see.",
+  "sel.preview.show": "Preview sharing",
   "sel.preview.hide": "Hide the preview",
   "sel.recommended": "recommended",
   "sel.language": "Recipient's language",
@@ -4493,6 +4494,7 @@ const en: Record<PassportCopyKey, string> = {
   "ad.title": "Share your Passport with this employer",
   "ad.lead":
     "Applying for the job shares nothing from your Passport. This employer sees only what you explicitly choose here, and you can withdraw it whenever you like.",
+  "ad.noVerified": "You have no verified information to share with this application.",
   "ad.needPassport":
     "You do not have a Passport yet. Create it first, and you can then choose what to share.",
   "ad.openPassport": "Open Security Passport",

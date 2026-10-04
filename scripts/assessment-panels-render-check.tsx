@@ -181,8 +181,15 @@ console.log("\n3. The screen the run ends on");
   const employee = text(
     render(<SubmittedNotice recruitment={false} closedStatus={null} reviewsOpened={0} />),
   );
-  check("3.1 an employee is thanked", employee.includes("dina svar är inlämnade"), employee);
-  check("3.2 and told about their development report", employee.includes("utvecklingsrapport"));
+  check(
+    "3.1 an employee sees confirmed submission",
+    /dina svar är inlämnade/i.test(employee),
+    employee,
+  );
+  check(
+    "3.2 submission does not promise report access",
+    !employee.includes("utvecklingsrapport") && employee.includes("testlista"),
+  );
 
   const candidate = text(
     render(<SubmittedNotice recruitment closedStatus={null} reviewsOpened={0} />),
@@ -221,8 +228,8 @@ console.log("\n3. The screen the run ends on");
     render(<SubmittedNotice recruitment closedStatus="released" reviewsOpened={0} />),
   );
   check(
-    "3.8 a released workforce run points at My Career",
-    releasedEmployee.includes("Min karriär"),
+    "3.8 a released workforce run points at the test list and shared reports",
+    releasedEmployee.includes("testlista") && releasedEmployee.includes("delats med dig"),
   );
   check(
     "3.9 a released recruitment run does not — a candidate has nothing there",
@@ -257,8 +264,8 @@ console.log("\n3. The screen the run ends on");
 console.log("\n4. The English half says the same things");
 {
   check(
-    "4.1 the English ending forks on purpose",
-    /development report/i.test(en["academy.done.body"] ?? "") &&
+    "4.1 neither English ending promises a report after submission",
+    !/development report/i.test(en["academy.done.body"] ?? "") &&
       !/development report/i.test(en["academy.done.bodyRecruitment"] ?? ""),
   );
   check(
@@ -298,6 +305,19 @@ console.log("\n4. The English half says the same things");
 }
 
 // ---------------------------------------------------------------------------
+const abandonedHtml = render(
+  <SubmittedNotice recruitment closedStatus="abandoned" reviewsOpened={0} />,
+);
+check(
+  "closed without submission never claims answers were submitted",
+  text(abandonedHtml).includes(sv["academy.done.abandonedTitle"]) &&
+    !text(abandonedHtml).includes(sv["academy.done.title"]),
+);
+check(
+  "closed without submission never claims review is pending",
+  !text(abandonedHtml).includes(sv["academy.done.reviewPending"]),
+);
+
 const total = passed + failures.length;
 console.log(`\n${passed}/${total} checks passed`);
 if (failures.length > 0) {

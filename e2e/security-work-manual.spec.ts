@@ -1,3 +1,4 @@
+import { selectSiteLanguage } from "./support/site-language";
 /** Real routed journeys: GoTrue sessions, server functions, PostgREST and RLS.
  * The fixture administers membership only in the explicitly owned local stack.
  * Every product record is otherwise written by an authenticated user's UI/API.
@@ -49,9 +50,8 @@ async function login(page: Page, address: string, destination: string) {
   await caller(page);
   await page.reload();
 }
-async function language(page: Page, locale: string) {
-  await page.getByRole("button", { name: locale, exact: true }).first().click();
-  await expect(page.locator("html")).toHaveAttribute("lang", new RegExp(`^${locale}`));
+async function language(page: Page, locale: "sv" | "en") {
+  await selectSiteLanguage(page, locale);
 }
 async function fit(page: Page) {
   const size = await page.evaluate(() => ({

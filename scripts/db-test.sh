@@ -1801,7 +1801,14 @@ pa_nc_expect_fail() {
 PA_MIG=supabase/migrations/20270112090000_passport_attestation_active_employer.sql
 PA_RB=supabase/rollback/20270112090000_passport_attestation_active_employer_rollback.sql
 pa_plant_fn() {
-  local sql; sql="$(sed -n "/^CREATE OR REPLACE FUNCTION public.$1(/,/^\\(END; \\)\\?\\\$function\\\$/p" "$PA_RB")"
+  # BSD sed does not implement GNU BRE's optional \? operator. Stop at the
+  # function terminator so an isolated mutation cannot execute the rollback's
+  # unrelated policy changes or whole-state postflight.
+  local sql; sql="$(awk -v fn="$1" '
+    index($0, "CREATE OR REPLACE FUNCTION public." fn "(") == 1 { copying = 1 }
+    copying { print }
+    copying && ($0 == "END; $function$" || $0 == "$function$") { exit }
+  ' "$PA_RB")"
   grep -q "has_employer_role(" <<<"$sql" && ! grep -q "has_active_employer_role" <<<"$sql" \
     || { echo "FAIL: passport-attestation control could not plant the pre-fix $1" >&2; exit 1; }
   psql_q -d "$TEST_DB" -c "$sql" >/dev/null
@@ -1860,7 +1867,14 @@ pe_nc_expect_fail() {
 PE_MIG=supabase/migrations/20270113090000_pending_employer_actions.sql
 PE_RB=supabase/rollback/20270113090000_pending_employer_actions_rollback.sql
 pe_plant_fn() {
-  local sql; sql="$(sed -n "/^CREATE OR REPLACE FUNCTION public.$1(/,/^\\(END; \\)\\?\\\$function\\\$/p" "$PE_RB")"
+  # BSD sed does not implement GNU BRE's optional \? operator. Stop at the
+  # function terminator so an isolated mutation cannot execute the rollback's
+  # unrelated policy changes or whole-state postflight.
+  local sql; sql="$(awk -v fn="$1" '
+    index($0, "CREATE OR REPLACE FUNCTION public." fn "(") == 1 { copying = 1 }
+    copying { print }
+    copying && ($0 == "END; $function$" || $0 == "$function$") { exit }
+  ' "$PE_RB")"
   grep -q "^CREATE OR REPLACE FUNCTION public.$1(" <<<"$sql" && ! grep -q "20270113090000" <<<"$sql" \
     || { echo "FAIL: pending-employer control could not plant the pre-fix $1" >&2; exit 1; }
   psql_q -d "$TEST_DB" -c "$sql" >/dev/null
@@ -8495,6 +8509,12 @@ else
     suite_failed "Security Passport application disclosure (assertion shortfall: floor 34)"
   fi
 fi
+
+# ---------------------------------------------------------------------------
+# This is a schema-state contract: a failed rollback or restoration stops CI.
+# The canonical test rolls back its own transaction, leaving F09 installed.
+echo "==> Verifying Security Passport application guard rollback and restoration"
+psql_q -d "$TEST_DB" -f supabase/tests/sp_application_passport_guard_rollback_test.sql
 
 # ---------------------------------------------------------------------------
 echo "==> Running Security Passport skill/language taxonomy assertions"

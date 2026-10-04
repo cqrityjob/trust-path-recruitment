@@ -36,7 +36,6 @@ import {
   readProfessionStage,
   readRecommendationConfidence,
   recommendationConfidenceLabel,
-  STAGE_LABEL,
 } from "@/lib/career-discovery/v31/profession-explanations";
 import type { ProfessionStage, RankedProfession } from "@/lib/career-discovery/v31/professions";
 
@@ -113,29 +112,8 @@ const CHIP_TARGET_CLASS =
 const CHIP_CLASS =
   "inline-flex items-center gap-1 rounded-full border border-accent/40 bg-accent/10 px-2.5 py-0.5 text-[11px] font-medium text-accent transition-colors group-hover:bg-accent/20";
 
-/** "Utforska nu" — the one action on a recommendation card.
- *
- *  ── WHY THIS IS A LINK AND NOT A BADGE ────────────────────────────────
- *
- *  The chip used to be StageBadge's <span> for the "explore_now" stage. It
- *  read as the card's call to action — accent-coloured, imperative, next to
- *  the occupation's name — and did nothing when pressed, which the owner
- *  reported as "the Explore now button is not clickable". A control that
- *  looks pressable must be pressable, and it must go somewhere that shows
- *  the occupation.
- *
- *  Where it goes is decided by exploreDestinationFor (profession-links.ts),
- *  not here, and it is the SAME rule the Career Center's recommendation and
- *  My Career use: a published Career Center guide when one exists, otherwise
- *  the reviewed catalogue page for exactly this CIG profession. (This card
- *  used to open an in-card panel for the second case while the Career Center
- *  printed "no guide yet" for the very same recommendation.)
- *
- *  For the "explore_now" stage the chip IS the stage badge, so the card
- *  looks exactly as before with the one difference that it works. For the
- *  other stages the stage badge stays as it was (it is a classification,
- *  and "Långsiktig riktning" is not an instruction to explore now) and the
- *  chip reads "Utforska yrket" beside it, so every card has the action. */
+/** A direct action for the exact recommended profession. Timing remains
+ * a separate classification badge, independent of this navigation label. */
 function ExploreChip({
   entry,
   locale,
@@ -147,10 +125,7 @@ function ExploreChip({
 }) {
   const t = translateFor(locale);
   const destination = exploreDestinationFor(entry.match);
-  const label =
-    entry.match.stage === "explore_now"
-      ? STAGE_LABEL.explore_now[locale]
-      : t("careerDiscovery.report.v31.exploreCareer");
+  const label = t("careerDiscovery.report.v31.exploreCareer");
   // The accessible name carries the occupation, so a screen-reader user
   // tabbing through three cards hears "Explore now: Polis", not "Explore
   // now" three times.
@@ -239,9 +214,7 @@ function RecommendationCard({
         >
           {recommendationConfidenceLabel(entry.confidence, locale)}
         </span>
-        {entry.match.stage !== "explore_now" && (
-          <StageBadge stage={entry.match.stage} locale={locale} />
-        )}
+        <StageBadge stage={entry.match.stage} locale={locale} />
         <ExploreChip entry={entry} locale={locale} title={title} />
       </div>
 

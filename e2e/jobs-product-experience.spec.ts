@@ -178,7 +178,9 @@ test("external application explains the destination and Escape returns focus", a
   // Reached the way a visitor reaches it: from the list.
   await open(page);
   await card(page, second.title_sv).click();
-  const apply = page.getByRole("button", { name: /Ansök.*arbetsgivar|Ansök externt/ }).first();
+  const apply = page
+    .getByRole("button", { name: /Sök jobbet på arbetsgivarens webbplats/ })
+    .first();
   await expect(apply).toBeVisible({ timeout: 30000 });
   await apply.click();
   const dialog = page.getByRole("alertdialog");

@@ -137,7 +137,7 @@ const MUTATIONS: readonly Mutation[] = [
     id: "CDC-NC-UNRESOLVED-AUTH-FORM",
     defect: "The loading session loses its own pre-dialog return",
     file: APPLY,
-    find: "  if (signedIn === null) {",
+    find: "  if (authUserId === undefined) {",
     replace: "  if (false) {",
     guard: GUARD,
     expect: "unresolved auth returns before the anonymous branch",

@@ -182,31 +182,74 @@ export function SubmittedNotice({
 }) {
   const { t } = useT();
   const bodyKey =
-    closedStatus === "released"
-      ? recruitment
-        ? "academy.done.releasedBodyRecruitment"
-        : "academy.done.releasedBody"
-      : closedStatus
+    closedStatus === "abandoned"
+      ? "academy.done.abandonedBody"
+      : closedStatus === "released"
         ? recruitment
-          ? "academy.done.alreadyBodyRecruitment"
-          : "academy.done.alreadyBody"
-        : recruitment
-          ? "academy.done.bodyRecruitment"
-          : "academy.done.body";
+          ? "academy.done.releasedBodyRecruitment"
+          : "academy.done.releasedBody"
+        : closedStatus
+          ? recruitment
+            ? "academy.done.alreadyBodyRecruitment"
+            : "academy.done.alreadyBody"
+          : recruitment
+            ? "academy.done.bodyRecruitment"
+            : "academy.done.body";
   return (
     <>
       <h1 className="flex items-center gap-2 text-lg font-semibold text-foreground">
         <CheckCircle2 className="h-5 w-5 text-accent" aria-hidden="true" />
-        {t(closedStatus ? "academy.done.alreadyTitle" : "academy.done.title")}
+        {t(
+          closedStatus === "abandoned"
+            ? "academy.done.abandonedTitle"
+            : closedStatus
+              ? "academy.done.alreadyTitle"
+              : "academy.done.title",
+        )}
       </h1>
       <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{t(bodyKey)}</p>
       {/* Said plainly, because a result that is not final yet must not look
           final. */}
-      {reviewsOpened > 0 && (
+      {closedStatus !== "abandoned" && reviewsOpened > 0 && (
         <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
           {t("academy.done.reviewPending")}
         </p>
       )}
     </>
+  );
+}
+
+/** A save attempt never traps somebody in the player, including when the
+ * request has no response. Leaving is an explicit acknowledgement of loss. */
+export function UnsavedAnswersNotice({
+  saving,
+  onRetry,
+  onStay,
+  onLeave,
+}: {
+  saving: boolean;
+  onRetry: () => void;
+  onStay: () => void;
+  onLeave: () => void;
+}) {
+  const { t } = useT();
+  const buttonClass =
+    "min-h-11 rounded-md border border-border bg-background px-3 py-2 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+  return (
+    <div data-testid="academy-unsaved-exit" className="space-y-3">
+      <p>{t(saving ? "academy.pause.saving" : "academy.pause.failed")}</p>
+      <p>{t("academy.leave.warning")}</p>
+      <div className="flex flex-wrap gap-2">
+        <button type="button" className={buttonClass} disabled={saving} onClick={onRetry}>
+          {t("academy.leave.retry")}
+        </button>
+        <button type="button" className={buttonClass} onClick={onStay}>
+          {t("academy.leave.stay")}
+        </button>
+        <button type="button" className={buttonClass} onClick={onLeave}>
+          {t("academy.leave.discard")}
+        </button>
+      </div>
+    </div>
   );
 }

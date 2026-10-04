@@ -1,0 +1,31 @@
+{
+  "groups": [
+    {
+      "count": 1,
+      "expired": false,
+      "focused": false,
+      "revoked": false,
+      "package_code": "employer_review",
+      "has_verified_content": false
+    },
+    {
+      "count": 3,
+      "expired": false,
+      "focused": false,
+      "revoked": false,
+      "package_code": "employer_review",
+      "has_verified_content": true
+    },
+    {
+      "count": 3,
+      "expired": true,
+      "focused": false,
+      "revoked": false,
+      "package_code": "employer_review",
+      "has_verified_content": false
+    }
+  ],
+  "read_at": "2026-10-04T16:42:41.001527+00:00",
+  "application_disclosures": 7,
+  "empty_application_disclosures": 4
+}

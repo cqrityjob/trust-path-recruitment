@@ -684,6 +684,15 @@ BEGIN
      SET application_id = _app, job_id = '55550000-0000-0000-0000-0000000000d1'
    WHERE id = _case;
 
+  -- Operator-owned synthetic verification fixture: the application share
+  -- must contain a verified active merit before its consent states are tested.
+  INSERT INTO public.sp_claims
+    (holder_user_id, claim_type, title, credential_code, claimed_issuer_name,
+     assertion_level, lifecycle_state, verified_by_user_id, verified_at)
+  VALUES (_holder, 'certification', 'Certified Protection Professional (CPP)',
+          'INTL_ASIS_CPP', 'ASIS International', 'verified', 'active',
+          '44440000-0000-0000-0000-0000000000a1', now());
+
   -- Passport allows ONE live disclosure per application, so this walks a single
   -- disclosure through its states rather than creating three at once. That is
   -- closer to what actually happens to a candidate's consent anyway: it is

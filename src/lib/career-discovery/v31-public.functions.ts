@@ -89,6 +89,7 @@
 // which control still bites where. Nothing about lifecycle_status, the review
 // gates or the authenticated in-product entrance changes.
 
+import { matchesConfirmedAccount } from "@/lib/auth/account-confirmation";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -975,11 +976,15 @@ export const persistPublicV31Run = createServerFn({ method: "POST" })
         // run they took while signed in — that path is byte-for-byte the one
         // it always was.
         claimToken: z.string().min(8).max(200).optional(),
+        expectedUserId: z.string().uuid().optional(),
       })
       .parse(d),
   )
   .handler(async ({ data, context }): Promise<PersistResult> => {
     const ctx = context as Ctx;
+    if (!matchesConfirmedAccount(data.expectedUserId, ctx.userId)) {
+      throw new V31PublicError("persist_failed");
+    }
 
     // 0. Access gate — see resolveSaveGate, which is where the reasoning
     //    lives and which is unit-tested as a truth table rather than

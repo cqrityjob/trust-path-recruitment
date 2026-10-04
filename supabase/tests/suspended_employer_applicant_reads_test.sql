@@ -151,6 +151,15 @@ BEGIN
   VALUES ('0f0d0000-2222-4000-8000-000000000001', '0f0d0000-1111-4000-8000-000000000001', _g, 'assessment',
           (SELECT f.id FROM public.scp_forms f WHERE f.assessment_version_id = _av LIMIT 1), _av, 'in_progress');
 END $$;
+-- A valid application share needs an active verified merit. This operator
+-- fixture is scoped to this synthetic holder; disclosure access remains the
+-- subject of the assertions below.
+INSERT INTO public.sp_claims
+  (holder_user_id, claim_type, title, credential_code, claimed_issuer_name,
+   assertion_level, lifecycle_state, verified_by_user_id, verified_at)
+VALUES ('0f0d0000-0000-4000-8000-000000000001', 'certification',
+        'Certified Protection Professional (CPP)', 'INTL_ASIS_CPP', 'ASIS International',
+        'verified', 'active', '0f0d0000-0000-4000-8000-00000000000a', now());
 SELECT pg_temp.act_as('0f0d0000-0000-4000-8000-000000000001');
 INSERT INTO public.sp_disclosures (id, holder_user_id, package_code, purpose, application_id, expires_at)
 VALUES ('0f0d0000-6666-4000-8000-000000000001', '0f0d0000-0000-4000-8000-000000000001',

@@ -1,3 +1,4 @@
+import { requirementExplanation } from "@/lib/recruitment/requirement-explanation";
 // H3.4A — on-platform ("internal") job application dialog. The only new
 // candidate-facing apply surface added in this phase; external/email apply
 // (ExternalApplyDialog, mailto link) are unchanged.
@@ -149,26 +150,60 @@ type CvOptionsState =
 
 type CvSource = "upload" | "cqrityjob_cv";
 
-export function ApplyInternalDialog({
-  jobId,
-  employerName,
-  label,
-  returnTo,
-}: {
+type ApplyInternalDialogProps = {
   jobId: string;
   employerName: string | null;
+  jobTitle: string;
   label: string;
-  /** Where signing in comes back to: the ad WITH the search it was opened
-   *  from, already through safeReturnPath (jobAdReturnPath). Reading
-   *  window.location.pathname here dropped the search. */
+  /** The ad with its validated search context, preserved across sign-in. */
   returnTo: string;
-}) {
+};
+
+export function ApplyInternalDialog(props: ApplyInternalDialogProps) {
+  const [authUserId, setAuthUserId] = useState<string | null | undefined>(undefined);
+  useEffect(() => {
+    let alive = true;
+    let authEventReceived = false;
+    const { data: sub } = supabase.auth.onAuthStateChange((_ev, session) => {
+      authEventReceived = true;
+      if (alive) setAuthUserId(session?.user.id ?? null);
+    });
+    void supabase.auth.getSession().then(({ data }) => {
+      // An older initial read must not overwrite a newer sign-in event.
+      if (alive && !authEventReceived) setAuthUserId(data.session?.user.id ?? null);
+    });
+    return () => {
+      alive = false;
+      sub.subscription.unsubscribe();
+    };
+  }, []);
+  if (authUserId === undefined) {
+    return <div className="h-10 animate-pulse rounded-md bg-muted/40" />;
+  }
+  // Account changes discard every in-memory field, file and consent before
+  // the new account can open a form or write a draft under its own key.
+  return (
+    <AccountApplyInternalDialog
+      key={`${authUserId ?? "signed-out"}:${props.jobId}`}
+      {...props}
+      authUserId={authUserId}
+    />
+  );
+}
+
+function AccountApplyInternalDialog({
+  jobId,
+  employerName,
+  jobTitle,
+  label,
+  returnTo,
+  authUserId,
+}: ApplyInternalDialogProps & { authUserId: string | null }) {
+  const signedIn = Boolean(authUserId);
   const { t, lang } = useT();
   const search = useSearch({ strict: false });
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [signedIn, setSignedIn] = useState<boolean | null>(null);
-  const [authUserId, setAuthUserId] = useState<string | null>(null);
   const [submittedApplicationId, setSubmittedApplicationId] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [phone, setPhone] = useState("");
@@ -215,7 +250,8 @@ export function ApplyInternalDialog({
   // An interrupted session (a closed tab, an expired sign-in) keeps what the
   // candidate typed. The CV file itself cannot be kept -- a browser does not
   // allow it -- and the form says so when it restores.
-  const draftKey = `cqj.apply-draft.${jobId}`;
+  // Legacy job-only drafts have no provable owner and are never restored.
+  const draftKey = `cqj.apply-draft.${authUserId}.${jobId}`;
   const [restored, setRestored] = useState(false);
   const offerFn = useServerFn(getApplicationPassportOffer);
   const cvOptionsFn = useServerFn(listMyApplicationCvOptions);
@@ -249,24 +285,6 @@ export function ApplyInternalDialog({
       resetScroll: false,
     });
   }, [signedIn, applications.isPending, appliedId, search, navigate]);
-
-  useEffect(() => {
-    let alive = true;
-    supabase.auth.getSession().then(({ data }) => {
-      if (alive) {
-        setSignedIn(!!data.session);
-        setAuthUserId(data.session?.user.id ?? null);
-      }
-    });
-    const { data: sub } = supabase.auth.onAuthStateChange((_ev, session) => {
-      setSignedIn(!!session);
-      setAuthUserId(session?.user.id ?? null);
-    });
-    return () => {
-      alive = false;
-      sub.subscription.unsubscribe();
-    };
-  }, []);
 
   const usableCvs = useMemo(
     () => (cvOptions.status === "ready" ? cvOptions.options.filter((c) => c.block === null) : []),
@@ -354,8 +372,7 @@ export function ApplyInternalDialog({
     return () => {
       alive = false;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, jobId]);
+  }, [open, jobId, draftKey]);
 
   useEffect(() => {
     if (!open || success) return;
@@ -519,10 +536,6 @@ export function ApplyInternalDialog({
     }
   }
 
-  if (signedIn === null) {
-    return <div className="h-10 animate-pulse rounded-md bg-muted/40" />;
-  }
-
   if (!signedIn) {
     return (
       <div className="space-y-2">
@@ -635,7 +648,9 @@ export function ApplyInternalDialog({
           // form refuses to shrink and the overflow never engages.
           <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col">
             <DialogHeader className="shrink-0">
-              <DialogTitle>{t("jobs.apply.dialog.title")}</DialogTitle>
+              <DialogTitle>
+                {t("jobs.apply.dialog.title")}: {jobTitle}
+              </DialogTitle>
               <DialogDescription>
                 {employerName
                   ? t("jobs.apply.dialog.body").replace("{employer}", employerName)
@@ -703,6 +718,7 @@ export function ApplyInternalDialog({
                         ? req.label_en || req.label_sv
                         : req.label_sv || req.label_en
                       : null;
+                    const explanation = requirementExplanation(req, lang);
                     const err = answerErrors[q.id];
                     return (
                       <div key={q.id}>
@@ -727,10 +743,19 @@ export function ApplyInternalDialog({
                             : {reqLabel}
                           </p>
                         )}
+                        {explanation && (
+                          <p
+                            id={`apply-q-${q.id}-help`}
+                            className="mt-2 text-sm leading-relaxed text-muted-foreground"
+                          >
+                            {explanation}
+                          </p>
+                        )}
                         {q.answer_kind === "yes_no" ? (
                           <div
                             role="radiogroup"
                             aria-labelledby={`apply-q-${q.id}-label`}
+                            aria-describedby={explanation ? `apply-q-${q.id}-help` : undefined}
                             aria-invalid={err || undefined}
                             className="mt-1.5 flex gap-4"
                           >
@@ -757,6 +782,7 @@ export function ApplyInternalDialog({
                           <Textarea
                             id={`apply-q-${q.id}`}
                             aria-labelledby={`apply-q-${q.id}-label`}
+                            aria-describedby={explanation ? `apply-q-${q.id}-help` : undefined}
                             aria-invalid={err || undefined}
                             value={answers[q.id]?.text ?? ""}
                             maxLength={2000}

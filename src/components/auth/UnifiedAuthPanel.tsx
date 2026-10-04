@@ -717,7 +717,10 @@ export function UnifiedAuthPanel({ mode }: { mode: UnifiedAuthMode }) {
       // the same unified identity, as email/password.
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
-        options: { redirectTo: oauthRedirectUri(destination) },
+        options: {
+          redirectTo: oauthRedirectUri(destination),
+          queryParams: { prompt: "select_account" },
+        },
       });
       if (error) throw error;
       // Leaving for the provider. Do NOT clear busy — the page is unloading,
