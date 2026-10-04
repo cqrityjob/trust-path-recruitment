@@ -2766,31 +2766,34 @@ for passport_round in before after; do
     echo "    $passport_count assertions passed: Passport $passport_suite ($passport_round rollback/reapply)"
   done
   if [ "$passport_round" = before ]; then
-    # 20270212090000 / 20270213090000 (the certification research integration:
-    # foundation, then the import) are the newest Passport units and stand down
-    # FIRST, import then foundation. (The publication is staged outside the
-    # migration path until the application is published: docs/passport/
-    # certification-catalogue-integration.md.) The import removes exactly what it
-    # added; the foundation refuses while anything depends on it. Each must leave
-    # nothing behind, and the suite must notice.
+    # 20270212090000 / 20270213090000 / 20270214090000 (the certification research
+    # integration: foundation, import, publication) are the newest Passport units
+    # and stand down FIRST, publication, then import, then foundation. The
+    # publication only withdraws the definitions from NEW registration; the import
+    # removes exactly what it added; the foundation refuses while anything depends
+    # on it. Each must leave nothing behind and the suite must notice.
+    psql_q -d "$TEST_DB" -f "supabase/rollback/20270214090000_sp_catalogue_research_publish_rollback.sql" >/dev/null
+    rs_active="$(psql_q -d "$TEST_DB" -Atc "SELECT count(*) FROM public.sp_credential_types WHERE code LIKE 'INTL\_%' AND is_active")"
+    [ "$rs_active" = "14" ] || { echo "FAIL: 20270214090000 rollback left $rs_active active international definitions, expected the original 14"; exit 1; }
+    echo "    ok  the research publication withdrawn: only the original 14 international definitions are selectable"
+    if psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_passport_catalogue_research_test.sql >/dev/null 2>&1; then
+      echo "FAIL: the research suite passed WITHOUT its publication -- it proves nothing" >&2
+      exit 1
+    fi
+    echo "    ok  and the research suite refuses to pass without the publication (negative control)"
     if psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" -f "supabase/rollback/20270212090000_sp_catalogue_research_foundation_rollback.sql" >/dev/null 2>&1; then
       echo "FAIL: the foundation rollback ran while the import still existed" >&2
       exit 1
     fi
     echo "    ok  the foundation rollback refuses while the import exists, and changes nothing"
     psql_q -d "$TEST_DB" -f "supabase/rollback/20270213090000_sp_catalogue_research_import_rollback.sql" >/dev/null
-    rs_import_left="$(psql_q -d "$TEST_DB" -Atc "SELECT (SELECT count(*) FROM public.sp_catalogue_research_records) + (SELECT count(*) FROM public.sp_credential_types WHERE code LIKE 'INTL\\_%') - 14 + (SELECT count(*) FROM public.sp_certification_issuers) - 5 + (SELECT count(*) FROM public.sp_certification_definitions) - 14")"
+    rs_import_left="$(psql_q -d "$TEST_DB" -Atc "SELECT (SELECT count(*) FROM public.sp_catalogue_research_records) + (SELECT count(*) FROM public.sp_credential_types WHERE code LIKE 'INTL\_%') - 14 + (SELECT count(*) FROM public.sp_certification_issuers) - 5 + (SELECT count(*) FROM public.sp_certification_definitions) - 14")"
     [ "$rs_import_left" = "0" ] || { echo "FAIL: 20270213090000 rollback left a residue ($rs_import_left)"; exit 1; }
     echo "    ok  the research import stood down: no record, definition or issuer it added remains"
     psql_q -d "$TEST_DB" -f "supabase/rollback/20270212090000_sp_catalogue_research_foundation_rollback.sql" >/dev/null
     rs_found_left="$(psql_q -d "$TEST_DB" -Atc "SELECT (to_regclass('public.sp_catalogue_research_records') IS NOT NULL)::int + (to_regclass('public.sp_catalogue_requests') IS NOT NULL)::int + (to_regclass('public.sp_certification_definition_aliases') IS NOT NULL)::int + (SELECT count(*) FROM pg_proc WHERE pronamespace='public'::regnamespace AND proname IN ('sp_catalogue_unavailable_matches','sp_request_catalogue_definition','sp_list_my_catalogue_requests','sp_admin_resolve_catalogue_request','sp_admin_review_research_record','sp_catalogue_research_provenance_immutable')) + (SELECT count(*) FROM public.sp_credential_classes) - 8")"
     [ "$rs_found_left" = "0" ] || { echo "FAIL: 20270212090000 rollback left $rs_found_left object(s) behind"; exit 1; }
     echo "    ok  the research foundation stood down: no table, function or class remains"
-    if psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_passport_catalogue_research_test.sql >/dev/null 2>&1; then
-      echo "FAIL: the research suite passed WITHOUT its migrations -- it proves nothing" >&2
-      exit 1
-    fi
-    echo "    ok  and the research suite refuses to pass without the migrations (negative control)"
     # 20261221090000 (the UK and Dubai opened as a public pilot) is DATA only
     # and the newest Passport migration: it stands down FIRST, returning the
     # three markets and their 44 definitions to internal pilot and touching no
@@ -2915,13 +2918,13 @@ for passport_round in before after; do
     ou_back="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" -f "supabase/migrations/20261221090000_sp_open_uk_dubai_public_pilot.sql" 2>&1)" || { echo "$ou_back"; exit 1; }
     printf '%s' "$ou_back" | grep -q 'SP_OPEN_UK_DUBAI_PROOF ok' || { echo "FAIL: 20261221090000 did not re-apply on top of its rollback"; exit 1; }
     echo "    ok  the UK and Dubai reopened as a public pilot on top of the availability model: proof ok"
-    # The certification research integration, back on top: foundation, then import.
-    for rs_migration in 20270212090000_sp_catalogue_research_foundation 20270213090000_sp_catalogue_research_import; do
+    # The certification research integration, back on top: foundation, import, publication.
+    for rs_migration in 20270212090000_sp_catalogue_research_foundation 20270213090000_sp_catalogue_research_import 20270214090000_sp_catalogue_research_publish; do
       psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" -f "supabase/migrations/${rs_migration}.sql" >/dev/null 2>&1 || { echo "FAIL: ${rs_migration} did not re-apply on top of its rollback"; exit 1; }
     done
     rs_back="$(psql_q -d "$TEST_DB" -Atc "SELECT (SELECT count(*) FROM public.sp_catalogue_research_records) || '/' || (SELECT count(*) FROM public.sp_credential_types WHERE code LIKE 'INTL\_%' AND is_active)")"
-    [ "$rs_back" = "170/14" ] || { echo "FAIL: the research integration re-applied to $rs_back, expected 170 records and only the original 14 active international definitions"; exit 1; }
-    echo "    ok  the research integration reapplied from nothing: 170 records, 140 inactive additions, the original 14 definitions still the only active ones"
+    [ "$rs_back" = "170/154" ] || { echo "FAIL: the research integration re-applied to $rs_back, expected 170 records and 154 active international definitions"; exit 1; }
+    echo "    ok  the research integration reapplied from nothing: 170 records, 154 active international definitions"
   fi
 done
 
@@ -9165,9 +9168,10 @@ psql_q -d postgres -c "DROP DATABASE ${PASSPORT_MAIN_TEST_DB}_pristine;" >/dev/n
 # as adoption to 20261118100000's rollback. Then 20261204090000 (HAYAT
 # assessments), whose triggers sit on sp_claims and sp_evidence. This database
 # is discarded at the end of the block, so none is reapplied here.
-# The certification research integration (20270212090000, 20270213090000) is
-# newer than all of these and stands down first, in its own reverse order:
-# import, then foundation.
+# The certification research integration (20270212090000, 20270213090000,
+# 20270214090000) is newer than all of these and stands down first, in its own
+# reverse order: publication, import, foundation.
+psql_q -d "$TEST_DB" -f supabase/rollback/20270214090000_sp_catalogue_research_publish_rollback.sql >/dev/null
 psql_q -d "$TEST_DB" -f supabase/rollback/20270213090000_sp_catalogue_research_import_rollback.sql >/dev/null
 psql_q -d "$TEST_DB" -f supabase/rollback/20270212090000_sp_catalogue_research_foundation_rollback.sql >/dev/null
 psql_q -d "$TEST_DB" -f supabase/rollback/20261221090000_sp_open_uk_dubai_public_pilot_rollback.sql >/dev/null
@@ -10565,9 +10569,10 @@ fi
 # rollbacks below restore, and its rows would read as adoption to the
 # foundation rollback further down. None is re-applied: none of the remaining
 # suites reads them.
-# The certification research integration (20270212090000, 20270213090000) is
-# newer than all of these and stands down first, in its own reverse order:
-# import, then foundation.
+# The certification research integration (20270212090000, 20270213090000,
+# 20270214090000) is newer than all of these and stands down first, in its own
+# reverse order: publication, import, foundation.
+psql_q -d "$TEST_DB" -f supabase/rollback/20270214090000_sp_catalogue_research_publish_rollback.sql >/dev/null
 psql_q -d "$TEST_DB" -f supabase/rollback/20270213090000_sp_catalogue_research_import_rollback.sql >/dev/null
 psql_q -d "$TEST_DB" -f supabase/rollback/20270212090000_sp_catalogue_research_foundation_rollback.sql >/dev/null
 psql_q -d "$TEST_DB" -f supabase/rollback/20261221090000_sp_open_uk_dubai_public_pilot_rollback.sql >/dev/null
