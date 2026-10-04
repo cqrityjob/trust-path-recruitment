@@ -1,7 +1,7 @@
 # Ägarbeslut 2026-10-04: juridik och lansering
 
 > **Uppdatering, andra leveransen (2026-10-04).** Det som den här anteckningen kallade "inte gjort" är nu gjort i egna PR:er:
-> AI-spärren (#419), de tre texterna (#420), mätningen av (#421) och beviset för kontoradering (#425). I den här PR:en
+> AI-spärren, de tre texterna, mätningen av och beviset för kontoradering, allt i den här PR:en (#417, den enda lanserings-PR:en). I den här PR:en
 > är retention-planen avstämd mot ägarens beslut (tre rader är förslag, inte beslut), manuella gallringsrutiner med ansvarig,
 > intervall och logg finns (`retention-runbook-v1.md`), texterna om nyhetsbrev, mätning och automatisk vidarebefordran är
 > borttagna, och biträdesavtalet har förslag på frister och inga hänvisningar till ett företagsavtal som inte finns.
