@@ -1,0 +1,51 @@
+{
+  "base": "e022ec52ae88a5647145ea6bac0606114ea3acb3",
+  "branch": "codex/cqrityjob-logo",
+  "capturedAt": "2026-10-04",
+  "source": "CQrityjob-logo-navy.svg supplied in Downloads; symbol paths retained for favicon.svg",
+  "before": "Exact main versions of modified files; same local app and browser settings as after",
+  "after": "Logo branch using SVG wordmark, SVG favicon and raster fallbacks",
+  "pages": [
+    "/",
+    "/login"
+  ],
+  "viewportWidths": [
+    320,
+    375,
+    390,
+    768,
+    1024,
+    1440
+  ],
+  "screenshots": [
+    "before-home-1440.png",
+    "after-home-1440.png",
+    "before-home-375.png",
+    "after-home-375.png",
+    "before-footer.png",
+    "after-footer.png",
+    "before-login.png",
+    "after-login.png"
+  ],
+  "browserChecks": {
+    "logosLoaded": true,
+    "homeLink": "/",
+    "horizontalOverflow": false,
+    "allSevenAssetsHTTP200": true,
+    "darkLogoFilter": "brightness(0) invert(1)",
+    "unstubbedBackendCalls": 0,
+    "productionBackendRequests": 0
+  },
+  "existingPlaywrightSuite": {
+    "file": "e2e/public-homepage.spec.ts",
+    "project": "chromium",
+    "passed": 9,
+    "checks": [
+      "minimum 44x44 targets",
+      "visible keyboard focus",
+      "no overflow at six widths in Swedish and English",
+      "footer reachable at 320px"
+    ]
+  },
+  "release": "PR review only; no merge or publication"
+}

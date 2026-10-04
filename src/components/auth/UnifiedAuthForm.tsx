@@ -58,6 +58,7 @@
 import { ShieldCheck } from "lucide-react";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { Container } from "@/components/site/Container";
+import { BrandLogo } from "@/components/site/BrandLogo";
 import { useT } from "@/i18n/context";
 import { UnifiedAuthPanel } from "./UnifiedAuthPanel";
 import type { UnifiedAuthMode } from "./UnifiedAuthPanel";
@@ -77,9 +78,7 @@ export function UnifiedAuthForm({ mode }: { mode: UnifiedAuthMode }) {
                 mobile: somebody arriving from an email link has no other
                 way to tell what this account is for. */}
             <div className="lg:pt-6">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">
-                {t("brand.name")}
-              </p>
+              <BrandLogo className="w-44" />
               <h1
                 className="mt-3 text-3xl font-semibold tracking-tight text-foreground md:text-4xl lg:text-[2.75rem] lg:leading-[1.1]"
                 style={{ fontFamily: "var(--font-display)" }}

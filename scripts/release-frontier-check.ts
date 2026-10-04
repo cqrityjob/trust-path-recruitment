@@ -391,11 +391,19 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // (#393) is published AFTER this, and the transactional-email function
 // (employer_new_application) is verified in production before that publication.
 // Evidence: docs/release/2026-10-03-employer-notice-hosted-verification.md.
-// Contract remains pending until the scoped application is published and verified.
 // #404 / 20270206090000 verified applied read-only at 2026-10-03T21:11:18.678365+00:00.
 // Evidence: docs/security/interview-access/expand-hosted-verification.md.
-const expectedPending: string[] = ["20270207090000_interview_ai_config_contract.sql"];
-
+// 2026-10-04 ~06:20 UTC: #406 (merge e022ec52, every mandatory CI job green on b4dc4e0e)
+// verified applied read-only, after the scoped application (#405) was published and
+// (according to the production session) verified in the running app: 20270207090000_interview_ai_config_contract is the last ledger row (369 rows,
+// digest 01357df572629d745e667d2fedb20ba1; the first 368 unchanged, digest
+// c086806d9fb5f0c92609678f037b73ba); scp_interview_ai_config_read is limited to
+// is_platform_admin(auth.uid()), the grants are unchanged (authenticated SELECT only, no
+// client write), the functions that read the table are unchanged. Nothing is pending by
+// design now. Evidence: docs/release/2026-10-04-interview-config-contract-hosted-verification.md.
+// 20270208090000 (account erasure with credential metadata) is pending until
+// the official integration applies it and hosted evidence is recorded.
+const expectedPending: string[] = ["20270208090000_account_erasure_credential_details.sql"];
 
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
