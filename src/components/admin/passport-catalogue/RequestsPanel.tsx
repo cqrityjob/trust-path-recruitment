@@ -27,6 +27,11 @@ function resolveError(code: string, l: Lang): string {
       "Skriv en motivering som innehavaren kan läsa.",
       "Write a reason the holder can read.",
     );
+  if (code === "SP_REQUEST_LIMIT")
+    return say(
+      "Innehavaren har redan tio öppna förfrågningar. Besvara en av dem innan du öppnar den här igen.",
+      "The holder already has ten open requests. Answer one of them before reopening this one.",
+    );
   if (code === "SP_REQUEST_NOTE_INVALID")
     return say(
       "Anteckningen får vara högst 300 tecken.",
