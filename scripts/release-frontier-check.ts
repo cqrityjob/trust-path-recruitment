@@ -401,7 +401,9 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // is_platform_admin(auth.uid()), the grants are unchanged (authenticated SELECT only, no
 // client write), the functions that read the table are unchanged. Nothing is pending by
 // design now. Evidence: docs/release/2026-10-04-interview-config-contract-hosted-verification.md.
-const expectedPending: string[] = [];
+// 20270208090000 (account erasure with credential metadata) is pending until
+// the official integration applies it and hosted evidence is recorded.
+const expectedPending: string[] = ["20270208090000_account_erasure_credential_details.sql"];
 
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
