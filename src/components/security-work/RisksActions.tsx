@@ -43,7 +43,7 @@ import {
   programmeKey,
   useProgramme,
 } from "./programme-ui";
-import { AssistantButton, useAssistantContext } from "./SecurityAssistant";
+import { AssistantButton, useAiAvailability, useAssistantContext } from "./SecurityAssistant";
 
 export function RatingField({
   label,
@@ -233,6 +233,7 @@ export function ProgrammeRiskEditor({
 }) {
   const l = useWorkText();
   const { workspace, canEdit } = useSecurityWorkspace();
+  const aiAvailable = useAiAvailability().available;
   const programme = useProgramme();
   const save = useServerFn(saveSecurityProgrammeRisk);
   const op = useSavedOperation();
@@ -346,10 +347,14 @@ export function ProgrammeRiskEditor({
         />
         <TextAreaField
           label={l("Hot / scenario", "Threat / scenario")}
-          hint={l(
-            "Vem eller vad, hur och när. Security AI kan hjälpa dig beskriva scenariot – du godkänner texten.",
-            "Who or what, how and when. Security AI can help describe the scenario; you approve the text.",
-          )}
+          hint={
+            aiAvailable
+              ? l(
+                  "Vem eller vad, hur och när. Security AI kan hjälpa dig beskriva scenariot – du godkänner texten.",
+                  "Who or what, how and when. Security AI can help describe the scenario; you approve the text.",
+                )
+              : l("Vem eller vad, hur och när.", "Who or what, how and when.")
+          }
           value={threat}
           maxLength={8000}
           onChange={(e) => setThreat(e.target.value)}

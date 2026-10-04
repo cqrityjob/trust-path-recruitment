@@ -434,20 +434,31 @@ group("T2 · the hero: the locked headline, the positioning, two equal entrances
       d(lang)["home.hero.subtitle"],
     );
     // It speaks to BOTH audiences (owner review, point 3): the individual
-    // (a job, the Security Passport, their own expertise) and the employer.
-    // Owner decision 2026-10-03: the subtitle no longer says "locally or
-    // internationally"; the employer entrance still does, and is asserted
-    // right below. The "AI-stöd" / "AI support" phrase in the copy is NOT locked
-    // here: AI functions are off in production and the privacy policy says no
-    // AI provider is used, so it is an open owner item, not a verified claim.
+    // (careers, security jobs and credentials that can be verified) and the
+    // employer. Owner decision 2026-10-04: the individual sentence is the
+    // owner's own and says nothing about AI. Version 1 has no generative AI
+    // (src/lib/ai/generative-ai-gate.ts), so neither the positioning nor the
+    // individual entrance may promise it; generative-ai-texts:check holds the
+    // wider rule. The subtitle no longer says "locally or internationally"
+    // (owner decision 2026-10-03); the employer entrance still does, and is
+    // asserted right below.
     ck(
       `${lang}: the positioning addresses individuals and employers`,
       lang === "sv"
-        ? /^Jobb, kompetens, Security Passport/.test(d(lang)["home.hero.subtitle"]) &&
-            /Rekryteringsverktyg för arbetsgivare/.test(d(lang)["home.hero.subtitle"])
-        : /^Jobs, expertise, Security Passport/.test(d(lang)["home.hero.subtitle"]) &&
-            /Recruitment tools for employers/.test(d(lang)["home.hero.subtitle"]),
+        ? /^Karriär, säkerhetsjobb och verifierbara meriter på ett ställe\./.test(
+            d(lang)["home.hero.subtitle"],
+          ) && /Rekryteringsverktyg för arbetsgivare/.test(d(lang)["home.hero.subtitle"])
+        : /^Careers, security jobs and verifiable credentials in one place\./.test(
+            d(lang)["home.hero.subtitle"],
+          ) && /Recruitment tools for employers/.test(d(lang)["home.hero.subtitle"]),
       d(lang)["home.hero.subtitle"],
+    );
+    ck(
+      `${lang}: the hero and the individual entrance promise no AI`,
+      !/\bAI\b|\bKI\b/.test(
+        [d(lang)["home.hero.subtitle"], d(lang)["home.hero.individual.body"], heroCopy].join(" "),
+      ),
+      [d(lang)["home.hero.subtitle"], d(lang)["home.hero.individual.body"]].join(" | "),
     );
     ck(
       `${lang}: the employer entrance still says the ambition is local or international`,

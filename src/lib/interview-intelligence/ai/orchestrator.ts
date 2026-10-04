@@ -19,6 +19,7 @@ import { MockAiProvider } from "./providers/mock";
 import { TASK_REGISTRY, abstentionSchema, type TaskKey } from "./registry";
 import { validatePolicy, type PolicyContext, type PolicyViolation } from "./policy";
 import { screenPassages, type QuarantinedPassage } from "./injection";
+import { GENERATIVE_AI_DISABLED_CODE, externalAiAllowed } from "../../ai/generative-ai-gate";
 import { AnthropicProvider } from "./providers/anthropic";
 
 /* ------------------------------------------------------------------ */
@@ -134,6 +135,15 @@ export function selectProvider(env: NodeJS.ProcessEnv = process.env): SelectedPr
   }
 
   if (configured === "anthropic") {
+    // Version 1 offers no generative AI, whatever the environment says. Refused
+    // here, before the key is even read, so every caller (interview, recruitment,
+    // CV draft) gets the same fail-closed answer. See ai/generative-ai-gate.ts.
+    if (!externalAiAllowed()) {
+      throw new AiProviderError(
+        `${GENERATIVE_AI_DISABLED_CODE}: generative AI is not part of version 1. Nothing was configured to run and no request was made.`,
+        "configuration",
+      );
+    }
     const apiKey = env.ANTHROPIC_API_KEY ?? "";
     if (!apiKey) {
       throw new AiProviderError(

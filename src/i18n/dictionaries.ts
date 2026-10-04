@@ -1,3 +1,4 @@
+import { COMPANY } from "../lib/legal/company";
 import { recruitmentEn, recruitmentSv } from "./recruitment-copy";
 import { securityWorkEn, securityWorkSv } from "./security-work-copy";
 
@@ -224,11 +225,11 @@ export const dictionaries = {
     "home.hero.title": "Din karriär, din kompetens, ditt säkerhetsarbete.",
     "home.hero.slogan": "Security careers, without limits.",
     "home.hero.subtitle":
-      "Jobb, kompetens, Security Passport och AI-stöd för ditt säkerhetsarbete. Rekryteringsverktyg för arbetsgivare – på samma plats.",
+      "Karriär, säkerhetsjobb och verifierbara meriter på ett ställe. Rekryteringsverktyg för arbetsgivare – på samma plats.",
     "home.hero.audience.label": "Välj var du vill börja",
     "home.hero.individual.title": "För dig i säkerhetsbranschen",
     "home.hero.individual.body":
-      "Hitta jobb, utveckla din kompetens, bygg ditt Security Passport och utforska AI-stöd för ditt säkerhetsarbete.",
+      "Hitta jobb, utveckla din kompetens och bygg ditt Security Passport.",
     "home.hero.employer.title": "För arbetsgivare",
     "home.hero.employer.body":
       "Hitta, bedöm och rekrytera säkerhetskompetens – lokalt eller internationellt.",
@@ -475,7 +476,7 @@ export const dictionaries = {
       "Ta fram underlag om risker, beredskap och kontaktvägar som stöd i verksamhetens planering.",
     "securityWorkPage.ai.title": "Om AI-stödet",
     "securityWorkPage.ai.body":
-      "Arbetsytan är byggd för AI-stöd som kan föreslå kompletteringsfrågor, synliggöra kunskapsluckor och ta fram utkast som du granskar. AI-stödet är ännu inte aktiverat. När det aktiveras gäller samma princip som i dag. AI hjälper dig med arbetet. Du ansvarar för besluten.",
+      "AI-stöd ingår inte i den här versionen av arbetsytan, och inget av det du skriver skickas till någon AI-tjänst. Om sådant stöd erbjuds senare gäller samma princip. AI hjälper dig med arbetet. Du ansvarar för besluten.",
     "securityWorkPage.privacy.title": "Bra att veta",
     "securityWorkPage.privacy.body":
       "Arbetsytan är din egen och delas inte med din karriärprofil, ditt Security Passport eller arbetsgivare. Säkerhetsskyddsklassificerad eller hemlig information ska inte läggas in – arbetsytan påminner om det där du registrerar underlag.",
@@ -832,7 +833,7 @@ export const dictionaries = {
       "CQrityjob grundades av Mostafa Alshawi, som har lång erfarenhet av säkerhetsarbete – från polisen och internationella säkerhetsuppdrag till personskydd, säkerhetsledning och företagssäkerhet. Den erfarenheten präglar plattformen: den är byggd kring de yrken, krav och beslut som faktiskt finns i branschen.",
     "about.trust.title": "Where trust comes first",
     "about.trust.body":
-      "Förtroende binder ihop allt vi bygger: din professionella identitet, dina meriter, rekryteringen, bedömningarna, AI-stödet och säkerhetsarbetet. Därför är vi tydliga med vad som är kontrollerat och vad som inte är det, du bestämmer själv vad du delar – och AI stödjer arbetet, medan människor ansvarar för besluten.",
+      "Förtroende binder ihop allt vi bygger: din professionella identitet, dina meriter, rekryteringen, bedömningarna och säkerhetsarbetet. Därför är vi tydliga med vad som är kontrollerat och vad som inte är det, du bestämmer själv vad du delar – och människor ansvarar för besluten.",
     "about.cta.individuals": "För dig i säkerhetsbranschen",
     "about.cta.employers": "För arbetsgivare",
     "assessment.title": "Karriäranalys, rekryteringstester och kompetensutveckling",
@@ -1293,10 +1294,9 @@ export const dictionaries = {
     "meta.terms.description":
       "Villkoren för att använda CQrityjob och de tjänster som omfattas av plattformen.",
     "meta.privacy.title": "Integritetspolicy – CQrityjob",
-    "meta.privacy.description":
-      "Hur Cqrityjob LLC behandlar dina personuppgifter när du använder CQrityjob.",
+    "meta.privacy.description": `Hur ${COMPANY.legalName} behandlar dina personuppgifter när du använder CQrityjob.`,
     "legal.swedishOnly": "",
-    "legal.provider": "Cqrityjob LLC · info@cqrityjob.com",
+    "legal.provider": `${COMPANY.legalName} · org.nr ${COMPANY.organisationNumber} · ${COMPANY.contactEmail}`,
     "legal.contents": "Innehåll",
     "footer.rights": "Alla rättigheter förbehållna.",
     "footer.built": "Baserat i Sverige. Byggd för säkerhetsbranschen.",
@@ -8195,7 +8195,7 @@ export const dictionaries = {
     "iiu.ov.steps": "Så här går det till",
     "iiu.ov.howitworks": "Om metoden bakom",
     "iiu.ov.howitworks.body":
-      "Intervjun följer CQrityjobs metod. Frågorna är låsta till intervjuguiden, AI får bara föreslå, och varje bedömning och beslut är ditt.",
+      "Intervjun följer CQrityjobs metod. Frågorna är låsta till intervjuguiden, och varje bedömning och beslut är ditt.",
     "iiu.ov.decision":
       "Anställningsbeslutet är ditt. Produkten dokumenterar underlaget — den rekommenderar ingenting.",
     "iiu.rp.candidatereport": "Kandidatrapport",
@@ -8668,7 +8668,8 @@ export const dictionaries = {
     "iin.el.whichRole": "Vilken roll eller ansökan det gäller",
     "iin.el.purpose": "Varför uppgifterna samlas in",
     "iin.el.whatIsRecorded": "Vilka slags uppgifter som kan registreras",
-    "iin.el.aiProposes": "Att AI kan strukturera och föreslå material",
+    "iin.el.aiProposes":
+      "Att arbetsgivaren använder ett strukturerat metodstöd för intervjun och bedömningen",
     "iin.el.humanConfirms": "Att en människa måste granska och bekräfta uppgifterna",
     "iin.el.aiDoesNotDecide": "Att AI inte fattar anställningsbeslutet",
     "iin.el.whoCanAccess": "Vem som kan komma åt materialet",
@@ -9250,11 +9251,11 @@ export const dictionaries = {
     "home.hero.title": "Your career, your expertise, your security work.",
     "home.hero.slogan": "Security careers, without limits.",
     "home.hero.subtitle":
-      "Jobs, expertise, Security Passport and AI support for your security work. Recruitment tools for employers – all in one place.",
+      "Careers, security jobs and verifiable credentials in one place. Recruitment tools for employers – all in one place.",
     "home.hero.audience.label": "Choose where to start",
     "home.hero.individual.title": "For security professionals",
     "home.hero.individual.body":
-      "Find jobs, develop your expertise, build your Security Passport and explore AI support for your security work.",
+      "Find jobs, develop your expertise and build your Security Passport.",
     "home.hero.employer.title": "For employers",
     "home.hero.employer.body":
       "Find, assess and recruit security talent – locally or internationally.",
@@ -9460,7 +9461,7 @@ export const dictionaries = {
       "Prepare evidence on risks, preparedness and contact routes to support operational planning.",
     "securityWorkPage.ai.title": "About AI assistance",
     "securityWorkPage.ai.body":
-      "The workspace is built for AI assistance that can suggest follow-up questions, highlight information gaps and produce drafts for you to review. AI assistance is not yet activated. When it is, the principle stays the same. AI helps you with the work. You are responsible for the decisions.",
+      "AI assistance is not part of this version of the workspace, and nothing you write is sent to an AI service. If such assistance is offered later, the same principle applies. AI helps you with the work. You are responsible for the decisions.",
     "securityWorkPage.privacy.title": "Good to know",
     "securityWorkPage.privacy.body":
       "The workspace is your own and is not shared with your career profile, your Security Passport or employers. Classified or secret information must not be entered – the workspace reminds you where you record evidence.",
@@ -9799,7 +9800,7 @@ export const dictionaries = {
       "CQrityjob was founded by Mostafa Alshawi, who has long experience across security – from policing and international security assignments to close protection, security management and corporate security. That experience shapes the platform: it is built around the roles, requirements and decisions that actually exist in the profession.",
     "about.trust.title": "Where trust comes first",
     "about.trust.body":
-      "Trust connects everything we build: your professional identity, your credentials, recruitment, assessment, AI support and security work. So we are clear about what has been checked and what has not, you decide what you share – and AI supports the work, while people remain responsible for the decisions.",
+      "Trust connects everything we build: your professional identity, your credentials, recruitment, assessment and security work. So we are clear about what has been checked and what has not, you decide what you share – and people remain responsible for the decisions.",
     "about.cta.individuals": "For people in security",
     "about.cta.employers": "For employers",
     "assessment.title": "Career analysis, recruitment assessments and learning",
@@ -10203,10 +10204,9 @@ export const dictionaries = {
     "meta.terms.title": "Terms of use – CQrityjob",
     "meta.terms.description": "The terms for using CQrityjob and the services the platform covers.",
     "meta.privacy.title": "Privacy policy – CQrityjob",
-    "meta.privacy.description":
-      "How Cqrityjob LLC processes your personal data when you use CQrityjob.",
+    "meta.privacy.description": `How ${COMPANY.legalName} processes your personal data when you use CQrityjob.`,
     "legal.swedishOnly": "This document is currently published in Swedish only.",
-    "legal.provider": "Cqrityjob LLC · info@cqrityjob.com",
+    "legal.provider": `${COMPANY.legalName} · org. no. ${COMPANY.organisationNumber} · ${COMPANY.contactEmail}`,
     "legal.contents": "Contents",
     "footer.rights": "All rights reserved.",
     "footer.built": "Based in Sweden. Built for the security industry.",
@@ -16883,7 +16883,7 @@ export const dictionaries = {
     "iiu.ov.steps": "How this works",
     "iiu.ov.howitworks": "About the method behind it",
     "iiu.ov.howitworks.body":
-      "The interview follows CQrityjob's method. The questions are locked to the interview guide, AI may only suggest, and every assessment and decision is yours.",
+      "The interview follows CQrityjob's method. The questions are locked to the interview guide, and every assessment and decision is yours.",
     "iiu.ov.decision":
       "The employment decision is yours. The product documents the material — it recommends nothing.",
     "iiu.rp.candidatereport": "Candidate report",
@@ -17350,7 +17350,8 @@ export const dictionaries = {
     "iin.el.whichRole": "Which role or application it concerns",
     "iin.el.purpose": "Why the information is being collected",
     "iin.el.whatIsRecorded": "Which kinds of information may be recorded",
-    "iin.el.aiProposes": "That AI may structure and propose material",
+    "iin.el.aiProposes":
+      "That the employer uses a structured method aid for the interview and the assessment",
     "iin.el.humanConfirms": "That a human must review and confirm the evidence",
     "iin.el.aiDoesNotDecide": "That AI does not make the employment decision",
     "iin.el.whoCanAccess": "Who can access the material",

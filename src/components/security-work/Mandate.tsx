@@ -11,7 +11,7 @@ import { mandateComplete } from "@/lib/security-work/programme/rules";
 import { useSecurityWorkspace } from "./context";
 import { SaveStatus, useSavedOperation, useWorkText } from "./analysis-ui";
 import { EvidenceLinks, Explain, Tag, programmeKey, useProgramme } from "./programme-ui";
-import { AssistantButton, useAssistantContext } from "./SecurityAssistant";
+import { AssistantButton, useAiAvailability, useAssistantContext } from "./SecurityAssistant";
 import {
   LoadingState,
   PageHeading,
@@ -66,6 +66,7 @@ export function SecurityMandatePage() {
   const { t, lang } = useT();
   const l = useWorkText();
   const { workspace, user, canEdit } = useSecurityWorkspace();
+  const aiAvailable = useAiAvailability().available;
   const programme = useProgramme();
   const queryClient = useQueryClient();
   const save = useServerFn(saveSecurityMandate);
@@ -316,10 +317,12 @@ export function SecurityMandatePage() {
             {l("Uppdragstext", "Mandate text")}
           </h2>
           <p className="text-sm text-muted-foreground">
-            {l(
-              "Skriv själv, eller be Security AI om ett utkast. Ett AI-utkast blir uppdragstext först när du godkänner det.",
-              "Write it yourself, or ask Security AI for a draft. An AI draft becomes mandate text only when you approve it.",
-            )}
+            {aiAvailable
+              ? l(
+                  "Skriv själv, eller be Security AI om ett utkast. Ett AI-utkast blir uppdragstext först när du godkänner det.",
+                  "Write it yourself, or ask Security AI for a draft. An AI draft becomes mandate text only when you approve it.",
+                )
+              : l("Skriv uppdragstexten själv.", "Write the mandate text yourself.")}
           </p>
           <TextAreaField
             label={l("Text", "Text")}

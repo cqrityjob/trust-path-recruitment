@@ -65,7 +65,10 @@ export const NOTICE_ELEMENTS = [
   "purpose",
   /** Which KINDS of information may be recorded. Kinds, never contents. */
   "whatIsRecorded",
-  /** That AI may help structure or propose material. */
+  /** That the employer uses a structured method aid for the interview and the
+   *  assessment. The key keeps its old name; in version 1 no generative AI is
+   *  part of it (src/lib/ai/generative-ai-gate.ts), so the notice does not say
+   *  that AI proposes anything. */
   "aiProposes",
   /** That a human must review and confirm the evidence. */
   "humanConfirms",

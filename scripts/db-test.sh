@@ -220,6 +220,8 @@ echo "==> Interview access expand regression"
 psql_q -d "$TEST_DB" -f supabase/tests/interview_access_expand_test.sql
 echo "==> Running complete client catalogue and privilege audit"
 psql_q -d "$TEST_DB" -f supabase/tests/client_table_privilege_hardening_test.sql
+echo "==> Manual retention routines (docs/legal/retention-runbook-v1.md), run as written on synthetic data"
+psql_q -d "$TEST_DB" -f supabase/tests/retention_manual_routines_test.sql
 
 # 20270208090000: account erasure removes the person's credential metadata and
 # document readings, which used to keep their Passport rows alive and make
@@ -233,7 +235,7 @@ ER_MIG=supabase/migrations/20270208090000_account_erasure_credential_details.sql
 ER_RB=supabase/rollback/20270208090000_account_erasure_credential_details_rollback.sql
 ER_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f "$ER_SUITE" 2>&1)" || { echo "$ER_OUT" | grep -E "ERROR|FAILED" | head -5; echo "FAIL: account erasure suite"; exit 1; }
 ER_PASSED="$(printf '%s\n' "$ER_OUT" | grep -c "ok  " || true)"
-[ "$ER_PASSED" -ge 22 ] || { echo "FAIL: account erasure assertion shortfall: $ER_PASSED (floor 22)"; exit 1; }
+[ "$ER_PASSED" -ge 27 ] || { echo "FAIL: account erasure assertion shortfall: $ER_PASSED (floor 27)"; exit 1; }
 echo "    ok  $ER_PASSED account erasure assertions passed"
 er_nc_expect_fail() {
   local label="$1" expect="$2" mutation="$3" out rc

@@ -1,5 +1,12 @@
 # Beslutsunderlag: användarvillkor, integritetspolicy, lagring och kandidatkommunikation
 
+> **Uppdaterad 2026-10-04.** Leverantören är inte längre Cqrityjob LLC utan **Cqrityjobb AB, organisationsnummer
+> 559261-0249**, enligt ägarens beslut 2026-10-04 (`docs/legal/2026-10-04-owner-decisions.md`). Samma beslut
+> godkänner lagringsplanen i avsnitt C som produktbeslut (rutinerna ska kontrolleras innan tiderna publiceras som
+> åtaganden) och gör svarstiden för job@ till ett internt mål, inte en offentlig svarstid. Resten av dokumentet
+> beskriver läget 2026-10-03 och är bevarat oförändrat som register över vad som beslutades och verifierades då.
+> "Cqrityjob LLC" nedan är därför kvar med flit.
+
 **Status: underlag för ägarens granskning.** Båda juridiska sidorna är
 **utkast**, ett mellanläge och inga färdiga lanseringstexter. Ett utkast
 visar en banner, är `noindex`, finns inte i sitemapen och registrerar

@@ -166,6 +166,7 @@ import {
   trackV31FunnelEvent,
   type FunnelEventName,
 } from "@/lib/career-discovery/v31-feedback.functions";
+import { FUNNEL_MEASUREMENT_ENABLED } from "@/lib/analytics/funnel-measurement";
 import { shareableUrl } from "@/lib/site-origin";
 
 // "result" is the terminal state for BOTH an anonymous and a signed-in
@@ -263,6 +264,8 @@ export function PublicAssessmentFlow() {
   // candidate's actual experience (see trackV31FunnelEvent's own doc).
   const track = useCallback(
     (eventName: FunnelEventName, detail?: Record<string, string | number | boolean>) => {
+      // Version 1 measures nothing (src/lib/analytics/funnel-measurement.ts).
+      if (!FUNNEL_MEASUREMENT_ENABLED) return;
       void trackEventFn({ data: { eventName, detail } }).catch(() => {
         /* best-effort only */
       });

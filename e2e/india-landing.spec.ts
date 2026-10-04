@@ -17,8 +17,10 @@ import { BASE, assertNoRefusals, installBoundary } from "./support/public-entry-
 
 const PAGE = `${BASE}/security-passport/india`;
 const INTENT = "/passport/start?market=IN";
-/** Only the funnel call leaves the page, and it answers with nothing. */
-const TABLE = { trackV31FunnelEvent: null };
+/** Nothing leaves the page. Version 1 measures nothing, so the funnel call that
+ *  used to be answered here is no longer made, and the boundary refuses any
+ *  server function the page grows unasked, that one included. */
+const TABLE = {};
 
 /** Hold every script until released. Registered after the boundary, so it is
  *  consulted first and hands everything else back to it. */
@@ -61,6 +63,20 @@ test("the India page: English, labelled example, the right intent, no OCR", asyn
   );
   await expect(page.locator("main")).not.toContainText(/guaranteed|Dubai-ready|testimonial/i);
   expect(fetched.filter((u) => /hayat-ocr|tesseract|pdf\.worker|traineddata/.test(u))).toEqual([]);
+  // Version 1 measures nothing: once the page is idle (the arrival effect has run
+  // long since), no server function was called and no "once" marker was written.
+  await page.waitForLoadState("networkidle");
+  await page.waitForTimeout(500);
+  expect(
+    fetched.filter((u) => u.includes("/_serverFn/")),
+    "the page made a server-function call: version 1 measures nothing",
+  ).toEqual([]);
+  expect(
+    await page.evaluate(() =>
+      Object.keys(sessionStorage).filter((key) => key.startsWith("cqj:funnel")),
+    ),
+    "a statistics marker was written to sessionStorage",
+  ).toEqual([]);
   const overflow = await page.evaluate(
     () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
   );

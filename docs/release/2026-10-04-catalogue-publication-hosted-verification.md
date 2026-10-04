@@ -49,7 +49,7 @@ non-administrator holder:
 - the holder is offered **210** definitions (was 70), including all 140 new ones, and no Abu Dhabi definition;
 - **all 140 new certifications register and read back** through `sp_save_international_credential`: `self_declared`,
   `active`, no country, no scope, the definition's own governed issuer, a credential-details row;
-- a no-expiry OSCP is refused (`SP_NO_EXPIRY_NOT_APPROVED`), an unknown code is refused
+- registering OSCP with the explicit non-expiring option is refused (`SP_NO_EXPIRY_NOT_APPROVED`); without an end date it is saved as missing, with no inferred expiry; an unknown code is refused
   (`SP_APPROVED_DEFINITION_REQUIRED`), and CAFS (a retained, unpublished research record) is still found as
   "not available yet";
 - afterwards production was re-read: 51 claims with the same fingerprint, 0 requests, 373 ledger rows.

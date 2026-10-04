@@ -1,7 +1,12 @@
 // Test-group feedback, funnel analytics, and career-goal persistence
 // (Execution Mandate §17, §31, §34).
 //
-// ANONYMOUS TELEMETRY IS STILL ANONYMOUS. What changed in
+// FUNNEL MEASUREMENT IS OFF IN VERSION 1 (src/lib/analytics/funnel-measurement.ts):
+// `trackV31FunnelEvent` records nothing, and nothing in the browser calls it.
+// What follows describes how a funnel event WAS written, and what a later
+// version would have to decide again. An event with no user id and no session
+// id is not thereby anonymous -- it still carries a time, a name and a detail --
+// so no text may call it that. What changed in
 // 20260916090000_security_hardening_lovable_findings.sql is HOW it is written:
 // the two tables no longer accept a direct INSERT from anon or authenticated,
 // because the policy that allowed it was `WITH CHECK (true)` over a table with
@@ -24,6 +29,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabase } from "@/integrations/supabase/client";
+import { FUNNEL_MEASUREMENT_ENABLED } from "@/lib/analytics/funnel-measurement";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Ctx = { supabase: any; userId: string };
@@ -79,16 +85,56 @@ export const FUNNEL_EVENT_NAMES = [
 
 export type FunnelEventName = (typeof FUNNEL_EVENT_NAMES)[number];
 
+/** What the write needs from a database client: the one RPC and its error. */
+export interface FunnelRpcClient {
+  rpc(
+    fn: string,
+    args: Record<string, unknown>,
+  ): PromiseLike<{ readonly error: { readonly message: string } | null }>;
+}
+
 /**
- * Records one funnel event. Fire-and-forget by design: a tracking failure
- * must never block or degrade the candidate's actual experience, so this
- * never throws to the caller — it logs and returns.
+ * The write itself, apart from the server function, so that a guard can hand it
+ * a recording client and prove that version 1 never reaches the database.
  *
- * This handler talks to the database with the PUBLISHABLE key and carries no
- * candidate JWT, so auth.uid() inside cd_record_funnel_event() is NULL and the
- * stored event is anonymous — exactly as it was before, when this code simply
- * omitted user_id. The difference is that it is now anonymous because the
- * database observed no identity, not because the caller chose not to send one.
+ * Fire-and-forget by design: a tracking failure must never block or degrade
+ * the candidate's actual experience, so this never throws to the caller — it
+ * logs and returns.
+ *
+ * Version 1 measures nothing (src/lib/analytics/funnel-measurement.ts): the
+ * browser callers no longer send, and this refuses what a stale page still
+ * does, before the database is touched.
+ */
+export async function recordFunnelEvent(
+  client: FunnelRpcClient,
+  data: {
+    readonly eventName: FunnelEventName;
+    readonly detail?: Record<string, string | number | boolean>;
+    readonly sessionId?: string;
+  },
+): Promise<{ readonly recorded: boolean }> {
+  if (!FUNNEL_MEASUREMENT_ENABLED) return { recorded: false };
+  const { error } = await client.rpc("cd_record_funnel_event", {
+    _event_name: data.eventName,
+    _detail: data.detail ?? {},
+    _session_id: data.sessionId ?? null,
+  });
+  if (error) {
+    console.error("[v31] funnel event record failed", data.eventName, error.message);
+    return { recorded: false };
+  }
+  return { recorded: true };
+}
+
+/**
+ * Records one funnel event, when measurement is on. It is off in version 1, and
+ * then this records nothing.
+ *
+ * (When it was on:) this handler talked to the database with the PUBLISHABLE
+ * key and carried no candidate JWT, so auth.uid() inside
+ * cd_record_funnel_event() was NULL and the row stored no user id and no
+ * session id. That is not "anonymous": the row still has a time, a name and a
+ * detail, and no text may call it anonymous on that ground alone.
  */
 export const trackV31FunnelEvent = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
@@ -102,18 +148,10 @@ export const trackV31FunnelEvent = createServerFn({ method: "POST" })
       })
       .parse(d),
   )
-  .handler(async ({ data }): Promise<{ readonly recorded: boolean }> => {
-    const { error } = await publicClient.rpc("cd_record_funnel_event", {
-      _event_name: data.eventName,
-      _detail: data.detail ?? {},
-      _session_id: data.sessionId ?? null,
-    });
-    if (error) {
-      console.error("[v31] funnel event record failed", data.eventName, error.message);
-      return { recorded: false };
-    }
-    return { recorded: true };
-  });
+  .handler(
+    async ({ data }): Promise<{ readonly recorded: boolean }> =>
+      recordFunnelEvent(publicClient, data),
+  );
 
 export const submitV31Feedback = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>

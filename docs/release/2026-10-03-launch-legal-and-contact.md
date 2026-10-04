@@ -1,5 +1,11 @@
 # Launch: contact addresses, mail senders, terms and privacy policy
 
+> **Updated 2026-10-04.** The provider is no longer Cqrityjob LLC but **Cqrityjobb AB, organisation number
+> 559261-0249**, by the owner's decision of 2026-10-04 (`docs/legal/2026-10-04-owner-decisions.md`). The text of
+> the terms and the privacy policy changed accordingly, and the retention plan is approved as a product decision.
+> The rest of this record describes the state of 2026-10-03 and is kept unchanged as a register of what was
+> decided and verified that day. "Cqrityjob LLC" below is therefore left in on purpose.
+
 **Status: PR for owner review.** It is not merged, and nothing in production
 was changed. The edge function change takes effect only when the owner
 deploys it after merge (§5).

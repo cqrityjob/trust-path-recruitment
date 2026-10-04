@@ -13,7 +13,7 @@ import { daysBetween } from "@/lib/security-work/programme/rules";
 import { useSecurityWorkspace } from "./context";
 import { useWorkText } from "./analysis-ui";
 import { AREA_ROUTES, Explain, programmeKey, useProgramme } from "./programme-ui";
-import { AssistantButton, useAssistantContext } from "./SecurityAssistant";
+import { AssistantButton, useAiAvailability, useAssistantContext } from "./SecurityAssistant";
 import { EmptyState, LoadingState, PageHeading, WorkButton, WorkError, panelClass } from "./ui";
 
 /** Optional onboarding: a fixed, versioned checklist, never AI-generated.
@@ -22,6 +22,7 @@ export function SecurityPlanPage() {
   const { t, lang } = useT();
   const l = useWorkText();
   const { workspace, user, canEdit } = useSecurityWorkspace();
+  const aiAvailable = useAiAvailability().available;
   const programme = useProgramme();
   const queryClient = useQueryClient();
   const save = useServerFn(saveSecurityPlan);
@@ -172,10 +173,15 @@ export function SecurityPlanPage() {
       )}
       <Explain title={l("Varför 90 dagar?", "Why 90 days?")}>
         <p>
-          {l(
-            "De första tre månaderna avgör om säkerhetsarbetet blir förankrat eller personberoende. Checklistan är fast och versionerad; Security AI kan förklara uppgifterna och hjälpa till med utkast, men skriver aldrig om planen.",
-            "The first three months decide whether security work becomes anchored or person-dependent. The checklist is fixed and versioned; Security AI can explain tasks and help with drafts, but never rewrites the plan.",
-          )}
+          {aiAvailable
+            ? l(
+                "De första tre månaderna avgör om säkerhetsarbetet blir förankrat eller personberoende. Checklistan är fast och versionerad; Security AI kan förklara uppgifterna och hjälpa till med utkast, men skriver aldrig om planen.",
+                "The first three months decide whether security work becomes anchored or person-dependent. The checklist is fixed and versioned; Security AI can explain tasks and help with drafts, but never rewrites the plan.",
+              )
+            : l(
+                "De första tre månaderna avgör om säkerhetsarbetet blir förankrat eller personberoende. Checklistan är fast och versionerad.",
+                "The first three months decide whether security work becomes anchored or person-dependent. The checklist is fixed and versioned.",
+              )}
         </p>
       </Explain>
     </>
