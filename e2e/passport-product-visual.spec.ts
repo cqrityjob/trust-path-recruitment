@@ -118,6 +118,11 @@ async function mount(page: Page, path: string, lang: "sv" | "en" = "en", empty =
       types: [],
     },
     listPassportMarketOverview: { markets: [], current: null },
+    // Read by the credential form and the credential page since the catalogue picker.
+    getHayatAvailability: { linkSources: [] },
+    searchUnavailableDefinitions: [],
+    listMyCatalogueRequests: [],
+    getSavedAssessment: null,
   };
   const refusals = await installBoundary(page, table);
   const storageKey = await observeSupabaseStorageKey(page);
