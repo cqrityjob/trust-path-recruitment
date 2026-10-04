@@ -132,6 +132,17 @@ const shot = async (page: Page, name: string) =>
 
 let claimId = "";
 let shareLink = "";
+/**
+ * The journey proves the catalogue in whichever state the disposable database is in:
+ * BEFORE the publication migration (the 140 researched definitions are added but inactive)
+ * and AFTER it (they are approved and offered). Which one is read from the database, never
+ * assumed, and every assertion that differs says so.
+ */
+let published = false;
+let offered = 0;
+let activeInternational = 0;
+/** A definition the holder must never reach: the researched OSCP before publication, the closed Abu Dhabi licence after. */
+let UNAPPROVED = "INTL_OFFSEC_OSCP";
 const EVIDENCE_PDF = {
   name: "journey-certificate.pdf",
   mimeType: "application/pdf",
@@ -139,6 +150,14 @@ const EVIDENCE_PDF = {
 };
 
 test.beforeAll(() => {
+  activeInternational = Number(
+    sql("select count(*) from public.sp_credential_types where is_active and code like 'INTL\\_%'"),
+  );
+  published = activeInternational > 14;
+  // 14 international + 8 Swedish + 4 Indian + 44 public-pilot UK/Dubai definitions = 70, plus the
+  // 140 researched definitions once the publication has been applied.
+  offered = published ? 210 : 70;
+  UNAPPROVED = published ? "AE_AZ_PSBD_LICENCE_GUARD" : "INTL_OFFSEC_OSCP";
   const holder = createUser(HOLDER);
   createUser(OTHER);
   const admin = createUser(ADMIN);
@@ -162,18 +181,21 @@ test("1 · a holder finds CPP by its abbreviation, registers it with evidence, a
   });
   await shot(page, "01-picker-empty");
 
-  // Everything the catalogue offers this holder: 14 international, 8 Swedish, 4 Indian
-  // and the 44 public-pilot UK and Dubai definitions = 70, drawn 20 at a time.
-  await expect(page.locator("[data-filter-count]")).toContainText("Showing 70 of 70 credentials");
+  // Everything the catalogue offers this holder, drawn 20 at a time.
+  await expect(page.locator("[data-filter-count]")).toContainText(
+    `Showing ${offered} of ${offered} credentials`,
+  );
   await expect(page.locator("[data-result]")).toHaveCount(20);
   while (await page.locator("[data-results-more]").isVisible())
     await page.locator("[data-results-more]").click();
   const listed = await resultCodes(page);
-  expect(listed).toHaveLength(70);
+  expect(listed).toHaveLength(offered);
   for (const code of ["INTL_ASIS_CPP", "INTL_ISC2_CISSP", "VU1", "SV", "IN_MEPSC_Q7101"])
     expect(listed).toContain(code);
-  // The 140 definitions the research import added are INACTIVE: none is offered.
-  expect(listed.filter((c) => /OFFSEC|PECB|COMPTIA|BCSP|IAPP|GIAC/.test(c))).toEqual([]);
+  const researched = listed.filter((c) => /OFFSEC|PECB|COMPTIA|BCSP|IAPP|GIAC/.test(c));
+  // The 140 researched definitions are offered only once the publication has been applied.
+  if (published) expect(researched).toContain("INTL_OFFSEC_OSCP");
+  else expect(researched).toEqual([]);
 
   await searchBox(page).fill("cpp");
   expect(await resultCodes(page)).toEqual(["INTL_ASIS_CPP"]);
@@ -243,10 +265,15 @@ test("2 · a credential the catalogue does not offer is explained, cannot be sel
     timeout: 60_000,
   });
 
-  // An award the research found, added as a definition but NOT yet published: not offered.
+  // An award the research found: before its publication it is a definition nobody can select,
+  // after it OSCP and OSCP+ are two distinct, selectable results.
   await searchBox(page).fill("oscp");
-  await expect(page.locator("[data-result]")).toHaveCount(0);
-  await expect(page.locator("[data-catalogue-empty]")).toBeVisible();
+  if (published) {
+    expect((await resultCodes(page)).sort()).toEqual(["INTL_OFFSEC_OSCP", "INTL_OFFSEC_OSCP_PLUS"]);
+  } else {
+    await expect(page.locator("[data-result]")).toHaveCount(0);
+    await expect(page.locator("[data-catalogue-empty]")).toBeVisible();
+  }
 
   // A retained record: explained, with the reason in a controlled vocabulary, and not selectable.
   await searchBox(page).fill("cafs");
@@ -310,10 +337,12 @@ test("3 · an administrator reads the research queue, decides a record, and answ
 }) => {
   const { context, page } = await asAdmin(browser);
   await expect(page.locator("[data-admin-passport-catalogue]")).toBeVisible({ timeout: 60_000 });
-  // The Definitions tab: the 140 imported definitions await their publication, and nothing is selectable by them.
-  await expect(page.locator('[data-count="awaiting_definition_approval"]')).toHaveText("140", {
-    timeout: 60_000,
-  });
+  // The Definitions tab: before the publication the 140 imported definitions await it and nothing is
+  // selectable by them; after it none is left awaiting.
+  await expect(page.locator('[data-count="awaiting_definition_approval"]')).toHaveText(
+    published ? "0" : "140",
+    { timeout: 60_000 },
+  );
   await shot(page, "09-admin-definitions");
 
   await page.locator('[data-catalogue-tab="research"]').click();
@@ -375,10 +404,14 @@ test("3 · an administrator reads the research queue, decides a record, and answ
     ),
   ).toBe(1);
   await shot(page, "11-admin-requests");
-  // Still nothing published, and nothing verified, by any of it.
+  // The decisions published nothing, and nothing was verified by any of it.
   expect(
-    sql("select count(*) from public.sp_credential_types where is_active and code like 'INTL\\_%'"),
-  ).toBe("14");
+    Number(
+      sql(
+        "select count(*) from public.sp_credential_types where is_active and code like 'INTL\\_%'",
+      ),
+    ),
+  ).toBe(activeInternational);
   expect(sql(`select assertion_level from public.sp_claims where id = '${claimId}'`)).not.toBe(
     "verified",
   );
@@ -616,7 +649,7 @@ test("7 · an international certification held in another country, a missing dat
 
 test("8 · an unapproved definition, a forged save and a direct write are refused by the database", async () => {
   const unapproved = await rpc(HOLDER, "sp_save_international_credential", {
-    _input: { definition_code: "INTL_OFFSEC_OSCP", identifier: "FORGED-1" },
+    _input: { definition_code: UNAPPROVED, identifier: "FORGED-1" },
   });
   expect(unapproved.status).toBeGreaterThanOrEqual(400);
   // A forged country on an international certification is refused as well.
@@ -636,14 +669,14 @@ test("8 · an unapproved definition, a forged save and a direct write are refuse
     body: JSON.stringify({
       holder_user_id: idOf(HOLDER),
       claim_type: "certification",
-      credential_code: "INTL_OFFSEC_OSCP",
-      title: "OSCP",
-      claimed_issuer_name: "OffSec",
+      credential_code: UNAPPROVED,
+      title: "Not approved",
+      claimed_issuer_name: "Nobody",
     }),
   });
   expect(direct.status).toBeGreaterThanOrEqual(400);
   // A holder cannot write the catalogue.
-  const write = await fetch(`${GATEWAY}/rest/v1/sp_credential_types?code=eq.INTL_OFFSEC_OSCP`, {
+  const write = await fetch(`${GATEWAY}/rest/v1/sp_credential_types?code=eq.${UNAPPROVED}`, {
     method: "PATCH",
     headers: {
       "content-type": "application/json",
@@ -653,12 +686,65 @@ test("8 · an unapproved definition, a forged save and a direct write are refuse
     body: JSON.stringify({ is_active: true }),
   });
   expect(write.status).toBeGreaterThanOrEqual(400);
-  expect(
-    sql("select is_active from public.sp_credential_types where code = 'INTL_OFFSEC_OSCP'"),
-  ).toBe("f");
+  expect(sql(`select is_active from public.sp_credential_types where code = '${UNAPPROVED}'`)).toBe(
+    "f",
+  );
   expect(
     sql(
-      `select count(*) from public.sp_claims where holder_user_id = '${idOf(HOLDER)}' and credential_code in ('INTL_OFFSEC_OSCP','INTL_ASIS_PSP')`,
+      `select count(*) from public.sp_claims where holder_user_id = '${idOf(HOLDER)}' and credential_code in ('${UNAPPROVED}','INTL_ASIS_PSP')`,
     ),
   ).toBe("0");
+});
+
+test("9 · a researched certification, once published, is found, registered with no country and no inferred lifetime", async ({
+  page,
+}) => {
+  test.skip(
+    !published,
+    "The 140 researched definitions are not published in this database: step 8 proves they are refused.",
+  );
+  await signIn(page, HOLDER, "/passport/credentials/new");
+  await expect(page.locator("[data-international-credential-form]")).toBeVisible({
+    timeout: 60_000,
+  });
+  // Two awards whose abbreviations differ by one character are told apart by name and issuer.
+  await searchBox(page).fill("oscp");
+  const headline = async (code: string) =>
+    (
+      await page
+        .locator(`[data-result][data-credential-code="${code}"] [data-result-headline]`)
+        .innerText()
+    ).trim();
+  const plain = await headline("INTL_OFFSEC_OSCP");
+  const plus = await headline("INTL_OFFSEC_OSCP_PLUS");
+  expect(plain).not.toBe(plus);
+  await expect(
+    page.locator('[data-result][data-credential-code="INTL_OFFSEC_OSCP"] [data-result-byline]'),
+  ).toContainText("OffSec · International certification");
+  await shot(page, "20-researched-results");
+
+  await chooseCredential(page, "INTL_OFFSEC_OSCP", { search: "oscp" });
+  await page.getByLabel("Credential identifier (optional)").fill(`OSCP-${RUN}`);
+  // No dates: the catalogue does not say this certification never expires, and neither do we.
+  await page.getByRole("button", { name: "Continue", exact: true }).click();
+  await page.getByRole("button", { name: "Save credential", exact: true }).click();
+  await page.waitForURL(/\/passport\/entry\/claim\/[0-9a-f-]{36}/, { timeout: 60_000 });
+  const id = page.url().match(/claim\/([0-9a-f-]{36})/)![1];
+  const row = sql(
+    `select credential_code || '|' || coalesce(jurisdiction_code,'<null>') || '|' || assertion_level || '|' || coalesce(claimed_issuer_name,'') || '|' || coalesce(valid_until::text,'<null>') || '|' || coalesce((select no_expiry::text from public.sp_credential_details d where d.claim_id = c.id),'<null>')
+       from public.sp_claims c where c.id = '${id}'`,
+  );
+  const [code, jurisdiction, assertion, issuer, until, noExpiry] = row.split("|");
+  expect(code).toBe("INTL_OFFSEC_OSCP");
+  expect(jurisdiction).toBe("<null>");
+  expect(assertion).not.toBe("verified"); // approval of the definition is not verification of the holder
+  expect(issuer).toBe("OffSec");
+  expect(until).toBe("<null>");
+  expect(["<null>", "false"]).toContain(noExpiry);
+  await page.reload();
+  await expect(page.locator("main")).toBeVisible();
+  await expect(page.locator("main")).not.toContainText(/No expiry|Utan utgångsdatum/);
+  await shot(page, "21-researched-saved-after-reload");
+  await page.goto(`${BASE}/passport`);
+  await expect(page.locator("[data-credential-wallet]")).toContainText("OSCP", { timeout: 60_000 });
 });
