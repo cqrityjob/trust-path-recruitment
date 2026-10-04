@@ -499,6 +499,28 @@ SELECT pg_temp.ok((SELECT count(*) = 1 AND min(resolution_note) = 'This award is
   'RS9.26 the holder sees the outcome and the note written for them');
 SELECT pg_temp.ok(pg_get_function_result('public.sp_list_my_catalogue_requests()'::regprocedure) NOT LIKE '%resolved_by%',
   'RS9.27 the holder''s view of a request exposes no administrator identity');
+-- Reopening is held to the same allowance. Holder A is back at ten open
+-- (eight left after the two resolutions above, plus two more).
+SELECT public.sp_request_catalogue_definition('{"requested_name":"Allowance refill award 1","requested_issuer":"Allowance Body"}');
+SELECT public.sp_request_catalogue_definition('{"requested_name":"Allowance refill award 2","requested_issuer":"Allowance Body"}');
+SELECT set_config('request.jwt.claim.sub', 'fd270000-0000-4000-8000-000000000004', true);
+SELECT pg_temp.refused(format($q$SELECT public.sp_admin_resolve_catalogue_request(%L, 'open')$q$, :'req_b'),
+  'SP_REQUEST_LIMIT', 'RS9.28 an administrator cannot reopen a request past the holder''s ten open');
+SELECT pg_temp.ok((SELECT status = 'in_research' FROM public.sp_catalogue_requests WHERE id = :'req_b')
+                  AND (SELECT count(*) = 10 FROM public.sp_catalogue_requests
+                        WHERE holder_user_id = 'fd270000-0000-4000-8000-000000000001' AND status = 'open')
+                  AND (SELECT count(*) = 2 FROM public.audit_logs WHERE action = 'catalogue_request_resolved'),
+  'RS9.29 the refused reopen changed nothing and wrote no audit row');
+SELECT public.sp_admin_resolve_catalogue_request(
+  (SELECT id FROM public.sp_catalogue_requests WHERE requested_name = 'Allowance refill award 2'),
+  'declined', 'Duplicate of an existing request.');
+SELECT public.sp_admin_resolve_catalogue_request(:'req_b', 'open');
+SELECT pg_temp.ok((SELECT status = 'open' AND resolved_at IS NULL AND resolved_by_user_id IS NULL AND resolution_note IS NULL
+                     FROM public.sp_catalogue_requests WHERE id = :'req_b')
+                  AND (SELECT count(*) = 10 FROM public.sp_catalogue_requests
+                        WHERE holder_user_id = 'fd270000-0000-4000-8000-000000000001' AND status = 'open')
+                  AND (SELECT count(*) = 4 FROM public.audit_logs WHERE action = 'catalogue_request_resolved'),
+  'RS9.30 below the allowance a reopen succeeds, back to exactly ten open, and is audited');
 RESET ROLE;
 
 -- ═══ RS10. Verification stays separate ══════════════════════════════════

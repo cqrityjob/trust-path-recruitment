@@ -284,6 +284,16 @@ console.log("\n5 · a request is answered, never promoted");
       !/email/i.test(fns),
     "5.4 an administrator sees which holder asked, by id, and no more personal data than that",
   );
+  const resolveFn = sql.slice(
+    sql.indexOf("FUNCTION public.sp_admin_resolve_catalogue_request("),
+    sql.indexOf("FUNCTION public.sp_admin_review_research_record("),
+  );
+  check(
+    /pg_advisory_xact_lock\(\s*hashtextextended\('sp_catalogue_request_quota:'/.test(resolveFn) &&
+      /SP_REQUEST_LIMIT/.test(resolveFn) &&
+      /code === "SP_REQUEST_LIMIT"/.test(panel),
+    "5.5 reopening a request is held to the holder's ten-open allowance, and the panel says so",
+  );
 }
 
 if (failures.length) {

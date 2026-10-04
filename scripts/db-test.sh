@@ -2922,7 +2922,19 @@ rs_nc_expect_fail "RS NC10 a holder may write a request row directly" RS9.7 "GRA
 rs_nc_expect_fail "RS NC11 a retained record may lose its issue" RS1.15 "ALTER TABLE public.sp_catalogue_research_records DROP CONSTRAINT sp_research_retained_is_actionable;"
 rs_nc_expect_fail "RS NC12 a new definition infers lifetime validity" RS3.3 "UPDATE public.sp_credential_types SET allows_no_expiry = true WHERE code = 'INTL_NEBOSH_IGC';"
 rs_nc_expect_fail "RS NC13 a new definition is given a country" RS3.2 "UPDATE public.sp_credential_types SET jurisdiction_code = 'GB', scope_code = 'national_regulated' WHERE code = 'INTL_CII_DIPLOMA_INSURANCE';"
-echo "    ok  thirteen planted defects, each caught on its named assertion"
+rs_nc_expect_fail "RS NC14 an administrator may reopen past the allowance" RS9.28 "$(rs_planted sp_admin_resolve_catalogue_request "IF _status = 'open' AND _q.status <> 'open' AND" 'IF false AND')"
+echo "    ok  fourteen planted defects, each caught on its named assertion"
+
+# The ten-open allowance under real concurrency: two sessions at once, for two
+# distinct requests and for a request racing an administrator's reopen, then
+# the same races against the functions with the per-holder lock stripped (the
+# negative control must reproduce the overrun). In a throwaway clone: the
+# fixtures are committed and the control replaces two functions.
+echo "==> Running the catalogue request allowance race (two sessions)"
+psql_q -d postgres -c "DROP DATABASE IF EXISTS ${TEST_DB}_rs_race;" >/dev/null
+psql_q -d postgres -c "CREATE DATABASE ${TEST_DB}_rs_race TEMPLATE ${TEST_DB};" >/dev/null
+PGDATABASE="${TEST_DB}_rs_race" bash scripts/catalogue-request-race-test.sh
+psql_q -d postgres -c "DROP DATABASE ${TEST_DB}_rs_race;" >/dev/null
 
 # Proof case K: the administrator's diagnosis (catalogue-diagnostics.ts, the
 # code behind /admin/passport-catalogue) against what the database actually

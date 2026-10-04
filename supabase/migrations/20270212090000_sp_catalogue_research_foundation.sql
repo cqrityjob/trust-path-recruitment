@@ -437,7 +437,15 @@ BEGIN
     END IF;
   END IF;
 
-  -- A small, fixed allowance of open requests per holder.
+  -- A small, fixed allowance of open requests per holder. The count and the
+  -- INSERT are one step per holder: without the lock, two concurrent requests
+  -- with different names both count nine and both insert. The same key is
+  -- taken by an administrator reopening a request (sp_admin_resolve_catalogue_
+  -- request), so a reopen cannot slip past the allowance either. The lock is
+  -- transaction-scoped and is released however this call ends. Two sessions
+  -- prove it in supabase/tests/security_passport_catalogue_request_race_test.sql.
+  PERFORM pg_advisory_xact_lock(
+    hashtextextended('sp_catalogue_request_quota:' || _uid::text, 0));
   IF (SELECT count(*) FROM public.sp_catalogue_requests
        WHERE holder_user_id = _uid AND status = 'open') >= 10 THEN
     RAISE EXCEPTION 'SP_REQUEST_LIMIT: you already have ten open requests' USING ERRCODE = 'check_violation';
@@ -484,6 +492,7 @@ AS $fn$
 DECLARE
   _caller uuid := auth.uid();
   _q public.sp_catalogue_requests%ROWTYPE;
+  _holder uuid;
   _clean text := nullif(btrim(coalesce(_note, '')), '');
 BEGIN
   IF _caller IS NULL THEN RAISE EXCEPTION 'SP_NOT_AUTHENTICATED' USING ERRCODE = 'insufficient_privilege'; END IF;
@@ -498,8 +507,26 @@ BEGIN
     RAISE EXCEPTION 'SP_REQUEST_NOTE_INVALID: the note shown to the holder is at most 300 characters' USING ERRCODE = 'check_violation';
   END IF;
 
+  -- Reopening counts against the holder's allowance, under the same per-holder
+  -- key sp_request_catalogue_definition takes. The key is taken BEFORE the row
+  -- lock, in the same order as the holder path (key, then rows), so the two
+  -- cannot deadlock. The holder of a request never changes, so reading it
+  -- unlocked to name the key is safe.
+  IF _status = 'open' THEN
+    SELECT q.holder_user_id INTO _holder FROM public.sp_catalogue_requests q WHERE q.id = _request_id;
+    IF FOUND THEN
+      PERFORM pg_advisory_xact_lock(
+        hashtextextended('sp_catalogue_request_quota:' || _holder::text, 0));
+    END IF;
+  END IF;
+
   SELECT * INTO _q FROM public.sp_catalogue_requests WHERE id = _request_id FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'SP_REQUEST_NOT_FOUND' USING ERRCODE = 'no_data_found'; END IF;
+
+  IF _status = 'open' AND _q.status <> 'open' AND (SELECT count(*) FROM public.sp_catalogue_requests
+       WHERE holder_user_id = _q.holder_user_id AND status = 'open') >= 10 THEN
+    RAISE EXCEPTION 'SP_REQUEST_LIMIT: the holder already has ten open requests' USING ERRCODE = 'check_violation';
+  END IF;
 
   IF _status = 'answered_existing' THEN
     IF _credential_code IS NULL OR NOT EXISTS (SELECT 1 FROM public.sp_credential_types WHERE code = _credential_code) THEN
