@@ -391,23 +391,39 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // (#393) is published AFTER this, and the transactional-email function
 // (employer_new_application) is verified in production before that publication.
 // Evidence: docs/release/2026-10-03-employer-notice-hosted-verification.md.
-// Contract remains pending until the scoped application is published and verified.
 // #404 / 20270206090000 verified applied read-only at 2026-10-03T21:11:18.678365+00:00.
 // Evidence: docs/security/interview-access/expand-hosted-verification.md.
+// 2026-10-04 ~06:20 UTC: #406 (merge e022ec52, every mandatory CI job green on b4dc4e0e)
+// verified applied read-only, after the scoped application (#405) was published and
+// (according to the production session) verified in the running app: 20270207090000_interview_ai_config_contract is the last ledger row (369 rows,
+// digest 01357df572629d745e667d2fedb20ba1; the first 368 unchanged, digest
+// c086806d9fb5f0c92609678f037b73ba); scp_interview_ai_config_read is limited to
+// is_platform_admin(auth.uid()), the grants are unchanged (authenticated SELECT only, no
+// client write), the functions that read the table are unchanged. Nothing is pending by
+// design now. Evidence: docs/release/2026-10-04-interview-config-contract-hosted-verification.md.
+// 2026-10-04 07:56 UTC: #416 (merge abbc036e, every mandatory CI job green on fbc6e4c3)
+// verified applied read-only: 20270208090000_account_erasure_credential_details is the
+// last ledger row (370 rows, digest 538769fe5724a0d4561a645d3faf79d6; the first 369
+// unchanged, 01357df572629d745e667d2fedb20ba1); admin_delete_user_if_safe and the new
+// extraction trigger function equal the strict local replay; the shared append-only
+// function is unchanged. Nothing is pending by design now.
+// Evidence: docs/release/2026-10-04-account-erasure-hosted-verification.md.
+// 2026-10-04 08:46 UTC: #410 (merge 277cb842, every mandatory CI job green on 3f824835)
+// verified applied read-only: 20270212090000_sp_catalogue_research_foundation and
+// 20270213090000_sp_catalogue_research_import are the last two ledger rows (372 rows,
+// digest 868e9c610f78ced1c5f529596ca273c2; the first 370 unchanged, 538769fe5724a0d4561a645d3faf79d6);
+// the five catalogue functions and the provenance trigger function equal the strict local
+// replay, the three new tables carry RLS with authenticated SELECT only, 170 research records
+// (14 matched, 140 added, 16 retained), 140 new definitions all inactive, 217 credential types
+// of which 26 active. Nothing is pending by design now: the publication that makes exactly
+// those 140 selectable (20270214090000) is staged outside the migration path until the
+// application that renders them is published.
+// Evidence: docs/release/2026-10-04-catalogue-schema-hosted-verification.md.
 //
-// Pending by design, none applied hosted: the certification research integration
-// (docs/passport/certification-catalogue-integration.md), in this order: the
-// schema (20270212090000), the data that records all 170 research decisions and
-// adds 140 definitions INACTIVE (20270213090000), and the publication that makes
-// exactly those 140 selectable (20270214090000), which is released only after the
-// application that renders them is published. Each name comes OFF this list in
-// the change that records its production evidence.
-const expectedPending: string[] = [
-  "20270207090000_interview_ai_config_contract.sql",
-  "20270212090000_sp_catalogue_research_foundation.sql",
-  "20270213090000_sp_catalogue_research_import.sql",
-  "20270214090000_sp_catalogue_research_publish.sql",
-];
+// Pending by design, not applied hosted: the publication of the 140 researched definitions
+// (20270214090000), released only after the application that renders them is published and
+// verified. The name comes OFF this list in the change that records its production evidence.
+const expectedPending: string[] = ["20270214090000_sp_catalogue_research_publish.sql"];
 
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",

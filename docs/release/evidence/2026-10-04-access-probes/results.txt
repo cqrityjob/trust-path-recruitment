@@ -1,0 +1,66 @@
+Results of probes.sql, copied as returned by the connector (2026-10-04 ~06:00-06:12 UTC). No identifier,
+address or report content is in the output; members are numbered by the probe, not by person.
+
+== PROBE 1: the access of every active member (9), in its own organisation ==
+n  role   reviewer_grant  is_member  owner_admin  use_cases            reports_readable  org_cases/vis  org_training/vis  org_notes/vis
+1  owner  true            true       true         recruitment,workforce true              1 / 0          0 / 0             1 / 1
+2  owner  true            true       true         recruitment,workforce true              12 / 11        10 / 10           0 / 0
+3  owner  false           true       true         recruitment,workforce true              0 / 0          0 / 0             0 / 0
+4  owner  false           true       true         recruitment,workforce true              0 / 0          0 / 0             0 / 0
+5  owner  false           true       true         recruitment,workforce true              0 / 0          0 / 0             0 / 0
+6  member true            true       false        recruitment           false             1 / 1          0 / 0             1 / 1
+7  member false           true       false        (none)                false             5 / 5          0 / 0             0 / 0
+8  member true            true       false        recruitment           false             0 / 0          0 / 0             0 / 0
+9  admin  true            true       true         recruitment,workforce true              1 / 1          0 / 0             1 / 1
+
+Reading: owners and the admin read both use cases. A member with a live reviewer grant reads exactly the granted use
+case (recruitment) and not the organisation-wide gate. The ordinary member without a grant (no. 7) has NO readable
+use case and no organisation-wide read, so the application is expected to say "no access" for that person; the
+text itself has NOT been seen in a browser yet (it is the browser step in the release note). That member still sees
+the 5 interview cases the person created, as designed ("the creator or a panel member reads only their own case").
+
+== PROBE 2: owner 1 sees 0 of 1 case, owner 2 sees 11 of 12 ==
+role    is_subject  is_creator  can_read_fn  row_visible  cases
+admin   false       false       true         true         1
+member  false       false       true         true         1
+member  false       true        true         true         2
+member  (null)      true        true         true         3
+owner   true        true        false        false        2
+owner   (null)      true        true         true         11
+
+Reading: the only cases an owner cannot read are the two where that owner is the interview's own subject: "a person
+never reads the employer-audience record about themselves through membership" (employer_reports_readable, rule 2).
+Nothing else is hidden from an owner or admin.
+
+== PROBE 3: suspended / removed person, pending request, approval, reviewer grant ==
+1  A suspended member requests access                       ACCESS_REQUEST_MEMBERSHIP_BLOCKED: your ac / 42501
+2  A no request row was created                              0
+3  B removed member requests access                          ACCESS_REQUEST_MEMBERSHIP_BLOCKED: your ac / 42501
+4  C pending request created before suspension              ok
+5  C owner approves request of a suspended person            ACCESS_REQUEST_REACTIVATION_REFUSED: this pers / 42501
+6  C membership after the attempt                            suspended
+7  D reviewer before suspension: member / use_cases          true / recruitment
+8  D grant revoked by the suspension                         true
+9  D suspended person: member / owner_admin / use_cases / readable   false / false /  / false
+
+== PROBE 4 (after contract 20270207090000): REAL non-admin readers use the scoped flag path ==
+member 1: platform_admin=false  live_reviewer_grant=true   org_cases=1
+   -> reads a case it did not create (true): capabilities (ai, transcript) = false, false   / direct config rows = 0
+member 2: platform_admin=true   live_reviewer_grant=false  org_cases=5
+   -> reads 5 cases it created (label false): capabilities = false, false (x5)  / direct config rows = 1
+member 3: platform_admin=false  live_reviewer_grant=true   org_cases=0   (no case to read)
+
+Reading: a real organisation member who is NOT a platform administrator and holds a live scoped reviewer grant reads a case
+and gets both runtime flags through scp_iv_case_capabilities, while reading 0 rows of scp_interview_ai_config directly: the
+scoped path works without any direct configuration read, and the table is closed to a non-admin. A platform administrator
+still reads the 1 configuration row.
+
+Note on the people in PROBE 1/2: production has exactly two platform administrator accounts (one 'admin', one 'superadmin').
+The people who created interview cases are those two accounts, each holding memberships in more than one organisation (an
+owner in one, a member in another), so no ordinary non-admin has created a case in production. The "ordinary member without a
+grant" of PROBE 1 (no. 7) is such an account: not a reviewer, no readable use case for reports in that organisation, and
+separately a platform administrator.
+
+== AFTER ==
+synthetic_users_left 0, synthetic_memberships_left 0, synthetic_requests_left 0, synthetic_grants_left 0,
+synthetic_profiles_left 0, memberships_total 9, ledger rows 368 (unchanged).
