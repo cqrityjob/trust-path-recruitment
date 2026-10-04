@@ -195,6 +195,11 @@ try {
       `PASS ${lang}/${width}: real login, preview selection, copy, QR, anonymous open/reload, selected-only data, revoke and invalid link`,
     );
   }
+} catch {
+  // Playwright navigation errors include their URL and can contain a bearer
+  // fragment. Never print the original error, stack or call log.
+  console.error("FAIL local Passport integration (details suppressed to protect share tokens)");
+  process.exitCode = 1;
 } finally {
   await browser.close();
 }
