@@ -234,3 +234,29 @@ read, and the local service role is granted `SELECT` on the public tables.
 the service role after its own administrator check. A bare local replay of the migration history leaves `service_role` without
 `SELECT` on `sp_credential_types` and its neighbours, which is why the local harness grants it. I have not verified what the
 hosted project grants; if it matches the local replay, that page (which existed before this work) would fail there too.
+
+## 10. The publication release (release 3)
+
+`20270214090000_sp_catalogue_research_publish.sql` is the only thing this release adds to the database. It sets `is_active = true`
+on exactly the 140 codes the import added, and nothing else: no market pack, entitlement, pilot state, claim, prerequisite or
+equivalence changes, and `allows_no_expiry`, `legal_review_state` and every maintenance field stay as imported. The update only
+touches a definition that is inactive, global, and has no jurisdiction and no market pack, so one that had drifted from the import
+is not activated and fails the count. Its postflight proves exactly 140 researched definitions are active, that 154
+international definitions are active in total and that no other global definition is. The rollback sets the same 140 back to inactive; it never touches a claim, so a credential a holder registered
+meanwhile stays in their Passport and is simply no longer offered to new registrations.
+
+**What was proven for it, in both states of the database (before and after the publication).**
+
+- The existing SQL suites that counted "every definition" now count what was reviewed and treat the researched definitions
+  separately: `security_passport_catalogue_completeness_test.sql` saves and reads back every active researched definition as an
+  ordinary holder (140 saved, no country, the governed issuer, `self_declared`) and expects `SP_APPROVED_DEFINITION_REQUIRED`
+  for each when they are inactive (0 saved, 140 refused). It passed on a database without the publication and on one with it.
+- The full `scripts/db-test.sh` (replay, every suite, every rollback ladder, every planted control) passed on this branch.
+- The real-backend journey (`e2e/passport-catalogue-integration-local.spec.ts`) passed 9 of 9 on a database with the publication
+  applied (desktop and 390px): 210 credentials offered, OSCP and OSCP+ two distinct results, a researched certification found,
+  registered with no country and no inferred lifetime, and forged, unapproved and direct writes still refused.
+- `catalogue-coverage-matrix.md` is regenerated from the published catalogue: 217 definitions, 210 in scope and all of them
+  selectable (166 by every holder, 44 through the public pilot), 7 in the closed market.
+
+**Not in this release, on purpose.** The 16 retained records, the 12 unclosed rechecks and the owner decisions in section 8 are
+untouched: publishing them is a later reviewed migration, each after the single fact it needs is confirmed.
