@@ -27,9 +27,17 @@
 //
 // Owner instruction, 2026-10-04 (second message): 13 months of usage statistics,
 // 24 months of audit logs and a general anonymisation after 24 months are NOT
-// treated as decisions already made. They are `proposed` below. Candidates' own
-// test results are account data (they belong to the `account` row), not
-// "anonymous usage statistics".
+// treated as decisions already made. Candidates' own test results are account
+// data (they belong to the `account` row), not "anonymous usage statistics".
+//
+// Owner decision, 2026-10-04 (third message, relayed through the release
+// session), now in the rows below: recruitment material is kept 24 months after
+// the recruitment ended, per the employer's established instructions; security
+// and permission logs at most 12 months with a documented need; ordinary
+// technical logs normally 90 days. Other kinds of audit entry are classified
+// BEFORE a period is decided (row `other-audit`), and the 339 old usage rows stay
+// as they are until their content has been checked and classified (row
+// `usage-statistics`): no new collection and no deletion.
 //
 // `evidence` is internal: what exists today and what is missing, as read from
 // the code and, read-only, from production on 2026-10-04. It is never shown to a
@@ -84,16 +92,14 @@ export const RETENTION_PLAN: readonly RetentionRow[] = [
     id: "recruitment",
     data: "Rekryteringsmaterial som hanteras för arbetsgivare: ansökningar, meddelanden, tester och intervjuer",
     period:
-      "Enligt arbetsgivarens dokumenterade regler och biträdesavtalet. Arbetsgivaren kan begära en kortare tid. [Ange hur länge materialet sparas när arbetsgivaren inte har bestämt något annat. Väntar på ägarens beslut.]",
-    approval: "proposed",
-    proposal:
-      "24 months after the recruitment ended, then anonymisation. A general default of 24 months and anonymisation is NOT an owner decision; the owner approved only that the employer's documented rules and the processor agreement govern, and that an employer may ask for a shorter time.",
+      "Standardtiden är 24 månader efter att rekryteringen avslutades, enligt arbetsgivarens fastställda instruktioner. Arbetsgivaren kan ange en kortare tid. Därefter raderas eller anonymiseras materialet.",
+    approval: "approved",
     inPolicy: true,
     mechanism: "pending",
     routine:
-      "Runbook R7: when an employer asks for deletion or a shorter time, manual, per request, logged. No default and no automatic routine until the owner decides.",
+      "Runbook R7: the standard (24 months after the recruitment ended, as the employer's instructions set it) is decided, but no routine applies it yet, so it is manual per request and logged. Nothing can be due before 2028-08 (the oldest application is from 2026-08-17); a routine that can determine each recruitment's end date must exist before then.",
     evidence:
-      "No scheduled anonymisation exists. The older sweep_application_retention() (migration 20260719173615) deletes applications 12 months after a withdrawn application or a closed job, is service-role only and is not scheduled; it deviates from every version of the plan (12 months, deletes instead of anonymising) and must not be used or scheduled before it is aligned with a decided period. Nothing is old enough to be affected yet (oldest application 2026-08-17).",
+      "No scheduled deletion or anonymisation exists. The older sweep_application_retention() (migration 20260719173615) deletes applications 12 months after a withdrawn application or a closed job, is service-role only and is not scheduled; it deviates from the decided standard (12 months, deletes instead of anonymising) and must not be used or scheduled before it is aligned with it. A recruitment counts as ended when the employer closes it; where that cannot be determined for a case, nothing is deleted until it has been clarified. Nothing is old enough to be affected yet (oldest application 2026-08-17).",
   },
   {
     id: "info-mailbox",
@@ -115,7 +121,7 @@ export const RETENTION_PLAN: readonly RetentionRow[] = [
     inPolicy: true,
     mechanism: "pending",
     routine:
-      "Runbook R6 (monthly, first working day, Mostafa, logged). Rule used: a conversation whose last message is older than 24 months. Nothing can be due before 2028-10 (the address was introduced for the launch).",
+      "Runbook R6 (monthly, first working day, Mostafa, logged). Counted from when the recruitment ended, not from the last message (the last message only pre-filters); where the end date cannot be determined nothing is deleted until it has been clarified. Nothing can be due before 2028-10 (the address was introduced for the launch).",
     evidence:
       "Replies to an employer's mail go to the job@ mailbox (Reply-To) and are handled by CQrityjob; nothing forwards them automatically. The manual monthly clean-up is documented and assigned and has a log; it is not carried out yet.",
   },
@@ -134,52 +140,65 @@ export const RETENTION_PLAN: readonly RetentionRow[] = [
   {
     id: "usage-statistics",
     data: "Användningsstatistik",
-    period: "[Ange lagringstid för användningsstatistik. Väntar på ägarens beslut.]",
+    period: "Inte beslutat. Kräver klassificering av innehållet först.",
     approval: "proposed",
     proposal:
       "13 months was in the plan the preparer worked from; it is NOT treated as an approved decision. Version 1 measures nothing (FUNNEL_MEASUREMENT_ENABLED = false), so the policy does not describe usage statistics at all. What remains is the 339 rows collected before 2026-10-04.",
     inPolicy: false,
     mechanism: "pending",
     routine:
-      "Owner decision: approve deleting the 339 historic rows (statement prepared in docs/release/2026-10-04-funnel-measurement-off.md, not run), or approve a period for them.",
+      "Not decided; classification first. The 339 historic rows stay until their content has been checked and classified (owner, 2026-10-04): no new collection and no deletion. The DELETE statement in docs/release/2026-10-04-funnel-measurement-off.md is prepared only and is not run.",
     evidence:
       "Table cd_v31_funnel_events (339 rows, 2026-08-15 to 2026-10-03). user_id and session_id are empty in every row, which does not make the rows anonymous: each has a time, an event name and a detail. Nothing reads them. Candidates' own test results are NOT in this table: they are cd_sessions, account data (the `account` row). The older sweep_analytics_retention() covers a different table (job_analytics_events, 0 rows) and is not scheduled.",
   },
   {
     id: "admin-audit",
-    data: "Granskningsloggar för administrativa åtgärder",
-    period: "[Ange lagringstid för granskningsloggar. Väntar på ägarens beslut.]",
-    approval: "proposed",
-    proposal:
-      "24 months. NOT treated as an approved decision. Audit logs are kept to answer for what administrators did, which argues for a longer period than a candidate's data, so the owner decides.",
-    inPolicy: true,
-    mechanism: "pending",
-    routine: "None until the period is decided; then a quarterly manual check like R3.",
-    evidence:
-      "Tables audit_logs (27 rows from 2026-07-19), job_audit_events (66), employer_moderation_events (5), sw_audit_events (5). No routine deletes by age. Nothing is older than 24 months yet. On account closure the rows stay. The audit row written for the closure (audit_logs, action user_deleted) keeps the erased person's e-mail address and the administrator's typed reason in its metadata (found in the full-path run, docs/release/2026-10-04-account-erasure-full-path-evidence.md). So until the owner decides this period, or a later migration stops writing the address, the policy must not promise that every trace of the address is gone.",
-  },
-  {
-    id: "platform-logs",
-    data: "Tekniska loggar hos plattformsleverantören: IP-adress, inloggning och förfrågningar",
-    period: "[Ange faktisk lagringstid hos leverantören]",
+    data: "Säkerhets- och behörighetsloggar: vem som gjorde vilken administrativ åtgärd",
+    period: "Högst 12 månader, och bara så länge det finns ett dokumenterat behov.",
     approval: "approved",
     inPolicy: true,
     mechanism: "pending",
     routine:
-      "Runbook R8 (supplier setting, read by the owner in the supplier's account, re-read quarterly, logged).",
+      "No routine yet. The oldest row is from 2026-07-19, so the first rows are due 2027-07-19; a quarterly manual check like R3 (a dry run, then a delete of audit_logs older than 12 months where no documented need remains) must be written, tested on synthetic data and logged before then.",
     evidence:
-      "Controlled by the platform supplier (Supabase). Log retention follows the project's plan (Supabase docs, Logs in Studio); the organisation's plan is Pro (read with the platform tools 2026-10-04), but the number of days is not shown there. The owner reads the actual period in the supplier's account. Open fact.",
+      "Table audit_logs (27 rows from 2026-07-19) holds administrators' actions. No routine deletes by age and nothing is older than 12 months yet. On account closure the rows stay. The audit row written for the closure (audit_logs, action user_deleted) keeps the erased person's e-mail address and the administrator's typed reason in its metadata (found in the full-path run, docs/release/2026-10-04-account-erasure-full-path-evidence.md). It is a security and permission log, so it falls under the 12-month cap, but until it has been deleted the policy must not promise that every trace of the address is gone, and a later migration may stop writing the address.",
+  },
+  {
+    id: "other-audit",
+    data: "Övriga granskningsposter: händelser kring annonser, moderering och Security work",
+    period: "[Ange lagringstid för övriga granskningsposter. De klassificeras först.]",
+    approval: "proposed",
+    proposal:
+      "None. The owner decided that audit entries other than security and permission logs are classified before a period is decided. job_audit_events (66 rows), employer_moderation_events (5) and sw_audit_events (5) have not been classified.",
+    inPolicy: true,
+    mechanism: "pending",
+    routine: "None until the entries are classified and a period is decided.",
+    evidence:
+      "Tables job_audit_events, employer_moderation_events and sw_audit_events (oldest rows 2026-07 to 2026-10). No routine deletes by age and nothing is older than 12 months. Which of them are security or permission logs (12-month cap) and which are something else is the open classification.",
+  },
+  {
+    id: "platform-logs",
+    data: "Tekniska loggar hos plattformsleverantören: IP-adress, inloggning och förfrågningar",
+    period: "Normalt 90 dagar.",
+    approval: "approved",
+    inPolicy: true,
+    mechanism: "pending",
+    routine:
+      "Runbook R8 (the owner reads the supplier setting in the supplier's account, confirms it is at most 90 days, re-reads it quarterly, logged).",
+    evidence:
+      "Controlled by the platform supplier (Supabase). Log retention follows the project's plan (Supabase docs, Logs in Studio, which gives no number); the organisation's plan is Pro (read with the platform tools 2026-10-04), and the actual number of days is read in the supplier's account. The row stays pending until the owner has read it and confirmed it is not longer than 90 days.",
   },
   {
     id: "mail-logs",
     data: "E-postloggar hos e-postleverantören",
-    period: "[Ange faktisk lagringstid hos leverantören]",
+    period: "Normalt 90 dagar.",
     approval: "approved",
     inPolicy: true,
     mechanism: "pending",
-    routine: "Runbook R8 (supplier setting, read by the owner in the supplier's account).",
+    routine:
+      "Runbook R8 (the owner reads the supplier setting in the supplier's account and confirms it is at most 90 days).",
     evidence:
-      "Controlled by the mail supplier (Resend). The period is read in the supplier's account. Open fact for the owner.",
+      "Controlled by the mail supplier (Resend). The owner's decision names ordinary technical logs; it is applied here to the delivery logs too. The row stays pending until the owner has read the supplier's period and confirmed it is not longer than 90 days; if the supplier cannot be set that short, the owner is told and the text changes.",
   },
   {
     id: "sessions",

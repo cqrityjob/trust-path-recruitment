@@ -118,9 +118,9 @@ Kunden med anmälan till tillsynsmyndigheten och information till de registrerad
 ## 10. Radering och återlämnande
 
 10.1 Kunden bestämmer hur länge Kunddata sparas. Kunden kan instruera en kortare tid. Om Kunden inte har
-bestämt något annat gäller [Ange hur länge rekryteringsmaterial sparas när Kunden inte har bestämt något
-annat. Förslag: 24 månader efter avslutad rekrytering, därefter anonymisering. Ägaren har inte beslutat
-detta, och integritetspolicyn visar samma öppna punkt].
+bestämt något annat gäller 24 månader efter att rekryteringen avslutades, enligt Kundens fastställda
+instruktioner, varefter Kunddata raderas eller anonymiseras. Kan avslutsdatumet inte avgöras för ett fall
+raderas inget i det fallet förrän det är klarlagt.
 
 10.2 När avtalet upphör, eller tidigare på Kundens begäran, raderar eller återlämnar Biträdet
 Kunddata [Ange tid, förslag: inom 30 dagar] enligt Kundens val. Återlämnande sker i ett vanligt
@@ -206,6 +206,7 @@ Samma förteckning som i integritetspolicyn, avsnitt 6. Ett fält i hakparentes 
 |---|---|---|---|---|
 | Supabase | Databas, inloggning, fillagring, loggar och serverfunktioner | Frankfurt, Tyskland (EU). Verifierad: projektets region är eu-central-1 | [Ange stöd för eventuell åtkomst från tredje land] | [Ange: biträdesavtal ingånget] |
 | Lovable | Drift av webbapplikationen | [Ange driftregion] | [Ange överföringsstöd] | [Ange: biträdesavtal ingånget] |
+| Tinybird (anlitas av Lovable för besöksstatistiken) | Lagring och analys av sidvisningar i Lovables besöksstatistik, tills den är avstängd | [Ange plats för Tinybirds behandling] | [Ange överföringsstöd] | [Ange: Lovables avtal med Tinybird] |
 | Resend | Utskick av systemmejl, till exempel kvitton, meddelanden och notiser | [Ange sändningsregion] | [Ange överföringsstöd] | [Ange: biträdesavtal ingånget] |
 | [Ange e-postleverantörens namn] | Inloggningsmejl och brevlådorna info@ och job@ | [Ange region] | [Ange överföringsstöd] | [Ange: biträdesavtal ingånget] |
 | Google | Inloggning med Google, bara om kandidaten väljer det | [Ange plats för Googles behandling] | [Ange överföringsstöd] | [Ange: Googles roll, självständigt ansvarig eller underbiträde] |
@@ -224,7 +225,7 @@ För ägarens beslut. Förslagen är inte ifyllda i avtalet, och tabellen tas bo
 | 6.2 Kundens invändning | 14 dagar | Hälften av förvarningen: parterna hinner lösa en invändning innan ändringen gäller. |
 | 8.1 Vidarebefordra en registrerads begäran | utan onödigt dröjsmål, senast 3 arbetsdagar | Kunden har en månad på sig mot den registrerade (art. 12.3). 3 arbetsdagar lämnar nästan hela månaden kvar och ligger över det interna målet på två arbetsdagar för första svar. |
 | 9.1 Meddela en personuppgiftsincident | senast 48 timmar | Kunden ska anmäla till tillsynsmyndigheten inom 72 timmar efter att ha fått kännedom (art. 33.1). 48 timmar lämnar Kunden minst en dag att bedöma och anmäla. |
-| 10.1 Standardtid för rekryteringsmaterial | 24 månader efter avslutad rekrytering, därefter anonymisering | Täcker en normal tid för invändningar och tvister kring ett rekryteringsbeslut. **Ägaren har inte beslutat detta.** Ett beslut ändrar också integritetspolicyns öppna punkt. |
+| 10.1 Standardtid för rekryteringsmaterial | 24 månader efter avslutad rekrytering, enligt Kundens fastställda instruktioner | Täcker en normal tid för invändningar och tvister kring ett rekryteringsbeslut. **Beslutad av ägaren 2026-10-04** och införd i avtalet och i policyn; ingen rutin tillämpar den än (första förfallodag 2028-08, se retention-runbook R7). |
 | 10.2 Radering eller återlämning när avtalet upphör | 30 dagar | Samma tid som policyn lovar när en person avslutar sitt konto. Säkerhetskopiorna skrivs över enligt sin rotation (Supabase Pro behåller dagliga kopior i 7 dagar, om inte tilläggstjänsten för återställning till en tidpunkt är på: se `open-facts-2026-10-04.md`). |
 | 11.2 Revision, frekvens och förvarning | högst en gång per år, 30 dagars förvarning | Proportionerligt för en liten tjänst. Biträdet kan i första hand visa efterlevnad med rapporter, så en granskning på plats behövs sällan. |
 | 11.2 Kostnader | var och en bär sina egna | Enkelt och undviker tvist. Kunden kan ersätta Biträdet för orimligt merarbete om parterna avtalar det särskilt. |

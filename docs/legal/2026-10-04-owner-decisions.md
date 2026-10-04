@@ -20,11 +20,12 @@ och var.
 |---|---|---|---|
 | 1 | Avtalspart och personuppgiftsansvarig är **Cqrityjobb AB, organisationsnummer 559261-0249**. Varumärket är CQrityjob. Tidigare Cqrityjob LLC ersätts i aktuella utkast, företagsavtal och webbtexter. Historiska handlingar ändras inte utan dokumenterat skäl. | Bolagsuppgifterna står en gång i `src/lib/legal/company.ts` och används av villkoren, policyn, webbtexterna (`legal.provider`, sökmotorbeskrivningen) och biträdesavtalet. Det gamla namnet finns inte kvar i källkod. De två historiska besluten från 2026-10-03 är orörda i sak och har fått en datumad anteckning överst. | `src/lib/legal/`, `src/i18n/dictionaries.ts`, `docs/release/2026-10-03-launch-legal-*.md` |
 | 2 | Kontakt är info@cqrityjob.com. job@cqrityjob.com används för rekryteringskommunikation. Mostafa bevakar initialt varje arbetsdag. **Två arbetsdagar är ett internt mål för första svar, inte en offentlig SLA.** GDPR-begäranden hanteras enligt lagens tidsfrister. | Ingen offentlig text lovar en svarstid (vaktskriptet förbjuder ordet "arbetsdag" i villkor och policy). Policyn säger "utan onödigt dröjsmål och senast inom en månad", med möjlig förlängning enligt artikel 12.3. Villkor och policy anger att svar på arbetsgivarens mejl går till job@ och vidarebefordras till arbetsgivaren. | `documents.ts`: villkor §7 och §13, policy §1 och §10 |
-| 3 | Lagringsplanen är godkänd som produktbeslut. **Rutinerna kontrolleras och genomförs innan tiderna publiceras som fungerande åtaganden.** Ingen massradering eller annan destruktiv produktionsåtgärd ingår. | Policyns avsnitt 9 byggs rad för rad från planen i `src/lib/legal/retention-plan.ts`. Varje rad anger vad som gör den sann, och policyn kan inte bli slutgiltig medan någon rad saknar verifierad rutin. Tre rader är förslag, inte beslut. Manuella rutiner med ansvarig (Mostafa), intervall och logg finns i `retention-runbook-v1.md`. Raden `account` är `live`: stängning på begäran (R1) är provad i produktion 2026-10-04 med ett syntetiskt konto med Passport-underlag (förbehåll: en kvarvarande Storage-fil prövades inte). Övriga rader är `pending`, så policyn är fortfarande ett utkast. Ingen destruktiv körning har gjorts av den här PR:en. | `retention-plan.ts`, `status.ts` (`RETENTION_READY`), vaktskriptets grupp 6, `retention-execution-log.md` |
+| 3 | Lagringsplanen är godkänd som produktbeslut. **Rutinerna kontrolleras och genomförs innan tiderna publiceras som fungerande åtaganden.** Ingen massradering eller annan destruktiv produktionsåtgärd ingår. | Policyns avsnitt 9 byggs rad för rad från planen i `src/lib/legal/retention-plan.ts`. Varje rad anger vad som gör den sann, och policyn kan inte bli slutgiltig medan någon rad saknar verifierad rutin. Manuella rutiner med ansvarig (Mostafa), intervall och logg finns i `retention-runbook-v1.md`. Raden `account` är `live`: stängning på begäran (R1) är provad i produktion 2026-10-04 med ett syntetiskt konto med Passport-underlag (förbehåll: en kvarvarande Storage-fil prövades inte). Övriga rader är `pending`, så policyn är fortfarande ett utkast. Ingen destruktiv körning har gjorts av den här PR:en. Tider som beslutades senare samma dag står i beslut 8. | `retention-plan.ts`, `status.ts` (`RETENTION_READY`), vaktskriptets grupp 6, `retention-execution-log.md` |
 | 4 | Generativa AI-funktioner förblir avstängda i version 1. Version 2 erbjuder dem som separata betaltjänster med uttrycklig beställning, prisinformation och aktivering. Betalmodellen byggs inte nu. | Villkor §6 och §10, och policy §5, säger det. Ingen betalmodell är byggd, och det finns ingen betalintegration i koden. Texten är sann genom koden: spärren är en konstant (`src/lib/ai/generative-ai-gate.ts`) som ingen miljövariabel eller databasrad kan öppna, och `generative-ai-gate:check` visar att inget anrop lämnar appen ens med en syntetisk nyckel. De texter som fortfarande nämnde AI oavsett spärren är rättade, se resultat 2 nedan. | `documents.ts`, matrisen rad B1–B4 |
 | 5 | Internationell drift är godkänd som inriktning. Inget generellt krav på EU-lagring. Faktiska mottagarländer, leverantörsavtal och lagligt överföringsstöd dokumenteras. Köp av AI-tjänst eller godkännande av villkoren ersätter inte kraven. | Policy §8 säger att ingen EU-regel finns och att stöd krävs för varje överföring, och §6 har en tabell med plats och stöd per leverantör. Allt som inte är verifierat är en synlig öppen punkt. Bara Supabases region (Frankfurt) är verifierad. | `vendors.ts`, policy §6 och §8 |
 | 6 | Inför den uppdaterade integritetspolicyn och ändringarna i användarvillkoren. Färdigställ dessutom ett separat personuppgiftsbiträdesavtal med behandlingsbilaga, säkerhetsåtgärder och underbiträdesförteckning för företagskunder. | Policyn och villkoren är uppdaterade och finns som utkast (banner, `noindex`, inte i sitemapen). Biträdesavtalet är ett utkast med Bilaga 1 (behandlingen), Bilaga 2 (säkerhetsåtgärder, med underlag per punkt) och Bilaga 3 (underbiträden, samma lista som policyn). | `docs/legal/personuppgiftsbitradesavtal-utkast.md` |
 | 7 | Samla kvarstående faktauppgifter i en kort lista. | Listan finns. | `docs/legal/open-facts-2026-10-04.md` |
+| 8 | **Tillägg senare 2026-10-04** (ägarens besked, förmedlat av release-sessionen): (a) rekryteringsmaterial: standard 24 månader efter avslutad rekrytering, enligt arbetsgivarens fastställda instruktioner; (b) säkerhets- och behörighetsloggar: högst 12 månader med dokumenterat behov; (c) vanliga tekniska loggar: normalt 90 dagar; (d) andra slags granskningsposter klassificeras innan en tid bestäms; (e) de 339 gamla mätraderna ligger kvar tills innehåll och klassificering är kontrollerade, ingen ny insamling och ingen radering; (f) de uppdaterade juridiska utkasten får visas med tydlig utkastbanner, `OWNER_APPROVED` förblir `false` och detta är inte ett slutligt juridik- eller lanseringsgodkännande; (g) §11 får inte säga "Vi mäter inte" förrän den faktiska driften är verifierad; texten ska säga att vår egen mätning är avstängd och vad driftleverantörens besöksstatistik registrerar. | (a)–(d): raderna `recruitment`, `admin-audit`, `other-audit`, `platform-logs`, `mail-logs` i `retention-plan.ts`, policyns avsnitt 9, biträdesavtalets 10.1, runbook R6–R8; tiderna frågas inte om igen. (e): `usage-statistics` och `funnel-measurement-off`-dokumentet ("inte beslutat; kräver klassificering först"). (f): sammanslagning av #417 får ske när granskningsfynden är rättade och CI är grön. (g): policy §11, tabellen i §6 (Tinybird, öppen punkt) och vaktskriptets 1.10b och 1.14. | `retention-plan.ts`, `documents.ts`, `vendors.ts`, `launch-legal-check.ts` |
 
 ## Vad som hittades när texten jämfördes med funktionen
 
@@ -41,12 +42,16 @@ visar hur den är hanterad i den här PR:en.
    villkorens mening om AI-resultat gjorda villkorliga eller fria från AI, och `generative-ai-texts:check`
    håller dem.
 3. **Mätning som texten inte nämnde.** Produkten registrerade användningshändelser (339 rader) och satte en
-   markering i webbläsarens sessionslagring. **Åtgärdat:** mätningen är avstängd i koden (en konstant) och
-   markeringen skrivs inte. De 339 raderna ligger kvar tills ägaren godkänner radering. Policy §11 säger att
-   CQrityjob inte gör någon egen mätning och har en öppen punkt för hostingleverantörens sidvisningsstatistik
-   (`/~flock.js`), som ligger utanför applikationen.
+   markering i webbläsarens sessionslagring. **Åtgärdat:** den egna mätningen är avstängd i koden (en konstant)
+   och markeringen skrivs inte. De 339 raderna ligger kvar tills innehåll och klassificering är kontrollerade
+   (beslut 8e). **Nytt fynd, verifierat på www.cqrityjob.com 2026-10-04:** driftleverantören lägger in en egen
+   besöksstatistik (`/~flock.js`) på varje publicerad sida som registrerar sidvisningar (adress, webbläsare,
+   språk, ungefärligt land) och sätter kakan `session-id`. Policy §11 säger därför inte "Vi mäter inte" utan att
+   den egna mätningen är avstängd och vad leverantörens statistik registrerar, och Tinybird är en öppen punkt i
+   leverantörstabellen. Funktionen kan stängas av i Lovables projektinställningar; det är ägarens åtgärd.
 4. **Kakor som texten inte nämnde.** Delningslänkar för Security Passport sätter två kortlivade kakor (en för
-   delningsnyckeln och en för delningssessionen, 30 minuter). **Åtgärdat:** policy §11 säger det.
+   delningsnyckeln och en för delningssessionen, 30 minuter vardera). **Åtgärdat:** policy §11 säger det, och
+   nämner också leverantörens kaka `session-id` (30 minuter).
 5. **Gallringsplanen och koden skiljer sig åt.** En äldre funktion raderar ansökningar efter 12 månader och
    körs aldrig; `cd_sessions` är användarnas egna testkörningar och hör till kontot; notisutkorgens rensning
    körs av en svepning som inte är konfigurerad; kontoradering avbröts för innehavare av
@@ -80,10 +85,10 @@ och pekar hit. Vaktskriptet kräver anteckningen.
 Av det som den här anteckningen först föreslog är granskning, AI-spärren, sanna ordval och rutinerna gjorda i
 den här PR:en. Det som återstår är ägarens:
 
-1. **Fakta och beslut** enligt den korta listan i `open-facts-2026-10-04.md` (adress, avtalsparter, överföringsstöd,
-   tre lagringstider, godkännande av radering av de 339 mätraderna, biträdesavtalets frister).
+1. **Fakta** enligt den korta listan i `open-facts-2026-10-04.md` (adress, avtalsparter, överföringsstöd,
+   biträdesavtalets frister, och att stänga av Lovables besöksstatistik).
 2. **Godkännande** av villkor och policy som slutversion (`OWNER_APPROVED` ändras då, av ägaren), varefter datumen
    sätts och alla konton godkänner villkoren igen.
-3. **Publicering.** Texterna visas som utkast (banner, `noindex`, inte i sitemapen) så länge något återstår.
-   En sammanslagning och en publicering gör den utkasttexten synlig på `/villkor` och `/integritetspolicy`;
-   det är ett uttryckligt ägarbeslut, se `docs/release/2026-10-04-version-1-launch-status.md`.
+3. **Publicering.** Texterna visas som utkast (banner, `noindex`, inte i sitemapen) så länge något återstår. Ägaren
+   har godkänt att de uppdaterade utkasten visas med tydlig utkastbanner (beslut 8f); det är inte ett slutligt
+   godkännande.

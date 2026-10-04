@@ -24,7 +24,9 @@ logg. Automatisering väntar där en manuell rutin räcker. Inget i policyn lova
 | R3 feedback | 2027-08-15 | äldsta raden i `cd_test_feedback` är 2026-08-15 |
 | R4 notisutkorg | 2027-01-01 | enda raden skapades 2026-10-03, 90 dagar efter avslut |
 | R5 `info@` | ägaren läser äldsta tråden | brevlådan ligger utanför plattformen |
-| R6 `job@` | 2028-10 | adressen infördes för lanseringen |
+| R6 `job@` | 2028-10 | adressen infördes för lanseringen; räknas från avslutad rekrytering |
+| R7 rekryteringsmaterial | 2028-08 | äldsta ansökan är från 2026-08-17; ingen rutin än |
+| Säkerhets- och behörighetsloggar | 2027-07-19 | äldsta raden i `audit_logs` är från 2026-07-19; ingen rutin än |
 
 ## R1. Avsluta ett konto på begäran (inom 30 dagar)
 
@@ -57,10 +59,11 @@ för att raden ska vara `live`, men det vore det enda som ännu inte setts i pro
 Varje kvartal: kör `supabase/retention/inactive-accounts-24-months.list.sql` i Supabase SQL Editor. Listan
 ändrar inget. För varje konto: skicka påminnelsen från `info@` ("ditt konto raderas om 30 dagar om du inte
 loggar in"), skriv datumet i loggen, och 30 dagar senare kontrollera om personen har loggat in. Har hen inte
-det: R1 från steg 2. Redan raderade konton (de ligger kvar som avidentifierade, avstängda rader och står i
-`public.deleted_accounts`) visas inte i listan. Ett avstängt konto visas med `suspended = true`: skicka ingen
+det: R1 från steg 2. Redan raderade konton (de ligger kvar som avstängda rader och står i
+`public.deleted_accounts`, med adressen `raderad+…@removed.invalid`) och avidentifierade konton (adressen
+`anonymised+…@removed.invalid`) visas inte i listan. Ett avstängt konto visas med `suspended = true`: skicka ingen
 påminnelse, ta det med ägaren. Provad på syntetiska konton i
-`supabase/tests/retention_manual_routines_test.sql` (RT3, med ett raderat och ett avstängt konto). Inget
+`supabase/tests/retention_manual_routines_test.sql` (RT3, med ett raderat, ett avidentifierat och ett avstängt konto). Inget
 konto är gammalt nog före 2028-07.
 
 ## R3. Feedback (12 månader)
@@ -88,39 +91,58 @@ antalet i loggen. Det är manuellt eftersom brevlådan ligger i e-postleverantö
 
 ## R6. Brevlådan `job@` (24 månader efter avslutad rekrytering)
 
-`job@` hanteras av CQrityjob. Inget vidarebefordras automatiskt. Varje månad: sök efter trådar vars
-senaste meddelande är äldre än 24 månader och radera dem. Det är en approximation: brevlådan vet inte när
-en rekrytering avslutades, bara när det senaste meddelandet kom, och en rekrytering kan ha avslutats
-tidigare än så. Raderingen kan alltså ske senare än 24 månader efter avslut, aldrig tidigare. Behövs en
-tidigare radering för en enskild rekrytering görs den som en begäran (R7). Skriv antalet i loggen. Inget kan
-vara förfallet före 2028-10.
+`job@` hanteras av CQrityjob. Inget vidarebefordras automatiskt. Tiden räknas från **när rekryteringen
+avslutades**, inte från trådens senaste meddelande. Varje månad: gå igenom trådar vars senaste meddelande är
+äldre än 24 månader (en förgallring, inte en grund för radering). För varje sådan tråd: ta reda på när
+rekryteringen avslutades (arbetsgivaren stängde annonsen eller rekryteringen; läs datumet i plattformen).
 
-## R7. En arbetsgivare ber om radering eller kortare tid
+- Är avslutsdatumet känt och äldre än 24 månader: radera tråden.
+- Kan avslutsdatumet inte avgöras: **radera inte.** Skriv tråden som "ej avgjord" i loggen och klargör det
+  först. Gallring sker inte förrän det är klarlagt.
 
-Det finns inget beslutat standardvärde för rekryteringsmaterial (se `retention-plan.ts`, raden
-`recruitment`: ägaren har inte beslutat 24 månader och anonymisering). Därför finns ingen automatisk
-rutin. Kommer en begäran från en arbetsgivare: hantera den som en ordinarie begäran enligt
-personuppgiftsbiträdesavtalet, i den ordning avtalet anger, och skriv den i R9-registret och i loggen. Den
-äldre funktionen `sweep_application_retention()` får inte köras eller schemaläggas.
+Skriv antalet raderade och antalet ej avgjorda i loggen. Inget kan vara förfallet före 2028-10 (adressen
+infördes för lanseringen).
+
+## R7. Rekryteringsmaterial hos arbetsgivare: standardtid och begäran om kortare tid
+
+**Standardtiden är beslutad** (ägaren 2026-10-04): 24 månader efter att rekryteringen avslutades, enligt
+arbetsgivarens fastställda instruktioner. Arbetsgivaren kan begära en kortare tid. Därefter raderas eller
+anonymiseras materialet.
+
+Det finns **ännu ingen rutin som tillämpar standardtiden**, så raden `recruitment` är `pending`. Inget är
+gammalt nog före 2028-08 (äldsta ansökan är från 2026-08-17). Före dess måste en rutin finnas som kan avgöra
+varje rekryterings avslutsdatum; kan det inte avgöras för ett fall raderas inget i det fallet. Tills dess:
+kommer en begäran från en arbetsgivare om radering eller kortare tid, hantera den som en ordinarie begäran
+enligt personuppgiftsbiträdesavtalet, i den ordning avtalet anger, och skriv den i R9-registret och i
+loggen. Den äldre funktionen `sweep_application_retention()` (12 månader, raderar i stället för att
+anonymisera) får inte köras eller schemaläggas.
 
 ## R8. Leverantörernas inställningar (kvartalsvis)
 
 Ägaren läser och skriver i loggen: loggarnas lagringstid i Supabase (Logs), e-postloggarnas i Resend,
 sessionernas längd i Supabase Auth, och säkerhetskopiornas rotation i Supabase (Database → Backups, och om
-Point-in-time recovery är på). De fyra siffrorna är det som ersätter de öppna punkterna i policyns avsnitt 9
-och 6. Se `docs/legal/open-facts-2026-10-04.md`.
+Point-in-time recovery är på). Tekniska loggar ska normalt vara högst 90 dagar (ägarens beslut 2026-10-04):
+är en leverantörs period längre och går inte att ställa in kortare, säg det till ägaren, så ändras texten.
+Det är dessa siffror som ersätter de öppna punkterna i policyns avsnitt 9 och 6, och först när de är lästa
+kan raderna `platform-logs` och `mail-logs` bli något annat än `pending`. Se
+`docs/legal/open-facts-2026-10-04.md`.
+
+Läs också om Lovables besöksstatistik är avstängd (Project settings → General → Publishing → Visitor
+analytics) och kontrollera på den publicerade sidan att skriptet `/~flock.js` och kakan `session-id` är
+borta. Tills dess säger policyns avsnitt 11 vad som registreras.
 
 ## R9. Brevlådor och GDPR-frister
 
 Se `docs/legal/mailbox-and-gdpr-routine.md`.
 
-## Rader som saknar beslutad tid
+## Rader som saknar beslutad tid eller rutin
 
 | Rad | Läge |
 |---|---|
-| Rekryteringsmaterial utan arbetsgivarens regel | ägaren har inte beslutat 24 månader och anonymisering; policyn visar en öppen punkt |
-| Granskningsloggar | ägaren har inte beslutat 24 månader; policyn visar en öppen punkt |
-| Användningsstatistik | mätningen är avstängd i version 1 (`FUNNEL_MEASUREMENT_ENABLED = false`); 339 äldre rader väntar på ägarens beslut (`docs/release/2026-10-04-funnel-measurement-off.md`) |
+| Rekryteringsmaterial | tiden är beslutad (24 månader efter avslutad rekrytering, enligt arbetsgivarens instruktioner); ingen rutin tillämpar den än, första förfallodag 2028-08 (R7) |
+| Säkerhets- och behörighetsloggar (`audit_logs`) | tiden är beslutad (högst 12 månader med dokumenterat behov); ingen rutin än, första förfallodag 2027-07-19. En rutin med torrkörning och logg ska skrivas och provas före dess |
+| Övriga granskningsposter (`job_audit_events`, `employer_moderation_events`, `sw_audit_events`) | klassificeras först; ingen tid beslutad; policyn visar en öppen punkt |
+| Användningsstatistik | mätningen är avstängd i version 1 (`FUNNEL_MEASUREMENT_ENABLED = false`); de 339 äldre raderna ligger kvar tills innehåll och klassificering är kontrollerade, ingen ny insamling och ingen radering (`docs/release/2026-10-04-funnel-measurement-off.md`) |
 | Bokföringsunderlag | bolagets bokföring; ägaren bekräftar |
 
 ## SQL-filerna
@@ -170,7 +192,8 @@ select (select count(*) from b) as beta_feedback_deleted,
 -- the date in the execution log, and 30 days later close the account through the
 -- admin console if the person has not signed in (runbook R1).
 -- An account that has already been erased (it stays as a pseudonymised, disabled
--- row and is recorded in public.deleted_accounts) is not listed. A suspended
+-- row, recorded in public.deleted_accounts, address raderad+<id>@removed.invalid)
+-- or anonymised (address anonymised+<id>@removed.invalid) is not listed. A suspended
 -- account is listed with suspended = true: send no reminder, raise it with the owner.
 select u.id,
        u.email,
@@ -181,6 +204,8 @@ select u.id,
   from auth.users u
  where coalesce(u.last_sign_in_at, u.created_at) < now() - interval '24 months'
    and not exists (select 1 from public.deleted_accounts d where d.user_id = u.id)
+   and coalesce(u.email, '') not like 'raderad+%@removed.invalid'
+   and coalesce(u.email, '') not like 'anonymised+%@removed.invalid'
  order by inactive_since;
 ```
 

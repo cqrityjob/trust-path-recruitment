@@ -713,11 +713,12 @@ export const PRIVACY: LegalDocument = {
         // settings): opening a share link to a Security Passport sets two
         // functional cookies, one carrying the share key and one the share
         // session, each for SHARE_COOKIE_MAX_AGE_SECONDS (1800 s,
-        // src/lib/security-passport/share-transport.ts). No cookie is set for
-        // analysis or marketing by the application.
+        // src/lib/security-passport/share-transport.ts). The application sets no
+        // other cookie for analysis or marketing, but the hosting layer does:
+        // see the last two paragraphs.
         {
           type: "p",
-          text: "Vi använder bara kakor och lagring i webbläsaren som behövs för att tjänsten ska fungera, till exempel för inloggning, språkval, sidopanelens läge och för att öppna en delningslänk till ett Security Passport (två kakor, en för delningsnyckeln och en för delningssessionen, som vardera gäller i 30 minuter). Vi sätter inga kakor för analys eller marknadsföring.",
+          text: "Vi använder bara kakor och lagring i webbläsaren som behövs för att tjänsten ska fungera, till exempel för inloggning, språkval, sidopanelens läge och för att öppna en delningslänk till ett Security Passport (två kakor, en för delningsnyckeln och en för delningssessionen, som vardera gäller i 30 minuter).",
         },
         // Owner decision 2026-10-04: CQrityjob's own usage measurement is off in
         // version 1 (FUNNEL_MEASUREMENT_ENABLED,
@@ -727,22 +728,27 @@ export const PRIVACY: LegalDocument = {
         // text says it is. The newsletter and the consent-based tracking that
         // used to be described here are not in the product either.
         //
-        // What this paragraph must NOT claim is that nothing at all measures
-        // page views: the hosting layer adds its own page-view script
-        // (`/~flock.js`) to every published page, outside this application
-        // (see src/lib/security-passport/share-transport.ts). Whether that
-        // script processes personal data, and whether it sets a cookie or reads
-        // the device, is the supplier's fact and is an open point until the
-        // owner has it (docs/legal/open-facts-2026-10-04.md). It is also why
-        // this paragraph no longer says that no technology requiring consent
-        // is used.
+        // What this section must NOT say is "we do not measure" or "only two
+        // cookies": verified on www.cqrityjob.com on 2026-10-04 (deployment
+        // e3ecf917), every published page carries the hosting supplier's
+        // "Visitor analytics" script (`/~flock.js`, added at build time, outside
+        // this application). It posts a page view with the browser, language,
+        // an approximate country, the referrer, the path and the whole URL to
+        // `/~api/analytics`, and sets a cookie `session-id` (a random UUID,
+        // Max-Age 1800, Secure). The supplier's documentation says it can be
+        // turned off in the project settings (Project settings > General >
+        // Publishing > Visitor analytics); that needs the owner's Lovable access
+        // and is not done. Until it is done and checked on the live site this
+        // paragraph keeps saying what happens (launch-legal:check 1.14 requires
+        // it), and the supplier behind it is an open point in the table in
+        // section 6 (src/lib/legal/vendors.ts).
         {
           type: "p",
-          text: "Vi gör ingen egen mätning av hur du använder tjänsten, och vi lagrar ingen statistikmarkering i webbläsaren.",
+          text: "Vi har stängt av vår egen mätning av hur tjänsten används, och vi lagrar ingen statistikmarkering i webbläsaren.",
         },
         {
-          type: "placeholder",
-          text: "[Ange om hostingleverantörens sidvisningsstatistik på publicerade sidor behandlar personuppgifter, vilka uppgifter den samlar in och om den sätter kakor eller läser av din enhet.]",
+          type: "p",
+          text: "Vår driftleverantör Lovable har en inbyggd besöksstatistik som vi håller på att stänga av. Tills den är avstängd registreras sidvisningar hos Lovable (sidans adress, webbläsare, språk och ungefärligt land), och Lovable sätter en kaka med namnet session-id som gäller i 30 minuter.",
         },
       ],
     },

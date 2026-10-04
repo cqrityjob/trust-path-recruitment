@@ -172,8 +172,8 @@ group("GROUP 1 — the owner's documents and decisions");
     String(gaps(terms)),
   );
   ck(
-    "1.7 the privacy policy's 18 undecided points are still open: date, address, supplier facts (including the hosting layer's page-view script), platform retention periods, and the two retention periods the owner has not decided",
-    gaps(privacy) === 18 && openPoints(PRIVACY).length === 18,
+    "1.7 the privacy policy's 16 undecided points are still open: date, address, supplier facts (including the supplier behind the hosting layer's visitor analytics), the backup period, and the audit entries that are classified first",
+    gaps(privacy) === 16 && openPoints(PRIVACY).length === 16,
     String(gaps(privacy)),
   );
   ck(
@@ -182,11 +182,18 @@ group("GROUP 1 — the owner's documents and decisions");
       RETENTION_POLICY_ROWS.every((r) => privacy.includes(`${r.data}\n${r.period}`)),
   );
   ck(
-    "1.14 nothing is described that the product does not do: no newsletter, no consent-based tracking, no own measurement (and the policy says so only while the measurement constant is false), and no automatic forwarding of replies from job@",
+    '1.14 nothing is described that the product does not do: no newsletter, no consent-based tracking, our own measurement said to be off only while the measurement constant is false, the hosting supplier\'s visitor analytics and its cookie described as what they are (never "Vi mäter inte"), and no automatic forwarding of replies from job@',
     !/nyhetsbrev|direktmarknadsföring|samtyckeskrävande spårning/i.test(`${terms}\n${privacy}`) &&
       !privacy.includes("Vi mäter anonymt") &&
+      !/Vi mäter inte/.test(privacy) &&
       FUNNEL_MEASUREMENT_ENABLED === false &&
-      privacy.includes("Vi gör ingen egen mätning av hur du använder tjänsten") &&
+      privacy.includes(
+        "Vi har stängt av vår egen mätning av hur tjänsten används, och vi lagrar ingen statistikmarkering i webbläsaren.",
+      ) &&
+      privacy.includes("Vår driftleverantör Lovable har en inbyggd besöksstatistik") &&
+      privacy.includes(
+        "registreras sidvisningar hos Lovable (sidans adress, webbläsare, språk och ungefärligt land), och Lovable sätter en kaka med namnet session-id som gäller i 30 minuter",
+      ) &&
       !/vidarebefordrar (?:det|svaret) till arbetsgivaren/.test(`${terms}\n${privacy}`) &&
       terms.includes("svaret förs inte automatiskt vidare till arbetsgivaren") &&
       privacy.includes("Svaret förs inte automatiskt vidare till arbetsgivaren") &&
@@ -210,11 +217,10 @@ group("GROUP 1 — the owner's documents and decisions");
         "Generativa AI-funktioner är avstängda i den här versionen av tjänsten och ingår inte i den.",
       ) &&
       terms.includes("är separata betaltjänster. De kräver en uttrycklig beställning") &&
-      privacy.includes("Vi sätter inga kakor för analys eller marknadsföring") &&
       !/kakpolicy|kakinställningar/.test(privacy),
   );
   ck(
-    "1.10b the policy's cookie sentence matches what the share transport sets (two cookies, 30 minutes), and nothing claims that no technology needing consent exists while the hosting layer's page-view script is an open point",
+    "1.10b the policy's cookie sentence matches what the share transport sets (two cookies, 30 minutes), and it does not claim that no analytics cookie or no technology needing consent exists while the hosting layer's visitor analytics sets one (session-id)",
     SHARE_COOKIE_MAX_AGE_SECONDS === 1800 &&
       buildShareCookie("t", true).includes("Max-Age=1800") &&
       buildShareSessionCookie("s", true).includes("Max-Age=1800") &&
@@ -224,7 +230,10 @@ group("GROUP 1 — the owner's documents and decisions");
       !privacy.includes("en kaka som gäller") &&
       !privacy.includes("behövs inget samtycke") &&
       !privacy.includes("ingen teknik som kräver samtycke") &&
-      privacy.includes("[Ange om hostingleverantörens sidvisningsstatistik"),
+      !privacy.includes("Vi sätter inga kakor för analys") &&
+      !privacy.includes("Vi använder inga kakor för analys") &&
+      privacy.includes("kaka med namnet session-id") &&
+      VENDORS.some((v) => v.id === "tinybird" && v.location.startsWith("[Ange ")),
   );
   ck(
     "1.10c the terms' AI-result sentence is conditional: it does not describe an AI result in a version that has no generative AI",
@@ -458,6 +467,14 @@ group("GROUP 6 — the retention plan is the policy, and the policy waits for it
     "job-mailbox": ["24 månader"],
     feedback: ["12 månader"],
     "notice-outbox": ["90 dagar"],
+    // Decided 2026-10-04 (third message, relayed by the release session).
+    recruitment: [
+      "24 månader efter att rekryteringen avslutades",
+      "arbetsgivarens fastställda instruktioner",
+    ],
+    "admin-audit": ["Högst 12 månader", "dokumenterat behov"],
+    "platform-logs": ["Normalt 90 dagar"],
+    "mail-logs": ["Normalt 90 dagar"],
   };
   ck(
     "6.2 the approved periods are the owner's (a change is a decision, so it must change this guard too)",
@@ -470,27 +487,36 @@ group("GROUP 6 — the retention plan is the policy, and the policy waits for it
   );
   // Owner instruction, 2026-10-04 (second message): 13 months of usage
   // statistics, 24 months of audit logs and a general anonymisation after 24
-  // months are NOT decisions already made. They are proposals: no number in the
-  // public text, an open point instead, and the number only in `proposal`.
-  const proposed = ["recruitment", "usage-statistics", "admin-audit", "accounting"];
+  // months are NOT decisions already made. The third message decided three of
+  // them in a narrower form (recruitment: 24 months after the recruitment ended,
+  // per the employer's instructions; security and permission logs: at most 12
+  // months with a documented need; technical logs: normally 90 days) and left
+  // two open: the other kinds of audit entry (classified first) and the 339 old
+  // usage rows (checked and classified first, nothing deleted). Those two stay
+  // proposals: no number in the public text, an open point or "not decided".
+  const proposed = ["usage-statistics", "other-audit", "accounting"];
   ck(
-    "6.2b usage statistics (13 months), audit logs (24 months) and a general 24-month anonymisation are proposals, not decisions: no such number or anonymisation in the public text, an open point instead",
-    ["recruitment", "usage-statistics", "admin-audit"].every((id) => {
+    '6.2b usage statistics (13 months), a 24-month audit period and the other audit entries are not decided: no number in the public text, an open point or "not decided" instead; the decided rows carry no leftover proposal',
+    ["usage-statistics", "other-audit"].every((id) => {
       const row = RETENTION_PLAN.find((r) => r.id === id);
       return (
         !!row &&
         row.approval === "proposed" &&
         !!row.proposal &&
-        /\[Ange [^\]]*Väntar på ägarens beslut\.?\]/.test(row.period) &&
-        !/\d+ månader/.test(row.period) &&
-        !/anonymis/i.test(row.period)
+        (/\[Ange [^\]]*\]/.test(row.period) || /Inte beslutat/.test(row.period)) &&
+        !/\d+ månader/.test(row.period)
       );
     }) &&
+      ["recruitment", "admin-audit", "platform-logs", "mail-logs"].every((id) => {
+        const row = RETENTION_PLAN.find((r) => r.id === id);
+        return !!row && row.approval === "approved" && !row.proposal;
+      }) &&
       RETENTION_PLAN.filter((r) => r.approval === "proposed")
         .map((r) => r.id)
         .sort()
         .join() === [...proposed].sort().join() &&
       !privacy.includes("13 månader") &&
+      !privacy.includes("24 månader för granskningsloggar") &&
       !/anonymiseras därefter/.test(
         privacy.replace("raderas eller anonymiseras därefter, såvida inte", ""),
       ),
@@ -510,10 +536,16 @@ group("GROUP 6 — the retention plan is the policy, and the policy waits for it
   );
   ck(
     "6.3 a period only the supplier knows is an open point, never a number invented by the code",
-    ["platform-logs", "mail-logs", "backups"].every((id) => {
+    ["backups"].every((id) => {
       const row = RETENTION_PLAN.find((r) => r.id === id);
       return !!row && row.period.startsWith("[Ange ") && row.mechanism === "pending";
-    }),
+    }) &&
+      // The logs have a decided ceiling (normally 90 days) but only the supplier's
+      // own setting makes it true, so they stay pending until the owner has read it.
+      ["platform-logs", "mail-logs"].every((id) => {
+        const row = RETENTION_PLAN.find((r) => r.id === id);
+        return !!row && row.mechanism === "pending" && /R8/.test(row.routine);
+      }),
   );
   const statusSrc = code("src/lib/legal/status.ts");
   const planSrc = code("src/lib/legal/retention-plan.ts");
@@ -555,7 +587,10 @@ group("GROUP 6 — the retention plan is the policy, and the policy waits for it
     "6.7 every row that is not supplier-controlled or undecided points at a runbook routine that exists",
     RETENTION_PLAN.every((r) => {
       const m = /Runbook (R\d)/.exec(r.routine);
-      return r.id === "accounting" || r.id === "usage-statistics" || r.id === "admin-audit"
+      return r.id === "accounting" ||
+        r.id === "usage-statistics" ||
+        r.id === "admin-audit" ||
+        r.id === "other-audit"
         ? true
         : !!m && new RegExp(`^## ${m[1]}\\.`, "m").test(runbook);
     }),
@@ -570,6 +605,19 @@ group("GROUP 6 — the retention plan is the policy, and the policy waits for it
     "6.8 the routine SQL in the runbook is the file's text, and the database test runs those files on synthetic data and is part of the database suite",
     files.every((f) => runbook.includes(read(f).trim()) && dbTest.includes(`cat ${f}`)) &&
       read("scripts/db-test.sh").includes("supabase/tests/retention_manual_routines_test.sql"),
+  );
+  const r6 = /## R6\.[\s\S]*?(?=\n## R7\.)/.exec(runbook)?.[0] ?? "";
+  const r2sql = read("supabase/retention/inactive-accounts-24-months.list.sql");
+  ck(
+    "6.10 R6 counts from the end of the recruitment and deletes nothing it cannot date (no claim that the rule is cautious); the R2 list leaves out erased and anonymised accounts",
+    r6.includes("Tiden räknas från **när rekryteringen") &&
+      r6.includes("Kan avslutsdatumet inte avgöras: **radera inte.**") &&
+      !/försiktig/i.test(r6) &&
+      r2sql.includes(
+        "not exists (select 1 from public.deleted_accounts d where d.user_id = u.id)",
+      ) &&
+      r2sql.includes("'raderad+%@removed.invalid'") &&
+      r2sql.includes("'anonymised+%@removed.invalid'"),
   );
   ck(
     "6.9 the destructive statements are never run by the guard or the build: they are documents for the owner",
@@ -630,13 +678,14 @@ group("GROUP 7 — the processor agreement draft, and the historical records");
       ),
   );
   ck(
-    "7.6 job@ is manual handling in the agreement too, with no automatic forwarding promised; and the retention default is an open point that matches the policy",
+    "7.6 job@ is manual handling in the agreement too, with no automatic forwarding promised; and the retention default is the decided standard, the same as the policy's (24 months after the recruitment ended, per the customer's instructions)",
     clauses.includes("Manuell hantering av kandidatsvar som kommer till job@cqrityjob.com") &&
       !/Vidarebefordran av kandidatsvar/.test(clauses) &&
-      /10\.1[\s\S]*\[Ange hur länge rekryteringsmaterial sparas när Kunden inte har bestämt något\s+annat/.test(
+      /10\.1[\s\S]*24 månader efter att rekryteringen avslutades, enligt Kundens fastställda\s+instruktioner/.test(
         clauses,
       ) &&
-      !/Detta motsvarar lagringsplanen/.test(clauses),
+      !/Detta motsvarar lagringsplanen/.test(clauses) &&
+      !clauses.includes("Ägaren har inte beslutat"),
   );
   ck(
     "7.7 every deadline left open in the agreement has a concrete proposal and a short reason in the table at the end",
