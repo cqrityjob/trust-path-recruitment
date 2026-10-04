@@ -395,6 +395,16 @@ function glyphMarkup(glyph: StatusGlyph, tone: string): string {
   }
 }
 
+/** Type size and tracking of the plate legend by its length. Four or fewer is the
+ *  original setting, byte for byte; the others fit the same 34.8-unit inner width. */
+const LEGEND_SET: Readonly<Record<number, { readonly size: string; readonly spacing: string }>> = {
+  4: { size: "8.6", spacing: "1.1" },
+  5: { size: "7.4", spacing: "0.5" },
+  6: { size: "6.4", spacing: "0.5" },
+  7: { size: "5.6", spacing: "0.3" },
+  8: { size: "5", spacing: "0.3" },
+};
+
 /**
  * The full symbol as an SVG fragment for a `0 0 44 44` viewBox.
  *
@@ -407,7 +417,7 @@ export function credentialSymbolMarkup(
   code: string | null,
   state: CredentialPresentationState,
   /** Text on the plate — the credential's GOVERNED mark, from
-   *  `sp_credential_types.symbol_label` (max four characters by database
+   *  `sp_credential_types.symbol_label` (one to eight characters by database
    *  CHECK) or from `credentialMark`, which resolves one from a code.
    *
    *  ── IT NEVER FALLS BACK TO THE CODE ──────────────────────────────────
@@ -426,7 +436,12 @@ export function credentialSymbolMarkup(
   label?: string | null,
 ): string {
   const t = symbolTreatment(state);
-  const text = (label ?? "").trim().slice(0, 4).toUpperCase();
+  // The database allows eight characters (20261111090000 relaxed four to eight so
+  // CISSP is not printed as "CISS"). Up to four keep the original type size, so a
+  // plate that already shipped is unchanged; a longer mark is set smaller and
+  // tighter so it still sits inside the plate's engraved border.
+  const text = (label ?? "").trim().slice(0, 8).toUpperCase();
+  const legend = LEGEND_SET[Math.min(Math.max(text.length, 4), 8)];
   const dash = t.dash ? ` stroke-dasharray="${t.dash}"` : "";
 
   const parts: string[] = [
@@ -450,7 +465,7 @@ export function credentialSymbolMarkup(
 
   if (text) {
     parts.push(
-      `<text x="22" y="36.4" text-anchor="middle" font-family="${FONT_STACK}" font-size="8.6" font-weight="700" letter-spacing="1.1" fill="${t.label}">${text}</text>`,
+      `<text x="22" y="36.4" text-anchor="middle" font-family="${FONT_STACK}" font-size="${legend.size}" font-weight="700" letter-spacing="${legend.spacing}" fill="${t.label}">${text}</text>`,
     );
   }
 

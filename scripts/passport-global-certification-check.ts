@@ -433,13 +433,18 @@ const CRED_FUNCTIONS = read("src/lib/security-passport/credentials.functions.ts"
       "utf8",
     );
     const uses = [...model.matchAll(/aliasText|aliasesOf/g)].length;
+    // An ISSUER alias is read from the governed table ONCE (issuerAliasText) and
+    // joins the search through ONE list (aliasText), which feeds both the folded
+    // haystack and the ranking field. The definition's own former names and the
+    // plate legend join the same list: three sources, one path, nothing rendered.
     ok(
       uses > 0 &&
-        /const aliasText = organisations\.flatMap\(\(o\) => aliasesOf\.get\(o\.id\) \?\? \[\]\);/.test(
+        /const issuerAliasText = organisations\.flatMap\(\(o\) => aliasesOf\.get\(o\.id\) \?\? \[\]\);/.test(
           model,
         ) &&
         /\.\.\.aliasText,\s*\]\.join\(" "\),\s*\),/.test(model) &&
-        (model.match(/aliasText/g) ?? []).length === 2,
+        (model.match(/issuerAliasText/g) ?? []).length === 2 &&
+        (model.match(/aliasText/g) ?? []).length === 3,
       "an alias reaches the folded search haystack through exactly one expression",
     );
     // HAYAT (document reading) added the ONLY other destination an alias may
