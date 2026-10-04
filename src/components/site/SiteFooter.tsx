@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { ShieldCheck } from "lucide-react";
+import { BrandLogo } from "./BrandLogo";
 import { useT } from "@/i18n/context";
 import { useSignedIn } from "@/hooks/useSignedIn";
 import { employerPortalEnabled } from "@/lib/job-intelligence/feature-flag";
@@ -71,8 +71,7 @@ export function SiteFooter() {
               className="inline-flex min-h-[44px] min-w-[44px] items-center gap-2 rounded-md font-semibold tracking-tight text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               style={{ fontFamily: "var(--font-display)" }}
             >
-              <ShieldCheck className="h-5 w-5 shrink-0 text-accent" strokeWidth={1.75} />
-              <span className="text-base">{t("brand.name")}</span>
+              <BrandLogo />
             </Link>
             {/* The brand line, once: "Where trust comes first." — the owner's
                 slogan, in the same words in both languages. */}
