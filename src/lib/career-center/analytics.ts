@@ -63,6 +63,7 @@ import {
   trackV31FunnelEvent,
   type FunnelEventName,
 } from "@/lib/career-discovery/v31-feedback.functions";
+import { FUNNEL_MEASUREMENT_ENABLED } from "@/lib/analytics/funnel-measurement";
 
 // `career_filter_used` left this vocabulary with the catalogue filters it
 // measured. The wire name stays in the funnel allowlist and in the database
@@ -113,6 +114,8 @@ export function useCareerCenterTracking(): (
 
   return useCallback(
     (event: CareerCenterEvent, detail: CareerCenterEventDetail) => {
+      // Version 1 measures nothing (src/lib/analytics/funnel-measurement.ts).
+      if (!FUNNEL_MEASUREMENT_ENABLED) return;
       const eventName = CAREER_CENTER_EVENT_WIRE_NAME[event];
       const payload: Record<string, string> = { surface: detail.surface };
       if (detail.subject) payload.subject = detail.subject;

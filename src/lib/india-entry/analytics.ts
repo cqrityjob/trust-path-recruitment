@@ -1,5 +1,9 @@
 // India entry — the funnel, measured without anything about the person.
 //
+// SWITCHED OFF IN VERSION 1. Nothing below runs while
+// FUNNEL_MEASUREMENT_ENABLED is false; the helper is kept so that the names and
+// the call sites stay reviewed for the day it is decided again.
+//
 // Six anonymous event NAMES on the product's only first-party analytics
 // (cd_v31_funnel_events, 20261215090000). This helper takes a name and nothing
 // else: there is no parameter through which a name, a certificate number,
@@ -15,6 +19,7 @@
 // second visit, and a second credential is not a "first credential".
 
 import { trackV31FunnelEvent } from "@/lib/career-discovery/v31-feedback.functions";
+import { FUNNEL_MEASUREMENT_ENABLED } from "@/lib/analytics/funnel-measurement";
 
 export const INDIA_FUNNEL_EVENTS = [
   "india_landing_viewed",
@@ -29,6 +34,9 @@ export type IndiaFunnelEvent = (typeof INDIA_FUNNEL_EVENTS)[number];
 const ONCE_PREFIX = "cqj:funnel:once:";
 
 export function trackFunnelOnce(event: IndiaFunnelEvent): void {
+  // Version 1 measures nothing: no request, and no "once" marker written to
+  // sessionStorage either (src/lib/analytics/funnel-measurement.ts).
+  if (!FUNNEL_MEASUREMENT_ENABLED) return;
   if (typeof window === "undefined") return;
   try {
     const key = ONCE_PREFIX + event;

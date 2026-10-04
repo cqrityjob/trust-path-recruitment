@@ -310,6 +310,14 @@ jobs:
       - name: Launch legal pages and signup acceptance check
         run: bun run launch-legal:check
 
+      # Launch (owner, 2026-10-04): version 1 does not measure how people use the
+      # product. The optional funnel sends nothing and writes no sessionStorage
+      # marker, the server write refuses what a stale page sends, and the set of
+      # browser-storage keys and analytics hosts is exactly the reviewed one.
+      # Planted controls run in negative-controls:all.
+      - name: Funnel measurement off check
+        run: bun run funnel-measurement:check
+
       # NEGATIVE CONTROLS -- proof that the guards above would notice.
       #
       # Each mutation introduces the exact defect a guard exists to catch and
