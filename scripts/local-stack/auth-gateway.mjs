@@ -131,7 +131,12 @@ export function serviceKey(secret = SECRET) {
   const now = Math.floor(Date.now() / 1000);
   const header = b64url(JSON.stringify({ alg: "HS256", typ: "JWT" }));
   const body = b64url(
-    JSON.stringify({ iss: "local-gateway", role: "service_role", iat: now, exp: now + 10 * 365 * 86400 }),
+    JSON.stringify({
+      iss: "local-gateway",
+      role: "service_role",
+      iat: now,
+      exp: now + 10 * 365 * 86400,
+    }),
   );
   const sig = b64url(createHmac("sha256", secret).update(`${header}.${body}`).digest());
   return `${header}.${body}.${sig}`;
@@ -379,7 +384,10 @@ async function handle(req, res) {
       if (!/^[0-9a-f-]{36}$/i.test(id)) {
         return send(res, 400, { code: 400, error_code: "validation_failed", msg: "invalid id" });
       }
-      const user = await queryJson(`SELECT ${ADMIN_USER} FROM auth.users u WHERE u.id = :'id'::uuid`, { id });
+      const user = await queryJson(
+        `SELECT ${ADMIN_USER} FROM auth.users u WHERE u.id = :'id'::uuid`,
+        { id },
+      );
       return user
         ? send(res, 200, user)
         : send(res, 404, { code: 404, error_code: "user_not_found", msg: "User not found" });
