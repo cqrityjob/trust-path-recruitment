@@ -431,7 +431,12 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // Owner-authorized canonical alias verified; deploy-plan independently proves an empty plan.
 // #429 is schema-only and awaits explicit production approval. Remove this
 // entry only with hosted application/postflight evidence, never on merge alone.
-const expectedPending: string[] = ["20270216090000_participant_report_api_boundary.sql"];
+const expectedPending: string[] = [
+  "20270216090000_participant_report_api_boundary.sql",
+  // PR 1 of 2: number, founder designation, narrow count rule, public social
+  // share. Schema-only; remove with hosted application/postflight evidence.
+  "20270217090000_sp_passport_number_and_social_share.sql",
+];
 
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",

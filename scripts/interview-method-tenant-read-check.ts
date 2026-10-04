@@ -363,7 +363,7 @@ const bare = stripComments(migration);
   );
   check(
     suite.includes(
-      "= 'cd_access_state, cd_get_shared_report, cd_record_funnel_event, cd_submit_test_feedback, employer_is_active_status, sp_network_stats'",
+      "= 'cd_access_state, cd_get_shared_report, cd_record_funnel_event, cd_submit_test_feedback, employer_is_active_status, sp_get_social_share, sp_network_stats'",
     ) && suite.includes("_grantees = 'authenticated, service_role'"),
     "IMTR-SUITE: it pins the anon-executable SECURITY DEFINER allowlist and the predicate's exact executor set",
   );

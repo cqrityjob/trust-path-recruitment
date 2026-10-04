@@ -17327,6 +17327,27 @@ export type Database = {
         }
         Relationships: []
       }
+      sp_passport_numbers: {
+        Row: {
+          assigned_at: string
+          designation: string | null
+          holder_user_id: string
+          passport_number: number
+        }
+        Insert: {
+          assigned_at?: string
+          designation?: string | null
+          holder_user_id: string
+          passport_number: number
+        }
+        Update: {
+          assigned_at?: string
+          designation?: string | null
+          holder_user_id?: string
+          passport_number?: number
+        }
+        Relationships: []
+      }
       sp_passport_events: {
         Row: {
           actor_user_id: string | null
@@ -24841,6 +24862,16 @@ export type Database = {
         }
         Returns: string
       }
+      sp_create_social_share: {
+        Args: {
+          _claim_ids: string[]
+          _expires_days: number
+          _image_base64: string
+          _locale: string
+          _request_key: string
+        }
+        Returns: Json
+      }
       sp_create_selected_disclosure: {
         Args: {
           _claim_ids: string[]
@@ -24889,6 +24920,10 @@ export type Database = {
           _title: string
         }
         Returns: string
+      }
+      sp_get_social_share: {
+        Args: { _public_id: string; _with_image: boolean }
+        Returns: Json
       }
       sp_get_disclosure: { Args: { _token: string }; Returns: Json }
       sp_get_disclosure_session: { Args: { _session: string }; Returns: Json }
@@ -24952,6 +24987,7 @@ export type Database = {
         Returns: boolean
       }
       sp_is_verifier: { Args: { _user_id: string }; Returns: boolean }
+      sp_list_my_social_shares: { Args: never; Returns: Json }
       sp_list_my_catalogue_requests: {
         Args: never
         Returns: {
@@ -24985,7 +25021,9 @@ export type Database = {
           revoked_at: string
         }[]
       }
+      sp_my_passport_number: { Args: never; Returns: Json }
       sp_network_stats: { Args: never; Returns: Json }
+      sp_revoke_social_share: { Args: { _public_id: string }; Returns: Json }
       sp_passport_complete_first_merit: {
         Args: {
           _country: string

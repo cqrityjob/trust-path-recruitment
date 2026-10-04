@@ -88,6 +88,11 @@ const ANON_EXECUTABLE_ALLOWLIST = new Set([
   // policy row as hidden. Takes no argument and writes nothing. Pinned in the
   // same words by security_hardening_test S3.1 and the method-library ML10.8.
   "sp_network_stats",
+  // 20270217090000: the public Security Passport share read. Takes a random
+  // 24-character public id (never a user id or token), returns ONE jsonb
+  // document derived from the holder's current claims, or a generic
+  // unavailable shape for an unknown, revoked or expired id. Writes nothing.
+  "sp_get_social_share",
 ]);
 
 /**
