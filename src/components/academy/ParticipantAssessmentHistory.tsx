@@ -72,13 +72,19 @@ export function ParticipantAssessmentHistory({ lang }: { lang: string }) {
                   {r.submittedAt && ` · ${new Date(r.submittedAt).toLocaleDateString()}`}
                 </p>
               </div>
-              <LifecycleChip state={r.lifecycleState} audience="participant" />
+              {r.useCase !== "recruitment" &&
+              ["under_review", "processing", "ready_to_release", "result_available"].includes(r.lifecycleState) ? (
+                <span className="inline-flex shrink-0 items-center rounded-full border border-border px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
+                  {t("academy.history.submitted")}
+                </span>
+              ) : (
+                <LifecycleChip state={r.lifecycleState} audience="participant" />
+              )}
             </div>
 
-            {/* Offered only when a participant snapshot actually exists. The
-                server decides whether there is a report; this does not infer
-                one from a date. */}
-            {r.lifecycleState === "result_available" && r.participantSnapshotId && (
+            {/* Recruitment only: workforce participant reports are not available
+                in this flow, even if the database has a released snapshot. */}
+            {r.useCase === "recruitment" && r.lifecycleState === "result_available" && r.participantSnapshotId && (
               <Link
                 to="/academy/report/$attemptId"
                 params={{ attemptId: r.attemptId }}

@@ -1,0 +1,100 @@
+{
+  "project": "wrygicdfxwjnrugduxnt",
+  "reviewed": {
+    "reviewedCommit": "d09da624359e9fddf181e86594b81da88e323549",
+    "file": "supabase/migrations/20270215090000_application_passport_verified_content_guard.sql",
+    "sha256": "0b492098ae86ff8ee19c97efe88de76058deb53ce67bda4dfffc337889d93f82",
+    "bodyMd5": "7bf734a466cd0e99bcf657939b8822db",
+    "rollbackSha256": "48f8a6f19088e65357bbce99a513ab74c6dc69e7b26c3338eea66b33032d0100"
+  },
+  "preflight": {
+    "read_at": "2026-10-04T16:39:29.280569+00:00",
+    "ledger_md5": "339b270ff57e60c0e7e024081e3102bd",
+    "target_rows": [],
+    "fingerprints": {
+      "claims": {
+        "md5": "9cc0ebe376e6512e1017ef4c97a34e41",
+        "count": 47
+      },
+      "experience": {
+        "md5": "3c11b41810623bd9a845eb87d14c15d1",
+        "count": 4
+      },
+      "disclosures": {
+        "md5": "ad30b4e6267e8747c626ba6ec53a53b7",
+        "count": 42
+      }
+    },
+    "ledger_count": 373,
+    "guard_function": null,
+    "guard_trigger_count": 0
+  },
+  "apply": {
+    "success": true
+  },
+  "postflight": {
+    "read_at": "2026-10-04T16:40:53.968433+00:00",
+    "function": {
+      "acl": "{postgres=X/postgres}",
+      "owner": "postgres",
+      "result": "trigger",
+      "body_md5": "7bf734a466cd0e99bcf657939b8822db",
+      "search_path": [
+        "search_path=public, pg_temp"
+      ],
+      "anon_execute": false,
+      "security_definer": true,
+      "service_role_execute": false,
+      "authenticated_execute": false
+    },
+    "triggers": [
+      {
+        "name": "sp_application_verified_content",
+        "enabled": "O",
+        "function": "sp_require_application_verified_content()",
+        "definition": "CREATE TRIGGER sp_application_verified_content BEFORE INSERT OR UPDATE OF holder_user_id, application_id, package_code, focus_claim_id ON public.sp_disclosures FOR EACH ROW EXECUTE FUNCTION sp_require_application_verified_content()"
+      },
+      {
+        "name": "sp_credential_share_audit",
+        "enabled": "O",
+        "function": "sp_audit_credential_share()",
+        "definition": "CREATE TRIGGER sp_credential_share_audit AFTER UPDATE ON public.sp_disclosures FOR EACH ROW EXECUTE FUNCTION sp_audit_credential_share()"
+      },
+      {
+        "name": "sp_private_session_write",
+        "enabled": "O",
+        "function": "sp_passport_session_write_guard()",
+        "definition": "CREATE TRIGGER sp_private_session_write BEFORE INSERT OR DELETE OR UPDATE ON public.sp_disclosures FOR EACH ROW EXECUTE FUNCTION sp_passport_session_write_guard()"
+      }
+    ],
+    "ledger_md5": "3bfd11b0037b10a31029b89cd8bc5179",
+    "target_rows": [
+      {
+        "name": "application_passport_verified_content_guard",
+        "version": "20261004164027",
+        "sql_sha256": "0b492098ae86ff8ee19c97efe88de76058deb53ce67bda4dfffc337889d93f82",
+        "statement_count": 1
+      }
+    ],
+    "fingerprints": {
+      "claims": {
+        "md5": "9cc0ebe376e6512e1017ef4c97a34e41",
+        "count": 47
+      },
+      "experience": {
+        "md5": "3c11b41810623bd9a845eb87d14c15d1",
+        "count": 4
+      },
+      "disclosures": {
+        "md5": "ad30b4e6267e8747c626ba6ec53a53b7",
+        "count": 42
+      }
+    },
+    "ledger_count": 374,
+    "old_ledger_md5": "339b270ff57e60c0e7e024081e3102bd"
+  },
+  "recovery": {
+    "backupList": "HTTP 403: current CLI identity lacks permission to list backups; full backup availability not verified.",
+    "schemaRecovery": "Reviewed rollback drops only new trigger and function; both absent before apply. Canonical rollback passed locally via psql -f and focused runner, including disabled-trigger negative control. No production rollback executed."
+  }
+}

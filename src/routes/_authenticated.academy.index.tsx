@@ -382,7 +382,7 @@ function AssessmentCard({ row, lang }: { row: AcademyWorkItem; lang: string }) {
             {row.progressDone > 0 ? t("academy.resume") : t("academy.start")}
           </Link>
         )}
-        {row.releasedAt && (
+        {row.useCase === "recruitment" && row.releasedAt && (
           <Link
             to="/academy/report/$attemptId"
             params={{ attemptId: row.workId }}
@@ -391,18 +391,16 @@ function AssessmentCard({ row, lang }: { row: AcademyWorkItem; lang: string }) {
             {t("academy.home.openReport")}
           </Link>
         )}
-        {/* Between submitting and the report arriving, the participant used to
-            get one line and no explanation. That gap is where a person decides
-            whether something has gone wrong -- so the steps are named, in
-            order, including the ones that are not theirs to do. No timeframe is
-            promised, because none exists. */}
-        {done && !row.releasedAt && (
+        {/* Workforce reports are not available in this participant flow. */}
+        {done && (row.useCase !== "recruitment" || !row.releasedAt) && (
           <div className="w-full rounded-md bg-[color:var(--surface-subtle)] p-3">
             <p className="text-[13px] font-medium text-foreground">
               {t(
                 row.status === "abandoned"
                   ? "academy.done.abandonedBody"
-                  : "academy.home.awaitingRelease",
+                  : row.useCase === "recruitment"
+                    ? "academy.home.awaitingRelease"
+                    : "academy.done.alreadyBody",
               )}
             </p>
           </div>

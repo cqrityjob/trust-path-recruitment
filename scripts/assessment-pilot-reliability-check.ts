@@ -326,7 +326,9 @@ console.log("\n5. 'Saved' is set by the reply, never by the click");
   );
   check(
     "5.2 a failed save is recorded against that answer",
-    /catch \{[\s\S]{0,120}\[itemId\]: "failed"/.test(runtime),
+    /catch \{\s*if \(disposed.current\) return;\s*failedSaves.current.add\(itemId\);\s*setSaveState\([\s\S]{0,100}\[itemId\]: "failed"/.test(
+      runtime,
+    ),
   );
   // The defect: one transient save failure drew the LOAD failure panel over a
   // run that was open and fully resumable.

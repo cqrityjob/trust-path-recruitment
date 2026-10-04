@@ -1,0 +1,7 @@
+{
+  "reviewedCommit": "d09da624359e9fddf181e86594b81da88e323549",
+  "file": "supabase/migrations/20270215090000_application_passport_verified_content_guard.sql",
+  "sha256": "0b492098ae86ff8ee19c97efe88de76058deb53ce67bda4dfffc337889d93f82",
+  "bodyMd5": "7bf734a466cd0e99bcf657939b8822db",
+  "rollbackSha256": "48f8a6f19088e65357bbce99a513ab74c6dc69e7b26c3338eea66b33032d0100"
+}

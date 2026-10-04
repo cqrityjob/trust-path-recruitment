@@ -20,7 +20,7 @@
 // would imply an access relationship that does not exist.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createFileRoute, useBlocker } from "@tanstack/react-router";
+import { createFileRoute, useBlocker, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { AlertTriangle, CheckCircle2, MessageSquare, ShieldAlert } from "lucide-react";
 import { LanguageScope, useT } from "@/i18n/context";
@@ -49,6 +49,7 @@ import { resolveAttemptLanguage } from "@/lib/security-competency/attempt-langua
 import { createAnswerQueue } from "@/lib/security-competency/answer-queue";
 import {
   MissingAnswersPanel,
+  UnsavedAnswersNotice,
   SaveStatus,
   SubmittedNotice,
   type SaveState,
@@ -181,7 +182,8 @@ function AcademyAttemptRunner({
 
   const failedSaves = useRef(new Set<string>());
   const [pauseState, setPauseState] = useState<"saving" | "failed" | null>(null);
-  const pauseInFlight = useRef(false);
+  const leaveGeneration = useRef(0);
+  const navigate = useNavigate();
   const [items, setItems] = useState<AcademyItem[]>([]);
   const [blocks, setBlocks] = useState<AcademyBlock[]>([]);
   // Which section introductions this sitting has already shown. A section
@@ -243,8 +245,8 @@ function AcademyAttemptRunner({
   // took it, and the participant came back to an empty box.
   //
   // So typing schedules a save, and anything that could end the sitting
-  // flushes it first: moving between questions, submitting, unmounting, and
-  // leaving the page. The debounce is short and is never the thing relied on —
+  // flushes it first: moving between questions, submitting, and explicit
+  // navigation. Identity changes discard buffers instead of writing them. The debounce is short and is never the thing relied on —
   // it exists to avoid a request per keystroke, not to be a deadline.
   const textTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const textDirty = useRef<{ itemId: string; value: string } | null>(null);
@@ -347,9 +349,11 @@ function AcademyAttemptRunner({
         // tell somebody their answer is saved on the strength of having sent
         // it, because the two are different facts and only one of them
         // survives a closed laptop.
+        if (disposed.current) return;
         failedSaves.current.delete(itemId);
         setSaveState((prev) => ({ ...prev, [itemId]: "saved" }));
       } catch {
+        if (disposed.current) return;
         failedSaves.current.add(itemId);
         setSaveState((prev) => ({ ...prev, [itemId]: "failed" }));
       }
@@ -406,13 +410,14 @@ function AcademyAttemptRunner({
   async function saveBeforeLeaving(): Promise<boolean> {
     flushText();
     await flushPendingSaves();
+    if (disposed.current) return false;
     for (const itemId of [...failedSaves.current]) {
       const item = itemsRef.current.find((row) => row.itemVersionId === itemId);
       if (item) void persist(itemId, item);
     }
     await flushPendingSaves();
+    if (disposed.current) return false;
     if (failedSaves.current.size > 0) {
-      setPauseState("failed");
       return false;
     }
     try {
@@ -421,31 +426,71 @@ function AcademyAttemptRunner({
     } catch {
       /* No answer content is stored in the browser. */
     }
-    setPauseState(null);
     return true;
   }
 
-  async function pause() {
-    if (pauseInFlight.current || submittingRef.current) return;
-    pauseInFlight.current = true;
+  async function tryLeaving(onSaved: () => void) {
+    const generation = ++leaveGeneration.current;
     setPauseState("saving");
-    try {
-      if (await saveBeforeLeaving()) setPhase("paused");
-    } finally {
-      pauseInFlight.current = false;
-    }
+    const saved = await saveBeforeLeaving();
+    // Staying, leaving explicitly, or losing the session cancels the intent.
+    // A late network reply must never navigate the new page or identity.
+    if (disposed.current || generation !== leaveGeneration.current) return;
+    setPauseState(saved ? null : "failed");
+    if (saved) onSaved();
   }
 
-  // Includes the logo, app links and browser Back. A failed write blocks the
-  // transition and keeps the visible answers available for another attempt.
-  useBlocker({
+  function pause() {
+    if (pauseState === "saving" || submittingRef.current) return;
+    void tryLeaving(() => setPhase("paused"));
+  }
+
+  // Resolve the actual router transition (including browser Back) only after
+  // acknowledged saves or an explicit choice to leave unsaved answers.
+  const blocker = useBlocker({
     disabled: phase === "done" || phase === "loading" || phase === "error",
     enableBeforeUnload: false,
-    shouldBlockFn: async () => {
-      if (submittingRef.current) return true;
-      return !(await saveBeforeLeaving());
-    },
+    withResolver: true,
+    shouldBlockFn: () =>
+      submittingRef.current ||
+      textDirty.current !== null ||
+      queue.current.size() > 0 ||
+      failedSaves.current.size > 0,
   });
+  useEffect(() => {
+    if (blocker.status !== "blocked") return;
+    if (submittingRef.current) {
+      blocker.reset();
+      return;
+    }
+    void tryLeaving(blocker.proceed);
+    // One save operation per blocked transition; renders while it runs must
+    // not start another retry. The operation reads current refs, not answers
+    // captured by a render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [blocker.status]);
+
+  const leaveNotice = pauseState ? (
+    <UnsavedAnswersNotice
+      saving={pauseState === "saving"}
+      onRetry={() => {
+        void tryLeaving(blocker.status === "blocked" ? blocker.proceed : () => setPhase("paused"));
+      }}
+      onStay={() => {
+        leaveGeneration.current++;
+        setPauseState(null);
+        if (blocker.status === "blocked") blocker.reset();
+      }}
+      onLeave={() => {
+        leaveGeneration.current++;
+        disposed.current = true;
+        if (textTimer.current) clearTimeout(textTimer.current);
+        textDirty.current = null;
+        if (blocker.status === "blocked") blocker.proceed();
+        else void navigate({ to: "/academy", ignoreBlocker: true });
+      }}
+    />
+  ) : undefined;
 
   // ── THE SITTING ENDING WITHOUT A CLICK ────────────────────────────────
   //
@@ -568,6 +613,7 @@ function AcademyAttemptRunner({
    *  Returns the items with no answer, in form order. */
   async function readMissing(): Promise<AcademyItem[]> {
     const fresh = await loadItems({ data: { attemptId, locale: lang } });
+    if (disposed.current) return [];
     setItems(fresh);
     itemsRef.current = fresh;
     return fresh.filter((i) => !isAnswered(i));
@@ -596,6 +642,7 @@ function AcademyAttemptRunner({
       // submitting past it makes the database correctly report an incomplete
       // attempt for a run that is, a few hundred milliseconds later, complete.
       await flushPendingSaves();
+      if (disposed.current) return;
       if (failedSaves.current.size > 0) {
         setPauseState("failed");
         setPhase("running");
@@ -610,6 +657,7 @@ function AcademyAttemptRunner({
       // to fail for exactly the same reason. Asking first turns the same fact
       // into three named questions and a way to reach the first.
       const gaps = await readMissing();
+      if (disposed.current) return;
       if (gaps.length > 0) {
         setMissing(gaps);
         setPhase("incomplete");
@@ -617,9 +665,11 @@ function AcademyAttemptRunner({
       }
 
       const res = await submitAttempt({ data: { attemptId } });
+      if (disposed.current) return;
       setOutcome({ reviewsOpened: res.reviewsOpened });
       setPhase("done");
     } catch (e) {
+      if (disposed.current) return;
       const code = (e as { code?: string }).code ?? "submit_failed";
       // ── IDEMPOTENCY ────────────────────────────────────────────────────
       //
@@ -628,6 +678,7 @@ function AcademyAttemptRunner({
       // without submission and must never claim the answers were handed in.
       try {
         const state = await loadState({ data: { attemptId } });
+        if (disposed.current) return;
         if (state && !state.isOpen) {
           setClosedStatus(state.status);
           setPhase("done");
@@ -643,6 +694,7 @@ function AcademyAttemptRunner({
       if (code === "incomplete" || code === "incomplete_best_worst") {
         try {
           const gaps = await readMissing();
+          if (disposed.current) return;
           if (gaps.length > 0) {
             setMissing(gaps);
             setPhase("incomplete");
@@ -655,6 +707,7 @@ function AcademyAttemptRunner({
       // A genuine refusal, with the attempt still open. NOT the load-failure
       // panel: nothing is lost, the answers are all saved, and the run is
       // resumable — so the participant is told that, and offered the button.
+      if (disposed.current) return;
       setErrorCode(code);
       setPhase("submit-failed");
     } finally {
@@ -664,7 +717,7 @@ function AcademyAttemptRunner({
 
   if (phase === "loading") {
     return (
-      <AssessmentShell exit={exit} deliveryLanguage={lang}>
+      <AssessmentShell exit={exit} deliveryLanguage={lang} notice={leaveNotice}>
         <AssessmentPanel>
           <p className="text-sm text-muted-foreground">{t("academy.loading")}</p>
         </AssessmentPanel>
@@ -680,7 +733,7 @@ function AcademyAttemptRunner({
           ? "academy.error.notOpen"
           : "academy.error.generic";
     return (
-      <AssessmentShell exit={exit} deliveryLanguage={lang}>
+      <AssessmentShell exit={exit} deliveryLanguage={lang} notice={leaveNotice}>
         <AssessmentPanel>
           <h1 className="flex items-center gap-2 text-lg font-semibold text-foreground">
             <AlertTriangle className="h-5 w-5 text-accent" aria-hidden="true" />
@@ -709,7 +762,7 @@ function AcademyAttemptRunner({
         exit={pauseExit}
         deliveryLanguage={lang}
         onExit={() => void pause()}
-        notice={pauseState === "failed" ? t("academy.pause.failed") : undefined}
+        notice={leaveNotice}
       >
         <AssessmentPanel>
           <MissingAnswersPanel
@@ -735,7 +788,7 @@ function AcademyAttemptRunner({
 
   if (phase === "submit-failed") {
     return (
-      <AssessmentShell exit={exit} deliveryLanguage={lang}>
+      <AssessmentShell exit={exit} deliveryLanguage={lang} notice={leaveNotice}>
         <AssessmentPanel>
           <h1 className="flex items-center gap-2 text-lg font-semibold text-foreground">
             <AlertTriangle className="h-5 w-5 text-accent" aria-hidden="true" />
@@ -767,7 +820,7 @@ function AcademyAttemptRunner({
 
   if (phase === "paused") {
     return (
-      <AssessmentShell exit={exit} deliveryLanguage={lang}>
+      <AssessmentShell exit={exit} deliveryLanguage={lang} notice={leaveNotice}>
         <AssessmentPanel>
           <p role="status" className="text-sm leading-relaxed">
             {t("academy.pause.saved")}
@@ -794,7 +847,7 @@ function AcademyAttemptRunner({
 
   if (phase === "intro") {
     return (
-      <AssessmentShell exit={exit} deliveryLanguage={lang}>
+      <AssessmentShell exit={exit} deliveryLanguage={lang} notice={leaveNotice}>
         <AssessmentPanel>
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-accent">
             {t(recruitment ? "academy.eyebrowRecruitment" : "academy.eyebrow")}
@@ -889,7 +942,7 @@ function AcademyAttemptRunner({
         exit={pauseExit}
         deliveryLanguage={lang}
         onExit={() => void pause()}
-        notice={pauseState === "failed" ? t("academy.pause.failed") : undefined}
+        notice={leaveNotice}
       >
         <AssessmentPanel>
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-accent">
@@ -933,7 +986,7 @@ function AcademyAttemptRunner({
         exit={pauseExit}
         deliveryLanguage={lang}
         onExit={() => void pause()}
-        notice={pauseState === "failed" ? t("academy.pause.failed") : undefined}
+        notice={leaveNotice}
       >
         <AssessmentPanel>
           <p className="text-sm text-muted-foreground">{t("academy.submitting")}</p>
@@ -944,7 +997,7 @@ function AcademyAttemptRunner({
 
   if (phase === "done") {
     return (
-      <AssessmentShell exit={exit} deliveryLanguage={lang}>
+      <AssessmentShell exit={exit} deliveryLanguage={lang} notice={leaveNotice}>
         <AssessmentPanel>
           <SubmittedNotice
             recruitment={recruitment}
@@ -977,7 +1030,7 @@ function AcademyAttemptRunner({
       exit={pauseExit}
       deliveryLanguage={lang}
       onExit={() => void pause()}
-      notice={pauseState === "failed" ? t("academy.pause.failed") : undefined}
+      notice={leaveNotice}
     >
       <AssessmentCard>
         <div className="border-b border-border px-5 py-3 sm:px-8">
@@ -989,11 +1042,6 @@ function AcademyAttemptRunner({
           >
             {t(pauseState === "saving" ? "academy.pause.saving" : "academy.pause.label")}
           </button>
-          {pauseState === "failed" && (
-            <p role="alert" className="mt-2 text-sm text-destructive">
-              {t("academy.pause.failed")}
-            </p>
-          )}
         </div>
         <AssessmentProgressBar
           stageLabel={currentBlock ? currentBlock.name : t("academy.stage")}

@@ -1186,6 +1186,10 @@ jobs:
       - name: Employer report access check
         run: bun run employer-report-access:check
 
+      # App launch gate only; direct RPC/RLS restrictions need separate approval.
+      - name: Participant report availability check
+        run: bun run participant-report-availability:check
+
       # The recruitment workspace (20261207090000): one vocabulary for what the
       # overview counts and the lists open, no contact with a candidate except
       # an explicit reviewed send, decisions withheld from seats the database

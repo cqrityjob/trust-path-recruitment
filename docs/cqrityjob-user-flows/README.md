@@ -1,6 +1,6 @@
 # CQrityjob användarflöden 4 oktober 2026
 
-Den samlade ändringen följer användarrapporten **CQrityjob 20261004.docx** och uppdragets F01–F15. Rapportens text och alla 14 bilder har lästs. Originalbilderna och den verkliga delningstoken publiceras inte. Arbetet utgår från `origin/main` `ecaa805`, inklusive tidigare logo-, katalog- och lanseringsändringar. Ingen merge, driftsättning, extern kontoregistrering eller produktionsdatamutation ingår.
+Den samlade ändringen följer användarrapporten **CQrityjob 20261004.docx** och uppdragets F01–F15. Rapportens text och alla 14 bilder har lästs. Originalbilderna och den verkliga delningstoken publiceras inte. Arbetet utgår från `origin/main` `ecaa805`, inklusive tidigare logo-, katalog- och lanseringsändringar. Ingen merge, appdriftsättning, extern kontoregistrering eller ändring av kandidatdata ingår. Ägaren godkände senare exakt F09-migrationen; den är applicerad och read-only-verifierad. Se [releaseförberedelser](../release/2026-10-04-pr428-release-preparation.md).
 
 Observation nedan är vad testaren rapporterade. Diagnos är vad kod, lokal databas eller webbläsare faktiskt har visat. Fixturetester bevisar gränssnittsbeteende; de ersätter inte Google, mejlleverans eller en verklig mottagarsession i publicerad version. Exakt slutcommit och slutlig CI-status redovisas i PR:n, eftersom en fil inte kan innehålla sitt eget commit-ID.
 
@@ -67,7 +67,7 @@ Observation nedan är vad testaren rapporterade. Diagnos är vad kod, lokal data
 - **Observation:** Efterhandsdelning var klickbar utan verifierade uppgifter.
 - **Diagnos:** Efterhands-RPC kunde skapa en tom/identitetsbaserad delning. Mottagarurvalet filtrerade fortfarande verified/active; klickbarheten bevisar inte överföring av overifierade meriter.
 - **Ändring:** Båda gränssnitt använder samma verifierade innehållserbjudande; databasfunktionen nekar även direktanrop när verifierat innehåll saknas. Konkret tomtext och ”Öppna Security Passport”. En fokuserad ansökningsdelning återkallas om meriten raderas, så att kontoradering fungerar utan att urvalet breddas. Allmän delning behåller sina regler och statusetiketter.
-- **Verifiering:** Ny isolerad databas från hela migrationskedjan. Ansökningsdelning 38 + 5 + 7 och allmän selected-sharing 122 assertions godkända; kontoradering ingår i admin-lifecycle-testets 144 assertions. Migrationen är **pending**, inte applicerad i produktion. Rollback har körts och kontrollerats i en lokal transaktion som sedan återställts.
+- **Verifiering:** Ny isolerad databas från hela migrationskedjan. Ansökningsdelning 38 + 5 + 7 och allmän selected-sharing 122 assertions godkända; kontoradering ingår i admin-lifecycle-testets 144 assertions. Migrationen är applicerad som hosted `20261004164027`, med identisk granskad SQL, trigger, funktion och rätt privilegier. Kandidatdata är oförändrade. Historikavstämningen mot kanoniskt filnamn återstår; se releaseförberedelserna. Faktisk rollback är nu kopplad till ordinarie databas-CI och har verifierats lokalt i återställd transaktion.
 
 ### F10 Klickbar testinbjudan
 
@@ -117,7 +117,7 @@ Observation nedan är vad testaren rapporterade. Diagnos är vad kod, lokal data
 - Riktig mejlleverans och bekräftelse över två enheter är inte verifierade av språkfixtures.
 - Den historiska `/p`-404:an har inte reproducerats. Publicerat `/p` utan token svarade 200; den känsliga token användes inte.
 - Befintlig main har lintskuld. Oförändrad `ecaa805` kontrollerades i separat lokal kopia: **800 errors, 114 warnings**. Slutlig jämförelse och CI-resultat finns i PR:n. Detta räknas som underkänt, inte överhoppat/godkänt.
-- Databasändringen är föreslagen, med lokal replay och rollback. Att pending-migrationen inte är applicerad hosted är avsiktligt enligt förbudet mot produktionsändringar.
+- Den enda uttryckligt godkända F09-migrationen är applicerad och verifierad; ingen annan produktionsändring gjordes. Aktuella releasegränser finns i releaseförberedelserna.
 
 ## Manuell återtest för Mostafa
 

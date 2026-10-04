@@ -218,3 +218,38 @@ export function SubmittedNotice({
     </>
   );
 }
+
+/** A save attempt never traps somebody in the player, including when the
+ * request has no response. Leaving is an explicit acknowledgement of loss. */
+export function UnsavedAnswersNotice({
+  saving,
+  onRetry,
+  onStay,
+  onLeave,
+}: {
+  saving: boolean;
+  onRetry: () => void;
+  onStay: () => void;
+  onLeave: () => void;
+}) {
+  const { t } = useT();
+  const buttonClass =
+    "min-h-11 rounded-md border border-border bg-background px-3 py-2 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+  return (
+    <div data-testid="academy-unsaved-exit" className="space-y-3">
+      <p>{t(saving ? "academy.pause.saving" : "academy.pause.failed")}</p>
+      <p>{t("academy.leave.warning")}</p>
+      <div className="flex flex-wrap gap-2">
+        <button type="button" className={buttonClass} disabled={saving} onClick={onRetry}>
+          {t("academy.leave.retry")}
+        </button>
+        <button type="button" className={buttonClass} onClick={onStay}>
+          {t("academy.leave.stay")}
+        </button>
+        <button type="button" className={buttonClass} onClick={onLeave}>
+          {t("academy.leave.discard")}
+        </button>
+      </div>
+    </div>
+  );
+}

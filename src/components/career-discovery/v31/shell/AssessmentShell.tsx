@@ -53,7 +53,7 @@ export function AssessmentShell({
    *  that. Absent means no exit link, never a default one. */
   exit?: AssessmentShellExit;
   onExit?: () => void;
-  notice?: string;
+  notice?: ReactNode;
   /** A short standing note for the foot of the page, already translated. Absent
    *  means no footer at all: a note about one product must not appear under
    *  another. */
@@ -117,12 +117,12 @@ export function AssessmentShell({
       <main className="flex-1 px-5 py-8 sm:px-8 sm:py-12">
         <div className={cn("mx-auto w-full", wide ? "max-w-[1040px]" : "max-w-[880px]")}>
           {notice && (
-            <p
+            <div
               role="alert"
               className="mb-4 rounded-md border border-destructive p-4 text-sm text-destructive"
             >
               {notice}
-            </p>
+            </div>
           )}
           {children}
         </div>

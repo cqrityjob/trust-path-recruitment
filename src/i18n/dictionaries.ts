@@ -4235,6 +4235,15 @@ export const dictionaries = {
     "academy.pause.saved": "Dina svar är sparade. Välj ”Till mina tester” för att lämna testet.",
     "academy.pause.failed":
       "Svaren kunde inte sparas. De finns kvar på den här sidan. Försök igen innan du lämnar testet.",
+    "academy.history.submitted": "Test inlämnat",
+    "academy.report.unavailableTitle": "Rapporten är inte tillgänglig",
+    "academy.report.unavailableBody":
+      "Det finns ingen rapport att visa här. Du kan följa testets status under Mina tester.",
+    "academy.leave.warning":
+      "Om du lämnar nu kan osparade svar gå förlorade. Redan sparade svar finns kvar.",
+    "academy.leave.retry": "Försök spara igen",
+    "academy.leave.stay": "Stanna kvar",
+    "academy.leave.discard": "Lämna utan att spara",
     "academy.overview": "Till översikten",
     "academy.done.abandonedTitle": "Testet är avslutat",
     "academy.done.abandonedBody":
@@ -12991,6 +13000,15 @@ export const dictionaries = {
     "academy.pause.saved": "Your answers are saved. Choose “Back to my tests” to leave the test.",
     "academy.pause.failed":
       "Your answers could not be saved. They are still on this page. Try again before leaving the test.",
+    "academy.history.submitted": "Assessment submitted",
+    "academy.report.unavailableTitle": "Report unavailable",
+    "academy.report.unavailableBody":
+      "There is no report to view here. You can follow the assessment status in My assessments.",
+    "academy.leave.warning":
+      "If you leave now, unsaved answers may be lost. Previously saved answers will remain.",
+    "academy.leave.retry": "Try saving again",
+    "academy.leave.stay": "Stay here",
+    "academy.leave.discard": "Leave without saving",
     "academy.overview": "Back to overview",
     "academy.done.abandonedTitle": "This test is closed",
     "academy.done.abandonedBody":

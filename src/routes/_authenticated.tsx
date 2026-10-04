@@ -43,7 +43,9 @@ function AuthenticatedLayout() {
       if (!mounted || identityChanged) return;
       const session = data.session;
       if (!session) {
-        navigate({ to: "/login", search: returnSearch() as never });
+        // Auth loss must bypass answer-saving blockers: the previous identity
+        // can no longer save, and its local state is being discarded.
+        navigate({ to: "/login", search: returnSearch() as never, ignoreBlocker: true });
       } else {
         setSignedInUserId(session.user.id);
       }
@@ -61,7 +63,9 @@ function AuthenticatedLayout() {
       // their query string. getSession() above is the authority for the
       // first decision; this handler only reacts to a real sign-out.
       if (!session && event !== "INITIAL_SESSION") {
-        navigate({ to: "/login", search: returnSearch() as never });
+        // Auth loss must bypass answer-saving blockers: the previous identity
+        // can no longer save, and its local state is being discarded.
+        navigate({ to: "/login", search: returnSearch() as never, ignoreBlocker: true });
       }
     });
     return () => {

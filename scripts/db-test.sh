@@ -8511,6 +8511,12 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# This is a schema-state contract: a failed rollback or restoration stops CI.
+# The canonical test rolls back its own transaction, leaving F09 installed.
+echo "==> Verifying Security Passport application guard rollback and restoration"
+psql_q -d "$TEST_DB" -f supabase/tests/sp_application_passport_guard_rollback_test.sql
+
+# ---------------------------------------------------------------------------
 echo "==> Running Security Passport skill/language taxonomy assertions"
 set +e
 SPSK_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/sp_skill_taxonomy_test.sql 2>&1)"

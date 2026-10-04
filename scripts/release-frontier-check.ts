@@ -427,10 +427,9 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // pack, pilot member, definition table and claim equals its fingerprint from before the apply.
 // That catalogue publication left nothing pending.
 // Evidence: docs/release/2026-10-04-catalogue-publication-hosted-verification.md.
-// F09 application-disclosure guard is proposed and locally verified; no hosted apply.
-const expectedPending: string[] = [
-  "20270215090000_application_passport_verified_content_guard.sql",
-];
+// F09 applied once as hosted 20261004164027; see 2026-10-04 guard verification.
+// Canonical alias remains absent; deploy-plan independently blocks re-execution.
+const expectedPending: string[] = [];
 
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
@@ -459,6 +458,7 @@ const retiredCanonicalIdentities = [
   "20261029090000_scp_trust_evidence_report_r3a_contract.sql",
 ];
 const hostedLedgerMarkers = [
+  "20261004164027_application_passport_verified_content_guard.sql",
   "20260927124146_client_table_privilege_hardening.sql",
   "20260904190901_scp_trust_evidence_report_r1_provenance.sql",
   "20260907064303_f8efc1c3-def4-4147-9db1-45a68b1f6a69.sql",

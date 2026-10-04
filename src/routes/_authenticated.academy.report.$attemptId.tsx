@@ -1,28 +1,6 @@
-// The participant's own report, plus their progress over time.
-//
-// Same maturity components as the employer view, and deliberately so: the
-// person should see exactly what their employer sees about them, in the same
-// words. A participant-facing summary that softened or reworded the employer
-// one would be the beginning of two versions of the truth.
-//
-// ── WHY THE WORDS "DEVELOPMENT" AND "YOUR EMPLOYER" ARE CONDITIONAL ────
-//
-// This page was written for the workforce product and said so throughout: the
-// heading was "My development report" and the reason given was that "your
-// employer asked you to complete an assessment for competence development".
-// The same page is what an APPLICANT reaches. Both sentences are false to
-// them — nobody is developing them, and the organisation that asked is one
-// they do not work for and may never work for.
-//
-// The fork is `personContext`, which the release function already derived from
-// the assignment and froze into the snapshot's own context. It is read here
-// rather than re-derived, for the same reason the employer results page reads
-// it: the report says what it was released as, and a report that changed its
-// purpose after the fact would not be a snapshot.
-//
-// Only the sentences that are FACTUALLY wrong in recruitment are forked.
-// Everything about evidence, limitations and rights is identical for both,
-// which is the point — the same person is owed the same account either way.
+// Participant recruitment reports only. Workforce and unknown historical
+// contexts are unavailable in this app; the server enforces the same gate.
+// Employer report workflows use their separate audience and routes.
 
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
@@ -72,7 +50,7 @@ function ParticipantReport() {
   // snapshot no longer carries a subject and neither does this browser: the
   // server resolves it through the same audience RPC that returned the report,
   // so these two reads cannot answer for a report this reader could not open.
-  const hasReport = Boolean(report.data);
+  const hasReport = report.data?.context?.personContext === "candidate";
   const recs = useQuery({
     queryKey: ["academy", "recs", "participant", attemptId],
     queryFn: () => recsFn({ data: { attemptId, audience: "participant" as const } }),
@@ -99,7 +77,7 @@ function ParticipantReport() {
   // Saying "not available yet" for a broken read leaves someone waiting for
   // something that already exists -- which is exactly what happened while the
   // audience RPC was withholding released reports. getAcademyReport returns
-  // null only for a genuine no-row, so isError is the signal that something
+  // null when no report is available in this app, so isError signals something
   // broke. Same handling as the employer results route.
   if (report.isError) {
     const { kind } = logAcademyError("academy/report", report.error);
@@ -127,23 +105,25 @@ function ParticipantReport() {
     );
   }
 
-  if (!report.data) {
+  if (!report.data || !hasReport) {
     return (
       <AssessmentLayout>
         <AssessmentPanel>
           <NoEvidenceState
-            title={t("academy.report.notReadyTitle")}
-            body={t("academy.report.notReadyBody")}
+            title={t("academy.report.unavailableTitle")}
+            body={t("academy.report.unavailableBody")}
           />
+          <Link to="/academy" className="mt-4 inline-flex min-h-[44px] items-center gap-1.5 text-sm font-medium text-foreground underline">
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+            {t("academy.report.back")}
+          </Link>
         </AssessmentPanel>
       </AssessmentLayout>
     );
   }
 
   const r = report.data;
-  // Read from the snapshot's frozen context, never re-derived. Absent on a
-  // snapshot released before the context carried it, and the workforce wording
-  // is the right default there: that is what those releases actually were.
+  // Only explicit candidate context passed the availability gate above.
   const candidate = r.context?.personContext === "candidate";
   const limitations = lang === "en" ? r.limitationsEn : r.limitationsSv;
   const releaseDates = Array.from(new Set((progress.data ?? []).map((p) => p.releasedAt)));

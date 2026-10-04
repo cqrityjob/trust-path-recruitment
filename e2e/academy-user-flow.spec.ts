@@ -180,9 +180,13 @@ for (const lang of ["sv", "en"] as const) {
     await expect(page.getByRole("textbox")).toHaveValue(
       "Synthetic answer remains available after a failed save.",
     );
+    await page
+      .getByRole("button", { name: lang === "sv" ? "Stanna kvar" : "Stay here", exact: true })
+      .click();
     await page.evaluate(() => history.back());
     await expect(page.getByRole("alert").first()).toBeVisible();
-    await expect(page).toHaveURL(new RegExp(`/academy/${ATTEMPT_ID}$`));
+    // Browser Back changes the address while its transition is awaiting a
+    // decision; the player and answers remain mounted until it resolves.
     expect(
       await page.evaluate(() => {
         const event = new Event("beforeunload", { cancelable: true });
@@ -190,6 +194,10 @@ for (const lang of ["sv", "en"] as const) {
         return event.defaultPrevented;
       }),
     ).toBe(true);
+    await page
+      .getByRole("button", { name: lang === "sv" ? "Stanna kvar" : "Stay here", exact: true })
+      .click();
+    await expect(page).toHaveURL(new RegExp(`/academy/${ATTEMPT_ID}$`));
     failSave = false;
     await pause().click();
     await expect(page.getByRole("status")).toContainText(lang === "sv" ? "sparade" : "saved");
@@ -263,13 +271,13 @@ for (const lang of ["sv", "en"] as const) {
       "src",
       "/brand/cqrityjob-logo.svg",
     );
-    if (test.info().project.name === "mobile-375") {
+    if ((page.viewportSize()?.width ?? 1280) < 1024) {
       await page
         .getByRole("button", { name: lang === "sv" ? "Öppna menyn" : "Open menu", exact: true })
         .click();
     }
     const nav = page.locator(
-      `[data-candidate-app-nav="${test.info().project.name === "mobile-375" ? "mobile" : "desktop"}"]`,
+      `[data-candidate-app-nav="${(page.viewportSize()?.width ?? 1280) < 1024 ? "mobile" : "desktop"}"]`,
     );
     await expect(nav).toBeVisible();
     await expect(nav.locator("a")).toHaveCount(7);
@@ -434,3 +442,271 @@ test("shared language controls switch both ways from Security Work", async ({ pa
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Mitt säkerhetsarbete");
   await expect(page.locator('[role="menu"]')).toHaveCount(0);
 });
+
+for (const pendingSubmission of [false, true]) {
+  test(`expired session ${pendingSubmission ? "during pending submission" : "with failed answers"} reaches login without saving under a new identity`, async ({
+    page,
+  }) => {
+    let releaseSave: (() => void) | undefined;
+    let submissions = 0;
+    let saves = 0;
+    await mount(page, "hub_active", {
+      path: `/academy/${ATTEMPT_ID}`,
+      ready: "main h1",
+      overrides: {
+        getAcademyAttemptState: ok({
+          status: "in_progress",
+          isOpen: true,
+          language: "sv",
+          minutesMin: 2,
+          minutesMax: 4,
+        }),
+        getAcademyAttemptItems: ok([
+          {
+            itemVersionId: itemId,
+            displayOrder: 1,
+            blockKey: "reflection",
+            itemFormat: "constructed_response",
+            scenario: "Synthetic scenario",
+            prompt: "Synthetic question",
+            isSafetyCritical: false,
+            options: [],
+            savedOptionId: null,
+            savedBestId: null,
+            savedWorstId: null,
+            savedText: null,
+          },
+        ]),
+        getAcademyAttemptBlocks: ok([
+          {
+            blockKey: "reflection",
+            name: "Reflection",
+            intro: "Synthetic introduction",
+            asks: "your_own_experience",
+            itemCount: 1,
+          },
+        ]),
+        listAcademyWork: ok([{ workId: ATTEMPT_ID, useCase: "recruitment" }]),
+        submitAcademyAttempt: async (r) => {
+          submissions++;
+          await response(r, { reviewsOpened: 0 });
+        },
+        saveAcademyResponse: async (r) => {
+          saves++;
+          if (pendingSubmission) {
+            await new Promise<void>((resolve) => {
+              releaseSave = resolve;
+            });
+            await response(r, null).catch(() => {});
+          } else await r.abort("failed");
+        },
+      },
+    });
+    await page.getByRole("button", { name: "Starta testet", exact: true }).click();
+    await page.getByRole("button", { name: "Fortsätt", exact: true }).click();
+    await page.getByRole("textbox").fill("Unsaved synthetic answer before expiry");
+    await expect.poll(() => saves).toBeGreaterThan(0);
+    if (pendingSubmission)
+      await page.getByRole("button", { name: "Lämna in testet", exact: true }).click();
+    await page.route("**/auth/v1/token**", (r) =>
+      r.fulfill({
+        status: 400,
+        json: { code: "refresh_token_not_found", msg: "Synthetic session expired" },
+      }),
+    );
+    const expiresAt = await page.evaluate(async () => {
+      const path = "/src/integrations/supabase/client.ts";
+      const { supabase } = await import(/* @vite-ignore */ path);
+      return (await supabase.auth.getSession()).data.session!.expires_at!;
+    });
+    // Advance Date beyond the real synthetic session's expiry. A proactive
+    // refresh failure while its access token is valid correctly preserves it.
+    await page.clock.setFixedTime(new Date((expiresAt + 1) * 1000));
+    // The real SDK emits SIGNED_OUT when refresh is rejected. No reload or
+    // storage replacement: this reproduces expiry while the player is mounted.
+    await page.evaluate(async () => {
+      const path = "/src/integrations/supabase/client.ts";
+      const { supabase } = await import(/* @vite-ignore */ path);
+      await supabase.auth.refreshSession();
+    });
+    await expect(page).toHaveURL(/\/login\?redirect=/);
+    await expect(page.locator('input[type="password"]')).toBeVisible();
+    const afterExpiry = saves;
+    const accountB = "00000000-0000-4000-8000-000000000002";
+    await page.route("**/auth/v1/user**", (r) =>
+      r.fulfill({
+        json: {
+          id: accountB,
+          aud: "authenticated",
+          role: "authenticated",
+          email: "synthetic-b@example.test",
+        },
+      }),
+    );
+    const signedInId = await page.evaluate(async (userId) => {
+      const path = "/src/integrations/supabase/client.ts";
+      const { supabase } = await import(/* @vite-ignore */ path);
+      const encode = (v: unknown) =>
+        btoa(JSON.stringify(v)).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+      const token = `${encode({ alg: "HS256", typ: "JWT" })}.${encode({ sub: userId, exp: Math.floor(Date.now() / 1000) + 3600, aud: "authenticated" })}.c3ludGhldGlj`;
+      const { data, error } = await supabase.auth.setSession({
+        access_token: token,
+        refresh_token: "synthetic-b-refresh",
+      });
+      if (error) throw error;
+      return data.user?.id;
+    }, accountB);
+    expect(signedInId).toBe(accountB);
+    releaseSave?.();
+    await page.waitForTimeout(1000);
+    expect(saves).toBe(afterExpiry);
+    expect(submissions).toBe(0);
+    await expect(
+      page.getByText("Unsaved synthetic answer before expiry", { exact: true }),
+    ).toHaveCount(0);
+  });
+}
+
+for (const lang of ["sv", "en"] as const) {
+  for (const mode of ["pause", "back", "hanging"] as const) {
+    const navigation = mode === "back";
+    test(`${lang}: network outage allows explicit leave after ${mode}`, async ({ page }) => {
+      let releaseRequest: (() => void) | undefined;
+      let saveCalls = 0;
+      let offline = false;
+      let savedText = "Previously saved synthetic answer";
+      await mount(page, "hub_active", {
+        lang,
+        path: "/academy",
+        ready: "main h1",
+        overrides: {
+          getLearningFormForModule: ok(null),
+          getAcademyAttemptState: ok({
+            status: "in_progress",
+            isOpen: true,
+            language: lang,
+            minutesMin: 2,
+            minutesMax: 4,
+          }),
+          getAcademyAttemptItems: (r) =>
+            response(r, [
+              {
+                itemVersionId: itemId,
+                displayOrder: 1,
+                blockKey: "reflection",
+                itemFormat: "constructed_response",
+                scenario: "Synthetic scenario",
+                prompt: "Synthetic question",
+                isSafetyCritical: false,
+                options: [],
+                savedOptionId: null,
+                savedBestId: null,
+                savedWorstId: null,
+                savedText,
+              },
+            ]),
+          getAcademyAttemptBlocks: ok([
+            {
+              blockKey: "reflection",
+              name: "Reflection",
+              intro: "Synthetic introduction",
+              asks: "your_own_experience",
+              itemCount: 1,
+            },
+          ]),
+          listAcademyWork: ok([
+            {
+              workId: ATTEMPT_ID,
+              workKind: "assessment",
+              useCase: "recruitment",
+              status: "in_progress",
+              progressDone: 1,
+              progressTotal: 1,
+              titleSv: "Syntetiskt test",
+              titleEn: "Synthetic test",
+            },
+          ]),
+          saveAcademyResponse: async (r) => {
+            saveCalls++;
+            if (offline) {
+              if (mode === "hanging")
+                await new Promise<void>((resolve) => {
+                  releaseRequest = resolve;
+                });
+              await r.abort("failed").catch(() => {});
+              return;
+            }
+            const payload = fromJSON(JSON.parse(r.request().postData()!)) as {
+              data: { responseText: string };
+            };
+            savedText = payload.data.responseText;
+            await response(r, null);
+          },
+        },
+      });
+      const open = () =>
+        page
+          .getByRole("link", {
+            name: lang === "sv" ? "Fortsätt testet" : "Continue the test",
+            exact: true,
+          })
+          .click();
+      const begin = async () => {
+        await page
+          .getByRole("button", {
+            name: lang === "sv" ? "Fortsätt testet" : "Continue the test",
+            exact: true,
+          })
+          .click();
+        await page
+          .getByRole("button", { name: lang === "sv" ? "Fortsätt" : "Continue", exact: true })
+          .click();
+      };
+      await open();
+      await begin();
+      offline = true;
+      await page.getByRole("textbox").fill("Unsaved change during synthetic outage");
+      if (navigation) await page.evaluate(() => history.back());
+      else
+        await page
+          .getByRole("button", {
+            name: lang === "sv" ? "Spara och fortsätt senare" : "Save and continue later",
+            exact: true,
+          })
+          .last()
+          .click();
+      const notice = page.getByTestId("academy-unsaved-exit");
+      const retry = notice.getByRole("button", {
+        name: lang === "sv" ? "Försök spara igen" : "Try saving again",
+        exact: true,
+      });
+      await expect(notice).toContainText(
+        lang === "sv" ? "osparade svar gå förlorade" : "unsaved answers may be lost",
+      );
+      if (mode === "hanging") {
+        await expect.poll(() => saveCalls).toBeGreaterThan(0);
+        await expect(retry).toBeDisabled();
+      } else {
+        await expect(retry).toBeEnabled();
+        const beforeRetry = saveCalls;
+        await retry.click();
+        await expect.poll(() => saveCalls).toBeGreaterThan(beforeRetry);
+        await expect(retry).toBeEnabled();
+      }
+      await expect(page.getByRole("textbox")).toHaveValue("Unsaved change during synthetic outage");
+      await notice
+        .getByRole("button", {
+          name: lang === "sv" ? "Lämna utan att spara" : "Leave without saving",
+          exact: true,
+        })
+        .click();
+      await expect(page).toHaveURL(/\/academy$/);
+      releaseRequest?.();
+      expect(savedText).toBe("Previously saved synthetic answer");
+      offline = false;
+      await open();
+      await begin();
+      await expect(page.getByRole("textbox")).toHaveValue("Previously saved synthetic answer");
+    });
+  }
+}
