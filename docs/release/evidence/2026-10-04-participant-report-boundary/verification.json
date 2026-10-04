@@ -1,0 +1,11 @@
+{
+  "base": "ce3d93d",
+  "production_changed": false,
+  "sql_assertions_per_run": 21,
+  "existing_employer_matrix_assertions": 63,
+  "independent_negative_controls": 5,
+  "http_assertions": 30,
+  "application_fixture_checks": 170,
+  "employer_application_checks": 42,
+  "final_ci": "Reported against exact head SHA in PR; not implied by this pre-commit evidence."
+}

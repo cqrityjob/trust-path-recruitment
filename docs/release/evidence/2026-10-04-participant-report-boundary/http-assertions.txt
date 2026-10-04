@@ -1,0 +1,30 @@
+ok HTTP employer and issuer retain nonempty access
+ok HTTP scp_participant_report blocks workforce
+ok HTTP scp_subject_progress blocks workforce
+ok HTTP scp_development_recommendations blocks workforce
+ok HTTP scp_participant_report preserves candidate
+ok HTTP scp_participant_report denies other candidate
+ok HTTP scp_participant_report denies anon
+ok HTTP scp_subject_progress preserves candidate
+ok HTTP scp_subject_progress denies other candidate
+ok HTTP scp_subject_progress denies anon
+ok HTTP scp_development_recommendations preserves candidate
+ok HTTP scp_development_recommendations denies other candidate
+ok HTTP scp_development_recommendations denies anon
+ok HTTP direct snapshot table denied
+ok HTTP direct funnel RPC denied
+ok HTTP test feedback preserved
+ok HTTP direct funnel RPC denied
+ok HTTP test feedback preserved
+ok HTTP direct RLS with SELECT still denies workforce
+ok HTTP direct RLS preserves candidate
+ok HTTP rollback preserves all report/evidence/funnel/feedback rows
+ok HTTP OLD ACCESS REPRODUCED scp_participant_report
+ok HTTP OLD ACCESS REPRODUCED scp_subject_progress
+ok HTTP OLD ACCESS REPRODUCED scp_development_recommendations
+ok HTTP OLD ACCESS REPRODUCED client funnel write
+ok HTTP migration preserves all report/evidence/funnel/feedback rows
+ok HTTP migration/rollback preserves employer and issuer payloads
+ok HTTP reapply closes workforce report
+ok HTTP empty unknown history withholds recommendations
+ok HTTP mixed history preserves candidate report

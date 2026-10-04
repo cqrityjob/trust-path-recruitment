@@ -7,6 +7,14 @@
   "$comment": "RELEASE PARITY STATE. Enforced by scripts/release-parity-check.ts, which runs in CI and before a release. This file records, for every canonical migration at the release frontier, whether it is believed applied on the hosted database, and which database objects it introduces. The guard fails when application code on this branch references an object whose migration is not applied -- the exact class of failure that stopped employers saving jobs during UAT. It NEVER connects to a database, holds no credentials and applies no migration; it compares this repository against itself. Edit it deliberately: every entry is an owner-level statement about production.", 
   "frontier": [
     {
+      "file": "20270216090000_participant_report_api_boundary.sql",
+      "hostedState": "pending",
+      "introduces": [],
+      "rollback": "supabase/rollback/20270216090000_participant_report_api_boundary_rollback.sql",
+      "verify": "Compare the three participant RPC definitions and candidate-only snapshot policy with the reviewed migration; confirm anon/authenticated cannot execute cd_record_funnel_event(text,jsonb,uuid), service_role still can, and test-feedback privileges are unchanged. See docs/release/2026-10-04-participant-report-api-boundary.md for preflight and postflight.",
+      "note": "Owner decision after #428: close employee development report, progression and recommendation access through direct RPC/RLS, and revoke client funnel writes. Changes existing functions/policy/privileges only; introduces no new object and rewrites no data. Read-only production preflight confirms the old access is still installed. Local SQL and direct HTTP tests prove migration, old-access negative controls, rollback/reapply and historical-row preservation. Production application requires explicit owner approval; rollback reopens the launch blocker. Do not mark applied or change hosted history until the approved migration and postflight succeed."
+    },
+    {
       "file": "20261004164027_application_passport_verified_content_guard.sql",
       "hostedState": "applied",
       "hostedVersion": "20261004164027",
