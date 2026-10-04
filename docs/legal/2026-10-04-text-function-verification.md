@@ -107,6 +107,13 @@ användarnas egna testkörningar och hör till kontots lagringstid, inte till de
 | H1 | Villkoren gäller från 2026-10-01 | `TERMS.date` är orörd. Ett utkast registreras som `2026-10-01-utkast`. Vid godkännande sätts datumet och alla konton godkänner igen | `launch-legal:check` 1.5 och 5.x | ✔ |
 | H2 | Dokumenten är utkast tills två saker är sanna | `OWNER_APPROVED` är `false`. Policyn blir dessutom inte slutgiltig förrän varje gallringsrad har en verifierad rutin (`RETENTION_READY`) | `launch-legal:check` 5.1 och 6.4 | ✔ |
 
+## I. Påståenden i ägarens text som inte motsvaras av en funktion i dag
+
+| ID | Text | Funktion eller underlag | Så kontrolleras det | Läge |
+|---|---|---|---|---|
+| I1 | Policy §4: "Frivilliga nyhetsbrev och samtyckeskrävande spårning" med samtycke som grund | Produkten har inga nyhetsbrev och ingen spårning (inga skript, inget marknadssamtycke, `launch-legal:check` 3.6). Raden beskriver en behandling som inte finns | Ägaren avgör om raden ska stå kvar som framtida behandling eller tas bort. Texten är inte ändrad | ◐ |
+| I2 | Villkor §10: pris och villkor ska framgå före köp av en betaltjänst | Inga betaltjänster finns i version 1 (B4). Påståendet gäller framtiden | – | ✔ |
+
 ## Bilaga: skrivskyddade frågor (kör mot produktion)
 
 ```sql
