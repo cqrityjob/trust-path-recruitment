@@ -19,6 +19,8 @@ Real production principals (all 9 active members), as role `authenticated` with 
 | 2 members with a live reviewer grant | read exactly the granted use case (`recruitment`), not the organisation-wide gate |
 | **the 1 ordinary member without a grant** | member, **no readable use case, no organisation-wide read** |
 
+The ordinary member without a grant is also a platform administrator (a separate role that does not add a report reading right in an organisation). That is why this person is not a candidate for the browser step below.
+
 The one thing an owner cannot read is an interview case whose subject is that owner (2 such cases), which is rule 2 of
 `employer_reports_readable`: a person never reads the employer-audience record about themselves through membership.
 An ordinary member still reads the interview cases they created (5), as designed.

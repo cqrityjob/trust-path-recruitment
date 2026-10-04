@@ -40,6 +40,11 @@ This author did not observe the publication or the edge-log lines; they are the 
   refused (`permission denied`); the platform administrator reads the 1 row; an authorised case reader gets the two flags through
   `scp_iv_case_capabilities` (both `false`: AI and transcripts are off) without any direct read; an unrelated signed-in user gets
   `INTERVIEW_CASE_NOT_FOUND` (42501).
+- **A real non-admin reader on the scoped path:** a real organisation member who is not a platform administrator and holds a
+  live scoped reviewer grant reads a case it did not create and gets the two flags (both `false`) through
+  `scp_iv_case_capabilities` while reading **0 rows** of `scp_interview_ai_config` directly (the test organisation has only its
+  owner as member, so this was read in another organisation; counts and booleans only, rolled back; see
+  `evidence/2026-10-04-access-probes/`, probe 4). The three people who created interview cases are all platform administrators.
 - **Row untouched:** the configuration row is unchanged (`updated_at` 2026-08-28), 1 row.
 
 ## Not done, and why

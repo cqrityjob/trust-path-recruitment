@@ -43,6 +43,23 @@ Nothing else is hidden from an owner or admin.
 8  D grant revoked by the suspension                         true
 9  D suspended person: member / owner_admin / use_cases / readable   false / false /  / false
 
+== PROBE 4 (after contract 20270207090000): REAL non-admin readers use the scoped flag path ==
+member 1: platform_admin=false  live_reviewer_grant=true   org_cases=1
+   -> reads a case it did not create (true): capabilities (ai, transcript) = false, false   / direct config rows = 0
+member 2: platform_admin=true   live_reviewer_grant=false  org_cases=5
+   -> reads 5 cases it created (label false): capabilities = false, false (x5)  / direct config rows = 1
+member 3: platform_admin=false  live_reviewer_grant=true   org_cases=0   (no case to read)
+
+Reading: a real organisation member who is NOT a platform administrator and holds a live scoped reviewer grant reads a case
+and gets both runtime flags through scp_iv_case_capabilities, while reading 0 rows of scp_interview_ai_config directly: the
+scoped path works without any direct configuration read, and the table is closed to a non-admin. A platform administrator
+still reads the 1 configuration row.
+
+Note on the people in PROBE 1/2: the three people who created interview cases (two owners and the one member whose 5 cases
+are listed above) are all platform administrators, so no ordinary non-admin has created a case in production. The "ordinary
+member without a grant" of PROBE 1 (no. 7) is that member: not a reviewer, no readable use case for reports, and
+separately a platform administrator.
+
 == AFTER ==
 synthetic_users_left 0, synthetic_memberships_left 0, synthetic_requests_left 0, synthetic_grants_left 0,
 synthetic_profiles_left 0, memberships_total 9, ledger rows 368 (unchanged).

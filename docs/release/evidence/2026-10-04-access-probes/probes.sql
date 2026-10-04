@@ -140,6 +140,48 @@ END $$;
 SELECT n, step, result FROM res ORDER BY n;
 ROLLBACK;
 
+-- ===== PROBE 4 (contract 20270207090000): the scoped flag path for REAL non-admin readers =====
+-- For every active ordinary member: is the person a platform administrator, does the person hold a live reviewer grant, and for
+-- every case in the own organisation the person may read: scp_iv_case_capabilities (the two flags) and how many rows of
+-- scp_interview_ai_config the person can read directly (the contract makes that 0 for a non-admin).
+BEGIN;
+SET LOCAL statement_timeout = '30s';
+CREATE TEMP TABLE res(n int, probe text, result text);
+GRANT ALL ON res TO authenticated;
+CREATE TEMP TABLE pm AS
+  SELECT row_number() OVER (ORDER BY em.created_at, em.user_id) AS k, em.user_id, em.employer_id, em.role,
+         public.is_platform_admin(em.user_id) AS is_pa,
+         EXISTS (SELECT 1 FROM public.scp_employer_reviewers rv WHERE rv.employer_id = em.employer_id
+                   AND rv.user_id = em.user_id AND rv.revoked_at IS NULL) AS grant_live
+    FROM public.employer_memberships em WHERE em.status = 'active' AND em.role = 'member';
+CREATE TEMP TABLE pc AS SELECT c.id AS case_id, c.employer_id, c.created_by FROM public.scp_interview_cases c;
+GRANT SELECT ON pm TO authenticated; GRANT SELECT ON pc TO authenticated;
+DO $$
+DECLARE m record; k record; cap record; msg text; st text; can boolean; c1 bigint;
+BEGIN
+  FOR m IN SELECT * FROM pm ORDER BY k LOOP
+    SELECT count(*) INTO c1 FROM pc WHERE employer_id = m.employer_id;
+    INSERT INTO res VALUES (m.k::int*10, 'member '||m.k||': platform_admin='||m.is_pa::text||' live_reviewer_grant='||m.grant_live::text||' org_cases='||c1::text, '');
+    FOR k IN SELECT * FROM pc WHERE employer_id = m.employer_id LOOP
+      PERFORM set_config('request.jwt.claim.sub', m.user_id::text, true); SET LOCAL ROLE authenticated;
+      SELECT public.scp_iv_can_read_case(k.case_id) INTO can;
+      IF can THEN
+        BEGIN
+          SELECT * INTO cap FROM public.scp_iv_case_capabilities(k.case_id);
+          SELECT count(*) INTO c1 FROM public.scp_interview_ai_config;
+          RESET ROLE;
+          INSERT INTO res VALUES (m.k::int*10 + 1, '   -> reads a case it did not create ('||(k.created_by IS DISTINCT FROM m.user_id)::text||'): capabilities (ai, transcript) / direct config rows',
+                                  cap.ai_enabled::text||', '||cap.transcript_enabled::text||' / '||c1::text);
+        EXCEPTION WHEN OTHERS THEN RESET ROLE; GET STACKED DIAGNOSTICS msg = MESSAGE_TEXT, st = RETURNED_SQLSTATE;
+          INSERT INTO res VALUES (m.k::int*10 + 1, '   -> can read but capabilities failed', left(msg,40)||' / '||st);
+        END;
+      ELSE RESET ROLE; END IF;
+    END LOOP;
+  END LOOP;
+END $$;
+SELECT n, probe, result FROM res ORDER BY n;
+ROLLBACK;
+
 -- ===== AFTER: nothing left behind =====
 SELECT (SELECT count(*) FROM auth.users WHERE email LIKE '%@synthetic.invalid') AS synthetic_users_left,
        (SELECT count(*) FROM public.employer_memberships WHERE user_id::text LIKE 'e5150000-%') AS synthetic_memberships_left,
