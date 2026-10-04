@@ -1,0 +1,225 @@
+PASS HTTP raw scenarios anon
+PASS HTTP published scenarios anon
+PASS HTTP configuration anon expand
+PASS HTTP case capability anon {"status":401,"body":{"code":"42501","details":null,"hint":null,"message":"permission denied for function scp_iv_case_capabilities"}}
+PASS HTTP configuration write denied anon
+PASS HTTP scenario mutation denied anon
+PASS HTTP raw scenarios candidate
+PASS HTTP published scenarios candidate
+PASS HTTP configuration candidate expand
+PASS HTTP case capability candidate {"status":403,"body":{"code":"42501","details":null,"hint":null,"message":"INTERVIEW_CASE_NOT_FOUND"}}
+PASS HTTP configuration write denied candidate
+PASS HTTP scenario mutation denied candidate
+PASS HTTP raw scenarios reviewer
+PASS HTTP published scenarios reviewer
+PASS HTTP configuration reviewer expand
+PASS HTTP case capability reviewer {"status":200,"body":[{"ai_enabled":true,"transcript_enabled":true}]}
+PASS HTTP configuration write denied reviewer
+PASS HTTP scenario mutation denied reviewer
+PASS HTTP raw scenarios colleague
+PASS HTTP published scenarios colleague
+PASS HTTP configuration colleague expand
+PASS HTTP case capability colleague {"status":403,"body":{"code":"42501","details":null,"hint":null,"message":"INTERVIEW_CASE_NOT_FOUND"}}
+PASS HTTP configuration write denied colleague
+PASS HTTP scenario mutation denied colleague
+PASS HTTP raw scenarios removed
+PASS HTTP published scenarios removed
+PASS HTTP configuration removed expand
+PASS HTTP case capability removed {"status":403,"body":{"code":"42501","details":null,"hint":null,"message":"INTERVIEW_CASE_NOT_FOUND"}}
+PASS HTTP configuration write denied removed
+PASS HTTP scenario mutation denied removed
+PASS HTTP raw scenarios suspended
+PASS HTTP published scenarios suspended
+PASS HTTP configuration suspended expand
+PASS HTTP case capability suspended {"status":403,"body":{"code":"42501","details":null,"hint":null,"message":"INTERVIEW_CASE_NOT_FOUND"}}
+PASS HTTP configuration write denied suspended
+PASS HTTP scenario mutation denied suspended
+PASS HTTP raw scenarios companyB
+PASS HTTP published scenarios companyB
+PASS HTTP configuration companyB expand
+PASS HTTP case capability companyB {"status":403,"body":{"code":"42501","details":null,"hint":null,"message":"INTERVIEW_CASE_NOT_FOUND"}}
+PASS HTTP configuration write denied companyB
+PASS HTTP scenario mutation denied companyB
+PASS HTTP raw scenarios admin
+PASS HTTP published scenarios admin
+PASS HTTP configuration admin expand
+PASS HTTP case capability admin {"status":403,"body":{"code":"42501","details":null,"hint":null,"message":"INTERVIEW_CASE_NOT_FOUND"}}
+PASS HTTP configuration write denied admin
+PASS HTTP scenario mutation denied admin
+PASS HTTP raw scenarios author
+PASS HTTP published scenarios author
+PASS HTTP configuration author expand
+PASS HTTP case capability author {"status":403,"body":{"code":"42501","details":null,"hint":null,"message":"INTERVIEW_CASE_NOT_FOUND"}}
+PASS HTTP configuration write denied author
+PASS HTTP scenario mutation denied author
+PASS HTTP authorised case reader gets only flags 01
+PASS HTTP authorised case reader gets only flags 03
+PASS HTTP authorised case reader gets only flags 12
+PASS HTTP authorised case reader gets only flags 13
+PASS HTTP authorised case reader gets only flags 0e
+PASS HTTP missing case denied
+PASS HTTP missing case denied
+PASS HTTP candidate raw assessment bank denied scp_item_options
+PASS HTTP candidate raw assessment bank denied scp_item_texts
+PASS HTTP candidate raw assessment bank denied scp_rubric_versions
+PASS HTTP candidate raw assessment bank denied scp_rubric_dimensions
+PASS HTTP candidate intended test delivery
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP delivery excludes option key, score and rationale
+PASS HTTP foreign attempt delivery denied
+PASS HTTP foreign attempt delivery denied
+PASS HTTP foreign attempt delivery denied
+PASS HTTP foreign attempt delivery denied
+interview-access-http: 224 assertions passed (expand)
