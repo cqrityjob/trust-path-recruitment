@@ -94,6 +94,7 @@ export const Route = createFileRoute("/")({
           slogan: "Where trust comes first.",
           description: SV["brand.description"],
           url: PRODUCTION_ORIGIN,
+          logo: `${PRODUCTION_ORIGIN}/brand/cqrityjob-logo.png`,
         }),
       },
     ],

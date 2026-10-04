@@ -44,7 +44,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: appCss,
       },
-      { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      { rel: "icon", href: "/favicon.ico?v=cq-logo", type: "image/x-icon" },
+      { rel: "icon", href: "/favicon-32.png", type: "image/png", sizes: "32x32" },
+      { rel: "icon", href: "/favicon.svg", type: "image/svg+xml", sizes: "any" },
+      { rel: "apple-touch-icon", href: "/apple-touch-icon.png", sizes: "180x180" },
       // NO THIRD-PARTY FONT FETCH.
       //
       // Sora and Manrope are served from this origin -- see the @font-face
