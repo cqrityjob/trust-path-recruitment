@@ -220,18 +220,17 @@ omdirigera den gamla värden (L1) **sist** (se `2026-10-03-www-domain-cutover.md
 ### Steg 4b — Astras åtkomstfixar för intervjuer (#404 → #405 → #406)
 
 Tre separata releaser i fast ordning (se `docs/security/interview-access/README.md`): **expand** (#404,
-`20270206090000`), **appen** (#405, läser flaggorna via `scp_iv_case_capabilities`; ska mergas, **publiceras och
-verifieras**, inte bara mergas) och först därefter **kontraktet** (#406, `20270207090000`, begränsar hela
-konfigurationsraden till plattformsadministratörer; att merga det applicerar det automatiskt).
-**Utfall 2026-10-03:** #404 mergad (`dae5c004`, 21:10 UTC) och `20270206090000` applicerad. Verifierat skrivskyddat av två
-oberoende läsare (Astra 21:11 UTC, registrerat i `main` av #405; en andra läsning ~21:20 UTC med samma värden):
-ledgern har 368 rader, digest `c086806d9fb5f0c92609678f037b73ba` (de första 367 oförändrade); båda funktionskropparna lika
-med en strikt lokal replay; `anon` saknar `EXECUTE`; `scp_scenario_versions_read` är begränsad till `scp_can_author`.
-Den gamla konfigurationsläsningen är medvetet kvar tills kontraktet. #405 är mergad (`4736e310`, 21:34 UTC) och enligt
-driftsessionen publicerad i Lovable 22:05 UTC (deployment `5d49df0e`), men **inte verifierad i den körande appen** (det kräver
-ett öppnat intervjuärende och `rpc/scp_iv_case_capabilities` 200 i API-loggarna); #406 är inte mergad och inte applicerad. Evidens:
-`2026-10-03-interview-access-expand-hosted-verification.md` (andra läsningen) och
-`../security/interview-access/expand-hosted-verification.md` (första).
+`20270206090000`), **appen** (#405, läser flaggorna via `scp_iv_case_capabilities`; mergas, **publiceras och
+verifieras**) och först därefter **kontraktet** (#406, `20270207090000`, begränsar hela konfigurationsraden till
+plattformsadministratörer; att merga det applicerar det automatiskt).
+**Utfall 2026-10-04:** alla tre är klara. #404 (`dae5c004`, 20270206 applicerad), #405 (`4736e310`; enligt driftsessionen publicerad
+i Lovable 22:05 UTC och verifierad i den körande appen 05:58–05:59 UTC: två `rpc/scp_iv_case_capabilities` 200 i API-loggarna, ingen
+klientläsning av konfigurationstabellen) och #406 (`e022ec52`, 20270207 applicerad efter min oberoende granskning). Ledgern har 369 rader,
+digest `01357df572629d745e667d2fedb20ba1` (de första 368 oförändrade); `scp_interview_ai_config_read` är begränsad till
+`is_platform_admin(auth.uid())`; behörigheterna är oförändrade (authenticated bara `SELECT`, ingen klientskrivning); en inloggad
+utan roll läser 0 rader, anon nekas, plattformsadmin läser raden. Evidens: `2026-10-03-interview-access-expand-hosted-verification.md`,
+`../security/interview-access/expand-hosted-verification.md` och `2026-10-04-interview-config-contract-hosted-verification.md`.
+Åtkomstproven för steg 11 och 15 på databasnivå: `2026-10-04-access-probes-steps-11-15.md`.
 
 ## 5. Vad som återstår som blockerar publik lansering
 
