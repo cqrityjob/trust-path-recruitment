@@ -46,7 +46,7 @@ const MUTATIONS: readonly Mutation[] = [
     id: "PCF-NC-SEARCH-IGNORES-ABBREVIATION",
     defect: "the search stops reading the governed abbreviation, so 'CPP' finds nothing",
     file: MODEL,
-    find: '          abbreviationOf.get(d.code) ?? "",\n',
+    find: '          abbreviation ?? "",\n',
     replace: "",
     guard: GUARD,
     expect: "7 an abbreviation finds its certification",

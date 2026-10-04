@@ -576,8 +576,15 @@ console.log("\nwhy a definition is, or is not, selectable (the administrator's d
     "D closing the market again closes its public-pilot definitions",
   );
   check(
-    diagnoseDefinition({ ...publicPilot, deprecated: true }).availability === "blocked",
+    diagnoseDefinition({ ...publicPilot, governedAuthority: null }).availability === "blocked",
     "D a public pilot does not unblock a structural gap",
+  );
+  // A deprecated or end-dated definition is RETIRED (20270212090000 era): not a
+  // gap approval could close, and never selectable again whatever the pilot says.
+  check(
+    diagnoseDefinition({ ...publicPilot, deprecated: true }).availability === "retired" &&
+      diagnoseDefinition({ ...publicPilot, retired: true }).availability === "retired",
+    "D a public pilot does not make a deprecated or retired definition selectable: it is retired",
   );
   check(
     diagnoseDefinition({ ...publicPilot, legalReviewState: "pending" }).availability ===

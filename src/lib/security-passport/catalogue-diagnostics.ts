@@ -47,6 +47,9 @@ export type DiagnosticReason =
   /** No governed issuer and no document-stated issuer under a governed regulator. */
   | "issuer_unresolved"
   | "deprecated"
+  /** The definition's own retirement date has passed
+   *  (`sp_certification_definitions.retired_on`). Existing claims keep it. */
+  | "retired"
   | "jurisdiction_inactive"
   /** No source-backed review row: no professional area, no recorded source. */
   | "source_review_missing"
@@ -65,6 +68,9 @@ export type CatalogueAvailability =
   | "awaiting_definition_approval"
   /** The market is closed by owner decision. */
   | "market_closed"
+  /** Withdrawn for new registrations: deprecated or past its end date. Holders
+   *  who already registered it keep it; nobody can register it again. */
+  | "retired"
   /** Something governed is missing; approval alone would not make it selectable. */
   | "blocked";
 
@@ -83,6 +89,8 @@ export interface DiagnosticDefinition {
   readonly legalReviewState: string | null;
   readonly requiresScope: boolean;
   readonly deprecated: boolean;
+  /** Past its own end date (see the `retired` reason). Absent means not retired. */
+  readonly retired?: boolean;
   /** `sp_credential_types.authority_id` resolves to an ACTIVE authority. */
   readonly governedAuthority: string | null;
   /** The certification definition's ACTIVE issuer (international). */
@@ -151,6 +159,7 @@ export function diagnoseDefinition(d: DiagnosticDefinition): DefinitionDiagnosis
       : d.governedAuthority !== null || (d.issuerStatedOnDocument && d.regulator !== null);
   if (!issuerResolved) reasons.push("issuer_unresolved");
   if (d.deprecated) reasons.push("deprecated");
+  if (d.retired) reasons.push("retired");
   if (!global && !d.jurisdictionActive) reasons.push("jurisdiction_inactive");
   if (!d.review) reasons.push("source_review_missing");
   if (nationalQualification) reasons.push("national_qualification_no_market");
@@ -186,17 +195,22 @@ export function diagnoseDefinition(d: DiagnosticDefinition): DefinitionDiagnosis
   );
   // A CLOSED market is the decisive answer: nothing else about the definition
   // matters until the owner opens it, so it outranks a structural gap.
-  const availability: CatalogueAvailability = reasons.includes("market_closed")
-    ? "market_closed"
-    : structural
-      ? "blocked"
-      : pilotRoute || (d.isActive && marketPilot)
-        ? "selectable_pilot_members"
-        : publicPilotRoute || (d.isActive && marketPublicPilot)
-          ? "selectable_public_pilot"
-          : !d.isActive
-            ? "awaiting_definition_approval"
-            : "selectable";
+  // A RETIRED definition is the most decisive answer of all: nothing else about
+  // it matters, because nobody can register it again.
+  const availability: CatalogueAvailability =
+    reasons.includes("retired") || reasons.includes("deprecated")
+      ? "retired"
+      : reasons.includes("market_closed")
+        ? "market_closed"
+        : structural
+          ? "blocked"
+          : pilotRoute || (d.isActive && marketPilot)
+            ? "selectable_pilot_members"
+            : publicPilotRoute || (d.isActive && marketPublicPilot)
+              ? "selectable_public_pilot"
+              : !d.isActive
+                ? "awaiting_definition_approval"
+                : "selectable";
 
   const holderMustState: ("authorisation_scope" | "issuer_name")[] = [];
   if (d.requiresScope) holderMustState.push("authorisation_scope");

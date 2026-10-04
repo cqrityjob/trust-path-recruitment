@@ -2,6 +2,7 @@
  * is independently exercised by the local PostgreSQL/RLS suites. */
 import { test, expect, type Page } from "@playwright/test";
 import { personaById } from "../src/lib/security-passport/fixtures/personas";
+import { chooseCredential, searchBox } from "./support/credential-picker";
 import {
   installBoundary,
   assertNoRefusals,
@@ -112,6 +113,13 @@ async function mount(page: Page, path: string, lang: "sv" | "en" = "en", empty =
       types: [],
     },
     listPassportMarketOverview: { markets: [], current: null },
+    // The wizard asks these on its own: which document links HAYAT may read, what the
+    // research knows of for a search, and the holder's own catalogue requests.
+    getHayatAvailability: { linkSources: [] },
+    searchUnavailableDefinitions: [],
+    listMyCatalogueRequests: [],
+    // The saved entry's own HAYAT card: no automatic check has been made.
+    getSavedAssessment: null,
   };
   const refusals = await installBoundary(page, table);
   const storageKey = await observeSupabaseStorageKey(page);
@@ -157,22 +165,25 @@ test("closed catalogue selects approved definitions and never accepts custom met
 }) => {
   test.setTimeout(60_000);
   const refusals = await mount(page, "/passport/credentials/new");
-  await page.getByRole("button", { name: "Continue", exact: true }).click();
-  await page.getByRole("button", { name: "Continue", exact: true }).click();
-  await page.getByLabel("Search catalogue").fill("ASIS");
-  const selector = page.getByLabel("Approved credential");
-  await expect(selector.locator("option")).toHaveCount(4);
-  await selector.selectOption("INTL_ASIS_CPP");
-  await page.getByRole("button", { name: "Continue", exact: true }).click();
+  // One screen: the three ASIS awards are listed, each named by abbreviation, full
+  // name and awarding organisation, and the abbreviation alone finds one.
+  await searchBox(page).fill("ASIS");
+  await expect(page.locator("[data-result]")).toHaveCount(3);
+  await expect(page.locator('[data-result][data-credential-code="INTL_ASIS_CPP"]')).toContainText(
+    "ASIS International",
+  );
+  await chooseCredential(page, "INTL_ASIS_CPP");
   await expect(page.getByLabel("Credential identifier (optional)")).toBeVisible();
   await expect(page.getByLabel("Original credential name", { exact: true })).toHaveCount(0);
   await expect(page.getByLabel("Issuer (self-reported)", { exact: true })).toHaveCount(0);
   await expect(page.getByRole("checkbox")).toHaveCount(0);
   await page.getByRole("button", { name: "Back", exact: true }).click();
-  await page.getByLabel("Search catalogue").fill("Unlisted custom credential");
-  await expect(page.getByRole("status")).toHaveText(
+  await page.getByRole("button", { name: "Clear selection", exact: true }).click();
+  await searchBox(page).fill("Unlisted custom credential");
+  await expect(page.locator("[data-catalogue-empty]")).toHaveText(
     "Your credential is not currently available in CQrityjob Security Passport.",
   );
+  await expect(page.locator("[data-result]")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Continue", exact: true })).toBeDisabled();
   expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
   assertNoRefusals(refusals);
@@ -344,10 +355,7 @@ test("international add, correction successor and archive remain reachable", asy
     return route.fallback();
   });
 
-  await page.getByRole("button", { name: "Continue", exact: true }).click();
-  await page.getByRole("button", { name: "Continue", exact: true }).click();
-  await page.getByLabel("Approved credential").selectOption("INTL_ASIS_CPP");
-  await page.getByRole("button", { name: "Continue", exact: true }).click();
+  await chooseCredential(page, "INTL_ASIS_CPP");
   await page.getByLabel("Credential identifier (optional)").fill("ORIGINAL-1");
   await page.getByRole("button", { name: "Continue", exact: true }).click();
   await page.getByRole("button", { name: "Save credential", exact: true }).click();
@@ -403,10 +411,7 @@ test("failed evidence attachment retries without creating a duplicate credential
     }
     return route.fallback();
   });
-  await page.getByRole("button", { name: "Continue", exact: true }).click();
-  await page.getByRole("button", { name: "Continue", exact: true }).click();
-  await page.getByLabel("Approved credential").selectOption("INTL_ASIS_CPP");
-  await page.getByRole("button", { name: "Continue", exact: true }).click();
+  await chooseCredential(page, "INTL_ASIS_CPP");
   await page.locator('input[type="file"]').setInputFiles({
     name: "synthetic.pdf",
     mimeType: "application/pdf",

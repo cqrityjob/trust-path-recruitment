@@ -49,6 +49,7 @@
 // in which any of these was skipped, and uploads the screenshots.
 
 import { createHash, randomUUID } from "node:crypto";
+import { chooseCredential } from "./support/credential-picker";
 import { execFileSync } from "node:child_process";
 import { mkdirSync, readFileSync } from "node:fs";
 import path from "node:path";
@@ -486,8 +487,7 @@ test.describe("the public pilot, on a real backend", () => {
       timeout: 60_000,
     });
     await evidence(page, "sv-register-passport-created");
-    await page.getByRole("radio", { name: /^Nationellt eller regionalt/ }).check();
-    await next(page);
+    await page.getByRole("radio", { name: /^Nationella eller regionala/ }).check();
     // Every market is offered to this new account, which holds no grant.
     const country = page.locator('select[data-filter="country"]');
     await expect(country.locator("option")).toHaveText([
@@ -500,11 +500,7 @@ test.describe("the public pilot, on a real backend", () => {
     await country.selectOption("AE");
     await page.locator('select[data-filter="region"]').selectOption("AE-DU");
     await evidence(page, "sv-register-market-choice");
-    await next(page);
-    await page
-      .getByRole("combobox", { name: "Godkänd merit", exact: true })
-      .selectOption("AE_DU_SIRA_CARD_GUARD");
-    await next(page);
+    await chooseCredential(page, "AE_DU_SIRA_CARD_GUARD", { lang: "sv" });
     await fillAndSave(page, dubaiCard, "sv-register-dubai-details");
 
     // Where they work, stated on the profile: Dubai's public pilot is then

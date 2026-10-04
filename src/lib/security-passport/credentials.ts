@@ -24,6 +24,7 @@
 // user-facing text — so it has to come from the copy module like everything
 // else, and be resolved at render time in the reader's language.
 
+import { RESEARCH_CREDENTIAL_MARKS } from "./catalogue-research-marks";
 import { GLOBAL_CERTIFICATION_TERRITORY, isGlobalCertification } from "./certification-scope";
 import { isCalendarDate, isFutureDate } from "./dates";
 import type { PassportCopyKey } from "./i18n";
@@ -212,7 +213,10 @@ const CREDENTIAL_MARKS: Readonly<Record<string, string>> = {
 
 export function credentialMark(code: string | null | undefined): string | null {
   if (!code) return null;
-  return CREDENTIAL_MARKS[code] ?? null;
+  // The research import's marks are GENERATED from the same reviewed decisions as
+  // the migration that seeds them (scripts/passport-catalogue-research-check.ts
+  // pins the two together), so this stays the one place a code becomes a mark.
+  return CREDENTIAL_MARKS[code] ?? RESEARCH_CREDENTIAL_MARKS[code] ?? null;
 }
 
 /** Whether the definition owns this credential's title rather than the holder.

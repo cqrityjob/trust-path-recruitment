@@ -359,7 +359,9 @@ function meritOfClaim(claim: Claim, review: ReviewState, now: Date): WorkspaceMe
     id: claim.id,
     titleSv: claim.titleSv,
     titleEn: claim.titleEn,
-    typeKey: CLAIM_TYPE_KEYS[claim.claimType],
+    // A claim type this build does not know (a migration ahead of the code) is
+    // named generically; the credential, its trust level and its dates still render.
+    typeKey: CLAIM_TYPE_KEYS[claim.claimType] ?? "claims.type.other",
     organisation: statedOrNull(claim.issuerName),
     dateKind: "validity",
     from: claim.issuedOn,

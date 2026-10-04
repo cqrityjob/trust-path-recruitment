@@ -629,6 +629,8 @@ const sv = {
   "claims.type.specialisation": "Specialisering",
   "claims.type.education": "Utbildning",
   "claims.type.professional_membership": "Yrkesmedlemskap",
+  // A credential type this build does not know yet: named generically, never blank.
+  "claims.type.other": "Annan merit",
   "claims.issuer": "Utfärdare",
   // The weakest true label: a credential's decider on the Passport card, and
   // the fallback for an approval with no recorded method -- both a review,
@@ -3052,6 +3054,7 @@ const en: Record<PassportCopyKey, string> = {
   "claims.type.specialisation": "Specialisation",
   "claims.type.education": "Education",
   "claims.type.professional_membership": "Professional membership",
+  "claims.type.other": "Other credential",
   "claims.issuer": "Issuer",
   "claims.verifier": "Reviewed by",
   "claims.attribution.document_review": "Document reviewed by",

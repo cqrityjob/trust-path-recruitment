@@ -11,6 +11,7 @@
  * (valid_until strictly after issued_on) is exercised by the SQL suites. */
 import { test, expect, type Page } from "@playwright/test";
 import { personaById } from "../src/lib/security-passport/fixtures/personas";
+import { chooseCredential } from "./support/credential-picker";
 import {
   installBoundary,
   assertNoRefusals,
@@ -59,7 +60,6 @@ const copy = {
   sv: {
     continue: "Fortsätt",
     back: "Tillbaka",
-    approved: "Godkänd merit",
     issued: "Utfärdad",
     validUntil: "Giltig till",
     review: "Granska och spara",
@@ -69,7 +69,6 @@ const copy = {
   en: {
     continue: "Continue",
     back: "Back",
-    approved: "Approved credential",
     issued: "Issued",
     validUntil: "Valid until",
     review: "Review & save",
@@ -102,10 +101,7 @@ async function openDetailsStep(page: Page, lang: "sv" | "en") {
   const t = copy[lang];
   const next = () => page.getByRole("button", { name: t.continue, exact: true }).click();
   await expect(page.locator("[data-international-credential-form]")).toBeVisible();
-  await next();
-  await next();
-  await page.getByLabel(t.approved).selectOption("INTL_ASIS_CPP");
-  await next();
+  await chooseCredential(page, "INTL_ASIS_CPP", { lang });
   await expect(page.getByRole("heading", { name: t.details })).toBeVisible();
   await expect(page.getByPlaceholder(t.placeholder)).toHaveCount(2);
   return { refusals, next, t };
