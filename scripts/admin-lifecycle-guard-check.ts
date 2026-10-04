@@ -44,11 +44,16 @@ const lifecycleMigration = read(
 const deletionMigration = read(
   "supabase/migrations/20260917090000_superadmin_permanent_account_deletion.sql",
 );
+// 2026-10-04 replaced admin_delete_user_if_safe once more, to remove the
+// person's credential metadata and document readings first. Newest first.
+const erasureDependentsMigration = read(
+  "supabase/migrations/20270208090000_account_erasure_credential_details.sql",
+);
 const migration = lifecycleMigration;
 
 /** The live definition of a function: from the newest migration that has one. */
 function definitionOf(fn: string): string {
-  for (const source of [deletionMigration, lifecycleMigration]) {
+  for (const source of [erasureDependentsMigration, deletionMigration, lifecycleMigration]) {
     const start = source.indexOf(`CREATE OR REPLACE FUNCTION public.${fn}(`);
     if (start === -1) continue;
     const end = source.indexOf(`REVOKE ALL ON FUNCTION public.${fn}`, start);
@@ -210,6 +215,31 @@ for (const [label, source, floor] of [
   expect(
     deletionMigration.includes("public.is_superadmin(auth.uid())"),
     "account_deletion_releases() must re-check superadmin rather than trusting the marker alone",
+  );
+  // 20270208090000 replaces the same function and may set the marker only there.
+  const laterMarkerSites = (
+    erasureDependentsMigration.match(/set_config\('trustpath\.deleting_account'/g) ?? []
+  ).length;
+  expect(
+    laterMarkerSites === 1 && (del.match(/set_config\('trustpath\.deleting_account'/g) ?? []).length === 1,
+    `the 20270208090000 replacement may set trustpath.deleting_account only inside admin_delete_user_if_safe; found ${laterMarkerSites}`,
+  );
+  const announce = del.indexOf("set_config('trustpath.deleting_account'");
+  const extractions = del.indexOf("DELETE FROM public.sp_evidence_extractions");
+  const details = del.indexOf("DELETE FROM public.sp_credential_details");
+  const completeness = del.lastIndexOf("RAISE EXCEPTION 'ERASURE_INCOMPLETE");
+  expect(
+    announce !== -1 && extractions > announce && details > extractions && completeness > details,
+    "admin_delete_user_if_safe must remove the person's document readings and credential metadata after announcing the erasure and before either form runs",
+  );
+  expect(
+    del.includes("e.holder_user_id = _user_id") && del.includes("c.holder_user_id = _user_id"),
+    "the readings and metadata removed must be read only from THIS person's evidence and claims",
+  );
+  expect(
+    erasureDependentsMigration.includes("public.account_deletion_releases(") &&
+      !/CREATE OR REPLACE FUNCTION public\.sp_extractions_append_only\(/.test(erasureDependentsMigration),
+    "the extraction guard must release only through account_deletion_releases(), and the shared append-only function must stay unchanged",
   );
   const impact = definitionOf("admin_user_deletion_impact");
   for (const key of ["'deleted', _deleted", "'detached', _detached", "'preserved', _preserved"]) {

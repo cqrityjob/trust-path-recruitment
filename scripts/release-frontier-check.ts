@@ -394,7 +394,12 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // Contract remains pending until the scoped application is published and verified.
 // #404 / 20270206090000 verified applied read-only at 2026-10-03T21:11:18.678365+00:00.
 // Evidence: docs/security/interview-access/expand-hosted-verification.md.
-const expectedPending: string[] = ["20270207090000_interview_ai_config_contract.sql"];
+// 20270208090000 (account erasure with credential metadata) is pending until
+// the official integration applies it and hosted evidence is recorded.
+const expectedPending: string[] = [
+  "20270207090000_interview_ai_config_contract.sql",
+  "20270208090000_account_erasure_credential_details.sql",
+];
 
 
 const hostedIdentities = [
