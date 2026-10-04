@@ -3,13 +3,18 @@
 // Run via `bun run launch-legal:check`.
 // Planted controls: `bun run negative-controls:launch-legal`.
 //
-// What must stay true (owner, 2026-10-03):
+// What must stay true (owner decisions of 2026-10-03 and 2026-10-04,
+// docs/legal/2026-10-04-owner-decisions.md):
 //
-//   1  the documents are the owner's texts, with exactly the two
-//      substitutions asked for: Cqrityjob LLC and info@cqrityjob.com; every
-//      undecided "[Ange …]" is still a visible gap, never filled in here;
+//   1  the documents carry the owner's decisions: the provider and data
+//      controller is Cqrityjobb AB (559261-0249) and the retired names are
+//      left nowhere; contact is info@, job@ is for recruitment replies, no
+//      response time is promised in public; generative AI is off in version 1
+//      and later a separate paid service; transfers need a documented support
+//      and no EU-only rule is invented; every undecided "[Ange ...]" is still a
+//      visible gap, never filled in by the code;
 //   2  both documents have a route, are linked from the footer and from
-//      registration, and are in the sitemap;
+//      registration, and are in the sitemap once final;
 //   3  signup asks for acceptance of the TERMS, in a box of its own that is
 //      required and never pre-ticked, and bundles no other consent;
 //      acceptance is recorded with the terms version; Google signup is held
@@ -18,11 +23,20 @@
 //      person "accepts";
 //   5  a document with open points is a draft (banner, noindex, no sitemap,
 //      draft version accepted), and every account, Google sign-in included,
-//      accepts before it can use the product.
+//      accepts before it can use the product;
+//   6  the retention section of the policy IS the approved plan, row for row,
+//      and the policy cannot become final while a period has no verified
+//      routine behind it;
+//   7  the processor agreement draft exists with the content art. 28(3) GDPR
+//      requires, and its sub-processor annex lists the same suppliers as the
+//      policy; the historical records keep the old provider name and say why.
 
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
+import { COMPANY } from "../src/lib/legal/company";
 import { PRIVACY, TERMS, type LegalDocument } from "../src/lib/legal/documents";
+import { RETENTION_PLAN, RETENTION_READY } from "../src/lib/legal/retention-plan";
+import { VENDORS } from "../src/lib/legal/vendors";
 import {
   ACCEPTED_TERMS_VERSION,
   OWNER_APPROVED,
@@ -66,24 +80,68 @@ const sv = dictionaries.sv as Record<string, string>;
 const en = dictionaries.en as Record<string, string>;
 
 /* ================================================================== */
-group("GROUP 1 — the owner's documents, as given");
+group("GROUP 1 — the owner's documents and decisions");
 /* ================================================================== */
 {
   const terms = allText(TERMS);
   const privacy = allText(PRIVACY);
+  const gaps = (t: string) =>
+    (t.match(/\[(?:Ange|ange|Länk|länk|publiceringsdatum)[^\]]*\]/g) ?? []).length;
+
   ck(
-    "1.1 the terms name Cqrityjob LLC and info@cqrityjob.com",
-    terms.includes("Cqrityjob LLC, info@cqrityjob.com"),
+    "1.0 the company data is the owner's: Cqrityjobb AB, 559261-0249, brand CQrityjob",
+    COMPANY.legalName === "Cqrityjobb AB" &&
+      COMPANY.organisationNumber === "559261-0249" &&
+      COMPANY.brand === "CQrityjob" &&
+      COMPANY.contactEmail === "info@cqrityjob.com" &&
+      COMPANY.recruitmentEmail === "job@cqrityjob.com",
   );
   ck(
-    "1.2 the privacy policy names Cqrityjob LLC as controller and info@ as contact",
-    privacy.includes("**Cqrityjob LLC**") &&
+    "1.1 the terms name Cqrityjobb AB, its organisation number and info@, and the address is a visible gap",
+    terms.includes("Tjänsten tillhandahålls av Cqrityjobb AB, organisationsnummer 559261-0249.") &&
+      terms.includes("Kontakt: info@cqrityjob.com") &&
+      terms.includes("[Ange bolagets adress.]"),
+  );
+  ck(
+    "1.2 the privacy policy names Cqrityjobb AB as controller, with organisation number, info@ as contact and job@ for replies",
+    privacy.includes("**Cqrityjobb AB**") &&
+      privacy.includes("Organisationsnummer: 559261-0249.") &&
       privacy.includes("Kontakt: **info@cqrityjob.com**") &&
-      privacy.includes("Cqrityjob LLC är personuppgiftsansvarig"),
+      privacy.includes("Cqrityjobb AB är personuppgiftsansvarig") &&
+      privacy.includes("Svar på ett sådant mejl går till job@cqrityjob.com") &&
+      privacy.includes("[Ange bolagets adress.]"),
+  );
+  const RETIRED = /Cqrityjob (?:LLC|AB)\b|\[kontaktadress\]/;
+  const webTexts = [
+    sv["legal.provider"],
+    en["legal.provider"],
+    sv["meta.privacy.description"],
+    en["meta.privacy.description"],
+  ];
+  const sourceFiles = (dir: string): string[] =>
+    readdirSync(path.join(root, dir), { withFileTypes: true }).flatMap((e) =>
+      e.isDirectory()
+        ? sourceFiles(path.join(dir, e.name))
+        : /\.(ts|tsx)$/.test(e.name)
+          ? [path.join(dir, e.name)]
+          : [],
+    );
+  const stale = [...sourceFiles("src"), ...sourceFiles("supabase/functions")].filter((f) =>
+    /Cqrityjob (?:LLC|AB)\b/.test(code(f)),
   );
   ck(
-    "1.3 no 'Cqrityjob AB' and no '[kontaktadress]' is left",
-    ![terms, privacy].some((t) => t.includes("Cqrityjob AB") || t.includes("[kontaktadress]")),
+    "1.3 the retired provider names and '[kontaktadress]' are left nowhere: documents, web texts, source",
+    ![terms, privacy, ...webTexts].some((t) => RETIRED.test(t)) && stale.length === 0,
+    stale.join(", "),
+  );
+  ck(
+    "1.3b the web texts name Cqrityjobb AB, the organisation number and info@ in both languages",
+    [sv["legal.provider"], en["legal.provider"]].every(
+      (t) =>
+        t.includes("Cqrityjobb AB") &&
+        t.includes("559261-0249") &&
+        t.includes("info@cqrityjob.com"),
+    ),
   );
   ck(
     "1.4 the terms keep all 16 sections, the privacy policy all 12",
@@ -94,11 +152,9 @@ group("GROUP 1 — the owner's documents, as given");
     TERMS.date === "2026-10-01" &&
       ACCEPTED_TERMS_VERSION === (TERMS_FINAL ? "2026-10-01" : "2026-10-01-utkast"),
   );
-  const gaps = (t: string) =>
-    (t.match(/\[(?:Ange|ange|Länk|länk|publiceringsdatum)[^\]]*\]/g) ?? []).length;
   ck(
-    "1.6 the terms carry the owner's two decisions and no open point: 18 years, closing through info@",
-    gaps(terms) === 0 &&
+    "1.6 the terms carry the owner's decisions (18 years, closing through info@) and exactly one open point, the company address",
+    gaps(terms) === 1 &&
       terms.includes("Du måste vara minst 18 år för att skapa ett konto.") &&
       terms.includes(
         "Du kan avsluta ditt konto genom att skriva till info@cqrityjob.com från den e-postadress som kontot är registrerat på.",
@@ -106,29 +162,57 @@ group("GROUP 1 — the owner's documents, as given");
     String(gaps(terms)),
   );
   ck(
-    "1.7 the privacy policy's 6 undecided points are still open",
-    gaps(privacy) === 6,
+    "1.7 the privacy policy's 15 undecided points are still open: date, address, supplier facts, platform retention periods",
+    gaps(privacy) === 15 && openPoints(PRIVACY).length === 15,
     String(gaps(privacy)),
   );
   ck(
-    "1.8 no retention time is promised that nothing enforces: no 7-day line, both rows open",
+    "1.8 section 9 is the approved retention plan, row for row, and the untrue 7-day promise is not back",
     !privacy.includes("7 dagar") &&
-      privacy.includes("Supportärenden\n[Ange lagringstid enligt beslutad lagringsplan]") &&
-      privacy.includes(
-        "Säkerhets- och åtkomstloggar\n[Ange lagringstid enligt beslutad lagringsplan]",
-      ),
-  );
-  ck(
-    "1.10 the verified facts: no AI provider, functional cookies only, no cookie-settings link",
-    privacy.includes("Vi använder i dag inga AI-leverantörer.") &&
-      privacy.includes("Vi använder inga kakor för analys eller marknadsföring") &&
-      !/kakpolicy|kakinställningar/.test(privacy),
+      RETENTION_PLAN.every((r) => privacy.includes(`${r.data}\n${r.period}`)),
   );
   ck(
     "1.9 acceptance of the terms is not consent to processing (terms §9)",
     terms.includes(
       "Att acceptera dessa användarvillkor innebär inte ett generellt samtycke till all personuppgiftsbehandling.",
     ),
+  );
+  ck(
+    "1.10 generative AI is off in version 1 and a later separate paid service; functional cookies only, no cookie-settings link",
+    privacy.includes("Generativa AI-funktioner är avstängda i den här versionen av tjänsten.") &&
+      privacy.includes(
+        "Vi använder i dag inga AI-leverantörer, och dina uppgifter skickas inte till någon AI-tjänst.",
+      ) &&
+      privacy.includes("som separata betaltjänster som du uttryckligen beställer och aktiverar") &&
+      terms.includes(
+        "Generativa AI-funktioner är avstängda i den här versionen av tjänsten och ingår inte i den.",
+      ) &&
+      terms.includes("är separata betaltjänster. De kräver en uttrycklig beställning") &&
+      privacy.includes("Vi använder inga kakor för analys eller marknadsföring") &&
+      !/kakpolicy|kakinställningar/.test(privacy),
+  );
+  ck(
+    "1.11 no response time is promised in public; requests follow the statutory deadline",
+    !/arbetsdag/i.test(`${terms}\n${privacy}`) &&
+      privacy.includes("utan onödigt dröjsmål och senast inom en månad"),
+  );
+  ck(
+    "1.12 transfers: no EU-only rule is invented, a transfer needs a documented support, and a purchase or an acceptance of the terms does not replace it",
+    privacy.includes(
+      "Vi har ingen generell regel om att uppgifter bara får behandlas inom EU/EES.",
+    ) &&
+      privacy.includes("framgår av tabellen i avsnitt 6") &&
+      privacy.includes(
+        "Ett köp av en tjänst eller ett godkännande av användarvillkoren ersätter inte stödet för en överföring.",
+      ) &&
+      !/endast inom EU|enbart inom EU|bara inom EU\/EES\./i.test(privacy),
+  );
+  ck(
+    "1.13 every supplier is listed in section 6 with its place and its transfer support",
+    VENDORS.length >= 5 &&
+      VENDORS.every((v) =>
+        privacy.includes(`${v.name}\n${v.purpose}\n${v.location}\n${v.transferSupport}`),
+      ),
   );
 }
 
@@ -302,6 +386,116 @@ group("GROUP 5 — drafts are drafts, and every account accepts");
   ck(
     "5.11 Google from the signup page carries the ticked box across the round trip",
     panel.includes("if (isSignup) rememberTermsAcceptance();"),
+  );
+}
+
+/* ================================================================== */
+group("GROUP 6 — the retention plan is the policy, and the policy waits for it");
+/* ================================================================== */
+{
+  const ids = RETENTION_PLAN.map((r) => r.id);
+  ck(
+    "6.1 every row has an id, a public text, a period and the evidence behind it; ids are unique",
+    RETENTION_PLAN.length >= 13 &&
+      new Set(ids).size === ids.length &&
+      RETENTION_PLAN.every(
+        (r) => r.id && r.data.length > 10 && r.period.length > 5 && r.evidence.length > 40,
+      ),
+  );
+  const approved: Record<string, readonly string[]> = {
+    account: ["30 dagar", "24 månader"],
+    recruitment: ["24 månader"],
+    "info-mailbox": ["12 månader"],
+    "job-mailbox": ["24 månader"],
+    feedback: ["12 månader"],
+    "usage-statistics": ["13 månader"],
+    "admin-audit": ["24 månader"],
+    "notice-outbox": ["90 dagar"],
+  };
+  ck(
+    "6.2 the periods are the owner's approved ones (a change is a decision, so it must change this guard too)",
+    Object.entries(approved).every(([id, parts]) => {
+      const row = RETENTION_PLAN.find((r) => r.id === id);
+      return !!row && parts.every((part) => row.period.includes(part));
+    }),
+  );
+  ck(
+    "6.3 a period only the supplier knows is an open point, never a number invented by the code",
+    ["platform-logs", "mail-logs", "backups"].every((id) => {
+      const row = RETENTION_PLAN.find((r) => r.id === id);
+      return !!row && row.period.startsWith("[Ange ") && row.mechanism === "pending";
+    }),
+  );
+  const statusSrc = code("src/lib/legal/status.ts");
+  const planSrc = code("src/lib/legal/retention-plan.ts");
+  ck(
+    "6.4 the policy cannot be final while a period has no verified routine",
+    /export const PRIVACY_FINAL =\s*openPoints\(PRIVACY\)\.length === 0 && OWNER_APPROVED\.privacy && RETENTION_READY;/.test(
+      statusSrc,
+    ) &&
+      planSrc.includes(
+        'export const RETENTION_READY = RETENTION_PLAN.every((r) => r.mechanism !== "pending");',
+      ) &&
+      PRIVACY_FINAL ===
+        (openPoints(PRIVACY).length === 0 && OWNER_APPROVED.privacy && RETENTION_READY),
+  );
+  ck(
+    "6.5 a row is only live or confirmed with a document that proves it",
+    RETENTION_PLAN.filter((r) => r.mechanism !== "pending").every((r) => /docs\//.test(r.evidence)),
+  );
+}
+
+/* ================================================================== */
+group("GROUP 7 — the processor agreement draft, and the historical records");
+/* ================================================================== */
+{
+  const DPA = "docs/legal/personuppgiftsbitradesavtal-utkast.md";
+  const have = existsSync(path.join(root, DPA));
+  const dpa = have ? read(DPA) : "";
+  ck(
+    "7.1 the processor agreement draft exists, is marked as a draft and names Cqrityjobb AB",
+    have &&
+      dpa.includes("Utkast") &&
+      dpa.includes("Cqrityjobb AB") &&
+      dpa.includes("559261-0249") &&
+      !/Cqrityjob (?:LLC|AB)\b/.test(dpa),
+  );
+  ck(
+    "7.2 it has what art. 28(3) GDPR requires: instructions, confidentiality, security, sub-processors, transfers, assistance, incidents, deletion or return, audit, and three annexes",
+    have &&
+      [
+        "Instruktioner",
+        "Sekretess",
+        "Säkerhetsåtgärder",
+        "Underbiträden",
+        "Överföring till tredje land",
+        "Bistånd",
+        "Personuppgiftsincidenter",
+        "Radering och återlämnande",
+        "Revision",
+        "Bilaga 1",
+        "Bilaga 2",
+        "Bilaga 3",
+      ].every((h) => dpa.includes(h)),
+  );
+  ck(
+    "7.3 its sub-processor annex lists every supplier of the privacy policy",
+    have && VENDORS.every((v) => dpa.includes(v.name)) && dpa.includes("Bilaga 3"),
+  );
+  const decisions = "docs/legal/2026-10-04-owner-decisions.md";
+  const records = [
+    "docs/release/2026-10-03-launch-legal-decisions.md",
+    "docs/release/2026-10-03-launch-legal-and-contact.md",
+  ].map((f) => (existsSync(path.join(root, f)) ? read(f) : ""));
+  ck(
+    "7.4 the historical records keep the old provider name and say, at the top, why it is retired and where the decision is",
+    existsSync(path.join(root, decisions)) &&
+      records.every(
+        (t) =>
+          t.includes("Cqrityjob LLC") &&
+          t.split("\n").slice(0, 14).join("\n").includes(decisions) &&
+          t.split("\n").slice(0, 14).join("\n").includes("2026-10-04"),
+      ),
   );
 }
 

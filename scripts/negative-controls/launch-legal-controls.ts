@@ -1,10 +1,19 @@
 /**
  * Negative controls for the launch legal guard (scripts/launch-legal-check.ts).
  *
- * Each mutation plants one defect the guard exists for: the old company
- * name, an owner gap filled in by the code, a pre-ticked or optional terms
- * box, a Google signup that skips it, marketing consent riding on it, the
- * privacy policy presented as accepted, and a footer without the documents.
+ * Each mutation plants one defect the guard exists for: the retired company
+ * name in the terms or in a web text, an owner gap filled in by the code, an
+ * untrue 7-day retention promise, a retention period that drifts from the
+ * owner's plan, the policy made final with no verified retention routine, a
+ * public response time, a lost AI-off sentence, an invented EU-only rule, a
+ * supplier the processor agreement does not list, a processor agreement with
+ * a required clause missing, a historical record without its note, a
+ * pre-ticked or optional terms box, a Google signup that skips it, marketing
+ * consent riding on it, the privacy policy presented as accepted, and a footer
+ * without the documents.
+ *
+ * `expect` names the failing check as "FAIL <id> ...", so a control cannot be
+ * satisfied by some other check failing.
  *
  * Run: bun run negative-controls:launch-legal
  */
@@ -12,36 +21,120 @@ import { runControls, type Mutation } from "./runner";
 
 const GUARD = "launch-legal:check";
 const DOCS = "src/lib/legal/documents.ts";
+const PLAN = "src/lib/legal/retention-plan.ts";
+const DPA = "docs/legal/personuppgiftsbitradesavtal-utkast.md";
 const PANEL = "src/components/auth/UnifiedAuthPanel.tsx";
 
 const MUTATIONS: readonly Mutation[] = [
   {
     id: "LEGAL-NC-OLD-COMPANY",
-    defect: "the terms name the old company",
+    defect: "the terms name the retired company",
     file: DOCS,
-    find: 'text: "Tjänsten tillhandahålls av Cqrityjob LLC, info@cqrityjob.com"',
-    replace: 'text: "Tjänsten tillhandahålls av Cqrityjob AB info@cqrityjob.com"',
+    find: "text: `Tjänsten tillhandahålls av ${COMPANY.legalName}, organisationsnummer ${COMPANY.organisationNumber}. ${COMPANY.brand} är tjänstens varumärke.`,",
+    replace: 'text: "Tjänsten tillhandahålls av Cqrityjob LLC, info@cqrityjob.com",',
     guard: GUARD,
-    expect: "1.1 the terms name Cqrityjob LLC and info@cqrityjob.com",
+    expect:
+      "FAIL 1.1 the terms name Cqrityjobb AB, its organisation number and info@, and the address is a visible gap",
+  },
+  {
+    id: "LEGAL-NC-LLC-IN-WEB-TEXT",
+    defect: "a web text still names the retired company",
+    file: "src/i18n/dictionaries.ts",
+    find: '"legal.provider": `${COMPANY.legalName} · org.nr ${COMPANY.organisationNumber} · ${COMPANY.contactEmail}`,',
+    replace: '"legal.provider": "Cqrityjob LLC · info@cqrityjob.com",',
+    guard: GUARD,
+    expect: "FAIL 1.3 the retired provider names",
   },
   {
     id: "LEGAL-NC-GAP-FILLED",
-    defect: "an undecided point of the privacy policy is filled in by the code",
+    defect: "the company address, an undecided fact, is filled in by the code",
     file: DOCS,
-    find: 'text: "[Länk till aktuell leverantörsförteckning.]"',
-    replace: 'text: "Se våra leverantörer."',
+    find: '        { type: "placeholder", text: "[Ange bolagets adress.]" },\n        {\n          type: "p",\n          text: `Kontakt: **${COMPANY.contactEmail}**`,',
+    replace:
+      '        { type: "p", text: "Storgatan 1, 111 22 Stockholm" },\n        {\n          type: "p",\n          text: `Kontakt: **${COMPANY.contactEmail}**`,',
     guard: GUARD,
-    expect: "1.7 the privacy policy's 6 undecided points are still open",
+    expect: "FAIL 1.2 the privacy policy names Cqrityjobb AB as controller",
   },
   {
     id: "LEGAL-NC-SEVEN-DAYS-BACK",
     defect: "the untrue 7-day retention promise returns",
-    file: DOCS,
-    find: '["Supportärenden", "[Ange lagringstid enligt beslutad lagringsplan]"],',
-    replace: '["Supportärenden", "7 dagar"],',
+    file: PLAN,
+    find: 'period: "12 månader efter senaste kontakt.",',
+    replace: 'period: "7 dagar",',
     guard: GUARD,
-    expect:
-      "1.8 no retention time is promised that nothing enforces: no 7-day line, both rows open",
+    expect: "FAIL 1.8 section 9 is the approved retention plan",
+  },
+  {
+    id: "LEGAL-NC-RETENTION-DRIFT",
+    defect: "a retention period drifts from the owner's approved plan",
+    file: PLAN,
+    find: 'period: "24 månader.",',
+    replace: 'period: "36 månader.",',
+    guard: GUARD,
+    expect: "FAIL 6.2 the periods are the owner's approved ones",
+  },
+  {
+    id: "LEGAL-NC-RETENTION-GATE-REMOVED",
+    defect: "the policy can become final although no retention routine is verified",
+    file: "src/lib/legal/status.ts",
+    find: "openPoints(PRIVACY).length === 0 && OWNER_APPROVED.privacy && RETENTION_READY;",
+    replace: "openPoints(PRIVACY).length === 0 && OWNER_APPROVED.privacy;",
+    guard: GUARD,
+    expect: "FAIL 6.4 the policy cannot be final while a period has no verified routine",
+  },
+  {
+    id: "LEGAL-NC-SLA-PROMISED",
+    defect: "a public response time is promised",
+    file: DOCS,
+    find: "Vi besvarar din begäran utan onödigt dröjsmål",
+    replace: "Vi svarar inom två arbetsdagar. Vi besvarar din begäran utan onödigt dröjsmål",
+    guard: GUARD,
+    expect: "FAIL 1.11 no response time is promised in public",
+  },
+  {
+    id: "LEGAL-NC-AI-OFF-LOST",
+    defect: "the policy no longer says generative AI is off",
+    file: DOCS,
+    find: 'text: "Generativa AI-funktioner är avstängda i den här versionen av tjänsten.",',
+    replace: 'text: "Vi använder AI för att hjälpa dig.",',
+    guard: GUARD,
+    expect: "FAIL 1.10 generative AI is off in version 1",
+  },
+  {
+    id: "LEGAL-NC-EU-ONLY-INVENTED",
+    defect: "an EU-only storage rule the owner did not decide is invented",
+    file: DOCS,
+    find: "Vi har ingen generell regel om att uppgifter bara får behandlas inom EU/EES.",
+    replace: "Uppgifter behandlas endast inom EU/EES.",
+    guard: GUARD,
+    expect: "FAIL 1.12 transfers",
+  },
+  {
+    id: "LEGAL-NC-VENDOR-NOT-IN-DPA",
+    defect: "a supplier of the policy is not in the processor agreement's annex",
+    file: "src/lib/legal/vendors.ts",
+    find: 'name: "Google",',
+    replace: 'name: "Gxogle",',
+    guard: GUARD,
+    expect: "FAIL 7.3 its sub-processor annex lists every supplier",
+  },
+  {
+    id: "LEGAL-NC-DPA-CLAUSE-MISSING",
+    defect: "the processor agreement has no clause on personal data incidents",
+    file: DPA,
+    find: "## 9. Personuppgiftsincidenter",
+    replace: "## 9. Meddelanden",
+    guard: GUARD,
+    expect: "FAIL 7.2 it has what art. 28(3) GDPR requires",
+  },
+  {
+    id: "LEGAL-NC-HISTORY-UNEXPLAINED",
+    defect: "the historical decision record keeps the old provider name with no note on why",
+    file: "docs/release/2026-10-03-launch-legal-decisions.md",
+    find: "(`docs/legal/2026-10-04-owner-decisions.md`)",
+    replace: "(beslutet)",
+    guard: GUARD,
+    expect: "FAIL 7.4 the historical records keep the old provider name",
   },
   {
     id: "LEGAL-NC-PRETICKED",

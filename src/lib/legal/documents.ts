@@ -1,16 +1,31 @@
-// GENERATED from the owner's texts of 2026-10-03 by a one-off script; the
-// wording is theirs, verbatim. Two substitutions only, both the owner's
-// instruction: the provider is "Cqrityjob LLC" (the text said "Cqrityjob AB"),
-// and the contact address is info@cqrityjob.com (the text said
-// "[kontaktadress]"). A bracketed "[Ange …]" / "[Länk …]" is a decision the
-// owner has not made yet. It is rendered as a visible placeholder, never
-// filled in here. Filled since, by owner decision of 2026-10-03: terms §2
-// (18 years) and terms §13 (closing an account through info@); privacy §5
-// (no AI provider) and §11 (functional cookies only), both verified in
-// production; privacy §9's two "7 dagar" rows, which were not true, are open
-// points again. See docs/release/2026-10-03-launch-legal-and-contact.md.
+// The owner's texts of 2026-10-03, changed only by the owner's decisions. A
+// bracketed "[Ange …]" / "[Länk …]" is a decision or a fact the owner has not
+// supplied yet. It is rendered as a visible placeholder, never filled in here.
+//
+// Decisions of 2026-10-03: terms §2 (18 years) and §13 (closing an account
+// through info@); privacy §5 (no AI provider) and §11 (functional cookies
+// only), both verified in production. See
+// docs/release/2026-10-03-launch-legal-and-contact.md.
+//
+// Decisions of 2026-10-04 (docs/legal/2026-10-04-owner-decisions.md):
+//   - the provider and data controller is Cqrityjobb AB, 559261-0249 (the
+//     company data lives in ./company.ts; "Cqrityjob LLC" is retired);
+//   - contact is info@; job@ is for recruitment communication; no response
+//     time is promised in public (two working days is an internal target);
+//   - generative AI is off in version 1 and, later, a separate paid service
+//     with an explicit order, price information and activation;
+//   - the retention plan is approved as a product decision. Section 9 is built
+//     from ./retention-plan.ts, row for row, and the policy cannot become
+//     final while a row is still `pending` (status.ts);
+//   - suppliers, places of processing and transfer support are one list
+//     (./vendors.ts); a cell that is not yet a verified fact stays a gap.
+// Neither document is approved as published: OWNER_APPROVED stays false.
 //
 // Inline markup in the strings: **bold** only.
+
+import { COMPANY } from "./company";
+import { RETENTION_PLAN } from "./retention-plan";
+import { VENDORS } from "./vendors";
 
 export type LegalBlock =
   | { readonly type: "p"; readonly text: string }
@@ -48,8 +63,11 @@ export const TERMS: LegalDocument = {
     },
     {
       type: "p",
-      text: "Tjänsten tillhandahålls av Cqrityjob LLC, info@cqrityjob.com",
+      text: `Tjänsten tillhandahålls av ${COMPANY.legalName}, organisationsnummer ${COMPANY.organisationNumber}. ${COMPANY.brand} är tjänstens varumärke.`,
     },
+    // The postal address is an open fact the owner has not supplied.
+    { type: "placeholder", text: "[Ange bolagets adress.]" },
+    { type: "p", text: `Kontakt: ${COMPANY.contactEmail}` },
   ],
   sections: [
     {
@@ -160,19 +178,25 @@ export const TERMS: LegalDocument = {
       ],
     },
     {
-      heading: "6. Karriärtester och AI-stöd",
+      heading: "6. Karriärtester och AI",
       blocks: [
         {
           type: "p",
-          text: "Karriärtester, rekommendationer och AI-genererat material är beslutsstöd. De kan innehålla fel, vara ofullständiga eller ge olika resultat beroende på underlaget.",
+          text: "Karriärtester och rekommendationer är beslutsstöd. De kan innehålla fel, vara ofullständiga eller ge olika resultat beroende på underlaget.",
         },
         {
           type: "p",
           text: "Du behöver kontrollera viktiga uppgifter innan du använder resultatet. Tjänsten garanterar inte ett visst arbete, en viss karriärutveckling eller att du uppfyller kraven för en yrkesroll.",
         },
+        // Owner decision 2026-10-04: generative AI stays off in version 1; a
+        // later version offers it as separate paid services.
         {
           type: "p",
-          text: "AI-stödet ersätter inte juridisk rådgivning, professionell säkerhetsbedömning eller andra specialistbedömningar.",
+          text: "Generativa AI-funktioner är avstängda i den här versionen av tjänsten och ingår inte i den. Om vi senare erbjuder sådana funktioner sker det som separata betaltjänster som du uttryckligen beställer efter att du har fått prisinformation, och de aktiveras först när du har beställt dem.",
+        },
+        {
+          type: "p",
+          text: "Ett AI-resultat är beslutsstöd. Det ersätter inte juridisk rådgivning, professionell säkerhetsbedömning eller andra specialistbedömningar.",
         },
         {
           type: "p",
@@ -198,6 +222,10 @@ export const TERMS: LegalDocument = {
         {
           type: "p",
           text: "Om en annons leder till en extern webbplats gäller den mottagande tjänstens villkor och integritetsinformation för den fortsatta användningen.",
+        },
+        {
+          type: "p",
+          text: `Meddelanden från en arbetsgivare om din ansökan skickas via ${COMPANY.brand}. Om du svarar på ett sådant mejl går svaret till ${COMPANY.recruitmentEmail}, och vi vidarebefordrar det till arbetsgivaren.`,
         },
       ],
     },
@@ -230,7 +258,7 @@ export const TERMS: LegalDocument = {
         },
         {
           type: "p",
-          text: "När CQrityjob behandlar personuppgifter på företagets uppdrag ska ett personuppgiftsbiträdesavtal finnas innan behandlingen börjar.",
+          text: `När CQrityjob behandlar personuppgifter på företagets uppdrag ska ett personuppgiftsbiträdesavtal finnas innan behandlingen börjar. Vi tillhandahåller ett sådant avtal på begäran via ${COMPANY.contactEmail}.`,
         },
       ],
     },
@@ -262,6 +290,11 @@ export const TERMS: LegalDocument = {
           type: "p",
           text: "Särskilda beställningsvillkor gäller tillsammans med dessa villkor. Om du köper som konsument gäller dessutom tvingande konsumentskydd, inklusive eventuell ångerrätt. Information om ångerrätt och eventuella lagliga undantag ska lämnas innan köp.",
         },
+        // Owner decision 2026-10-04: AI is a later, separate, paid service.
+        {
+          type: "p",
+          text: "Generativa AI-funktioner, om de erbjuds i en senare version, är separata betaltjänster. De kräver en uttrycklig beställning, tydlig prisinformation och en separat aktivering. De ingår inte i ett kostnadsfritt konto, och de aktiveras inte av att du godkänner dessa villkor.",
+        },
       ],
     },
     {
@@ -277,7 +310,7 @@ export const TERMS: LegalDocument = {
         },
         {
           type: "p",
-          text: "Rättigheter till AI-genererat material kan bero på materialets innehåll och tillämplig lag. Vi garanterar inte att sådant material är unikt eller fritt från tredje mans rättigheter.",
+          text: "Om AI-funktioner erbjuds i en senare version kan rättigheter till AI-genererat material bero på materialets innehåll och tillämplig lag. Vi garanterar inte att sådant material är unikt eller fritt från tredje mans rättigheter.",
         },
       ],
     },
@@ -303,7 +336,7 @@ export const TERMS: LegalDocument = {
       blocks: [
         {
           type: "p",
-          text: "Du kan avsluta ditt konto genom att skriva till info@cqrityjob.com från den e-postadress som kontot är registrerat på. För betaltjänster gäller även avtalad uppsägningstid.",
+          text: `Du kan avsluta ditt konto genom att skriva till ${COMPANY.contactEmail} från den e-postadress som kontot är registrerat på. För betaltjänster gäller även avtalad uppsägningstid.`,
         },
         {
           type: "p",
@@ -311,7 +344,7 @@ export const TERMS: LegalDocument = {
         },
         {
           type: "p",
-          text: "Kontakta info@cqrityjob.com om du anser att en åtgärd är felaktig.",
+          text: `Kontakta ${COMPANY.contactEmail} om du anser att en åtgärd är felaktig.`,
         },
         {
           type: "p",
@@ -324,7 +357,7 @@ export const TERMS: LegalDocument = {
       blocks: [
         {
           type: "p",
-          text: "Vi ansvarar för tjänsten enligt avtalet och tillämplig lag. Vi garanterar inte riktigheten i användares uppgifter, arbetsgivares annonser eller enskilda AI-resultat.",
+          text: "Vi ansvarar för tjänsten enligt avtalet och tillämplig lag. Vi garanterar inte riktigheten i användares uppgifter, arbetsgivares annonser eller, om AI-funktioner erbjuds i en senare version, enskilda AI-resultat.",
         },
         {
           type: "p",
@@ -389,15 +422,21 @@ export const PRIVACY: LegalDocument = {
         },
         {
           type: "p",
-          text: "**Cqrityjob LLC**",
+          text: `**${COMPANY.legalName}**`,
         },
         {
           type: "p",
-          text: "Kontakt: **info@cqrityjob.com**",
+          text: `Organisationsnummer: ${COMPANY.organisationNumber}. ${COMPANY.brand} är plattformens varumärke.`,
+        },
+        // The postal address is an open fact the owner has not supplied.
+        { type: "placeholder", text: "[Ange bolagets adress.]" },
+        {
+          type: "p",
+          text: `Kontakt: **${COMPANY.contactEmail}**`,
         },
         {
           type: "p",
-          text: "Cqrityjob LLC är personuppgiftsansvarig för den behandling där vi bestämmer varför och hur personuppgifterna används. Det omfattar exempelvis ditt personliga konto, egna karriärtjänster, Security Passport och plattformens säkerhet.",
+          text: `${COMPANY.legalName} är personuppgiftsansvarig för den behandling där vi bestämmer varför och hur personuppgifterna används. Det omfattar exempelvis ditt personliga konto, egna karriärtjänster, Security Passport och plattformens säkerhet.`,
         },
         {
           type: "p",
@@ -406,6 +445,10 @@ export const PRIVACY: LegalDocument = {
         {
           type: "p",
           text: "Arbetsgivarens egen integritetsinformation beskriver hur uppgifterna används i rekryteringen.",
+        },
+        {
+          type: "p",
+          text: `Meddelanden från en arbetsgivare om din ansökan skickas via ${COMPANY.brand}. Svar på ett sådant mejl går till ${COMPANY.recruitmentEmail}, och vi vidarebefordrar det till arbetsgivaren på arbetsgivarens uppdrag.`,
         },
       ],
     },
@@ -509,15 +552,20 @@ export const PRIVACY: LegalDocument = {
           type: "p",
           text: "Resultaten bygger på dina svar och tillgängligt underlag. De kan innehålla fel och är vägledning, inte garantier för lämplighet eller anställning.",
         },
+        // Owner decision 2026-10-04: generative AI is off in version 1. The
+        // facts behind the claim, and the one path the database switch does
+        // not cover, are in docs/legal/2026-10-04-text-function-verification.md.
         {
           type: "p",
-          text: "Vid användning av generativ AI kan relevanta uppgifter behandlas av en AI-leverantör.",
+          text: "Generativa AI-funktioner är avstängda i den här versionen av tjänsten.",
         },
-        // Verified 2026-10-03 (was "[Ange aktiva AI-leverantörer …]"): no AI
-        // provider is enabled in production and no AI run has ever happened.
         {
           type: "p",
-          text: "Vi använder i dag inga AI-leverantörer. Om vi inför AI-stöd uppdaterar vi policyn innan funktionen tas i bruk.",
+          text: "Vi använder i dag inga AI-leverantörer, och dina uppgifter skickas inte till någon AI-tjänst.",
+        },
+        {
+          type: "p",
+          text: "Om vi i en senare version erbjuder AI-funktioner sker det som separata betaltjänster som du uttryckligen beställer och aktiverar. Vi uppdaterar den här policyn innan en sådan funktion aktiveras och anger då vilken leverantör som används, i vilket land uppgifterna behandlas och vilket stöd som gäller för en överföring.",
         },
         {
           type: "p",
@@ -542,7 +590,7 @@ export const PRIVACY: LegalDocument = {
             "arbetsgivare som du söker jobb hos eller deltar i en rekrytering hos,",
             "mottagare som du väljer att dela uppgifter med,",
             "utfärdare eller register vid begärd verifiering,",
-            "leverantörer av drift, lagring, e-post, support och aktiverade AI-funktioner,",
+            "leverantörer av drift, lagring, e-post och support, se tabellen nedan,",
             "myndigheter eller rådgivare när det finns rättsligt stöd.",
           ],
         },
@@ -550,9 +598,18 @@ export const PRIVACY: LegalDocument = {
           type: "p",
           text: "Leverantörer som behandlar uppgifter på vårt uppdrag ska omfattas av personuppgiftsbiträdesavtal.",
         },
+        // Owner decision 2026-10-04: one list, here, instead of a link. The
+        // place and the transfer support are facts the suppliers confirm; a
+        // cell that is not yet confirmed stays a visible gap (./vendors.ts).
         {
-          type: "placeholder",
-          text: "[Länk till aktuell leverantörsförteckning.]",
+          type: "table",
+          head: [
+            "Leverantör",
+            "Uppgift",
+            "Plats för behandling",
+            "Stöd för överföring utanför EU/EES",
+          ],
+          rows: VENDORS.map((v) => [v.name, v.purpose, v.location, v.transferSupport]),
         },
         {
           type: "p",
@@ -580,13 +637,25 @@ export const PRIVACY: LegalDocument = {
     {
       heading: "8. Behandling utanför EU/EES",
       blocks: [
+        // Owner decision 2026-10-04: international operation is approved and
+        // there is no general requirement to store in the EU. What is required
+        // is that the actual countries, agreements and transfer support are
+        // documented; they are the table in section 6.
         {
           type: "p",
-          text: "Överföringar av personuppgifter utanför EU/EES ska omfattas av ett giltigt stöd enligt GDPR och de skyddsåtgärder som krävs för överföringen.",
+          text: "Vi har ingen generell regel om att uppgifter bara får behandlas inom EU/EES. Våra leverantörer kan behandla uppgifter i andra länder.",
         },
         {
-          type: "placeholder",
-          text: "[Ange faktiska mottagarländer, överföringsmekanismer och hur användaren kan få information eller en kopia av relevanta skyddsåtgärder.]",
+          type: "p",
+          text: "Överföringar av personuppgifter utanför EU/EES ska omfattas av ett giltigt stöd enligt GDPR och de skyddsåtgärder som krävs för överföringen, till exempel EU–U.S. Data Privacy Framework eller EU-kommissionens standardavtalsklausuler. Mottagarland och stöd för varje leverantör framgår av tabellen i avsnitt 6.",
+        },
+        {
+          type: "p",
+          text: `Du kan få information om de skyddsåtgärder som gäller, och en kopia av dem, genom att kontakta ${COMPANY.contactEmail}.`,
+        },
+        {
+          type: "p",
+          text: "Ett köp av en tjänst eller ett godkännande av användarvillkoren ersätter inte stödet för en överföring.",
         },
       ],
     },
@@ -595,26 +664,19 @@ export const PRIVACY: LegalDocument = {
       blocks: [
         {
           type: "p",
-          text: "Uppgifter sparas så länge de behövs för sitt ändamål och raderas eller anonymiseras därefter, om lag eller rättsliga anspråk kräver fortsatt lagring.",
+          // The owner's sentence said "om lag … kräver fortsatt lagring", which
+          // reads the wrong way round; "såvida inte" is the meaning intended.
+          text: "Uppgifter sparas så länge de behövs för sitt ändamål och raderas eller anonymiseras därefter, såvida inte lag eller rättsliga anspråk kräver fortsatt lagring.",
         },
+        // Owner decision 2026-10-04: the retention plan is approved as a
+        // product decision. The table is built from ./retention-plan.ts, so the
+        // text IS the plan; a row is not a working commitment until its routine
+        // is verified, and the policy cannot become final before that
+        // (status.ts, RETENTION_READY). "7 dagar" was never true and stays out.
         {
           type: "table",
           head: ["Uppgifter", "Lagringstid"],
-          rows: [
-            [
-              "Konto, kandidatprofil, egna tester och Security Passport",
-              "[Ange gallringsregler, även för inaktiva och avslutade konton]",
-            ],
-            [
-              "Rekryteringsmaterial som hanteras för arbetsgivare",
-              "Enligt arbetsgivarens dokumenterade regler och biträdesavtalet",
-            ],
-            // "7 dagar" was not true (nothing is purged; logs reach back to
-            // the project's start), so both are open points until the owner
-            // approves the retention plan.
-            ["Supportärenden", "[Ange lagringstid enligt beslutad lagringsplan]"],
-            ["Säkerhets- och åtkomstloggar", "[Ange lagringstid enligt beslutad lagringsplan]"],
-          ],
+          rows: RETENTION_PLAN.map((r) => [r.data, r.period]),
         },
         {
           type: "p",
@@ -635,7 +697,9 @@ export const PRIVACY: LegalDocument = {
         },
         {
           type: "p",
-          text: "Kontakta **info@cqrityjob.com**. Vi svarar normalt inom en månad. Om en förlängning är tillåten och behövs informerar vi dig om skälet. Vi kan behöva kontrollera din identitet för att skydda dina uppgifter.",
+          // Owner decision 2026-10-04: requests are handled within the
+          // statutory deadlines (GDPR art. 12.3); no shorter time is promised.
+          text: `Kontakta **${COMPANY.contactEmail}**. Vi besvarar din begäran utan onödigt dröjsmål och senast inom en månad efter att vi har tagit emot den. När begäran är komplex eller vi har många begäranden kan tiden förlängas med högst ytterligare två månader. Vi informerar dig då inom den första månaden och anger skälet. Vi kan behöva kontrollera din identitet för att skydda dina uppgifter.`,
         },
         {
           type: "p",
@@ -650,7 +714,15 @@ export const PRIVACY: LegalDocument = {
         // settings): one functional cookie, no analytics or tracking.
         {
           type: "p",
-          text: "Vi använder bara kakor och lagring i webbläsaren som behövs för att tjänsten ska fungera, till exempel för inloggning, språkval och sidopanelens läge. Vi använder inga kakor för analys eller marknadsföring, och därför behövs inget samtycke.",
+          text: "Vi använder bara kakor och lagring i webbläsaren som behövs för att tjänsten ska fungera, till exempel för inloggning, språkval, sidopanelens läge och för att öppna en delningslänk till ett Security Passport (en kaka som gäller i 30 minuter). Vi använder inga kakor för analys eller marknadsföring, och därför behövs inget samtycke.",
+        },
+        // Found in the 2026-10-04 text-to-function check: the product records
+        // anonymous usage events (cd_v31_funnel_events, no user or session id
+        // in any production row), with a once-per-visit flag in the browser's
+        // session storage. The text said nothing about it.
+        {
+          type: "p",
+          text: "Vi mäter anonymt hur ofta vissa sidor och steg används. Mätningen använder inga kakor och registrerar inte ditt namn, din e-postadress eller ditt konto. En markering i webbläsarens sessionslagring gör att samma steg inte räknas två gånger under ett besök, och den försvinner när du stänger fliken.",
         },
         {
           type: "p",
@@ -667,7 +739,7 @@ export const PRIVACY: LegalDocument = {
         },
         {
           type: "p",
-          text: "Om du misstänker obehörig åtkomst eller felaktig hantering av personuppgifter, kontakta **info@cqrityjob.com**.",
+          text: `Om du misstänker obehörig åtkomst eller felaktig hantering av personuppgifter, kontakta **${COMPANY.contactEmail}**.`,
         },
         {
           type: "p",

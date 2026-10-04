@@ -1,3 +1,4 @@
+import { COMPANY } from "../lib/legal/company";
 import { recruitmentEn, recruitmentSv } from "./recruitment-copy";
 import { securityWorkEn, securityWorkSv } from "./security-work-copy";
 
@@ -1293,10 +1294,9 @@ export const dictionaries = {
     "meta.terms.description":
       "Villkoren för att använda CQrityjob och de tjänster som omfattas av plattformen.",
     "meta.privacy.title": "Integritetspolicy – CQrityjob",
-    "meta.privacy.description":
-      "Hur Cqrityjob LLC behandlar dina personuppgifter när du använder CQrityjob.",
+    "meta.privacy.description": `Hur ${COMPANY.legalName} behandlar dina personuppgifter när du använder CQrityjob.`,
     "legal.swedishOnly": "",
-    "legal.provider": "Cqrityjob LLC · info@cqrityjob.com",
+    "legal.provider": `${COMPANY.legalName} · org.nr ${COMPANY.organisationNumber} · ${COMPANY.contactEmail}`,
     "legal.contents": "Innehåll",
     "footer.rights": "Alla rättigheter förbehållna.",
     "footer.built": "Baserat i Sverige. Byggd för säkerhetsbranschen.",
@@ -10203,10 +10203,9 @@ export const dictionaries = {
     "meta.terms.title": "Terms of use – CQrityjob",
     "meta.terms.description": "The terms for using CQrityjob and the services the platform covers.",
     "meta.privacy.title": "Privacy policy – CQrityjob",
-    "meta.privacy.description":
-      "How Cqrityjob LLC processes your personal data when you use CQrityjob.",
+    "meta.privacy.description": `How ${COMPANY.legalName} processes your personal data when you use CQrityjob.`,
     "legal.swedishOnly": "This document is currently published in Swedish only.",
-    "legal.provider": "Cqrityjob LLC · info@cqrityjob.com",
+    "legal.provider": `${COMPANY.legalName} · org. no. ${COMPANY.organisationNumber} · ${COMPANY.contactEmail}`,
     "legal.contents": "Contents",
     "footer.rights": "All rights reserved.",
     "footer.built": "Based in Sweden. Built for the security industry.",

@@ -1,4 +1,5 @@
 import { PRIVACY, TERMS, type LegalDocument } from "./documents";
+import { RETENTION_READY } from "./retention-plan";
 
 // ── IS A DOCUMENT FINAL? ────────────────────────────────────────────────
 //
@@ -33,7 +34,15 @@ export function openPoints(doc: LegalDocument): string[] {
 export const OWNER_APPROVED = { terms: false, privacy: false } as const;
 
 export const TERMS_FINAL = openPoints(TERMS).length === 0 && OWNER_APPROVED.terms;
-export const PRIVACY_FINAL = openPoints(PRIVACY).length === 0 && OWNER_APPROVED.privacy;
+
+/** The privacy policy states retention periods as commitments (section 9, built
+ *  from ./retention-plan.ts). It cannot become final while a period has no
+ *  verified routine behind it, even if every gap is filled and the owner has
+ *  approved the wording: the owner's condition of 2026-10-04 is that the
+ *  routines are checked and carried out BEFORE the times are published as
+ *  working commitments. */
+export const PRIVACY_FINAL =
+  openPoints(PRIVACY).length === 0 && OWNER_APPROVED.privacy && RETENTION_READY;
 
 /** What an account records when it accepts the terms. A draft's acceptance
  *  is recorded as a draft's, so the final text is asked for again. */
