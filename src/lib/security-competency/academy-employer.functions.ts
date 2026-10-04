@@ -1410,10 +1410,7 @@ function mapBrief(b: RpcRow | null): ReportBrief | null {
 // participants. Employer reads keep their existing database audience rules.
 // Direct RPC access is NOT disabled by this application gate.
 function reportAvailableInApp(row: RpcRow, audience: "participant" | "employer"): boolean {
-  return (
-    audience === "employer" ||
-    (row.context as RpcRow | null)?.person_context === "candidate"
-  );
+  return audience === "employer" || (row.context as RpcRow | null)?.person_context === "candidate";
 }
 
 export const getAcademyReport = createServerFn({ method: "GET" })
@@ -1544,18 +1541,23 @@ export const getParticipantReportAsIssuer = createServerFn({ method: "GET" })
 async function candidateOnlySnapshotHistory(ctx: Ctx, subjectId: string): Promise<boolean> {
   const { data: history, error } = await ctx.supabase.rpc("scp_my_assessment_history");
   if (error) throw fail(error.message, "recommendations_failed");
-  const attempts = [...new Set(
-    ((history ?? []) as RpcRow[])
-      .filter((row) => row.participant_snapshot_id || row.released_at)
-      .map((row) => String(row.attempt_id)),
-  )];
+  const attempts = [
+    ...new Set(
+      ((history ?? []) as RpcRow[])
+        .filter((row) => row.participant_snapshot_id || row.released_at)
+        .map((row) => String(row.attempt_id)),
+    ),
+  ];
   if (!attempts.length) return false;
   for (const attemptId of attempts) {
-    const { data: reports, error: reportError } = await ctx.supabase.rpc("scp_participant_report", { _attempt_id: attemptId });
+    const { data: reports, error: reportError } = await ctx.supabase.rpc("scp_participant_report", {
+      _attempt_id: attemptId,
+    });
     if (reportError) throw fail(reportError.message, "recommendations_failed");
     const report = (Array.isArray(reports) ? reports[0] : undefined) as RpcRow | undefined;
     if (!report?.subject_id) return false;
-    if (String(report.subject_id) === subjectId && !reportAvailableInApp(report, "participant")) return false;
+    if (String(report.subject_id) === subjectId && !reportAvailableInApp(report, "participant"))
+      return false;
   }
   return true;
 }
@@ -1623,10 +1625,18 @@ export const getSubjectProgress = createServerFn({ method: "GET" })
     if (data.audience === "participant") {
       const allowedAttempts = new Set<string>();
       for (const attemptId of new Set(visibleRows.map((row) => String(row.attempt_id)))) {
-        const { data: reports, error: reportError } = await ctx.supabase.rpc("scp_participant_report", { _attempt_id: attemptId });
+        const { data: reports, error: reportError } = await ctx.supabase.rpc(
+          "scp_participant_report",
+          { _attempt_id: attemptId },
+        );
         if (reportError) throw fail(reportError.message, "progress_failed");
         const report = (Array.isArray(reports) ? reports[0] : undefined) as RpcRow | undefined;
-        if (report && String(report.subject_id) === subjectId && reportAvailableInApp(report, "participant")) allowedAttempts.add(attemptId);
+        if (
+          report &&
+          String(report.subject_id) === subjectId &&
+          reportAvailableInApp(report, "participant")
+        )
+          allowedAttempts.add(attemptId);
       }
       visibleRows = visibleRows.filter((row) => allowedAttempts.has(String(row.attempt_id)));
     }

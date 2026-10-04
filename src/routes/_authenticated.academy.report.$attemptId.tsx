@@ -113,7 +113,10 @@ function ParticipantReport() {
             title={t("academy.report.unavailableTitle")}
             body={t("academy.report.unavailableBody")}
           />
-          <Link to="/academy" className="mt-4 inline-flex min-h-[44px] items-center gap-1.5 text-sm font-medium text-foreground underline">
+          <Link
+            to="/academy"
+            className="mt-4 inline-flex min-h-[44px] items-center gap-1.5 text-sm font-medium text-foreground underline"
+          >
             <ArrowLeft className="h-4 w-4" aria-hidden="true" />
             {t("academy.report.back")}
           </Link>

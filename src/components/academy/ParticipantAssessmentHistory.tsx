@@ -42,13 +42,9 @@ export function ParticipantAssessmentHistory({ lang }: { lang: string }) {
     <section className="mt-10">
       <div className="mb-3 flex items-center gap-2">
         <History className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-        <h2 className="text-base font-semibold text-foreground">
-          {t("academy.history.heading")}
-        </h2>
+        <h2 className="text-base font-semibold text-foreground">{t("academy.history.heading")}</h2>
       </div>
-      <p className="mb-4 max-w-[62ch] text-sm text-muted-foreground">
-        {t("academy.history.lede")}
-      </p>
+      <p className="mb-4 max-w-[62ch] text-sm text-muted-foreground">{t("academy.history.lede")}</p>
 
       <ul className="space-y-3">
         {rows.map((r) => (
@@ -73,7 +69,9 @@ export function ParticipantAssessmentHistory({ lang }: { lang: string }) {
                 </p>
               </div>
               {r.useCase !== "recruitment" &&
-              ["under_review", "processing", "ready_to_release", "result_available"].includes(r.lifecycleState) ? (
+              ["under_review", "processing", "ready_to_release", "result_available"].includes(
+                r.lifecycleState,
+              ) ? (
                 <span className="inline-flex shrink-0 items-center rounded-full border border-border px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
                   {t("academy.history.submitted")}
                 </span>
@@ -84,15 +82,17 @@ export function ParticipantAssessmentHistory({ lang }: { lang: string }) {
 
             {/* Recruitment only: workforce participant reports are not available
                 in this flow, even if the database has a released snapshot. */}
-            {r.useCase === "recruitment" && r.lifecycleState === "result_available" && r.participantSnapshotId && (
-              <Link
-                to="/academy/report/$attemptId"
-                params={{ attemptId: r.attemptId }}
-                className="mt-3 inline-flex rounded-md border border-border px-3 py-1.5 text-sm hover:bg-muted"
-              >
-                {t("academy.history.viewResult")}
-              </Link>
-            )}
+            {r.useCase === "recruitment" &&
+              r.lifecycleState === "result_available" &&
+              r.participantSnapshotId && (
+                <Link
+                  to="/academy/report/$attemptId"
+                  params={{ attemptId: r.attemptId }}
+                  className="mt-3 inline-flex rounded-md border border-border px-3 py-1.5 text-sm hover:bg-muted"
+                >
+                  {t("academy.history.viewResult")}
+                </Link>
+              )}
           </li>
         ))}
       </ul>
