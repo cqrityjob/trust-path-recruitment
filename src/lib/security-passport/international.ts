@@ -15,6 +15,17 @@ export const CREDENTIAL_CLASSES = {
   // qualifications). Mirrors public.sp_credential_classes -- scripts/
   // india-entry-check.ts refuses a class the database has and this lacks.
   vocational_qualification: { sv: "Yrkeskvalifikation", en: "Vocational qualification" },
+  // 20270212090000: the kinds of award the certification research integration
+  // distinguishes. A personal certification keeps `certification`; these four
+  // say what the other awards ARE, so a course certificate is never mistaken
+  // for a professional certification.
+  professional_qualification: {
+    sv: "Professionell kvalifikation",
+    en: "Professional qualification",
+  },
+  professional_designation: { sv: "Professionell beteckning", en: "Professional designation" },
+  assessed_certificate: { sv: "Examinerat ämnesintyg", en: "Assessed subject certificate" },
+  course_certificate: { sv: "Kursintyg", en: "Course certificate" },
 } as const;
 export type CredentialClass = keyof typeof CREDENTIAL_CLASSES;
 

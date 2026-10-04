@@ -39,7 +39,7 @@ describe("credential-only Passport ownership", () => {
 });
 describe("international identity, locale and review expiry", () => {
   it("every database class translated (india-entry-check 9.x mirrors the migrations)", () => {
-    assert.equal(Object.keys(CREDENTIAL_CLASSES).length, 8);
+    assert.equal(Object.keys(CREDENTIAL_CLASSES).length, 12);
     assert(Object.values(CREDENTIAL_CLASSES).every((c) => c.sv && c.en));
   });
   it("missing expiry remains unknown", () => {
