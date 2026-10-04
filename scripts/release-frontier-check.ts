@@ -419,11 +419,15 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // those 140 selectable (20270214090000) is staged outside the migration path until the
 // application that renders them is published.
 // Evidence: docs/release/2026-10-04-catalogue-schema-hosted-verification.md.
-//
-// Pending by design, not applied hosted: the publication of the 140 researched definitions
-// (20270214090000), released only after the application that renders them is published and
-// verified. The name comes OFF this list in the change that records its production evidence.
-const expectedPending: string[] = ["20270214090000_sp_catalogue_research_publish.sql"];
+// 2026-10-04 09:47 UTC: #412 (merge 3e3a66c6, every mandatory CI job green on 1d06c8a8)
+// verified applied read-only: 20270214090000_sp_catalogue_research_publish is the last
+// ledger row (373 rows, digest 339b270ff57e60c0e7e024081e3102bd; the first 372 unchanged,
+// 868e9c610f78ced1c5f529596ca273c2). Exactly the 140 researched definitions are active (166
+// credential types active, 154 international), and every other credential-type column, market
+// pack, pilot member, definition table and claim equals its fingerprint from before the apply.
+// Nothing is pending by design now.
+// Evidence: docs/release/2026-10-04-catalogue-publication-hosted-verification.md.
+const expectedPending: string[] = [];
 
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
