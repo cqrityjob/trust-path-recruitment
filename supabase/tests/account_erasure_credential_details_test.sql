@@ -210,15 +210,77 @@ INSERT INTO auth.users (id, email) VALUES ('e0e00000-0000-4000-8000-0000000000f2
 SELECT pg_temp.ok((SELECT count(*) FROM auth.users WHERE lower(email) = 'er-holder-two@erasure.invalid') = 1,
   'ER2.5 a new account can be created with the released address, with no link to the old one');
 
+-- ER6: use a PostgREST-style JWT, not only the legacy sub setting.
+INSERT INTO auth.sessions (id, user_id, not_after)
+VALUES ('e0e05000-0000-4000-8000-0000000000aa',
+        'e0e00000-0000-4000-8000-0000000000aa', now() + interval '1 hour');
+
+-- Fingerprint every row in the affected tables so denied calls cannot hide
+-- partial writes to audit, storage queue, identities or unrelated holders.
+CREATE FUNCTION pg_temp.er_state() RETURNS jsonb LANGUAGE plpgsql AS $$
+DECLARE _table text; _rows jsonb; _state jsonb := '{}'::jsonb;
+BEGIN
+  FOREACH _table IN ARRAY ARRAY[
+    'auth.users', 'auth.identities', 'auth.sessions', 'public.profiles',
+    'public.user_roles', 'public.sp_claims', 'public.sp_credential_details',
+    'public.sp_evidence', 'public.sp_evidence_extractions',
+    'public.job_applications', 'public.deleted_accounts',
+    'public.storage_erasure_queue', 'public.audit_logs'
+  ] LOOP
+    EXECUTE format('SELECT coalesce(jsonb_agg(to_jsonb(t) ORDER BY to_jsonb(t)::text), ''[]''::jsonb) FROM %s t', _table)
+      INTO _rows;
+    _state := _state || jsonb_build_object(_table, _rows);
+  END LOOP;
+  RETURN _state;
+END $$;
+CREATE TEMP TABLE er_before AS SELECT pg_temp.er_state() AS state;
+
+-- auth.uid() in the disposable bootstrap reads the legacy sub separately.
+-- Keep it consistent with the full JWT that auth.jwt() and the trigger read.
+SET LOCAL request.jwt.claim.sub = 'e0e00000-0000-4000-8000-0000000000aa';
+SET LOCAL request.jwt.claims = '{"sub":"e0e00000-0000-4000-8000-0000000000aa","role":"authenticated","session_id":"e0e05000-0000-4000-8000-0000000000ff"}';
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.must_fail(
+  $$SELECT public.admin_delete_user_if_safe('e0e00000-0000-4000-8000-000000000004', 'test', 'er-holder-four@erasure.invalid')$$,
+  'SP_SESSION_REVOKED', 'ER6.1 a real JWT with a missing session cannot erase a holder');
+RESET ROLE;
+SELECT pg_temp.ok((SELECT state FROM er_before) = pg_temp.er_state(),
+  'ER6.2 a revoked-session refusal changes no affected rows');
+
+SET LOCAL request.jwt.claim.sub = '';
+SET LOCAL request.jwt.claims = '{}';
+SET LOCAL ROLE service_role;
+SELECT pg_temp.must_fail(
+  $$SELECT public.admin_delete_user_if_safe('e0e00000-0000-4000-8000-000000000004', 'test', 'er-holder-four@erasure.invalid')$$,
+  'Not authenticated', 'ER6.3 service_role without a caller cannot erase a holder');
+RESET ROLE;
+SELECT pg_temp.ok((SELECT state FROM er_before) = pg_temp.er_state(),
+  'ER6.4 an unauthenticated service-role refusal changes no affected rows');
+
+SET LOCAL request.jwt.claim.sub = 'e0e00000-0000-4000-8000-0000000000aa';
+SET LOCAL request.jwt.claims = '{"sub":"e0e00000-0000-4000-8000-0000000000aa","role":"authenticated","session_id":"e0e05000-0000-4000-8000-0000000000aa"}';
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.ok(auth.jwt()->>'session_id' = 'e0e05000-0000-4000-8000-0000000000aa'
+                  AND auth.uid() = 'e0e00000-0000-4000-8000-0000000000aa'::uuid
+                  AND public.sp_passport_session_active(),
+  'ER6.5 the authenticated superadmin JWT has a live session');
+RESET ROLE;
+
 -- The production case: a holder with Passport data and no application.
 TRUNCATE er_result;
+GRANT INSERT ON er_result TO authenticated;
+SET LOCAL ROLE authenticated;
 INSERT INTO er_result
 SELECT pg_temp.erase('e0e00000-0000-4000-8000-000000000004', 'er-holder-four@erasure.invalid',
                      'ER2.0b a holder with credential metadata and a reading and no application can be erased');
+RESET ROLE;
+SET LOCAL request.jwt.claims = '{}';
+SET LOCAL request.jwt.claim.sub = 'e0e00000-0000-4000-8000-0000000000aa';
 SELECT pg_temp.ok(
   (SELECT r ->> 'form' FROM er_result) <> 'hard_delete'
   AND (SELECT r -> 'removed_dependents' FROM er_result) = '{"sp_credential_details": 1, "sp_evidence_extractions": 1}'::jsonb
   AND (SELECT count(*) FROM public.sp_claims WHERE holder_user_id = 'e0e00000-0000-4000-8000-000000000004') = 0
+  AND (SELECT count(*) FROM public.sp_credential_details WHERE claim_id = 'e0e0c000-0000-4000-8000-000000000004') = 0
   AND (SELECT count(*) FROM public.sp_evidence_extractions WHERE evidence_id = 'e0e0e000-0000-4000-8000-000000000004') = 0
   AND (SELECT count(*) FROM auth.users WHERE lower(email) = 'er-holder-four@erasure.invalid') = 0,
   'ER2.6 a holder with credential metadata and no application (the production case) is erased and the address released');
@@ -249,5 +311,5 @@ SELECT pg_temp.ok(
         WHERE action = 'user_deleted' AND subject_id = 'e0e00000-0000-4000-8000-000000000001') = 1,
   'ER5.2 each of the three erasures wrote one audit row, naming the metadata and reading it removed');
 
-DO $$ BEGIN RAISE NOTICE '    ok  account_erasure_credential_details_test: 22 assertions passed'; END $$;
+DO $$ BEGIN RAISE NOTICE '    ok  account_erasure_credential_details_test: 27 assertions passed'; END $$;
 ROLLBACK;
