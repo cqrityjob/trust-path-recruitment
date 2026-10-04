@@ -205,8 +205,8 @@ Samma förteckning som i integritetspolicyn, avsnitt 6. Ett fält i hakparentes 
 | Underbiträde | Uppgift | Plats för behandling | Stöd för överföring utanför EU/EES | Avtal med underbiträdet |
 |---|---|---|---|---|
 | Supabase | Databas, inloggning, fillagring, loggar och serverfunktioner | Frankfurt, Tyskland (EU). Verifierad: projektets region är eu-central-1 | [Ange stöd för eventuell åtkomst från tredje land] | [Ange: biträdesavtal ingånget] |
-| Lovable | Drift av webbapplikationen | [Ange driftregion] | [Ange överföringsstöd] | [Ange: biträdesavtal ingånget] |
-| Tinybird (anlitas av Lovable för besöksstatistiken) | Lagring och analys av sidvisningar i Lovables besöksstatistik, tills den är avstängd | [Ange plats för Tinybirds behandling] | [Ange överföringsstöd] | [Ange: Lovables avtal med Tinybird] |
+| Lovable | Drift (hosting) av webbapplikationen | [Ange driftregion] | [Ange överföringsstöd] | [Ange: biträdesavtal ingånget] |
+| Cloudflare (CDN och skydd för driften) | Leverans av sidor och skydd mot automatiserad trafik | [Ange plats för Cloudflares behandling] | [Ange överföringsstöd] | [Ange: Lovables avtal med Cloudflare] |
 | Resend | Utskick av systemmejl, till exempel kvitton, meddelanden och notiser | [Ange sändningsregion] | [Ange överföringsstöd] | [Ange: biträdesavtal ingånget] |
 | [Ange e-postleverantörens namn] | Inloggningsmejl och brevlådorna info@ och job@ | [Ange region] | [Ange överföringsstöd] | [Ange: biträdesavtal ingånget] |
 | Google | Inloggning med Google, bara om kandidaten väljer det | [Ange plats för Googles behandling] | [Ange överföringsstöd] | [Ange: Googles roll, självständigt ansvarig eller underbiträde] |

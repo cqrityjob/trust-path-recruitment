@@ -710,15 +710,20 @@ export const PRIVACY: LegalDocument = {
       heading: "11. Kakor och liknande teknik",
       blocks: [
         // Verified 2026-10-03/04 (was a link to a cookie policy and to cookie
-        // settings): opening a share link to a Security Passport sets two
+        // settings). Opening a share link to a Security Passport sets two
         // functional cookies, one carrying the share key and one the share
         // session, each for SHARE_COOKIE_MAX_AGE_SECONDS (1800 s,
-        // src/lib/security-passport/share-transport.ts). The application sets no
-        // other cookie for analysis or marketing, but the hosting layer does:
-        // see the last two paragraphs.
+        // src/lib/security-passport/share-transport.ts). The two cookies of the
+        // hosting layer were measured by the release session in a fresh
+        // Chromium session on www.cqrityjob.com on 2026-10-04 (deployment
+        // 7b19bf27): `__cf_bm`, Cloudflare's bot management, HttpOnly, Secure,
+        // 30 minutes; `__dpl`, Lovable's pin to the published version, not
+        // HttpOnly, about 24 hours. Both are needed technically and neither is
+        // for analysis. Login and language sit in the browser's storage and the
+        // sidebar state is a cookie.
         {
           type: "p",
-          text: "Vi använder bara kakor och lagring i webbläsaren som behövs för att tjänsten ska fungera, till exempel för inloggning, språkval, sidopanelens läge och för att öppna en delningslänk till ett Security Passport (två kakor, en för delningsnyckeln och en för delningssessionen, som vardera gäller i 30 minuter).",
+          text: "Vi använder bara kakor och lagring i webbläsaren som behövs för att tjänsten ska fungera eller vara säker, till exempel för inloggning, språkval och sidopanelens läge. När du öppnar en delningslänk till ett Security Passport sätts två kakor (en för delningsnyckeln och en för delningssessionen, som vardera gäller i 30 minuter). Driften av tjänsten sätter dessutom två kakor: __cf_bm från Cloudflare, som skyddar mot automatiserad trafik och gäller i 30 minuter, och __dpl från Lovable, som håller dig på rätt publicerad version och gäller i ungefär 24 timmar. Ingen av dem används för analys eller marknadsföring.",
         },
         // Owner decision 2026-10-04: CQrityjob's own usage measurement is off in
         // version 1 (FUNNEL_MEASUREMENT_ENABLED,
@@ -728,27 +733,20 @@ export const PRIVACY: LegalDocument = {
         // text says it is. The newsletter and the consent-based tracking that
         // used to be described here are not in the product either.
         //
-        // What this section must NOT say is "we do not measure" or "only two
-        // cookies": verified on www.cqrityjob.com on 2026-10-04 (deployment
-        // e3ecf917), every published page carries the hosting supplier's
-        // "Visitor analytics" script (`/~flock.js`, added at build time, outside
-        // this application). It posts a page view with the browser, language,
-        // an approximate country, the referrer, the path and the whole URL to
-        // `/~api/analytics`, and sets a cookie `session-id` (a random UUID,
-        // Max-Age 1800, Secure). The supplier's documentation says it can be
-        // turned off in the project settings (Project settings > General >
-        // Publishing > Visitor analytics); that needs the owner's Lovable access
-        // and is not done. Until it is done and checked on the live site this
-        // paragraph keeps saying what happens (launch-legal:check 1.14 requires
-        // it), and the supplier behind it is an open point in the table in
-        // section 6 (src/lib/legal/vendors.ts).
+        // The hosting supplier's built-in "Visitor analytics" (`/~flock.js`,
+        // which posted page views to `/~api/analytics` and set a `session-id`
+        // cookie) was on until the owner turned it off on 2026-10-04. The
+        // release session then checked the live site (deployment 7b19bf27): no
+        // `~flock.js` in the HTML of /, /jobb, /om-oss, /integritetspolicy and
+        // /villkor, no call to /~api/analytics or tinybird, no `session-id`
+        // cookie, empty localStorage and sessionStorage. The sentence below says
+        // so as a check on that date, not as a promise: it must not say "Vi mäter
+        // inte", and the owner wants it checked again after the next
+        // publication (an open item in docs/release/2026-10-04-version-1-launch-status.md,
+        // not in this text). launch-legal:check 1.14 requires this wording.
         {
           type: "p",
-          text: "Vi har stängt av vår egen mätning av hur tjänsten används, och vi lagrar ingen statistikmarkering i webbläsaren.",
-        },
-        {
-          type: "p",
-          text: "Vår driftleverantör Lovable har en inbyggd besöksstatistik som vi håller på att stänga av. Tills den är avstängd registreras sidvisningar hos Lovable (sidans adress, webbläsare, språk och ungefärligt land), och Lovable sätter en kaka med namnet session-id som gäller i 30 minuter.",
+          text: "Vår egen användningsmätning och driftleverantörens besöksstatistik är avstängda (kontrollerat den 4 oktober 2026), och vi lagrar ingen statistikmarkering i webbläsaren.",
         },
       ],
     },

@@ -34,7 +34,7 @@
 // session), now in the rows below: recruitment material is kept 24 months after
 // the recruitment ended, per the employer's established instructions; security
 // and permission logs at most 12 months with a documented need; ordinary
-// technical logs normally 90 days. Other kinds of audit entry are classified
+// technical logs 90 days. Other kinds of audit entry are classified
 // BEFORE a period is decided (row `other-audit`), and the 339 old usage rows stay
 // as they are until their content has been checked and classified (row
 // `usage-statistics`): no new collection and no deletion.
@@ -153,7 +153,7 @@ export const RETENTION_PLAN: readonly RetentionRow[] = [
   },
   {
     id: "admin-audit",
-    data: "Säkerhets- och behörighetsloggar: vem som gjorde vilken administrativ åtgärd",
+    data: "Säkerhets- och åtkomstloggar: vem som gjorde vilken administrativ åtgärd",
     period: "Högst 12 månader, och bara så länge det finns ett dokumenterat behov.",
     approval: "approved",
     inPolicy: true,
@@ -179,7 +179,7 @@ export const RETENTION_PLAN: readonly RetentionRow[] = [
   {
     id: "platform-logs",
     data: "Tekniska loggar hos plattformsleverantören: IP-adress, inloggning och förfrågningar",
-    period: "Normalt 90 dagar.",
+    period: "90 dagar.",
     approval: "approved",
     inPolicy: true,
     mechanism: "pending",
@@ -191,7 +191,7 @@ export const RETENTION_PLAN: readonly RetentionRow[] = [
   {
     id: "mail-logs",
     data: "E-postloggar hos e-postleverantören",
-    period: "Normalt 90 dagar.",
+    period: "90 dagar.",
     approval: "approved",
     inPolicy: true,
     mechanism: "pending",

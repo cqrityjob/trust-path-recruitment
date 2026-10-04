@@ -26,10 +26,15 @@
 // fails if the constant is true while the privacy policy still says CQrityjob
 // does not measure, so flipping it without the policy cannot pass.
 //
-// Not covered by this constant: the hosting layer injects its own page-view
-// script (`/~flock.js`) into every published page. It is outside this
-// application and cannot be switched off from here; the privacy policy §11
-// carries an open point for it (see docs/release/2026-10-04-funnel-measurement-off.md).
+// Not covered by this constant: the hosting layer's own visitor analytics
+// (`/~flock.js`, which posted page views to `/~api/analytics` and set a
+// `session-id` cookie). It sits outside this application and cannot be switched
+// off from here. The owner turned it off in the hosting project's settings on
+// 2026-10-04 and the release session checked the live site afterwards
+// (deployment 7b19bf27: no script, no analytics call, no cookie, empty browser
+// storage). The privacy policy says so as a dated check, not as a promise, and
+// the check is repeated after the next publication
+// (docs/release/2026-10-04-version-1-launch-status.md).
 
 /** Version 1: no usage measurement. */
 export const FUNNEL_MEASUREMENT_ENABLED = false;

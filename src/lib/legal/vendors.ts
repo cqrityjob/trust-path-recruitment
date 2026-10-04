@@ -12,13 +12,14 @@
 //
 // Verified 2026-10-04: the Supabase project runs in eu-central-1 (Frankfurt),
 // read from the project record. Nothing else in this table is verified. The
-// Tinybird row exists because the hosting supplier's built-in visitor analytics
-// sends page views through a processor of its own; the row goes away when the
-// owner has turned that analytics off and the live site has been checked.
+// Cloudflare row exists because the hosting layer's `__cf_bm` cookie shows that
+// Cloudflare is in the delivery path. (A Tinybird row for the hosting supplier's
+// visitor analytics was removed once the owner had turned that analytics off and
+// the live site had been checked, 2026-10-04.)
 
 export type Vendor = {
   /** Stable key. Annex 3 of the processor agreement lists the same ids. */
-  readonly id: "supabase" | "lovable" | "tinybird" | "resend" | "smtp" | "google";
+  readonly id: "supabase" | "lovable" | "cloudflare" | "resend" | "smtp" | "google";
   readonly name: string;
   readonly purpose: string;
   /** Where the supplier processes the data. */
@@ -38,19 +39,20 @@ export const VENDORS: readonly Vendor[] = [
   {
     id: "lovable",
     name: "Lovable",
-    purpose: "Drift av webbapplikationen",
+    purpose: "Drift (hosting) av webbapplikationen",
     location: "[Ange driftregion]",
     transferSupport: "[Ange överföringsstöd]",
   },
   {
-    // Reported by the release session from the supplier's own description of
-    // its "Visitor analytics" (2026-10-04); not verified against a contract or
-    // the supplier's sub-processor list. Until the owner turns that analytics
-    // off, page views reach it through Lovable (policy section 11).
-    id: "tinybird",
-    name: "Tinybird (anlitas av Lovable för besöksstatistiken)",
-    purpose: "Lagring och analys av sidvisningar i Lovables besöksstatistik, tills den är avstängd",
-    location: "[Ange plats för Tinybirds behandling]",
+    // Observed by the release session on the live site (2026-10-04): the
+    // `__cf_bm` cookie is Cloudflare's bot management, so Cloudflare sits in the
+    // delivery path of the published pages (a CDN and protection layer run by the
+    // hosting supplier). Its place of processing and its transfer support are not
+    // verified.
+    id: "cloudflare",
+    name: "Cloudflare (CDN och skydd för driften)",
+    purpose: "Leverans av sidor och skydd mot automatiserad trafik",
+    location: "[Ange plats för Cloudflares behandling]",
     transferSupport: "[Ange överföringsstöd]",
   },
   {

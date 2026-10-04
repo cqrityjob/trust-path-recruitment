@@ -25,7 +25,7 @@ och var.
 | 5 | Internationell drift är godkänd som inriktning. Inget generellt krav på EU-lagring. Faktiska mottagarländer, leverantörsavtal och lagligt överföringsstöd dokumenteras. Köp av AI-tjänst eller godkännande av villkoren ersätter inte kraven. | Policy §8 säger att ingen EU-regel finns och att stöd krävs för varje överföring, och §6 har en tabell med plats och stöd per leverantör. Allt som inte är verifierat är en synlig öppen punkt. Bara Supabases region (Frankfurt) är verifierad. | `vendors.ts`, policy §6 och §8 |
 | 6 | Inför den uppdaterade integritetspolicyn och ändringarna i användarvillkoren. Färdigställ dessutom ett separat personuppgiftsbiträdesavtal med behandlingsbilaga, säkerhetsåtgärder och underbiträdesförteckning för företagskunder. | Policyn och villkoren är uppdaterade och finns som utkast (banner, `noindex`, inte i sitemapen). Biträdesavtalet är ett utkast med Bilaga 1 (behandlingen), Bilaga 2 (säkerhetsåtgärder, med underlag per punkt) och Bilaga 3 (underbiträden, samma lista som policyn). | `docs/legal/personuppgiftsbitradesavtal-utkast.md` |
 | 7 | Samla kvarstående faktauppgifter i en kort lista. | Listan finns. | `docs/legal/open-facts-2026-10-04.md` |
-| 8 | **Tillägg senare 2026-10-04** (ägarens besked, förmedlat av release-sessionen): (a) rekryteringsmaterial: standard 24 månader efter avslutad rekrytering, enligt arbetsgivarens fastställda instruktioner; (b) säkerhets- och behörighetsloggar: högst 12 månader med dokumenterat behov; (c) vanliga tekniska loggar: normalt 90 dagar; (d) andra slags granskningsposter klassificeras innan en tid bestäms; (e) de 339 gamla mätraderna ligger kvar tills innehåll och klassificering är kontrollerade, ingen ny insamling och ingen radering; (f) de uppdaterade juridiska utkasten får visas med tydlig utkastbanner, `OWNER_APPROVED` förblir `false` och detta är inte ett slutligt juridik- eller lanseringsgodkännande; (g) §11 får inte säga "Vi mäter inte" förrän den faktiska driften är verifierad; texten ska säga att vår egen mätning är avstängd och vad driftleverantörens besöksstatistik registrerar. | (a)–(d): raderna `recruitment`, `admin-audit`, `other-audit`, `platform-logs`, `mail-logs` i `retention-plan.ts`, policyns avsnitt 9, biträdesavtalets 10.1, runbook R6–R8; tiderna frågas inte om igen. (e): `usage-statistics` och `funnel-measurement-off`-dokumentet ("inte beslutat; kräver klassificering först"). (f): sammanslagning av #417 får ske när granskningsfynden är rättade och CI är grön. (g): policy §11, tabellen i §6 (Tinybird, öppen punkt) och vaktskriptets 1.10b och 1.14. | `retention-plan.ts`, `documents.ts`, `vendors.ts`, `launch-legal-check.ts` |
+| 8 | **Tillägg senare 2026-10-04** (ägarens besked, förmedlat av release-sessionen, med ägarens egna ord för de fyra rättelserna): (a) jobbmejl: gallring sker först när rekryteringens avslutsdatum är känt och 24 månader har passerat; saknas avslutsdatum sker ingen automatisk radering; (b) lagringstider: rekryteringsmaterial 24 månader efter avslutad process (enligt arbetsgivarens fastställda instruktioner), säkerhets- och åtkomstloggar högst 12 månader med dokumenterat behov, vanliga tekniska loggar 90 dagar; övriga auditposter klassificeras innan en gallringsregel bestäms; (c) de 339 gamla mätraderna behålls tills de har klassificerats och radering har beslutats, ingen radering är godkänd nu, ingen ny insamling; (d) hosting och kakor: Lovables Visitor analytics är avstängd och verifierad live 2026-10-04 (deployment 7b19bf27), de observerade driftkakorna `__cf_bm` (Cloudflare, bot management, HttpOnly, Secure, 30 minuter) och `__dpl` (Lovable, håller besökaren på rätt publicerad version, ej HttpOnly, ca 24 timmar) nämns i §11, och texten ska vara ett daterat konstaterande, inte ett absolut löfte (kontrolleras igen efter nästa publicering); (e) de uppdaterade juridiska utkasten får visas med tydlig utkastbanner, `OWNER_APPROVED` förblir `false` och detta är inte ett slutligt juridik- eller lanseringsgodkännande; (f) de inloggade sluttesterna (steg 11 och 15 med flera) är **uppskjutna, inte godkända**. | (a): runbook R6. (b): raderna `recruitment`, `admin-audit`, `other-audit`, `platform-logs`, `mail-logs` i `retention-plan.ts`, policyns avsnitt 9, biträdesavtalets 10.1, runbook R6–R8; tiderna frågas inte om igen. (c): `usage-statistics` och `funnel-measurement-off`-dokumentet ("inte beslutat; kräver klassificering först"). (d): policy §11, Cloudflare som öppen punkt i leverantörstabellen, vaktskriptets 1.10b och 1.14. (e): sammanslagning av #417 får ske när granskningsfynden är rättade och CI är grön. (f): launch status B4. | `retention-plan.ts`, `documents.ts`, `vendors.ts`, `launch-legal-check.ts` |
 
 ## Vad som hittades när texten jämfördes med funktionen
 
@@ -43,15 +43,18 @@ visar hur den är hanterad i den här PR:en.
    håller dem.
 3. **Mätning som texten inte nämnde.** Produkten registrerade användningshändelser (339 rader) och satte en
    markering i webbläsarens sessionslagring. **Åtgärdat:** den egna mätningen är avstängd i koden (en konstant)
-   och markeringen skrivs inte. De 339 raderna ligger kvar tills innehåll och klassificering är kontrollerade
-   (beslut 8e). **Nytt fynd, verifierat på www.cqrityjob.com 2026-10-04:** driftleverantören lägger in en egen
-   besöksstatistik (`/~flock.js`) på varje publicerad sida som registrerar sidvisningar (adress, webbläsare,
-   språk, ungefärligt land) och sätter kakan `session-id`. Policy §11 säger därför inte "Vi mäter inte" utan att
-   den egna mätningen är avstängd och vad leverantörens statistik registrerar, och Tinybird är en öppen punkt i
-   leverantörstabellen. Funktionen kan stängas av i Lovables projektinställningar; det är ägarens åtgärd.
+   och markeringen skrivs inte. De 339 raderna ligger kvar tills de har klassificerats och radering har
+   beslutats (beslut 8c). **Nytt fynd, verifierat på www.cqrityjob.com 2026-10-04:** driftleverantören hade en
+   egen besöksstatistik (`/~flock.js`) på varje publicerad sida som registrerade sidvisningar (adress,
+   webbläsare, språk, ungefärligt land) och satte kakan `session-id`. **Ägaren har stängt av den**, och
+   release-sessionen har kontrollerat live (deployment 7b19bf27): inget skript, inga analysanrop, ingen
+   `session-id`-kaka, tom localStorage och sessionStorage. Policy §11 säger därför inte "Vi mäter inte" utan
+   att vår egen mätning och driftleverantörens besöksstatistik är avstängda, kontrollerat den 4 oktober 2026,
+   och kontrollen upprepas efter nästa publicering.
 4. **Kakor som texten inte nämnde.** Delningslänkar för Security Passport sätter två kortlivade kakor (en för
-   delningsnyckeln och en för delningssessionen, 30 minuter vardera). **Åtgärdat:** policy §11 säger det, och
-   nämner också leverantörens kaka `session-id` (30 minuter).
+   delningsnyckeln och en för delningssessionen, 30 minuter vardera). Driften sätter dessutom `__cf_bm`
+   (Cloudflare, 30 minuter) och `__dpl` (Lovable, ungefär 24 timmar). **Åtgärdat:** policy §11 nämner alla fyra
+   med ändamål och livslängd, och Cloudflare är en öppen punkt i leverantörstabellen.
 5. **Gallringsplanen och koden skiljer sig åt.** En äldre funktion raderar ansökningar efter 12 månader och
    körs aldrig; `cd_sessions` är användarnas egna testkörningar och hör till kontot; notisutkorgens rensning
    körs av en svepning som inte är konfigurerad; kontoradering avbröts för innehavare av
@@ -85,10 +88,10 @@ och pekar hit. Vaktskriptet kräver anteckningen.
 Av det som den här anteckningen först föreslog är granskning, AI-spärren, sanna ordval och rutinerna gjorda i
 den här PR:en. Det som återstår är ägarens:
 
-1. **Fakta** enligt den korta listan i `open-facts-2026-10-04.md` (adress, avtalsparter, överföringsstöd,
-   biträdesavtalets frister, och att stänga av Lovables besöksstatistik).
+1. **Fakta** enligt den korta listan i `open-facts-2026-10-04.md` (adress, avtalsparter, överföringsstöd för
+   bland andra Cloudflare, biträdesavtalets frister).
 2. **Godkännande** av villkor och policy som slutversion (`OWNER_APPROVED` ändras då, av ägaren), varefter datumen
    sätts och alla konton godkänner villkoren igen.
 3. **Publicering.** Texterna visas som utkast (banner, `noindex`, inte i sitemapen) så länge något återstår. Ägaren
-   har godkänt att de uppdaterade utkasten visas med tydlig utkastbanner (beslut 8f); det är inte ett slutligt
+   har godkänt att de uppdaterade utkasten visas med tydlig utkastbanner (beslut 8e); det är inte ett slutligt
    godkännande.

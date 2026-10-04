@@ -172,7 +172,7 @@ group("GROUP 1 — the owner's documents and decisions");
     String(gaps(terms)),
   );
   ck(
-    "1.7 the privacy policy's 16 undecided points are still open: date, address, supplier facts (including the supplier behind the hosting layer's visitor analytics), the backup period, and the audit entries that are classified first",
+    "1.7 the privacy policy's 16 undecided points are still open: date, address, supplier facts (including Cloudflare, which the hosting layer's cookie shows is in the delivery path), the backup period, and the audit entries that are classified first",
     gaps(privacy) === 16 && openPoints(PRIVACY).length === 16,
     String(gaps(privacy)),
   );
@@ -182,17 +182,13 @@ group("GROUP 1 — the owner's documents and decisions");
       RETENTION_POLICY_ROWS.every((r) => privacy.includes(`${r.data}\n${r.period}`)),
   );
   ck(
-    '1.14 nothing is described that the product does not do: no newsletter, no consent-based tracking, our own measurement said to be off only while the measurement constant is false, the hosting supplier\'s visitor analytics and its cookie described as what they are (never "Vi mäter inte"), and no automatic forwarding of replies from job@',
+    '1.14 nothing is described that the product does not do: no newsletter, no consent-based tracking, our own measurement and the hosting supplier\'s visitor analytics said to be off only as checked on 4 October 2026 and only while the measurement constant is false (never "Vi mäter inte"), and no automatic forwarding of replies from job@',
     !/nyhetsbrev|direktmarknadsföring|samtyckeskrävande spårning/i.test(`${terms}\n${privacy}`) &&
       !privacy.includes("Vi mäter anonymt") &&
       !/Vi mäter inte/.test(privacy) &&
       FUNNEL_MEASUREMENT_ENABLED === false &&
       privacy.includes(
-        "Vi har stängt av vår egen mätning av hur tjänsten används, och vi lagrar ingen statistikmarkering i webbläsaren.",
-      ) &&
-      privacy.includes("Vår driftleverantör Lovable har en inbyggd besöksstatistik") &&
-      privacy.includes(
-        "registreras sidvisningar hos Lovable (sidans adress, webbläsare, språk och ungefärligt land), och Lovable sätter en kaka med namnet session-id som gäller i 30 minuter",
+        "Vår egen användningsmätning och driftleverantörens besöksstatistik är avstängda (kontrollerat den 4 oktober 2026), och vi lagrar ingen statistikmarkering i webbläsaren.",
       ) &&
       !/vidarebefordrar (?:det|svaret) till arbetsgivaren/.test(`${terms}\n${privacy}`) &&
       terms.includes("svaret förs inte automatiskt vidare till arbetsgivaren") &&
@@ -220,20 +216,24 @@ group("GROUP 1 — the owner's documents and decisions");
       !/kakpolicy|kakinställningar/.test(privacy),
   );
   ck(
-    "1.10b the policy's cookie sentence matches what the share transport sets (two cookies, 30 minutes), and it does not claim that no analytics cookie or no technology needing consent exists while the hosting layer's visitor analytics sets one (session-id)",
+    "1.10b the policy's cookie sentence matches what the share transport sets (two cookies, 30 minutes), and it names the two cookies of the hosting layer that were measured on the live site (__cf_bm, __dpl) with their purposes and lifetimes, without claiming that no technology needing consent exists or that nothing is ever measured",
     SHARE_COOKIE_MAX_AGE_SECONDS === 1800 &&
       buildShareCookie("t", true).includes("Max-Age=1800") &&
       buildShareSessionCookie("s", true).includes("Max-Age=1800") &&
       privacy.includes(
-        "(två kakor, en för delningsnyckeln och en för delningssessionen, som vardera gäller i 30 minuter)",
+        "sätts två kakor (en för delningsnyckeln och en för delningssessionen, som vardera gäller i 30 minuter)",
       ) &&
       !privacy.includes("en kaka som gäller") &&
       !privacy.includes("behövs inget samtycke") &&
       !privacy.includes("ingen teknik som kräver samtycke") &&
       !privacy.includes("Vi sätter inga kakor för analys") &&
       !privacy.includes("Vi använder inga kakor för analys") &&
-      privacy.includes("kaka med namnet session-id") &&
-      VENDORS.some((v) => v.id === "tinybird" && v.location.startsWith("[Ange ")),
+      privacy.includes(
+        "__cf_bm från Cloudflare, som skyddar mot automatiserad trafik och gäller i 30 minuter, och __dpl från Lovable, som håller dig på rätt publicerad version och gäller i ungefär 24 timmar. Ingen av dem används för analys eller marknadsföring.",
+      ) &&
+      !privacy.includes("session-id") &&
+      VENDORS.some((v) => v.id === "cloudflare" && v.location.startsWith("[Ange ")) &&
+      !VENDORS.some((v) => (v.id as string) === "tinybird"),
   );
   ck(
     "1.10c the terms' AI-result sentence is conditional: it does not describe an AI result in a version that has no generative AI",
@@ -473,8 +473,8 @@ group("GROUP 6 — the retention plan is the policy, and the policy waits for it
       "arbetsgivarens fastställda instruktioner",
     ],
     "admin-audit": ["Högst 12 månader", "dokumenterat behov"],
-    "platform-logs": ["Normalt 90 dagar"],
-    "mail-logs": ["Normalt 90 dagar"],
+    "platform-logs": ["90 dagar"],
+    "mail-logs": ["90 dagar"],
   };
   ck(
     "6.2 the approved periods are the owner's (a change is a decision, so it must change this guard too)",
@@ -611,7 +611,7 @@ group("GROUP 6 — the retention plan is the policy, and the policy waits for it
   ck(
     "6.10 R6 counts from the end of the recruitment and deletes nothing it cannot date (no claim that the rule is cautious); the R2 list leaves out erased and anonymised accounts",
     r6.includes("Tiden räknas från **när rekryteringen") &&
-      r6.includes("Kan avslutsdatumet inte avgöras: **radera inte.**") &&
+      r6.includes("Kan avslutsdatumet inte fastställas: **radera inte.**") &&
       !/försiktig/i.test(r6) &&
       r2sql.includes(
         "not exists (select 1 from public.deleted_accounts d where d.user_id = u.id)",

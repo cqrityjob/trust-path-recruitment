@@ -48,39 +48,46 @@ product names, so a new statistics marker cannot arrive unnoticed.
   function derives the user id from the session. Revoking the grant is an
   optional hardening that needs a migration, which this change does not write
   (version 2 backlog, `docs/release/2026-10-04-version-1-launch-status.md`).
-- **The hosting layer's own visitor analytics.** The published site is served
-  with a script that the host adds to every HTML response at build time, outside
-  this application and not in the build output:
-  `<script defer src="/~flock.js" data-proxy-url="/~api/analytics">`. Verified
-  on www.cqrityjob.com on 2026-10-04 by the release session (deployment
-  e3ecf917): it is Lovable's "Visitor analytics", which Lovable's documentation
-  says is built on Tinybird. It posts a `page_hit` with the user agent, the
-  language, a country derived from the time zone, the referrer, the path and the
-  whole URL to `/~api/analytics`, and sets a cookie `session-id` (a random UUID,
-  Max-Age 1800, Secure); depending on configuration it may also use
-  localStorage or sessionStorage. Per Lovable's documentation it can be turned
-  off under Project settings, General, Publishing, Visitor analytics. That needs
-  the owner's Lovable access and has not been done. `FUNNEL_MEASUREMENT_ENABLED`
-  does not cover it and no change in this repository can switch it off
-  (`src/lib/security-passport/share-transport.ts` explains why Security Passport
-  share links are built so that the share key never reaches it). So the privacy
-  policy does not say "we do not measure". It says that CQrityjob's own
-  measurement is off, and what the supplier's statistics register while it is
-  on, and it lists Tinybird as an open point in the supplier table
-  (`open-facts-2026-10-04.md`, item 4). `launch-legal:check` 1.14 requires that
-  wording and forbids "Vi mäter inte". After the owner turns it off and the live
-  site has been checked, the text can be tightened in a later change.
+- **The hosting layer's own visitor analytics: was on, now off and checked.**
+  The published site was served with a script that the host adds to every HTML
+  response at build time, outside this application:
+  `<script defer src="/~flock.js" data-proxy-url="/~api/analytics">`, Lovable's
+  "Visitor analytics" (built on Tinybird according to Lovable's documentation).
+  Verified on www.cqrityjob.com on 2026-10-04 (deployment e3ecf917) it posted a
+  `page_hit` with the user agent, the language, a country derived from the time
+  zone, the referrer, the path and the whole URL to `/~api/analytics`, and set a
+  cookie `session-id` (a random UUID, Max-Age 1800, Secure).
+  `FUNNEL_MEASUREMENT_ENABLED` never covered it and no change in this repository
+  could switch it off. **The owner turned it off in the hosting project's
+  settings (Project settings, General, Publishing, Visitor analytics) on
+  2026-10-04, and the release session checked the live site afterwards**
+  (deployment 7b19bf27, a fresh Chromium session on `/` and curl on `/`,
+  `/jobb`, `/om-oss`, `/integritetspolicy` and `/villkor`): no `~flock.js` in
+  the HTML, no call to `/~api/analytics` or tinybird, no `session-id` cookie,
+  empty localStorage and sessionStorage. What is left from the hosting layer is
+  two cookies that are needed technically and are not for analysis: `__cf_bm`
+  (Cloudflare, bot management, HttpOnly, Secure, 30 minutes) and `__dpl`
+  (Lovable, keeps the visitor on the published version, not HttpOnly, about 24
+  hours); the policy names both. The policy states this as a dated check
+  ("kontrollerat den 4 oktober 2026"), not as a promise, and never says "Vi
+  mäter inte". The owner wants it checked again after the next publication
+  (open item in `docs/release/2026-10-04-version-1-launch-status.md`).
+  `launch-legal:check` 1.14 requires that wording. Security Passport share
+  links are still built so that the share key never reaches a page load
+  (`src/lib/security-passport/share-transport.ts`), which keeps that design
+  independent of whether such a script is present.
 - **The privacy policy.** Its sentence about anonymous measurement is replaced in
-  this same PR by "Vi gör ingen egen mätning av hur du använder tjänsten, och vi lagrar
-  ingen statistikmarkering i webbläsaren." `launch-legal:check` 1.14 holds that
-  sentence only while the constant is `false`.
+  this same PR by "Vår egen användningsmätning och driftleverantörens besöksstatistik
+  är avstängda (kontrollerat den 4 oktober 2026), och vi lagrar ingen
+  statistikmarkering i webbläsaren." `launch-legal:check` 1.14 holds that sentence
+  only while the constant is `false`.
 
 ## Not decided: classify first, then decide (the 339 rows)
 
-Owner decision, 2026-10-04: the 339 old rows stay until their content and
-classification have been checked. No new collection and no deletion. Whether
-they are deleted, kept for a period or anonymised is **not decided and needs the
-classification first**. The statements below are a reading aid for that check,
+Owner decision, 2026-10-04: the 339 old rows stay until they have been
+classified and a deletion has been decided. **No deletion is approved now**, and
+there is no new collection. Whether they are deleted, kept for a period or
+anonymised is **not decided and needs the classification first**. The statements below are a reading aid for that check,
 not a prepared deletion:
 
 ```sql

@@ -96,11 +96,13 @@ avslutades**, inte från trådens senaste meddelande. Varje månad: gå igenom t
 äldre än 24 månader (en förgallring, inte en grund för radering). För varje sådan tråd: ta reda på när
 rekryteringen avslutades (arbetsgivaren stängde annonsen eller rekryteringen; läs datumet i plattformen).
 
-- Är avslutsdatumet känt och äldre än 24 månader: radera tråden.
-- Kan avslutsdatumet inte avgöras: **radera inte.** Skriv tråden som "ej avgjord" i loggen och klargör det
-  först. Gallring sker inte förrän det är klarlagt.
+- Är avslutsdatumet känt (från annonsen eller ärendet i plattformen) och 24 månader har passerat sedan det:
+  radera tråden.
+- Kan avslutsdatumet inte fastställas: **radera inte.** Ingen radering sker, varken automatisk eller manuell.
+  Skriv tråden som "ej avgjord" i loggen och klargör datumet först.
 
-Skriv antalet raderade och antalet ej avgjorda i loggen. Inget kan vara förfallet före 2028-10 (adressen
+En rekrytering som avslutades efter trådens senaste meddelande har alltså ett senare avslutsdatum än meddelandet,
+och tråden gallras först 24 månader efter det datumet. Skriv antalet raderade och antalet ej avgjorda i loggen. Inget kan vara förfallet före 2028-10 (adressen
 infördes för lanseringen).
 
 ## R7. Rekryteringsmaterial hos arbetsgivare: standardtid och begäran om kortare tid
@@ -121,15 +123,16 @@ anonymisera) får inte köras eller schemaläggas.
 
 Ägaren läser och skriver i loggen: loggarnas lagringstid i Supabase (Logs), e-postloggarnas i Resend,
 sessionernas längd i Supabase Auth, och säkerhetskopiornas rotation i Supabase (Database → Backups, och om
-Point-in-time recovery är på). Tekniska loggar ska normalt vara högst 90 dagar (ägarens beslut 2026-10-04):
-är en leverantörs period längre och går inte att ställa in kortare, säg det till ägaren, så ändras texten.
+Point-in-time recovery är på). Vanliga tekniska loggar ska vara 90 dagar (ägarens beslut 2026-10-04): är en
+leverantörs period längre och går inte att ställa in kortare, säg det till ägaren, så ändras texten.
 Det är dessa siffror som ersätter de öppna punkterna i policyns avsnitt 9 och 6, och först när de är lästa
 kan raderna `platform-logs` och `mail-logs` bli något annat än `pending`. Se
 `docs/legal/open-facts-2026-10-04.md`.
 
-Läs också om Lovables besöksstatistik är avstängd (Project settings → General → Publishing → Visitor
-analytics) och kontrollera på den publicerade sidan att skriptet `/~flock.js` och kakan `session-id` är
-borta. Tills dess säger policyns avsnitt 11 vad som registreras.
+Kontrollera också efter varje publicering att Lovables besöksstatistik fortfarande är avstängd (Project
+settings → General → Publishing → Visitor analytics): på den publicerade sidan ska skriptet `/~flock.js`,
+anropen till `/~api/analytics` och kakan `session-id` saknas, och driftens enda kakor ska vara `__cf_bm`
+(Cloudflare) och `__dpl` (Lovable). Avstängd och kontrollerad 2026-10-04 (deployment 7b19bf27).
 
 ## R9. Brevlådor och GDPR-frister
 
