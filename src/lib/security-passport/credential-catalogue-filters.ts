@@ -38,15 +38,19 @@
 //      "all".
 //   7. Search matches every token, diacritic-folded, against the canonical
 //      names, the stable code, the symbol, the abbreviation, approved issuer
-//      aliases and the governed organisation names.
+//      aliases, approved definition aliases (a former name) and the governed
+//      organisation names. A token matches the START of a word, so "cpp" finds
+//      CPP and not IFCPP, and "sec" finds "Security". The most specific match
+//      is listed first: an exact abbreviation, then a prefix of one, then a name,
+//      then an organisation, then an alias.
+//   9. Scope starts at "all": a holder who does not yet know whether the
+//      credential is international or national still finds it. International
+//      and national narrow the list; neither is ever chosen for the holder.
 //   8. A definition with no reviewed professional area is never excluded by
 //      "all areas".
 
 export type OrganisationRoleKind =
-  | "issuer"
-  | "regulator"
-  | "training_provider"
-  | "verification_authority";
+  "issuer" | "regulator" | "training_provider" | "verification_authority";
 
 export interface FilterDefinition {
   readonly code: string;
@@ -81,6 +85,15 @@ export interface CatalogueFilterSource {
     readonly requires_scope?: boolean | null;
     readonly symbol_label?: string | null;
   }[];
+  /**
+   * `sp_certification_definition_aliases`: former and alternative names of a
+   * DEFINITION (20270212090000). Search only, never rendered: whatever matched,
+   * the holder is shown the governed name.
+   */
+  readonly definitionAliases?: readonly {
+    readonly credential_code: string;
+    readonly alias: string;
+  }[];
   /** `sp_certification_definitions.abbreviation`. */
   readonly abbreviations: readonly {
     readonly credential_code: string;
@@ -92,8 +105,10 @@ export interface CatalogueFilterSource {
   readonly organisations: readonly { readonly id: string; readonly name: string }[];
 }
 
+export type CatalogueScope = "all" | "international" | "national";
+
 export interface CatalogueFilterState {
-  readonly scope: "international" | "national";
+  readonly scope: CatalogueScope;
   readonly country: string;
   readonly region: string;
   readonly domain: string;
@@ -103,7 +118,7 @@ export interface CatalogueFilterState {
 }
 
 export const EMPTY_FILTERS: CatalogueFilterState = {
-  scope: "international",
+  scope: "all",
   country: "",
   region: "",
   domain: "",
@@ -127,6 +142,18 @@ export interface IndexedDefinition extends FilterDefinition {
   readonly trainingProviderStatedOnDocument: boolean;
   readonly organisations: readonly OrganisationInRole[];
   readonly haystack: string;
+  /** The governed abbreviation (`sp_certification_definitions`), or null: none is invented. */
+  readonly abbreviation: string | null;
+  /** The governed plate legend. Search only. */
+  readonly symbolLabel: string | null;
+  /** The folded search fields, kept apart so a match can be RANKED, not only found. */
+  readonly fold: {
+    readonly abbreviation: string;
+    readonly code: string;
+    readonly names: string;
+    readonly organisations: string;
+    readonly aliases: string;
+  };
   /**
    * Every approved way the ISSUER of this definition may be written: the
    * governed organisation name plus its approved aliases ("(ISC)²", a historical
@@ -175,11 +202,17 @@ export function buildCatalogueIndex(source: CatalogueFilterSource): readonly Ind
   );
   const factsOf = new Map(source.definitionFacts.map((f) => [f.code, f]));
   const abbreviationOf = new Map(
-    source.abbreviations.map((a) => [a.credential_code, a.abbreviation ?? ""]),
+    source.abbreviations.map((a) => [a.credential_code, a.abbreviation?.trim() || null]),
   );
   const aliasesOf = new Map<string, string[]>();
   for (const a of source.issuerAliases)
     aliasesOf.set(a.issuer_id, [...(aliasesOf.get(a.issuer_id) ?? []), a.alias]);
+  const definitionAliasesOf = new Map<string, string[]>();
+  for (const a of source.definitionAliases ?? [])
+    definitionAliasesOf.set(a.credential_code, [
+      ...(definitionAliasesOf.get(a.credential_code) ?? []),
+      a.alias,
+    ]);
   const rolesOf = new Map<string, FilterOrganisationRole[]>();
   for (const r of source.organisationRoles)
     rolesOf.set(r.credential_code, [...(rolesOf.get(r.credential_code) ?? []), r]);
@@ -197,8 +230,21 @@ export function buildCatalogueIndex(source: CatalogueFilterSource): readonly Ind
     if (d.issuer_id && d.issuer_name && !organisations.some((o) => o.role === "issuer"))
       organisations.push({ id: d.issuer_id, name: d.issuer_name, role: "issuer" });
     const facts = factsOf.get(d.code);
-    const aliasText = organisations.flatMap((o) => aliasesOf.get(o.id) ?? []);
+    const abbreviation = abbreviationOf.get(d.code) ?? null;
+    const issuerAliasText = organisations.flatMap((o) => aliasesOf.get(o.id) ?? []);
+    const aliasText = [
+      ...issuerAliasText,
+      ...(definitionAliasesOf.get(d.code) ?? []),
+      facts?.symbol_label ?? "",
+    ];
     const issuingOrganisations = organisations.filter((o) => o.role === "issuer");
+    const fold = {
+      abbreviation: foldForSearch(abbreviation ?? ""),
+      code: foldForSearch(d.code),
+      names: foldForSearch(`${d.name_sv} ${d.name_en}`),
+      organisations: foldForSearch(organisations.map((o) => o.name).join(" ")),
+      aliases: foldForSearch(aliasText.join(" ")),
+    };
     return {
       ...d,
       domain: domainOf.get(d.code) ?? null,
@@ -209,6 +255,9 @@ export function buildCatalogueIndex(source: CatalogueFilterSource): readonly Ind
         (r) => r.role === "training_provider" && r.document_specific,
       ),
       organisations,
+      abbreviation,
+      symbolLabel: facts?.symbol_label ?? null,
+      fold,
       issuerMatchTerms: issuingOrganisations.flatMap((o) => [
         o.name,
         ...(aliasesOf.get(o.id) ?? []),
@@ -219,7 +268,7 @@ export function buildCatalogueIndex(source: CatalogueFilterSource): readonly Ind
           d.name_en,
           d.code,
           facts?.symbol_label ?? "",
-          abbreviationOf.get(d.code) ?? "",
+          abbreviation ?? "",
           ...organisations.map((o) => o.name),
           ...aliasText,
         ].join(" "),
@@ -228,12 +277,56 @@ export function buildCatalogueIndex(source: CatalogueFilterSource): readonly Ind
   });
 }
 
+/** True when `token` starts a word of the (already folded) text. */
+function startsAWord(folded: string, token: string): boolean {
+  return ` ${folded}`.includes(` ${token}`);
+}
+
+/**
+ * How well one definition answers a search: 0 is no match, a larger number is a
+ * more specific one. Every token must match the start of a word SOMEWHERE (so
+ * the match is found); the score says WHERE the whole query matches best.
+ *
+ *   100  the query is exactly the abbreviation ("cpp" → CPP)
+ *    80  the query starts the abbreviation ("cis" → CISSP, CISA, CISM)
+ *    60  every token starts a word of the name
+ *    40  every token starts a word of the issuing/regulating organisation
+ *    20  every token starts a word of an approved alias, the code or the legend
+ *    10  the tokens are satisfied only across several of those
+ */
+export function searchScore(d: IndexedDefinition, query: string, extra = ""): number {
+  const tokens = foldForSearch(query).split(" ").filter(Boolean);
+  if (!tokens.length) return 0;
+  const hay = `${d.haystack} ${foldForSearch(extra)}`;
+  if (!tokens.every((t) => startsAWord(hay, t))) return 0;
+  const joined = tokens.join(" ");
+  if (d.fold.abbreviation && d.fold.abbreviation === joined) return 100;
+  if (d.fold.abbreviation && tokens.length === 1 && d.fold.abbreviation.startsWith(joined))
+    return 80;
+  const within = (text: string) => tokens.every((t) => startsAWord(text, t));
+  if (within(d.fold.names)) return 60;
+  if (within(d.fold.organisations)) return 40;
+  if (within(d.fold.aliases) || within(d.fold.code)) return 20;
+  return 10;
+}
+
 type OptionalFilter = "region" | "domain" | "category" | "organisation" | "search";
 
 function matchesScope(d: IndexedDefinition, state: CatalogueFilterState): boolean {
+  if (state.scope === "all") return true;
   if (state.scope === "international") return d.scope_code === "global_professional";
   if (d.scope_code === "global_professional") return false;
   return !state.country || d.country === state.country;
+}
+
+/**
+ * Whether a definition belongs to the place a filter state names: the scope and,
+ * for national credentials, the country. The one filter that can CONTRADICT a
+ * chosen credential — "Great Britain" while a Swedish credential is selected —
+ * as opposed to merely narrowing the list around it.
+ */
+export function definitionFitsPlace(d: IndexedDefinition, state: CatalogueFilterState): boolean {
+  return matchesScope(d, state);
 }
 
 function matchesOptional(
@@ -254,13 +347,8 @@ function matchesOptional(
     !d.organisations.some((o) => o.id === state.organisation)
   )
     return false;
-  if (skip !== "search") {
-    const tokens = foldForSearch(state.search).split(" ").filter(Boolean);
-    if (tokens.length) {
-      const hay = `${d.haystack} ${foldForSearch(extraHaystack(d))}`;
-      if (!tokens.every((t) => hay.includes(t))) return false;
-    }
-  }
+  if (skip !== "search" && foldForSearch(state.search))
+    if (searchScore(d, state.search, extraHaystack(d)) === 0) return false;
   return true;
 }
 
@@ -290,7 +378,19 @@ export function filterCatalogue(
   const pass = (skip?: OptionalFilter) =>
     inScope.filter((d) => matchesOptional(d, state, extraHaystack, skip));
 
-  const results = pass();
+  const matched = pass();
+  // With a search the best answer comes first (ties keep the catalogue's own
+  // order); without one the catalogue's order is left alone.
+  const results = foldForSearch(state.search)
+    ? matched
+        .map((d, position) => ({
+          d,
+          position,
+          score: searchScore(d, state.search, extraHaystack(d)),
+        }))
+        .sort((a, b) => b.score - a.score || a.position - b.position)
+        .map((r) => r.d)
+    : matched;
   const regionalInCountry = inScope.filter((d) => d.region);
   // Region options count the country-wide definitions too (rule 3), so the
   // number beside "Dubai" is what the holder will actually see.
@@ -343,7 +443,7 @@ export function changeFilter(
   let next: CatalogueFilterState = { ...state, ...change };
   if (change.scope !== undefined && change.scope !== state.scope)
     next = { ...next, country: "", region: "", domain: "", category: "", organisation: "" };
-  if (next.scope === "international") next = { ...next, country: "", region: "" };
+  if (next.scope !== "national") next = { ...next, country: "", region: "" };
   if (change.country !== undefined && change.country !== state.country)
     next = { ...next, region: "" };
 

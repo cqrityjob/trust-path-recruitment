@@ -535,6 +535,15 @@ async function mount(page: Page, path: string, lang: "sv" | "en" = "sv") {
       case "getMyProfessionalIdentity":
         return ok(route, null);
 
+      // The credential picker's own reads: link sources, research the catalogue has not
+      // approved, and the holder's earlier requests. None of them is a catalogue entry.
+      case "getHayatAvailability":
+        return ok(route, { linkSources: [] });
+      case "searchUnavailableDefinitions":
+        return ok(route, []);
+      case "listMyCatalogueRequests":
+        return ok(route, []);
+
       // Header chrome, on every authenticated page.
       case "countMyAcademyWork":
         return ok(route, { total: 0, actionable: 0 });
@@ -778,9 +787,9 @@ test.describe("Security Passport — closed catalogue first run", () => {
     expect(db.calls.ensureFirstRunPassport).toBe(1);
     expect(db.events.filter((e) => e.type === "passport_created")).toHaveLength(1);
     expect(db.merits).toHaveLength(0);
-    await page.getByRole("button", { name: "Fortsätt", exact: true }).click();
-    await page.getByRole("button", { name: "Fortsätt", exact: true }).click();
-    await expect(page.getByRole("combobox", { name: "Godkänd merit" })).toBeVisible();
+    // The first step of the wizard IS the picker: a search and the approved credentials.
+    await expect(page.locator('[data-filter="search"]')).toBeVisible();
+    await expect(page.locator("[data-credential-picker]")).toBeVisible();
     expect(db.calls.completeFirstMerit ?? 0).toBe(0);
   });
   test("existing profile with legacy draft cannot resume free-text capture", async ({ page }) => {
@@ -809,11 +818,12 @@ test.describe("Security Passport — closed catalogue first run", () => {
   test("unavailable catalogue offers no custom claim escape", async ({ page }) => {
     db.profile = profileOf();
     await mount(page, "/passport/credentials/new", "en");
-    await page.getByRole("button", { name: "Continue", exact: true }).click();
-    await page.getByRole("button", { name: "Continue", exact: true }).click();
-    await expect(page.getByRole("status")).toHaveText(
+    // The picker is the first step: with nothing approved it says so at once, and there is
+    // nothing to continue with.
+    await expect(page.locator("[data-catalogue-empty]")).toHaveText(
       "Your credential is not currently available in CQrityjob Security Passport.",
     );
+    await expect(page.getByRole("button", { name: "Continue", exact: true })).toBeDisabled();
     await expect(page.getByRole("button", { name: "Save as self-reported" })).toHaveCount(0);
     await expect(page.getByLabel("Original credential name", { exact: true })).toHaveCount(0);
     await expect(page.getByLabel("Issuer (self-reported)", { exact: true })).toHaveCount(0);

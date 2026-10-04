@@ -1532,6 +1532,22 @@ jobs:
       - name: Passport catalogue filter model
         run: bun run passport-catalogue-filter:check
 
+      # The credential picker built on that model (certification research
+      # integration): one ranked search over every approved definition, a
+      # result named "ABBR — Full name" over "Issuer · kind", the credentials
+      # the catalogue does not offer yet explained rather than missing, a
+      # catalogue REQUEST that is not a definition and verifies nobody, a
+      # selection change that clears what depended on it, plates that print a
+      # whole mark, and an unknown claim type that is named, not dropped.
+      - name: Passport credential picker
+        run: bun run passport-credential-picker:check
+
+      # The administration of the research queue and the holders' requests:
+      # administrator-only, the administrator's own session, no approval and no
+      # publication from the page, retired told apart from blocked.
+      - name: Passport catalogue administration
+        run: bun run passport-catalogue-admin:check
+
       # What may be said about an entry that is no longer current (PR #263): an
       # expired self-declared credential must never be described as having been
       # verified, documented or source-confirmed. Read-only over committed code,

@@ -131,6 +131,12 @@ export const adminListPassportCatalogue = createServerFn({ method: "POST" })
         .filter((i) => i.is_active)
         .map((i) => [i.id as string, i.display_name as string]),
     );
+    const today = new Date().toISOString().slice(0, 10);
+    const retiredByDefinition = new Set(
+      ((definitions.data ?? []) as Row[])
+        .filter((d) => typeof d.retired_on === "string" && (d.retired_on as string) <= today)
+        .map((d) => d.credential_code as string),
+    );
     const definitionIssuer = new Map(
       ((definitions.data ?? []) as Row[]).map((d) => [
         d.credential_code as string,
@@ -193,6 +199,7 @@ export const adminListPassportCatalogue = createServerFn({ method: "POST" })
         legalReviewState: (t.legal_review_state as string | null) ?? null,
         requiresScope: t.requires_scope === true,
         deprecated: deprecated.has(code),
+        retired: retiredByDefinition.has(code),
         governedAuthority: t.authority_id
           ? (authorityName.get(t.authority_id as string) ?? null)
           : null,

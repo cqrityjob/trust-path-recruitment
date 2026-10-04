@@ -156,7 +156,10 @@ export function buildShareSelection(input: ShareSelectionInput): ShareSelectionM
   const groupOf = (candidate: ShareCandidate): ShareGroupId =>
     candidate.merit.kind === "experience"
       ? "employment"
-      : GROUP_OF_CLAIM[claimById.get(candidate.merit.id)?.claimType ?? "training"];
+      : // An unknown claim type falls into the qualifications group: it is listed and
+        // selectable, never silently absent from the sharing screen.
+        (GROUP_OF_CLAIM[claimById.get(candidate.merit.id)?.claimType ?? "training"] ??
+        "qualification");
 
   const groups: readonly ShareGroup[] = (
     [

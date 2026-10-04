@@ -37,8 +37,9 @@ const STATE: Record<string, string> = {
   selectable: "approved · open to all",
   selectable_pilot_members: "pilot-authorised (not public) · valid members of this market",
   selectable_public_pilot: "public pilot (not approved) · every signed-in holder, no grant",
-  awaiting_definition_approval: "NOT approved · pilot market",
+  awaiting_definition_approval: "NOT approved yet · awaiting approval or publication",
   market_closed: "market CLOSED",
+  retired: "RETIRED · cannot be registered again",
   blocked: "BLOCKED",
 };
 // The legal review, beside availability and never inside it: a public pilot
@@ -56,13 +57,19 @@ const selectableNow = (r: (typeof rows)[number]) =>
         ? "every signed-in holder"
         : "no";
 const inScope = (r: (typeof rows)[number]) => r.marketPackCode !== "AE-AZ";
+// Only a definition somebody can select today saves and reads back. An awaiting
+// one is refused, and the matrix says so instead of calling it proven.
+const isOffered = (r: (typeof rows)[number]) =>
+  r.availability === "selectable" ||
+  r.availability === "selectable_pilot_members" ||
+  r.availability === "selectable_public_pilot";
 const display = (r: (typeof rows)[number]) =>
   r.scopeCode === "global_professional"
     ? "globe · no country"
     : `flag ${r.subJurisdictionCode ?? r.jurisdictionCode}${r.scopeCode === "national_qualification" ? " · national qualification, not a licence" : ""}${r.requiresScope ? " · scope-limited mark, scope text withheld from an anonymous share" : ""}`;
 
 const line = (r: (typeof rows)[number]) =>
-  `| \`${r.code}\` | ${r.nameEn} | ${territory(r)} | ${r.claimType} / ${r.category} | ${r.regulator ?? "—"} | ${awarding(r)}${r.trainingProviderStatedOnDocument ? "; training provider stated on the certificate" : ""} | ${STATE[r.availability]} | ${legalReview(r)} | ${selectableNow(r)} | ${inScope(r) ? `proven${r.holderMustState.length ? ` (holder states ${r.holderMustState.join(" + ").replaceAll("_", " ")})` : ""}${r.availability === "selectable_pilot_members" ? " — as a valid pilot member" : ""}${r.availability === "selectable_public_pilot" ? " — as an ordinary holder with no grant" : ""}` : "refused (closed market)"} | ${inScope(r) ? "review request + evidence reach the reviewer; definition, issuer as stated, territory and scope shown" : "n/a"} | ${inScope(r) ? display(r) : "n/a"} |`;
+  `| \`${r.code}\` | ${r.nameEn} | ${territory(r)} | ${r.claimType} / ${r.category} | ${r.regulator ?? "—"} | ${awarding(r)}${r.trainingProviderStatedOnDocument ? "; training provider stated on the certificate" : ""} | ${STATE[r.availability]} | ${legalReview(r)} | ${selectableNow(r)} | ${!inScope(r) ? "refused (closed market)" : !isOffered(r) ? "not selectable yet — refused (SP_APPROVED_DEFINITION_REQUIRED) until approved" : `proven${r.holderMustState.length ? ` (holder states ${r.holderMustState.join(" + ").replaceAll("_", " ")})` : ""}${r.availability === "selectable_pilot_members" ? " — as a valid pilot member" : ""}${r.availability === "selectable_public_pilot" ? " — as an ordinary holder with no grant" : ""}`} | ${isOffered(r) ? "review request + evidence reach the reviewer; definition, issuer as stated, territory and scope shown" : "n/a"} | ${isOffered(r) ? display(r) : "n/a"} |`;
 
 const count = (a: string) => rows.filter((r) => r.availability === a).length;
 const pending = rows.filter((r) => r.availability === "selectable_pilot_members");
@@ -104,7 +111,8 @@ same diagnosis is shown to a platform administrator at \`/admin/passport-catalog
 | market closed (Abu Dhabi) | ${count("market_closed")} |
 | blocked by missing governed data | ${count("blocked")} |
 
-**Nothing is approved to produce this proof.** "Saves and reloads — proven" means the definition is pinned by code in
+**Nothing is approved to produce this proof.** "Saves and reloads — proven" appears ONLY on a definition somebody can select today; a
+definition that is not approved yet reads "not selectable yet" and is refused by the database, which the same suite proves. "Proven" means the definition is pinned by code in
 \`supabase/tests/security_passport_catalogue_completeness_test.sql\` (CI, every push) and in
 \`scripts/passport-live-local-journey-check.mjs\` (real GoTrue + PostgREST, authenticated test
 users): visible to its entitled holder, saved through \`sp_save_international_credential\` with the

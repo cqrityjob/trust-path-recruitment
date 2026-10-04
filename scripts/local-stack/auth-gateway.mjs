@@ -5,9 +5,12 @@
  * application code, the checked-in Supabase client and the real routes run
  * against it unmodified:
  *
- *   /auth/v1/*   handled here  -- password sign-in, token refresh, /user, logout,
+ *   /auth/v1/*   handled here  -- password sign-in, token refresh, /user, logout
+ *                                 (each sign-in persists its auth.sessions row; logout deletes it),
  *                                 and (2026-09-26) sign-up, confirmation, resend
  *   /rest/v1/*   proxied       -- to a real PostgREST, which enforces the real RLS
+ *   /storage/v1/*  handled here -- an IN-MEMORY substitute for the five storage calls
+ *                   the Passport's evidence upload makes (owner-prefix rule restated)
  *   /__local/inbox  the CONTROLLED TEST INBOX: every confirmation email the
  *                   gateway "sent", readable by address, loopback only. Set
  *                   LOCAL_MAILER_AUTOCONFIRM=0 to require confirmation the way
@@ -57,6 +60,10 @@ const ACCESS_TTL = 3600;
 const AUTOCONFIRM = (process.env.LOCAL_MAILER_AUTOCONFIRM ?? "1") !== "0";
 /** GoTrue's default minimum interval between two emails to one address. */
 const EMAIL_INTERVAL_MS = 60_000;
+/** Storage substitute: objects by `bucket/path`, and the signed-URL grants issued for them. */
+const objects = new Map();
+const signedUrls = new Map();
+
 /** The controlled inbox: what a real mailer would have delivered. */
 const inbox = [];
 const lastMailAt = new Map();
@@ -124,30 +131,12 @@ function accessToken(user, sessionId) {
   });
 }
 
-/** The service-role key: a real JWT for the `service_role` role. The application's
- *  server-side client uses it for the few reads that RLS deliberately does not allow
- *  a signed-in person (the Auth Admin API, display names in the admin console). */
-export function serviceKey(secret = SECRET) {
-  const now = Math.floor(Date.now() / 1000);
-  const header = b64url(JSON.stringify({ alg: "HS256", typ: "JWT" }));
-  const body = b64url(
-    JSON.stringify({
-      iss: "local-gateway",
-      role: "service_role",
-      iat: now,
-      exp: now + 10 * 365 * 86400,
-    }),
-  );
-  const sig = b64url(createHmac("sha256", secret).update(`${header}.${body}`).digest());
-  return `${header}.${body}.${sig}`;
-}
-
 /** The anon key: a real JWT for the `anon` role, as the local stack publishes one. */
-export function anonKey(secret = SECRET) {
+export function anonKey(secret = SECRET, role = "anon") {
   const now = Math.floor(Date.now() / 1000);
   const header = b64url(JSON.stringify({ alg: "HS256", typ: "JWT" }));
   const body = b64url(
-    JSON.stringify({ iss: "supabase-local", role: "anon", iat: now, exp: now + 60 * 60 * 24 * 7 }),
+    JSON.stringify({ iss: "supabase-local", role, iat: now, exp: now + 60 * 60 * 24 * 7 }),
   );
   const sig = b64url(createHmac("sha256", secret).update(`${header}.${body}`).digest());
   return `${header}.${body}.${sig}`;
@@ -288,8 +277,15 @@ function userBody(user) {
   };
 }
 
-function sessionBody(user) {
+async function sessionBody(user) {
   const sessionId = randomUUID();
+  // A real GoTrue persists the session its tokens name, and the Passport's
+  // sp_passport_session_active() reads auth.sessions: without a row, every
+  // Passport write is refused as a revoked session. Logging out deletes it.
+  await query(
+    "INSERT INTO auth.sessions (id, user_id) VALUES (:'sid'::uuid, :'uid'::uuid) ON CONFLICT DO NOTHING",
+    { sid: sessionId, uid: user.id },
+  );
   return {
     access_token: accessToken(user, sessionId),
     token_type: "bearer",
@@ -415,7 +411,7 @@ async function handle(req, res) {
             msg: "Email not confirmed",
           });
         }
-        return send(res, 200, sessionBody(user));
+        return send(res, 200, await sessionBody(user));
       }
 
       if (grant === "refresh_token") {
@@ -427,7 +423,7 @@ async function handle(req, res) {
             error_description: "Invalid Refresh Token",
           });
         }
-        return send(res, 200, sessionBody(user));
+        return send(res, 200, await sessionBody(user));
       }
 
       return send(res, 400, { error: "unsupported_grant_type", error_description: String(grant) });
@@ -497,7 +493,7 @@ async function handle(req, res) {
           },
         ],
       };
-      if (AUTOCONFIRM) return send(res, 200, { ...sessionBody(u), user: shaped });
+      if (AUTOCONFIRM) return send(res, 200, { ...(await sessionBody(u)), user: shaped });
       return send(res, 200, shaped);
     }
 
@@ -524,7 +520,7 @@ async function handle(req, res) {
       );
       // The implicit flow: the session travels in the fragment, which
       // supabase-js reads with detectSessionInUrl. Same as the hosted project.
-      const session = sessionBody(user);
+      const session = await sessionBody(user);
       const fragment = new URLSearchParams({
         access_token: session.access_token,
         expires_in: String(session.expires_in),
@@ -577,6 +573,11 @@ async function handle(req, res) {
     }
 
     if (route === "logout" && req.method === "POST") {
+      const claims = verify(bearer(req));
+      if (claims?.session_id)
+        await query("DELETE FROM auth.sessions WHERE id = :'sid'::uuid", {
+          sid: String(claims.session_id),
+        });
       res.writeHead(204, CORS);
       return res.end();
     }
@@ -585,6 +586,86 @@ async function handle(req, res) {
       code: 404,
       msg: `the local gateway implements no ${req.method} /auth/v1/${route}`,
     });
+  }
+
+  // -- Storage, SUBSTITUTED: in memory, for the evidence upload the Passport walk
+  //    needs (20260927: private owner-scoped evidence). Only the calls the
+  //    application makes: upload, authenticated download, signed URL, remove and
+  //    getBucket. The production bucket policy is restated, not skipped: a write
+  //    needs a signed-in user and the object path must begin with that user's id,
+  //    so a second holder cannot write into the first one's folder. Nothing
+  //    persists past the process, and a signed URL carries a short-lived token. --
+  if (url.pathname.startsWith("/storage/v1/")) {
+    const route = url.pathname.slice("/storage/v1/".length);
+    const claims = verify(bearer(req));
+    const user = claims && claims.role === "authenticated" ? String(claims.sub ?? "") : "";
+    const storageError = (status, message) =>
+      send(res, status, { statusCode: String(status), error: message, message });
+    const bucketGet = /^bucket\/([^/]+)$/.exec(route);
+    if (bucketGet && req.method === "GET")
+      return send(res, 200, { id: bucketGet[1], name: bucketGet[1], public: false });
+    const signRoute = /^object\/sign\/([^/]+)\/(.+)$/.exec(route);
+    if (signRoute && req.method === "POST") {
+      if (!user) return storageError(401, "Unauthorized");
+      const key = `${signRoute[1]}/${decodeURIComponent(signRoute[2])}`;
+      if (!objects.has(key)) return storageError(404, "Object not found");
+      const token = randomUUID();
+      signedUrls.set(token, { key, exp: Date.now() + 5 * 60_000 });
+      return send(res, 200, {
+        signedURL: `/object/sign/${signRoute[1]}/${signRoute[2]}?token=${token}`,
+      });
+    }
+    if (signRoute && req.method === "GET") {
+      const grant = signedUrls.get(url.searchParams.get("token") ?? "");
+      if (
+        !grant ||
+        grant.exp < Date.now() ||
+        grant.key !== `${signRoute[1]}/${decodeURIComponent(signRoute[2])}`
+      )
+        return storageError(400, "Invalid signed URL");
+      const object = objects.get(grant.key);
+      if (!object) return storageError(404, "Object not found");
+      res.writeHead(200, { "content-type": object.type, ...CORS });
+      return res.end(object.bytes);
+    }
+    const objectRoute = /^object\/(?:authenticated\/)?([^/]+)\/(.+)$/.exec(route);
+    if (objectRoute && req.method === "POST") {
+      if (!user) return storageError(401, "Unauthorized");
+      const path = decodeURIComponent(objectRoute[2]);
+      if (!path.startsWith(`${user}/`))
+        return storageError(403, "new row violates row-level security policy");
+      const key = `${objectRoute[1]}/${path}`;
+      if (objects.has(key) && req.headers["x-upsert"] !== "true")
+        return storageError(409, "The resource already exists");
+      objects.set(key, {
+        bytes: await readBody(req),
+        type: String(req.headers["content-type"] ?? "application/octet-stream"),
+      });
+      return send(res, 200, { Id: randomUUID(), Key: key });
+    }
+    if (objectRoute && req.method === "GET") {
+      if (!user) return storageError(401, "Unauthorized");
+      const path = decodeURIComponent(objectRoute[2]);
+      const object = objects.get(`${objectRoute[1]}/${path}`);
+      if (!object) return storageError(404, "Object not found");
+      res.writeHead(200, { "content-type": object.type, ...CORS });
+      return res.end(object.bytes);
+    }
+    const removeRoute = /^object\/([^/]+)$/.exec(route);
+    if (removeRoute && req.method === "DELETE") {
+      if (!user) return storageError(401, "Unauthorized");
+      const body = JSON.parse((await readBody(req)).toString("utf8") || "{}");
+      const removed = [];
+      for (const path of body.prefixes ?? []) {
+        if (objects.delete(`${removeRoute[1]}/${path}`))
+          removed.push({ name: path, bucket_id: removeRoute[1] });
+      }
+      return send(res, 200, removed);
+    }
+    return storageError(
+      404,
+      "the local gateway implements only the storage calls the Passport makes",
+    );
   }
 
   // -- the controlled test inbox, loopback only -----------------------------
@@ -620,13 +701,18 @@ async function handle(req, res) {
     return res.end(out);
   }
 
-  return send(res, 404, { msg: "the local gateway serves /auth/v1 and /rest/v1 only" });
+  return send(res, 404, {
+    msg: "the local gateway serves /auth/v1, /rest/v1 and the Passport's storage calls only",
+  });
 }
 
 if (process.argv[2] === "--print-anon-key") {
   process.stdout.write(anonKey());
 } else if (process.argv[2] === "--print-service-key") {
-  process.stdout.write(serviceKey());
+  // The server tier's own key (a few administration reads use the service role
+  // AFTER an administrator check). Signed with the local secret, valid for this
+  // disposable stack only.
+  process.stdout.write(anonKey(SECRET, "service_role"));
 } else {
   server.listen(PORT, "127.0.0.1", () => {
     console.log(`local gateway on http://127.0.0.1:${PORT} (auth local, rest -> ${POSTGREST})`);

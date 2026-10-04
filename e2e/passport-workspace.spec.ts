@@ -598,6 +598,15 @@ async function mount(
       case "getMyPassportProfileBasics":
         return ok(route, null);
 
+      // The credential picker's own reads (link sources, research the catalogue has not
+      // approved, the holder's requests): none of them is a catalogue entry.
+      case "getHayatAvailability":
+        return ok(route, { linkSources: [] });
+      case "searchUnavailableDefinitions":
+        return ok(route, []);
+      case "listMyCatalogueRequests":
+        return ok(route, []);
+
       // /passport/share — the holder's own list of links. The sharing screen
       // reads this one now (PR #197); the old package list is gone.
       case "listMyShares":

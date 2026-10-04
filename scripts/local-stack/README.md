@@ -48,6 +48,16 @@ would read, verifying the password with the same bcrypt hash in the database
 and signing with the same HS256 secret PostgREST verifies with. It proxies
 `/rest/v1/*` to PostgREST untouched.
 
+**Storage, in memory (added 2026-10-03 for the certification catalogue walk).**
+The Passport's evidence upload goes through Supabase Storage, which this stack
+did not have. `auth-gateway.mjs` now answers the five storage calls the
+application makes — upload, authenticated download, signed URL, remove and
+getBucket — from memory, and restates the bucket's owner rule rather than
+skipping it: a write needs a signed-in user and the object path must begin with
+that user's id. What is NOT exercised is Storage itself: its size limits,
+its real bucket policies, durability. The evidence rows, their hashes and the
+review that reads them are the database's own.
+
 So a sign-in is a real password check against a real row, and every request
 after it is authorised by the database and nothing else. What is NOT exercised
 is GoTrue itself: its rate limiting, its email flows, its MFA, its session

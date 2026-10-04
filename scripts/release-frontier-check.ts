@@ -408,18 +408,18 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // extraction trigger function equal the strict local replay; the shared append-only
 // function is unchanged. Nothing is pending by design now.
 // Evidence: docs/release/2026-10-04-account-erasure-hosted-verification.md.
-//
-// Pending by design, none applied hosted: the certification research integration
-// (docs/passport/certification-catalogue-integration.md): the schema
-// (20270212090000) and the data that records all 170 research decisions and adds
-// 140 definitions INACTIVE (20270213090000). The publication that makes exactly
-// those 140 selectable (20270214090000) is staged outside the migration path
-// until the application that renders them is published. Each name comes OFF this
-// list in the change that records its production evidence.
-const expectedPending: string[] = [
-  "20270212090000_sp_catalogue_research_foundation.sql",
-  "20270213090000_sp_catalogue_research_import.sql",
-];
+// 2026-10-04 08:46 UTC: #410 (merge 277cb842, every mandatory CI job green on 3f824835)
+// verified applied read-only: 20270212090000_sp_catalogue_research_foundation and
+// 20270213090000_sp_catalogue_research_import are the last two ledger rows (372 rows,
+// digest 868e9c610f78ced1c5f529596ca273c2; the first 370 unchanged, 538769fe5724a0d4561a645d3faf79d6);
+// the five catalogue functions and the provenance trigger function equal the strict local
+// replay, the three new tables carry RLS with authenticated SELECT only, 170 research records
+// (14 matched, 140 added, 16 retained), 140 new definitions all inactive, 217 credential types
+// of which 26 active. Nothing is pending by design now: the publication that makes exactly
+// those 140 selectable (20270214090000) is staged outside the migration path until the
+// application that renders them is published.
+// Evidence: docs/release/2026-10-04-catalogue-schema-hosted-verification.md.
+const expectedPending: string[] = [];
 
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",

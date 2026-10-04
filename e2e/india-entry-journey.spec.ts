@@ -15,6 +15,7 @@
  * INDIA_DB_URL for the disposable stack (docs/passport/india-market-entry.md).
  */
 import { execFileSync } from "node:child_process";
+import { chooseCredential } from "./support/credential-picker";
 import { test, expect, type Page } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
 import QRCode from "qrcode";
@@ -238,10 +239,7 @@ test("India: landing → confirmed account → setup → credential → review �
   // ── 5. The first credential: an Indian qualification, read by HAYAT ───
   await page.locator("[data-setup-add-credential]").click();
   await expect(page).toHaveURL(/\/passport\/credentials\/new\?country=IN/);
-  await page.getByRole("button", { name: "Continue", exact: true }).click();
-  await page.getByRole("button", { name: "Continue", exact: true }).click();
-  await page.getByLabel("Approved credential").selectOption("IN_MEPSC_Q7101");
-  await page.getByRole("button", { name: "Continue", exact: true }).click();
+  await chooseCredential(page, "IN_MEPSC_Q7101");
   await expect(page.locator("[data-credential-awarding-body]")).toContainText("MEPSC");
   await expect(page.locator("[data-national-qualification-note]")).toBeVisible();
   const fixtures = await createFixtures(browser);
@@ -582,10 +580,7 @@ test("India on a phone: landing, keyboard, setup and form stay usable", async ({
   await page.unroute("**/_serverFn/**");
 
   await page.goto(`${BASE}/passport/credentials/new?country=IN`);
-  await page.getByRole("button", { name: "Continue", exact: true }).click();
-  await page.getByRole("button", { name: "Continue", exact: true }).click();
-  await page.getByLabel("Approved credential").selectOption("IN_MEPSC_Q7104");
-  await page.getByRole("button", { name: "Continue", exact: true }).click();
+  await chooseCredential(page, "IN_MEPSC_Q7104");
   await noHorizontalScroll(page, "credential form");
   // HAYAT failure: an unreadable file. The form keeps everything and saves by hand.
   await page.locator('[data-field="identifier"]').fill("CCTV-SUP-SYNTH-1");
@@ -702,10 +697,7 @@ test("India: a Passport with SE, GB and international credentials gains all four
   // The Indian qualification, through the product form, with only what it
   // requires: the issuer as printed. No number, no dates, no version.
   await page.goto(`${BASE}/passport/credentials/new?country=IN`);
-  await page.getByRole("button", { name: "Continue", exact: true }).click();
-  await page.getByRole("button", { name: "Continue", exact: true }).click();
-  await page.getByLabel("Approved credential").selectOption("IN_MEPSC_Q7101");
-  await page.getByRole("button", { name: "Continue", exact: true }).click();
+  await chooseCredential(page, "IN_MEPSC_Q7101");
   await page
     .locator('[data-field="issuer-name"]')
     .fill("Management & Entrepreneurship and Professional Skills Council");
