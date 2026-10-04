@@ -196,7 +196,7 @@ export const TERMS: LegalDocument = {
         },
         {
           type: "p",
-          text: "Ett AI-resultat är beslutsstöd. Det ersätter inte juridisk rådgivning, professionell säkerhetsbedömning eller andra specialistbedömningar.",
+          text: "Om AI-funktioner erbjuds i en senare version är ett AI-resultat beslutsstöd. Det ersätter inte juridisk rådgivning, professionell säkerhetsbedömning eller andra specialistbedömningar.",
         },
         {
           type: "p",
@@ -709,22 +709,40 @@ export const PRIVACY: LegalDocument = {
     {
       heading: "11. Kakor och liknande teknik",
       blocks: [
-        // Verified 2026-10-03 (was a link to a cookie policy and to cookie
-        // settings): one functional cookie, no analytics or tracking.
+        // Verified 2026-10-03/04 (was a link to a cookie policy and to cookie
+        // settings): opening a share link to a Security Passport sets two
+        // functional cookies, one carrying the share key and one the share
+        // session, each for SHARE_COOKIE_MAX_AGE_SECONDS (1800 s,
+        // src/lib/security-passport/share-transport.ts). No cookie is set for
+        // analysis or marketing by the application.
         {
           type: "p",
-          text: "Vi använder bara kakor och lagring i webbläsaren som behövs för att tjänsten ska fungera, till exempel för inloggning, språkval, sidopanelens läge och för att öppna en delningslänk till ett Security Passport (en kaka som gäller i 30 minuter). Vi använder inga kakor för analys eller marknadsföring, och därför behövs inget samtycke.",
+          text: "Vi använder bara kakor och lagring i webbläsaren som behövs för att tjänsten ska fungera, till exempel för inloggning, språkval, sidopanelens läge och för att öppna en delningslänk till ett Security Passport (två kakor, en för delningsnyckeln och en för delningssessionen, som vardera gäller i 30 minuter). Vi sätter inga kakor för analys eller marknadsföring.",
         },
-        // Owner decision 2026-10-04: usage measurement is off in version 1
-        // (FUNNEL_MEASUREMENT_ENABLED, src/lib/analytics/funnel-measurement.ts),
-        // so the policy says so instead of describing a measurement that does
-        // not run. An event with no user or session id is not "anonymous" on
-        // that ground alone, and no text says it is. The newsletter and the
-        // consent-based tracking that used to be described here are not in the
-        // product either.
+        // Owner decision 2026-10-04: CQrityjob's own usage measurement is off in
+        // version 1 (FUNNEL_MEASUREMENT_ENABLED,
+        // src/lib/analytics/funnel-measurement.ts), so the policy says so
+        // instead of describing a measurement that does not run. An event with
+        // no user or session id is not "anonymous" on that ground alone, and no
+        // text says it is. The newsletter and the consent-based tracking that
+        // used to be described here are not in the product either.
+        //
+        // What this paragraph must NOT claim is that nothing at all measures
+        // page views: the hosting layer adds its own page-view script
+        // (`/~flock.js`) to every published page, outside this application
+        // (see src/lib/security-passport/share-transport.ts). Whether that
+        // script processes personal data, and whether it sets a cookie or reads
+        // the device, is the supplier's fact and is an open point until the
+        // owner has it (docs/legal/open-facts-2026-10-04.md). It is also why
+        // this paragraph no longer says that no technology requiring consent
+        // is used.
         {
           type: "p",
-          text: "Vi mäter inte hur du använder tjänsten, och vi lagrar ingen statistikmarkering i webbläsaren. Vi använder ingen teknik som kräver samtycke.",
+          text: "Vi gör ingen egen mätning av hur du använder tjänsten, och vi lagrar ingen statistikmarkering i webbläsaren.",
+        },
+        {
+          type: "placeholder",
+          text: "[Ange om hostingleverantörens sidvisningsstatistik på publicerade sidor behandlar personuppgifter, vilka uppgifter den samlar in och om den sätter kakor eller läser av din enhet.]",
         },
       ],
     },

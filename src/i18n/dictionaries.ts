@@ -476,7 +476,7 @@ export const dictionaries = {
       "Ta fram underlag om risker, beredskap och kontaktvägar som stöd i verksamhetens planering.",
     "securityWorkPage.ai.title": "Om AI-stödet",
     "securityWorkPage.ai.body":
-      "Arbetsytan är byggd för AI-stöd som kan föreslå kompletteringsfrågor, synliggöra kunskapsluckor och ta fram utkast som du granskar. AI-stödet är ännu inte aktiverat. När det aktiveras gäller samma princip som i dag. AI hjälper dig med arbetet. Du ansvarar för besluten.",
+      "AI-stöd ingår inte i den här versionen av arbetsytan, och inget av det du skriver skickas till någon AI-tjänst. Om sådant stöd erbjuds senare gäller samma princip. AI hjälper dig med arbetet. Du ansvarar för besluten.",
     "securityWorkPage.privacy.title": "Bra att veta",
     "securityWorkPage.privacy.body":
       "Arbetsytan är din egen och delas inte med din karriärprofil, ditt Security Passport eller arbetsgivare. Säkerhetsskyddsklassificerad eller hemlig information ska inte läggas in – arbetsytan påminner om det där du registrerar underlag.",
@@ -8195,7 +8195,7 @@ export const dictionaries = {
     "iiu.ov.steps": "Så här går det till",
     "iiu.ov.howitworks": "Om metoden bakom",
     "iiu.ov.howitworks.body":
-      "Intervjun följer CQrityjobs metod. Frågorna är låsta till intervjuguiden, AI får bara föreslå, och varje bedömning och beslut är ditt.",
+      "Intervjun följer CQrityjobs metod. Frågorna är låsta till intervjuguiden, och varje bedömning och beslut är ditt.",
     "iiu.ov.decision":
       "Anställningsbeslutet är ditt. Produkten dokumenterar underlaget — den rekommenderar ingenting.",
     "iiu.rp.candidatereport": "Kandidatrapport",
@@ -9461,7 +9461,7 @@ export const dictionaries = {
       "Prepare evidence on risks, preparedness and contact routes to support operational planning.",
     "securityWorkPage.ai.title": "About AI assistance",
     "securityWorkPage.ai.body":
-      "The workspace is built for AI assistance that can suggest follow-up questions, highlight information gaps and produce drafts for you to review. AI assistance is not yet activated. When it is, the principle stays the same. AI helps you with the work. You are responsible for the decisions.",
+      "AI assistance is not part of this version of the workspace, and nothing you write is sent to an AI service. If such assistance is offered later, the same principle applies. AI helps you with the work. You are responsible for the decisions.",
     "securityWorkPage.privacy.title": "Good to know",
     "securityWorkPage.privacy.body":
       "The workspace is your own and is not shared with your career profile, your Security Passport or employers. Classified or secret information must not be entered – the workspace reminds you where you record evidence.",
@@ -16883,7 +16883,7 @@ export const dictionaries = {
     "iiu.ov.steps": "How this works",
     "iiu.ov.howitworks": "About the method behind it",
     "iiu.ov.howitworks.body":
-      "The interview follows CQrityjob's method. The questions are locked to the interview guide, AI may only suggest, and every assessment and decision is yours.",
+      "The interview follows CQrityjob's method. The questions are locked to the interview guide, and every assessment and decision is yours.",
     "iiu.ov.decision":
       "The employment decision is yours. The product documents the material — it recommends nothing.",
     "iiu.rp.candidatereport": "Candidate report",

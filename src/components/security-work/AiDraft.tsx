@@ -173,12 +173,14 @@ export function AiDraft({
         <h2 className="text-xl font-semibold">
           {l("AI-stöd för analysen", "AI support for your analysis")}
         </h2>
-        <p className="text-sm text-muted-foreground">
-          {l(
-            "AI föreslår kompletteringsfrågor, risker, åtgärder och rapporttext från granskat underlag. Du granskar och för in förslaget i ett redigerbart utkast innan rapporten godkänns separat.",
-            "AI suggests follow-up questions, risks, actions and report text from reviewed evidence. You review and apply the proposal to an editable draft before approving the report separately.",
-          )}
-        </p>
+        {status.data?.enabled && (
+          <p className="text-sm text-muted-foreground">
+            {l(
+              "AI föreslår kompletteringsfrågor, risker, åtgärder och rapporttext från granskat underlag. Du granskar och för in förslaget i ett redigerbart utkast innan rapporten godkänns separat.",
+              "AI suggests follow-up questions, risks, actions and report text from reviewed evidence. You review and apply the proposal to an editable draft before approving the report separately.",
+            )}
+          </p>
+        )}
         {/* The three availability states in the MVP text specification's
             words (§9.2), read from the existing server check. A failed read
             is not "off", and "available" is not a health claim. */}

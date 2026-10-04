@@ -29,9 +29,12 @@ logg. Automatisering väntar där en manuell rutin räcker. Inget i policyn lova
 ## R1. Avsluta ett konto på begäran (inom 30 dagar)
 
 Förutsättning: **#416 (`20270208090000`) är sammanslagen och tillämpad.** Den är det (`abbc036e`, hostat
-verifierad i #418). Databasdelen är bevisad lokalt med ett syntetiskt konto som har Passport-underlag
-(`docs/release/2026-10-04-account-erasure-full-path-evidence.md`). Raden i planen blir `live` först när
-ägaren har provat hela vägen i produktion med testkontot (steg nedan, "Första provet").
+verifierad i #418). Hela vägen är bevisad lokalt med ett syntetiskt konto som har Passport-underlag
+(`docs/release/2026-10-04-account-erasure-full-path-evidence.md`) och provad i produktion 2026-10-04 08:00 UTC
+med ett syntetiskt kandidatkonto med Passport-underlag (`docs/release/2026-10-04-test-round-cleanup.md`
+avsnitt 5, loggad i `retention-execution-log.md`). Raden `account` är därför `live`. Det provet prövade inte
+borttagning av en fil som fortfarande finns i Storage (filen var redan raderad av kontoinnehavaren), så första
+gången en riktig begäran har en kvarvarande fil: följ steg 4 och skriv antalet i loggen.
 
 1. Begäran kommer till `info@cqrityjob.com` från den e-postadress som kontot är registrerat på. Skriv in
    den i begärandelogg (R9) med datum. Fristen är **30 dagar** enligt policyn och högst en månad enligt
@@ -45,18 +48,20 @@ verifierad i #418). Databasdelen är bevisad lokalt med ett syntetiskt konto som
 5. Svara personen från `info@` att kontot är avslutat. Skriv i loggen: datum, begäran, "raderat", antal
    lagringsobjekt. Säkerhetskopior: raderingen når dem när de roteras ut (se R8, öppet faktum).
 
-**Första provet i produktion (ägaren, en gång):** logga in som testkontot `8a0fdbc5-…`, lägg till ett
-dokument i Security Passport (så att det finns underlag), logga ut, och radera kontot enligt steg 2–4.
-Kontrollera efteråt att Admin → Data → Lagringsradering visar 0 kvar. Skriv resultatet i loggen. Först då
-kan raden `account` flyttas till `live`.
+**Första provet i produktion: gjort 2026-10-04** med testkontot `8a0fdbc5-…` (steg 2–4, efterkontroll
+skrivskyddad, resultatet i loggen). Ett ytterligare prov med en fil som finns kvar i Storage behövs inte
+för att raden ska vara `live`, men det vore det enda som ännu inte setts i produktion.
 
 ## R2. Inaktiva konton (24 månader, påminnelse, radering 30 dagar senare)
 
 Varje kvartal: kör `supabase/retention/inactive-accounts-24-months.list.sql` i Supabase SQL Editor. Listan
 ändrar inget. För varje konto: skicka påminnelsen från `info@` ("ditt konto raderas om 30 dagar om du inte
 loggar in"), skriv datumet i loggen, och 30 dagar senare kontrollera om personen har loggat in. Har hen inte
-det: R1 från steg 2. Provad på syntetiska konton i `supabase/tests/retention_manual_routines_test.sql`
-(RT3). Inget konto är gammalt nog före 2028-07.
+det: R1 från steg 2. Redan raderade konton (de ligger kvar som avidentifierade, avstängda rader och står i
+`public.deleted_accounts`) visas inte i listan. Ett avstängt konto visas med `suspended = true`: skicka ingen
+påminnelse, ta det med ägaren. Provad på syntetiska konton i
+`supabase/tests/retention_manual_routines_test.sql` (RT3, med ett raderat och ett avstängt konto). Inget
+konto är gammalt nog före 2028-07.
 
 ## R3. Feedback (12 månader)
 
@@ -84,8 +89,11 @@ antalet i loggen. Det är manuellt eftersom brevlådan ligger i e-postleverantö
 ## R6. Brevlådan `job@` (24 månader efter avslutad rekrytering)
 
 `job@` hanteras av CQrityjob. Inget vidarebefordras automatiskt. Varje månad: sök efter trådar vars
-senaste meddelande är äldre än 24 månader och radera dem. Regeln är försiktig: rekryteringen kan inte ha
-avslutats senare än sitt sista meddelande. Skriv antalet i loggen. Inget kan vara förfallet före 2028-10.
+senaste meddelande är äldre än 24 månader och radera dem. Det är en approximation: brevlådan vet inte när
+en rekrytering avslutades, bara när det senaste meddelandet kom, och en rekrytering kan ha avslutats
+tidigare än så. Raderingen kan alltså ske senare än 24 månader efter avslut, aldrig tidigare. Behövs en
+tidigare radering för en enskild rekrytering görs den som en begäran (R7). Skriv antalet i loggen. Inget kan
+vara förfallet före 2028-10.
 
 ## R7. En arbetsgivare ber om radering eller kortare tid
 
@@ -161,13 +169,18 @@ select (select count(*) from b) as beta_feedback_deleted,
 -- Supabase dashboard, SQL Editor. For each row: send the reminder from info@, write
 -- the date in the execution log, and 30 days later close the account through the
 -- admin console if the person has not signed in (runbook R1).
+-- An account that has already been erased (it stays as a pseudonymised, disabled
+-- row and is recorded in public.deleted_accounts) is not listed. A suspended
+-- account is listed with suspended = true: send no reminder, raise it with the owner.
 select u.id,
        u.email,
        u.created_at,
        u.last_sign_in_at,
-       coalesce(u.last_sign_in_at, u.created_at) as inactive_since
+       coalesce(u.last_sign_in_at, u.created_at) as inactive_since,
+       coalesce(u.banned_until > now(), false) as suspended
   from auth.users u
  where coalesce(u.last_sign_in_at, u.created_at) < now() - interval '24 months'
+   and not exists (select 1 from public.deleted_accounts d where d.user_id = u.id)
  order by inactive_since;
 ```
 
@@ -176,7 +189,7 @@ select u.id,
 | Rutin | Provad | Hur |
 |---|---|---|
 | R1 databasdelen | ja, lokalt | syntetiskt konto med Passport-underlag, hela RPC-vägen (se bevisdokumentet) |
-| R1 i produktion | **nej** | ägarens första prov, ovan |
+| R1 i produktion | ja, 2026-10-04 | syntetiskt kandidatkonto med Passport-underlag; allt i databasen borta, gravsten kvar. **Inte prövat:** borttagning av en Storage-fil som finns kvar (den var redan borta) |
 | R2 listan | ja | RT3, syntetiska konton |
 | R3 | ja | RT1, RT2, RT4 |
 | R4 | ja | EN8 i den befintliga notistesten |

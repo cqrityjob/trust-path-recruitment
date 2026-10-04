@@ -247,6 +247,87 @@ console.log("\n4 · dictionary keys that mention AI");
   }
 }
 
+/* ------------------------------------------------------------------ */
+/* 5 · The workspace texts that used to promise AI whatever the switch  */
+/* ------------------------------------------------------------------ */
+
+console.log("\n5 · workspace and method texts that must not promise AI in version 1");
+{
+  // Reviewed again after the independent review of 2026-10-04: these sentences
+  // were shown whether or not AI is available, so a reader was told the
+  // product would draft, suggest or help with AI. They are now either free of
+  // AI or shown only where the availability read says AI is on here.
+  for (const lang of ["sv", "en"] as const) {
+    const ai = d[lang]["securityWorkPage.ai.body"];
+    ck(
+      `${lang}: the public Security work page says AI support is not part of this version and nothing is sent to an AI service`,
+      lang === "sv"
+        ? /ingår inte i den här versionen/.test(ai) && /skickas till någon AI-tjänst/.test(ai)
+        : /not part of this version/.test(ai) && /sent to an AI service/.test(ai),
+      ai,
+    );
+    ck(
+      `${lang}: the public Security work page no longer says the workspace is built for AI`,
+      !/byggd för AI|built for AI/i.test(ai),
+      ai,
+    );
+    const method = d[lang]["iiu.ov.howitworks.body"];
+    ck(`${lang}: the interview method text mentions no AI`, !AI.test(method), method);
+  }
+
+  // Each sentence that speaks of Security AI or of AI proposals sits behind a
+  // read of the availability status, so it is shown only where AI is on here.
+  const GUARDED: readonly { file: string; sentence: string; guard: string }[] = [
+    {
+      file: "src/components/security-work/Mandate.tsx",
+      sentence: "Skriv själv, eller be Security AI om ett utkast.",
+      guard: "aiAvailable",
+    },
+    {
+      file: "src/components/security-work/Assets.tsx",
+      sentence: "Security AI kan föreslå utifrån er verksamhetsbeskrivning",
+      guard: "aiAvailable",
+    },
+    {
+      file: "src/components/security-work/RisksActions.tsx",
+      sentence: "Security AI kan hjälpa dig beskriva scenariot",
+      guard: "aiAvailable",
+    },
+    {
+      file: "src/components/security-work/Plan.tsx",
+      sentence: "Security AI kan förklara uppgifterna",
+      guard: "aiAvailable",
+    },
+    {
+      file: "src/components/security-work/AiDraft.tsx",
+      sentence: "AI föreslår kompletteringsfrågor, risker, åtgärder och rapporttext",
+      guard: "status.data?.enabled &&",
+    },
+  ];
+  for (const g of GUARDED) {
+    const src = read(g.file);
+    const at = src.indexOf(g.sentence);
+    const once = at >= 0 && src.indexOf(g.sentence, at + 1) < 0;
+    const before = at >= 0 ? src.slice(Math.max(0, at - 450), at) : "";
+    ck(
+      `${g.file.split("/").pop()}: "${g.sentence.slice(0, 40)}…" is shown only where AI is available`,
+      once && before.includes(g.guard),
+      once ? "no availability guard before the sentence" : "sentence missing or repeated",
+    );
+  }
+  for (const file of [
+    "src/components/security-work/Mandate.tsx",
+    "src/components/security-work/Assets.tsx",
+    "src/components/security-work/RisksActions.tsx",
+    "src/components/security-work/Plan.tsx",
+  ]) {
+    ck(
+      `${file.split("/").pop()}: the availability hook is read where the guard variable is used`,
+      /const aiAvailable = useAiAvailability\(\)\.available;/.test(read(file)),
+    );
+  }
+}
+
 console.log("");
 if (fails.length) {
   console.error(`generative-ai-texts: ${fails.length} failure(s) of ${checks} checks`);

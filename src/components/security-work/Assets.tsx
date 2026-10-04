@@ -17,7 +17,7 @@ import {
   programmeKey,
   useProgramme,
 } from "./programme-ui";
-import { AssistantButton, useAssistantContext } from "./SecurityAssistant";
+import { AssistantButton, useAiAvailability, useAssistantContext } from "./SecurityAssistant";
 import {
   EmptyState,
   Field,
@@ -293,6 +293,7 @@ export function SecurityAssetsPage() {
   const { t, lang } = useT();
   const l = useWorkText();
   const { workspace, user, canEdit } = useSecurityWorkspace();
+  const aiAvailable = useAiAvailability().available;
   const programme = useProgramme();
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState<string | "new" | null>(null);
@@ -356,10 +357,17 @@ export function SecurityAssetsPage() {
             "Börja med det som inte får sluta fungera",
             "Start with what must never stop working",
           )}
-          body={l(
-            "Personer, verksamhet, lokaler, information, system, leverantörer och anseende. Lägg till de fem till tio viktigaste först. Security AI kan föreslå utifrån er verksamhetsbeskrivning – du godkänner varje förslag.",
-            "People, operations, facilities, information, systems, suppliers and reputation. Add the five to ten most important first. Security AI can suggest from your organisation description; you approve each suggestion.",
-          )}
+          body={
+            aiAvailable
+              ? l(
+                  "Personer, verksamhet, lokaler, information, system, leverantörer och anseende. Lägg till de fem till tio viktigaste först. Security AI kan föreslå utifrån er verksamhetsbeskrivning – du godkänner varje förslag.",
+                  "People, operations, facilities, information, systems, suppliers and reputation. Add the five to ten most important first. Security AI can suggest from your organisation description; you approve each suggestion.",
+                )
+              : l(
+                  "Personer, verksamhet, lokaler, information, system, leverantörer och anseende. Lägg till de fem till tio viktigaste först.",
+                  "People, operations, facilities, information, systems, suppliers and reputation. Add the five to ten most important first.",
+                )
+          }
         >
           {addButton}
         </EmptyState>

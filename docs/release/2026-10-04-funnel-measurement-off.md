@@ -41,11 +41,31 @@ product names, so a new statistics marker cannot arrive unnoticed.
   detail object. They are not read by anything in the product. Deleting them is
   a destructive production action and needs the owner's approval; the statement
   below is prepared, not run.
-- **The database function.** `cd_record_funnel_event` is still granted to
-  `anon`. Nothing in the application calls it; revoking the grant is an
-  optional hardening that needs a migration, which this change does not write.
-- **The privacy policy.** Its sentence about anonymous measurement belongs to the
-  legal PR, which is updated for this decision.
+- **The database function.** `cd_record_funnel_event` is still `EXECUTE`-granted to
+  `anon` and `authenticated` (`20260916090000_security_hardening_expand.sql`).
+  Nothing in the application calls it, but a client holding the public key can
+  still write a row directly through PostgREST; for a signed-in caller the
+  function derives the user id from the session. Revoking the grant is an
+  optional hardening that needs a migration, which this change does not write
+  (version 2 backlog, `docs/release/2026-10-04-version-1-launch-status.md`).
+- **The hosting layer's own page-view script.** The published site is served
+  with a script that the host adds to every HTML response, outside this
+  application and not in the build output:
+  `<script defer src="/~flock.js" data-proxy-url="/~api/analytics">`. It posts a
+  `page_hit` with the page's path and URL, and offers no opt-out of its own
+  (`src/lib/security-passport/share-transport.ts` explains why Security Passport
+  share links are built so that the share key never reaches it). `FUNNEL_MEASUREMENT_ENABLED`
+  does not cover it and no change in this repository can switch it off. So the
+  privacy policy says that CQrityjob makes no _own_ measurement, and carries an
+  open point for the owner to fill from Lovable's own statement: whether the
+  script processes personal data, whether it sets a cookie or reads the device,
+  and whether the project settings can turn it off (`open-facts-2026-10-04.md`,
+  item 4). The policy no longer claims that no technology requiring consent is
+  used.
+- **The privacy policy.** Its sentence about anonymous measurement is replaced in
+  this same PR by "Vi gör ingen egen mätning av hur du använder tjänsten, och vi lagrar
+  ingen statistikmarkering i webbläsaren." `launch-legal:check` 1.14 holds that
+  sentence only while the constant is `false`.
 
 ## Prepared, not run (needs the owner's approval)
 
@@ -59,6 +79,8 @@ delete from public.cd_v31_funnel_events;
 
 ## Turning measurement on again
 
-Not by changing the constant alone. `funnel-measurement:check` fails on it, and
-the privacy policy's guard fails until the policy describes the measurement, its
-purpose, its retention and who can read it.
+Not by changing the constant alone. `funnel-measurement:check` fails on a caller
+that can still reach the server or storage while it is `false`, and
+`launch-legal:check` (1.14) fails when it is `true` while the policy still says
+CQrityjob does not measure. The policy must be changed to describe the measurement,
+its purpose, its retention and who can read it, in the same change.

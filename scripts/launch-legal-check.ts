@@ -33,6 +33,12 @@
 
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
+import { FUNNEL_MEASUREMENT_ENABLED } from "../src/lib/analytics/funnel-measurement";
+import {
+  SHARE_COOKIE_MAX_AGE_SECONDS,
+  buildShareCookie,
+  buildShareSessionCookie,
+} from "../src/lib/security-passport/share-transport";
 import { COMPANY } from "../src/lib/legal/company";
 import { PRIVACY, TERMS, type LegalDocument } from "../src/lib/legal/documents";
 import {
@@ -166,8 +172,8 @@ group("GROUP 1 — the owner's documents and decisions");
     String(gaps(terms)),
   );
   ck(
-    "1.7 the privacy policy's 17 undecided points are still open: date, address, supplier facts, platform retention periods, and the two retention periods the owner has not decided",
-    gaps(privacy) === 17 && openPoints(PRIVACY).length === 17,
+    "1.7 the privacy policy's 18 undecided points are still open: date, address, supplier facts (including the hosting layer's page-view script), platform retention periods, and the two retention periods the owner has not decided",
+    gaps(privacy) === 18 && openPoints(PRIVACY).length === 18,
     String(gaps(privacy)),
   );
   ck(
@@ -176,10 +182,11 @@ group("GROUP 1 — the owner's documents and decisions");
       RETENTION_POLICY_ROWS.every((r) => privacy.includes(`${r.data}\n${r.period}`)),
   );
   ck(
-    "1.14 nothing is described that the product does not do: no newsletter, no consent-based tracking, no measurement, and no automatic forwarding of replies from job@",
+    "1.14 nothing is described that the product does not do: no newsletter, no consent-based tracking, no own measurement (and the policy says so only while the measurement constant is false), and no automatic forwarding of replies from job@",
     !/nyhetsbrev|direktmarknadsföring|samtyckeskrävande spårning/i.test(`${terms}\n${privacy}`) &&
       !privacy.includes("Vi mäter anonymt") &&
-      privacy.includes("Vi mäter inte hur du använder tjänsten") &&
+      FUNNEL_MEASUREMENT_ENABLED === false &&
+      privacy.includes("Vi gör ingen egen mätning av hur du använder tjänsten") &&
       !/vidarebefordrar (?:det|svaret) till arbetsgivaren/.test(`${terms}\n${privacy}`) &&
       terms.includes("svaret förs inte automatiskt vidare till arbetsgivaren") &&
       privacy.includes("Svaret förs inte automatiskt vidare till arbetsgivaren") &&
@@ -203,8 +210,27 @@ group("GROUP 1 — the owner's documents and decisions");
         "Generativa AI-funktioner är avstängda i den här versionen av tjänsten och ingår inte i den.",
       ) &&
       terms.includes("är separata betaltjänster. De kräver en uttrycklig beställning") &&
-      privacy.includes("Vi använder inga kakor för analys eller marknadsföring") &&
+      privacy.includes("Vi sätter inga kakor för analys eller marknadsföring") &&
       !/kakpolicy|kakinställningar/.test(privacy),
+  );
+  ck(
+    "1.10b the policy's cookie sentence matches what the share transport sets (two cookies, 30 minutes), and nothing claims that no technology needing consent exists while the hosting layer's page-view script is an open point",
+    SHARE_COOKIE_MAX_AGE_SECONDS === 1800 &&
+      buildShareCookie("t", true).includes("Max-Age=1800") &&
+      buildShareSessionCookie("s", true).includes("Max-Age=1800") &&
+      privacy.includes(
+        "(två kakor, en för delningsnyckeln och en för delningssessionen, som vardera gäller i 30 minuter)",
+      ) &&
+      !privacy.includes("en kaka som gäller") &&
+      !privacy.includes("behövs inget samtycke") &&
+      !privacy.includes("ingen teknik som kräver samtycke") &&
+      privacy.includes("[Ange om hostingleverantörens sidvisningsstatistik"),
+  );
+  ck(
+    "1.10c the terms' AI-result sentence is conditional: it does not describe an AI result in a version that has no generative AI",
+    terms.includes(
+      "Om AI-funktioner erbjuds i en senare version är ett AI-resultat beslutsstöd.",
+    ) && !terms.includes("Ett AI-resultat är beslutsstöd."),
   );
   ck(
     "1.11 no response time is promised in public; requests follow the statutory deadline",

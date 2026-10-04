@@ -188,14 +188,14 @@ bekräfta den. Ingen punkt här ska stå kvar som ett åtagande om den inte stä
 | 5 | **Kryptering vid överföring.** Webbplatsen svarar bara över HTTPS: `http://` omdirigeras med 301, och `Strict-Transport-Security` med ett års giltighet är satt. | Verifierad 2026-10-04 mot www.cqrityjob.com |
 | 6 | **Kryptering i vila.** Databas och fillagring ligger hos plattformsleverantören med leverantörens kryptering. | Att bekräfta i leverantörens dokumentation |
 | 7 | **Hemligheter bara på servern.** Tjänstenyckeln till databasen och e-postnyckeln används bara i serversidan och i en serverfunktion, aldrig i webbläsaren. | Verifierad i kod och av CI-kontroller. Värdena kan inte läsas |
-| 8 | **Delningslänkar för Security Passport.** En delning har en återkallbar nyckel. En mottagare får en kaka som är `HttpOnly`, `SameSite=Lax` och gäller i 30 minuter. | Verifierad i kod (`src/lib/security-passport/share-transport.ts`) |
+| 8 | **Delningslänkar för Security Passport.** En delning har en återkallbar nyckel. En mottagare får två kakor (delningsnyckeln och delningssessionen) som är `HttpOnly`, `SameSite=Lax` och gäller i 30 minuter vardera. | Verifierad i kod (`src/lib/security-passport/share-transport.ts`) |
 | 9 | **Loggning av administrativa åtgärder.** Åtgärder av administratörer och på annonser, arbetsgivarmoderering och säkerhetsarbete loggas. | Verifierad: tabellerna finns och fylls. Lagringstiden är en öppen punkt (lagringsplanen) |
 | 10 | **Säkerhetskopior.** Dagliga kopior hos plattformsleverantören. | Att bekräfta: [Ange faktisk backuprotation] |
 | 11 | **Ändringsprocess.** Varje ändring granskas i en pull request. Automatiska tester av åtkomstmodellen och planterade negativa kontroller körs i CI. Databasändringar släpps schema-först och verifieras skrivskyddat i produktion av en oberoende läsare. | Verifierad, dokumenterad per ändring under `docs/release/` |
 | 12 | **Åtkomst för Biträdets personal.** Administratörsåtkomst till hela tjänsten (plattformsadministratör) innehas av två konton i produktion. | Verifierad antal 2026-10-04. Flerfaktorsinloggning: [Ange] |
 | 13 | **Tystnadsplikt för personal.** | Att bekräfta: [Ange hur den är avtalad] |
 | 14 | **Hantering av personuppgiftsincidenter.** | Att bekräfta: [Ange rutin och ansvarig] |
-| 15 | **Radering.** Ett konto raderas eller anonymiseras av en administratör, och filer köas för radering i lagringen. | Delvis: raderingen avbryts för konton som har Security Passport-detaljer. Rättelsen (`20270208090000`) är under granskning |
+| 15 | **Radering.** Ett konto raderas eller anonymiseras av en administratör, och filer köas för radering i lagringen. | Ja för databasen: raderingen för konton med Security Passport-detaljer är rättad (`20270208090000`, sammanslagen och tillämpad) och provad i produktion 2026-10-04 med ett syntetiskt konto. Inte prövat i produktion: borttagning av en Storage-fil som finns kvar (filen var redan raderad). Se `docs/release/2026-10-04-test-round-cleanup.md` avsnitt 5 |
 | 16 | **Inga personuppgifter till AI-tjänster.** Generativa AI-funktioner är avstängda i den här versionen. | Verifierad: AI-leverantören är avstängd och inga AI-körningar finns i databasen 2026-10-04. Servermiljön kan inte läsas härifrån, se `docs/legal/2026-10-04-text-function-verification.md` |
 
 ## Bilaga 3. Underbiträden

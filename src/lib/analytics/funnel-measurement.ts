@@ -20,8 +20,16 @@
 //
 // This is a CONSTANT, not a setting. Turning measurement on again is a reviewed
 // change that comes together with an owner decision, an updated privacy policy
-// and a retention routine for what it stores; `funnel-measurement:check` fails
-// until the policy no longer says it is off.
+// and a retention routine for what it stores. Two guards hold that together:
+// `funnel-measurement:check` fails if a caller can reach the server or write a
+// storage marker while the constant is false, and `launch-legal:check` (1.14)
+// fails if the constant is true while the privacy policy still says CQrityjob
+// does not measure, so flipping it without the policy cannot pass.
+//
+// Not covered by this constant: the hosting layer injects its own page-view
+// script (`/~flock.js`) into every published page. It is outside this
+// application and cannot be switched off from here; the privacy policy §11
+// carries an open point for it (see docs/release/2026-10-04-funnel-measurement-off.md).
 
 /** Version 1: no usage measurement. */
 export const FUNNEL_MEASUREMENT_ENABLED = false;

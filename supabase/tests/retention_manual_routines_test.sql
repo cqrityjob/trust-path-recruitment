@@ -10,7 +10,9 @@
 --                           and leaves a row from 11 months ago and from today
 --   RT3  inactive accounts  lists exactly the accounts with no sign-in for 24
 --                           months (and never-signed-in accounts created that long
---                           ago), oldest first, and nothing else
+--                           ago), oldest first, leaves out an account that has
+--                           already been erased (a row in deleted_accounts), flags
+--                           a suspended one, and changes nothing
 --   RT4  a second run       is a no-op
 
 \set ON_ERROR_STOP on
@@ -38,7 +40,15 @@ INSERT INTO auth.users (id, email, created_at, last_sign_in_at) VALUES
   ('c3000000-0000-0000-0000-000000000002', 'rt-never-old@retention.test',    now() - interval '30 months', NULL),
   ('c3000000-0000-0000-0000-000000000003', 'rt-active@retention.test',       now() - interval '40 months', now() - interval '2 months'),
   ('c3000000-0000-0000-0000-000000000004', 'rt-new-never@retention.test',    now() - interval '1 month',   NULL),
-  ('c3000000-0000-0000-0000-000000000005', 'rt-23-months@retention.test',    now() - interval '40 months', now() - interval '23 months');
+  ('c3000000-0000-0000-0000-000000000005', 'rt-23-months@retention.test',    now() - interval '40 months', now() - interval '23 months'),
+  -- an account erased with history: kept as a pseudonymised, disabled row (#416)
+  ('c3000000-0000-0000-0000-000000000006', 'anonymised+c3000000-0000-0000-0000-000000000006@removed.invalid', now() - interval '40 months', now() - interval '31 months'),
+  -- a suspended account that has been silent for 28 months
+  ('c3000000-0000-0000-0000-000000000007', 'rt-suspended@retention.test',     now() - interval '40 months', now() - interval '28 months');
+UPDATE auth.users SET banned_until = now() + interval '100 years' WHERE id = 'c3000000-0000-0000-0000-000000000006';
+UPDATE auth.users SET banned_until = now() + interval '1 year'    WHERE id = 'c3000000-0000-0000-0000-000000000007';
+INSERT INTO public.deleted_accounts (user_id, reason, had_history)
+VALUES ('c3000000-0000-0000-0000-000000000006', 'synthetic retention test', true);
 
 -- ── RT1 · the dry run ──────────────────────────────────────────────────────
 \set dry `cat supabase/retention/feedback-12-months.dry-run.sql`
@@ -112,17 +122,24 @@ DECLARE _ids text;
 BEGIN
   SELECT string_agg(id::text, ',' ORDER BY inactive_since) INTO _ids
     FROM rt_inactive WHERE id::text LIKE 'c3000000-%';
-  IF _ids IS DISTINCT FROM 'c3000000-0000-0000-0000-000000000002,c3000000-0000-0000-0000-000000000001' THEN
-    RAISE EXCEPTION 'RT3.1 FAIL: the list was %, expected the never-signed-in 30-month account then the 25-month one', _ids;
+  IF _ids IS DISTINCT FROM 'c3000000-0000-0000-0000-000000000002,c3000000-0000-0000-0000-000000000007,c3000000-0000-0000-0000-000000000001' THEN
+    RAISE EXCEPTION 'RT3.1 FAIL: the list was %, expected the never-signed-in 30-month account, the suspended 28-month one, then the 25-month one', _ids;
+  END IF;
+  IF EXISTS (SELECT 1 FROM rt_inactive WHERE id = 'c3000000-0000-0000-0000-000000000006') THEN
+    RAISE EXCEPTION 'RT3.4 FAIL: an already erased account (a row in deleted_accounts) is on the list';
+  END IF;
+  IF (SELECT suspended FROM rt_inactive WHERE id = 'c3000000-0000-0000-0000-000000000007') IS DISTINCT FROM true
+     OR EXISTS (SELECT 1 FROM rt_inactive WHERE id = 'c3000000-0000-0000-0000-000000000001' AND suspended) THEN
+    RAISE EXCEPTION 'RT3.5 FAIL: the suspended flag is not true for exactly the suspended account';
   END IF;
   IF EXISTS (SELECT 1 FROM rt_inactive WHERE id IN
       ('c3000000-0000-0000-0000-000000000003', 'c3000000-0000-0000-0000-000000000004', 'c3000000-0000-0000-0000-000000000005')) THEN
     RAISE EXCEPTION 'RT3.2 FAIL: an active, new or 23-month account is on the list';
   END IF;
-  IF (SELECT count(*) FROM auth.users WHERE id::text LIKE 'c3000000-%') <> 5 THEN
+  IF (SELECT count(*) FROM auth.users WHERE id::text LIKE 'c3000000-%') <> 7 THEN
     RAISE EXCEPTION 'RT3.3 FAIL: the list changed accounts';
   END IF;
-  RAISE NOTICE 'ok  RT3 the inactive-account list holds exactly the accounts silent for 24 months, oldest first, and changes nothing';
+  RAISE NOTICE 'ok  RT3 the inactive-account list holds exactly the accounts silent for 24 months, oldest first, leaves out erased accounts, flags suspended ones, and changes nothing';
 END $$;
 
 -- ── clean up the synthetic rows ────────────────────────────────────────────

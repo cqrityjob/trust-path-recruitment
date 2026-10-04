@@ -95,6 +95,44 @@ const MUTATIONS: readonly Mutation[] = [
     guard: GUARD,
     expect: "the version-1 texts stand only while the server gate is closed",
   },
+  {
+    id: "AITEXT-NC-SW-BUILT-FOR-AI",
+    defect: "the public Security work page says the workspace is built for AI again",
+    file: DICT,
+    find: '"AI-stöd ingår inte i den här versionen av arbetsytan, och inget av det du skriver skickas till någon AI-tjänst. Om sådant stöd erbjuds senare gäller samma princip. AI hjälper dig med arbetet. Du ansvarar för besluten.",',
+    replace:
+      '"Arbetsytan är byggd för AI-stöd som kan föreslå kompletteringsfrågor och ta fram utkast. AI-stödet är ännu inte aktiverat.",',
+    guard: GUARD,
+    expect: "sv: the public Security work page says AI support is not part of this version",
+  },
+  {
+    id: "AITEXT-NC-METHOD-AI",
+    defect: "the interview method text says AI may suggest again",
+    file: DICT,
+    find: '"Intervjun följer CQrityjobs metod. Frågorna är låsta till intervjuguiden, och varje bedömning och beslut är ditt.",',
+    replace:
+      '"Intervjun följer CQrityjobs metod. Frågorna är låsta till intervjuguiden, AI får bara föreslå, och varje bedömning och beslut är ditt.",',
+    guard: GUARD,
+    expect: "sv: the interview method text mentions no AI",
+  },
+  {
+    id: "AITEXT-NC-MANDATE-HINT-UNGUARDED",
+    defect: "the mandate hint promises a Security AI draft whether or not AI is available",
+    file: "src/components/security-work/Mandate.tsx",
+    find: "            {aiAvailable\n              ? l(",
+    replace: "            {true\n              ? l(",
+    guard: GUARD,
+    expect: "Mandate.tsx:",
+  },
+  {
+    id: "AITEXT-NC-AIDRAFT-INTRO-UNGUARDED",
+    defect: "the analysis panel says AI proposes report text even when AI is off",
+    file: "src/components/security-work/AiDraft.tsx",
+    find: '        {status.data?.enabled && (\n          <p className="text-sm text-muted-foreground">',
+    replace: '        {true && (\n          <p className="text-sm text-muted-foreground">',
+    guard: GUARD,
+    expect: "AiDraft.tsx:",
+  },
 ];
 
 runControls("generative-ai-texts", MUTATIONS);

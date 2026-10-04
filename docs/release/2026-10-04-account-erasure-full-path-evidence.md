@@ -55,8 +55,10 @@ credential details or a reading), now seen through the browser.
 
 1. **The Storage deletion itself.** The stack has no Supabase Storage, so the sweep's HTTP call could
    not succeed here: the object stayed queued with its error recorded, which is the documented
-   behaviour (the account is erased and the object is a separate, retryable obligation). Whether the
-   file really leaves the `passport-evidence` bucket is the first step of the production test below.
+   behaviour (the account is erased and the object is a separate, retryable obligation). The
+   production run below did not settle it either: the holder had already deleted the file, so the
+   queued object was already absent. Deleting a Storage object that is still present is proven
+   only by the sweep's own tests, not end to end in production.
 2. **GoTrue.** The stack's gateway signs the JWT; the spec writes the `auth.sessions` row that
    real GoTrue writes at sign-in, because the Passport write guard requires a live session. The
    gateway also gained the two Auth Admin reads the admin console makes (`GET /auth/v1/admin/users`
@@ -77,19 +79,27 @@ credential details or a reading), now seen through the browser.
    the row keeps the id of the identity-free tombstone rather than a null. Nothing identifies the
    person from it, but the free text is the person's own words and stays up to 12 months.
 
-## The production test (the owner, once), after which the row may become `live`
+## The production run (2026-10-04, done)
 
-Account `8a0fdbc5-…` is the owner's test account.
+The synthetic candidate account `8a0fdbc5-…` (it held Passport underlag: one credential detail and
+one evidence file) was closed permanently by a superadmin through the admin UI at 08:00:19 UTC, as
+form `erasure`. The read-only check afterwards is in
+`docs/release/2026-10-04-test-round-cleanup.md` section 5 and the run is logged in
+`docs/legal/retention-execution-log.md`:
 
-1. Sign in as that account and add one document to the Security Passport (so a file exists in the
-   `passport-evidence` bucket). Sign out.
-2. Sign in as a superadmin: Admin, Users, the account, "Radera kontot permanent". Reason: the date
-   only. Confirm with the account's address.
-3. The list opens. If a banner says storage objects are owed, open Admin, Data, Storage erasure and
-   press retry until the backlog is 0.
-4. In the Supabase dashboard, Storage, bucket `passport-evidence`: the file must be gone.
-5. Write the result in `docs/legal/retention-execution-log.md`. Only then is account erasure
-   verified end to end, and only then can the `account` row in `retention-plan.ts` move to `live`.
+- removed: 1 `sp_credential_details`; 0 identities, sessions, refresh tokens, claims, evidence,
+  orphaned credential details, profile, CV, experience or role rows;
+- kept because other parties' records reference them (anonymised): 3 revoked share links, 1 job
+  application with its status event, 1 cancelled assessment assignment;
+- 1 `deleted_accounts` tombstone; audit rows `user_anonymised` and `user_deleted` kept; the address
+  pseudonymised and free to register again;
+- Storage: 1 `passport-evidence` object queued and already absent (the holder had deleted the file
+  earlier), so the queue row is settled and 0 objects remain. **This is the one thing the run did
+  not exercise:** deleting a file that is still there.
+
+The `account` row in `retention-plan.ts` is therefore `live`, with that caveat written into its
+evidence. If a real request ever has a file still in the bucket, runbook R1 step 4 applies and the
+count goes in the log.
 
 ## Re-running this evidence
 

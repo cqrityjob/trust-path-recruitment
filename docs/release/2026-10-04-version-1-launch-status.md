@@ -28,13 +28,13 @@ kontoradering. Ersatta PR är stängda först efter att deras arbete fanns i #41
 |---|---|---|---|
 | B1 | Juridiken godkänns av ägaren och dateras: `OWNER_APPROVED` för villkor och policy, publiceringsdatum, bolagets adress, leverantörsfakta (avtalspart, region, överföringsstöd, loggtid, backuprotation, sessioner). Villkoren och policyn visas som utkast tills dess (banner, `noindex`, inte i sitemapen). | Ägaren | Öppen. Frågelistan i `docs/legal/open-facts-2026-10-04.md` |
 | B2 | Tre lagringstider som ägaren inte har beslutat (standardtid för rekryteringsmaterial, granskningsloggar, de 339 gamla användningshändelserna). Policyn visar öppna punkter. | Ägaren | Öppen |
-| B3 | Kontoradering verifierad hela vägen i produktion med testkontot (Lagringssteget). Allt övrigt är bevisat lokalt. Tills dess markeras raden `account` inte som verifierad. | Ägaren | Öppen. Fem steg i `docs/release/2026-10-04-account-erasure-full-path-evidence.md` |
-| B4 | Gallringsrutinerna körs och loggas första gången (brevlådorna, leverantörsinställningarna). Policyn kan inte bli slutgiltig före dess. | Mostafa | Dokumenterade och provade. Ej körda |
-| B5 | Kärnflöden och åtkomstkontroller som ännu saknar webbläsarbevis: stegen 11 och 15 (ägarens webbläsarprov, korrigerade anvisningar i `docs/release/2026-10-04-access-probes-steps-11-15.md`) och de steg som tidigare redovisats utan bevis. | Ägaren, med Astra | Läget är sist rapporterat, se slutrapporten |
-| B6 | De två testliknande publika annonserna (Väktare och Säkerhetschef) ska bestämmas: behållas eller tas bort innan lansering. | Ägaren | Öppen (sist läst tidigare i dag) |
-| B7 | Merge av #417 och publicering i den ordning slutrapporten anger, med ägarens godkännande av slutversionen. | Opus (genomför), ägaren (godkänner) | Efter grön CI |
+| B3 | Gallringsrutinerna körs och loggas första gången (brevlådorna, leverantörsinställningarna). Policyn kan inte bli slutgiltig före dess. | Mostafa | Dokumenterade och provade. Ej körda |
+| B4 | Kärnflöden och åtkomstkontroller som ännu saknar webbläsarbevis: stegen 11 och 15 (ägarens webbläsarprov, korrigerade anvisningar i `docs/release/2026-10-04-access-probes-steps-11-15.md`) och de steg som tidigare redovisats utan bevis. | Ägaren, med Astra | Läget är sist rapporterat, se slutrapporten |
+| B5 | De två testliknande publika annonserna (Väktare och Säkerhetschef) ska bestämmas: behållas eller tas bort innan lansering. | Ägaren | Öppen (sist läst tidigare i dag) |
+| B6 | **Ägarens beslut före sammanslagning och publicering:** villkoren och policyn är utkast med banner, `noindex` och en öppen punkt. När #417 slås samman och publiceras blir den nya utkasttexten synlig på `/villkor` och `/integritetspolicy` medan `TERMS.date` är oförändrat och `OWNER_APPROVED` är `false`. Ägaren sade att inga juridiska texter ska publiceras innan slutversionen är godkänd. Alternativ: (a) slå samman men publicera först när ägaren godkänner, (b) slå samman och publicera nu, med utkastbannern som enda skydd. Rekommendation: (a). | Ägaren (beslutar), Opus (genomför) | Öppen |
+| B7 | Merge av #417 och publicering i den ordning slutrapporten anger, med ägarens godkännande av slutversionen. Katalogsessionen har bett att inget slås samman i `main` innan dess egen publicering är verifierad (därefter #412 och en liten registreringspost). | Opus (genomför), ägaren (godkänner) | Efter grön CI och B6 |
 
-Allt som tidigare stod som blockerare i den här leveransen och nu är löst: CV-utkastet kunde skicka karriäruppgifter till en AI-tjänst
+Allt som tidigare stod som blockerare i den här leveransen och nu är löst: kontoradering hela vägen i produktion (testkontot med Passport-underlag raderades 2026-10-04 08:00 UTC och kontrollerades skrivskyddat, `docs/release/2026-10-04-test-round-cleanup.md` avsnitt 5; raden `account` är `live`; en kvarvarande Storage-fil prövades inte), CV-utkastet kunde skicka karriäruppgifter till en AI-tjänst
 (spärrat i koden), tre texter lovade AI (rättade), mätningen sparade statistikmarkeringar (avstängd), policyn nämnde nyhetsbrev och automatisk
 vidarebefordran som inte finns (borttaget), biträdesavtalet hänvisade till ett företagsavtal som inte finns (borttaget), gallringsplanen
 presenterade tre förslag som beslut (rättat).
@@ -48,6 +48,6 @@ presenterade tre förslag som beslut (rättat).
 - Återställ ett sparat CV till ett faktabaserat utkast (en riktig serverfunktion). I version 1 är knappen en länk till skaparen.
 - Självbetjäning för export och radering av konto.
 - Ett lokalt Storage-stöd i den lokala stacken, så att filradering kan provas utan produktion.
-- Revoka `anon`-behörigheten på `cd_record_funnel_event` (ingen anropar den längre) och radera funnel-tabellen när ägaren har beslutat.
+- Revoka `EXECUTE` på `cd_record_funnel_event` för `anon` och `authenticated` (migration `20260916090000` gav det; applikationen anropar den inte längre, men en klient med den publika nyckeln kan fortfarande skriva en rad direkt via PostgREST) och radera funnel-tabellen när ägaren har beslutat. Detta kräver en migration och är därför inte med i #417.
 - Betalmodell och generativ AI som separata betaltjänster med uttrycklig beställning (ägarens riktning för version 2). Spärren öppnas då i en granskad kodändring tillsammans med beställningsflödet och en uppdaterad policy.
 - Fler språk än svenska och engelska, och en juridisk granskning av engelska villkor.

@@ -1,8 +1,10 @@
 // The server gate for generative AI in version 1 (owner decision, 2026-10-04).
 //
 // Version 1 of CQrityjob offers no generative AI. It is not "off by default":
-// no external AI request may leave the application, whatever the environment
-// says. Before this gate, four of the five ways to reach an AI provider were
+// no external AI request may leave the DEPLOYED application, whatever the
+// environment says. (Operator-run scripts are the one exception, see "The lab
+// seam" below: they open the seam themselves, never a request or a setting.)
+// Before this gate, four of the five ways to reach an AI provider were
 // closed by database switches, but the CV draft was governed only by two
 // environment variables (INTERVIEW_AI_PROVIDER and ANTHROPIC_API_KEY). A
 // configured server could have sent a person's career facts to a provider
@@ -42,7 +44,19 @@ export class GenerativeAiDisabledError extends Error {
 
 // The lab seam. Only scripts under scripts/ may call it (the guard fails on any
 // other use), to exercise the provider adapters against a stub transport. It
-// is not reachable from a request, an environment variable or a database row.
+// is not reachable from a request, an environment variable or a database row,
+// so the deployed application cannot open it.
+//
+// An operator who runs one of those scripts by hand CAN open it.
+// scripts/security-work-ai-quality-run.ts opens it when the file loads, so the
+// gate offers no protection inside that process; what protects it is the
+// script's own approval flow: its live mode needs `--live --approval <approved
+// plan>`, SW_AI_QUALITY_LIVE and an operator-injected SW_AI_QUALITY_API_KEY
+// (docs/security-intelligence/ai-quality.md), and it sends only the synthetic
+// fixture cases, from the operator's machine. It is not part of the deployed
+// application or of any CI job. It is still the one path where a request can
+// leave, which is why running it live is an operator decision and why the guard
+// pins who may call the seam.
 let labOverride = false;
 export function __setGenerativeAiLabOverride(allow: boolean): void {
   labOverride = allow;
