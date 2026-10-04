@@ -22,6 +22,9 @@
 
 \set ON_ERROR_STOP on
 
+-- Contract comes down before expand, just as in the operator recovery order.
+\ir ../rollback/20270207090000_interview_ai_config_contract_rollback.sql
+
 -- Unwind the new capability wrapper before removing its interview domain.
 -- Keep the historical assertion that every scp_iv_* function is removed.
 \ir ../rollback/20270206090000_interview_access_expand_rollback.sql
