@@ -2986,7 +2986,10 @@
     },
     {
       "file": "20270212090000_sp_catalogue_research_foundation.sql",
-      "hostedState": "pending",
+      "hostedState": "applied",
+      "hostedVersion": "20270212090000",
+      "hostedName": "sp_catalogue_research_foundation",
+      "evidenceSource": "Read-only verification 2026-10-04 08:46 UTC through the Supabase management connector on owner production wrygicdfxwjnrugduxnt, after PR #410 merged to main (merge 277cb842193650b47266650d349eef5d84fb66ad, head 3f824835e124af5a3a1de7503d3bf3d4a5d31362, every mandatory CI job green on that head) and the official integration applied 20270212090000 and 20270213090000 in version order. Ledger 372 rows, digest 868e9c610f78ced1c5f529596ca273c2 (md5 of version:name joined by newline); the first 370 are unchanged (538769fe5724a0d4561a645d3faf79d6) and the first 369 as before (01357df572629d745e667d2fedb20ba1). The five catalogue functions and the provenance trigger function equal a strict local replay by md5(prosrc); the three new tables have RLS enabled, authenticated SELECT only and the admin-read or definition-read policy; the three relaxed constraints read as designed; the previous 77 credential types, 14 certification definitions and 5 issuers are byte-identical to their pre-apply fingerprints (taken read-only before the merge). Evidence: docs/release/2026-10-04-catalogue-schema-hosted-verification.md.",
       "introduces": [
         {
           "kind": "table",
@@ -3027,7 +3030,10 @@
     },
     {
       "file": "20270213090000_sp_catalogue_research_import.sql",
-      "hostedState": "pending",
+      "hostedState": "applied",
+      "hostedVersion": "20270213090000",
+      "hostedName": "sp_catalogue_research_import",
+      "evidenceSource": "Read-only verification 2026-10-04 08:46 UTC, same read as 20270212090000 (applied in the same integration run, in version order). 170 research records (14 matched_existing, 140 added_approved, 16 retained_for_review), 140 new definitions all inactive, global, without jurisdiction or market pack, allows_no_expiry false, legal review pending; 36 issuers (5 + 31), 154 certification definitions, 2 aliases, 0 requests, 0 claims on the new codes; sp_credential_types 217 rows of which 26 active (unchanged). Evidence: docs/release/2026-10-04-catalogue-schema-hosted-verification.md.",
       "introduces": [],
       "rollback": "supabase/rollback/20270213090000_sp_catalogue_research_import_rollback.sql",
       "verify": "SELECT reconciliation_outcome, catalogue_decision, count(*) FROM public.sp_catalogue_research_records GROUP BY 1,2 ORDER BY 1; -- expect added_approved/approved 140; matched_existing/approved 14; retained_for_review/needs_information 16. SELECT count(*) FROM public.sp_catalogue_research_records; -- expect 170. SELECT count(*) FILTER (WHERE is_active), count(*) FROM public.sp_credential_types WHERE code LIKE 'INTL\\_%'; -- expect 14 active of 154: every new definition is inactive until the publication migration. SELECT count(*) FROM public.sp_approved_credential_catalogue; -- expect UNCHANGED from before the release (nothing new is selectable). SELECT count(*) FROM public.sp_certification_issuers; -- expect 36 (5 existing + 31 new). SELECT count(*) FROM public.sp_credential_types t JOIN public.sp_catalogue_research_records r ON r.credential_code=t.code WHERE r.reconciliation_outcome='added_approved' AND (t.scope_code<>'global_professional' OR t.jurisdiction_code IS NOT NULL OR t.market_pack_code IS NOT NULL OR t.allows_no_expiry OR t.legal_review_state<>'pending'); -- expect 0. SELECT count(*) FROM public.sp_claims; -- expect unchanged from before the release.",

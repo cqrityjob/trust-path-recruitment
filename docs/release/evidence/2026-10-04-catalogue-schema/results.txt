@@ -1,0 +1,28 @@
+Production read, 2026-10-04 ~08:46 UTC, project wrygicdfxwjnrugduxnt, read-only SELECT through the
+Supabase management connector. Query: verify.sql (same directory). Output, one line per key:
+
+01 tables | sp_catalogue_requests=true,sp_catalogue_research_records=true,sp_certification_definition_aliases=true
+02 rls | sp_catalogue_requests:true:false,sp_catalogue_research_records:true:false,sp_certification_definition_aliases:true:false
+03 grants | sp_catalogue_requests:authenticated:SELECT,sp_catalogue_research_records:authenticated:SELECT,sp_certification_definition_aliases:authenticated:SELECT
+04 policies | sp_catalogue_requests_admin_read SELECT authenticated is_platform_admin(auth.uid()) ; sp_catalogue_research_records_admin_read SELECT authenticated is_platform_admin(auth.uid()) ; sp_certification_definition_aliases_read SELECT authenticated EXISTS(definition exists)
+05 functions | sp_admin_resolve_catalogue_request:true:71455be0c890c70dcb1a9e0efa6663c6 ; sp_admin_review_research_record:true:d6c062c920b0ed8c7ef129a3a0728ce1 ; sp_catalogue_research_provenance_immutable:false:f616c066f23c27984fdaf8bb9a57de7b ; sp_catalogue_unavailable_matches:true:eebdcf4e4612185dc04e95ee481ad2f2 ; sp_list_my_catalogue_requests:true:6a38db83a14321b98edcef13ca04f4ad ; sp_request_catalogue_definition:true:94084df19e0788e77beaeec0edd819a9   (all search_path="")
+06 fn_exec | anon=false, authenticated=true for the five RPCs
+07 constraints | abbreviation: NULL or 1..24 characters; maintenance_policy_type adds 'not_assessed'; professional_domain adds insurance, risk_compliance, resilience_safety
+08 abbr_nullable | YES
+09 classes | assessed_certificate,certification,course_certificate,mandatory_training,occupational_card,other_professional_credential,permit,professional_designation,professional_licence,professional_qualification,regulated_authorisation,vocational_qualification
+10 outcomes | added_approved/approved=140,matched_existing/approved=14,retained_for_review/needs_information=16
+11 records_total | 170
+12 new_definitions | 140 inactive=140 scope_ok=140
+13 types_total | 217 active=26
+14 issuers | 36
+15 cert_defs | 154
+16 aliases | 2
+17 requests | 0
+18 old_types_fp | 0666aa9258ba1b21e58d62dc9588f6cb n=77
+19 old_defs_fp | 5cd7fc831c456edac4e6b6e54c6678a8 n=14
+20 new_defs_fp | 4fba8b00f7dfe4dc012f746dbf760c13 n=140
+21 matched_existing_links | 14 linked=14
+22 claims_untouched | 0
+
+Ledger: 372 rows, md5(version:name joined by newline) 868e9c610f78ced1c5f529596ca273c2;
+first 370 rows 538769fe5724a0d4561a645d3faf79d6; first 369 rows 01357df572629d745e667d2fedb20ba1.
