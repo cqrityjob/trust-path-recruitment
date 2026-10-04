@@ -401,9 +401,14 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // is_platform_admin(auth.uid()), the grants are unchanged (authenticated SELECT only, no
 // client write), the functions that read the table are unchanged. Nothing is pending by
 // design now. Evidence: docs/release/2026-10-04-interview-config-contract-hosted-verification.md.
-// 20270208090000 (account erasure with credential metadata) is pending until
-// the official integration applies it and hosted evidence is recorded.
-const expectedPending: string[] = ["20270208090000_account_erasure_credential_details.sql"];
+// 2026-10-04 07:56 UTC: #416 (merge abbc036e, every mandatory CI job green on fbc6e4c3)
+// verified applied read-only: 20270208090000_account_erasure_credential_details is the
+// last ledger row (370 rows, digest 538769fe5724a0d4561a645d3faf79d6; the first 369
+// unchanged, 01357df572629d745e667d2fedb20ba1); admin_delete_user_if_safe and the new
+// extraction trigger function equal the strict local replay; the shared append-only
+// function is unchanged. Nothing is pending by design now.
+// Evidence: docs/release/2026-10-04-account-erasure-hosted-verification.md.
+const expectedPending: string[] = [];
 
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",

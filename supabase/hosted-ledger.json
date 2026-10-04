@@ -13,8 +13,8 @@
   ],
   "source": "Supabase connector read-only SQL, explicit project wrygicdfxwjnrugduxnt",
   "projectRef": "wrygicdfxwjnrugduxnt",
-  "readAt": "2026-10-04T06:20:00+00:00",
-  "readBy": "Read-only production verification after #406 merged (interview access, contract: the full interview AI configuration row readable only by platform administrators). All 368 previous ledger identities preserved (their digest is still c086806d9fb5f0c92609678f037b73ba); the new row is 20270207090000, applied by the official integration. md5 of version:name joined by newline over all 369 rows 01357df572629d745e667d2fedb20ba1, equal on the connector read and on this file. See docs/release/2026-10-04-interview-config-contract-hosted-verification.md.",
+  "readAt": "2026-10-04T07:56:38+00:00",
+  "readBy": "Read-only production verification after #416 merged (account erasure with credential metadata). All 369 previous ledger identities preserved (their digest is still 01357df572629d745e667d2fedb20ba1); the new row is 20270208090000, applied by the official integration. md5 of version:name joined by newline over all 370 rows 538769fe5724a0d4561a645d3faf79d6, equal on the connector read and on this file. See docs/release/2026-10-04-account-erasure-hosted-verification.md.",
   "versions": [
     {
       "version": "20260716153446",
@@ -1491,6 +1491,10 @@
     {
       "version": "20270207090000",
       "name": "interview_ai_config_contract"
+    },
+    {
+      "version": "20270208090000",
+      "name": "account_erasure_credential_details"
     }
   ]
 }
