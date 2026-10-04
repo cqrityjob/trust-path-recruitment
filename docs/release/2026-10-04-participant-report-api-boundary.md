@@ -1,6 +1,6 @@
 # Participant report API boundary after #428
 
-Prepared from fresh `origin/main` `ce3d93d` (#428). This is a schema-only change; no production migration, merge, publication or external mail was performed. The production boundary remains open until the owner approves and applies this migration.
+Prepared from fresh `origin/main` `ce3d93d` (#428), then integrated current main `13502d130d8715f0fc3605e60ef383f08c77cb94` without rewriting history. This is a schema-only change; no production migration, merge to main, publication or external mail was performed. The production boundary remains open until the owner approves and applies this migration. Release bookkeeping records it as **pending**, with no new objects introduced; the release gate must remain closed until application and postflight are verified.
 
 ## Decision and implementation
 
@@ -55,6 +55,18 @@ Rollback is operational recovery only: it restores the old access and therefore 
 | Passport F05 recipient/QR/revoke after publication             | #428 real GoTrue/PostgREST local SV/1280 and EN/375 chain, clipboard/QR equality, logged-out reload, revoke and invalid link; F09 production apply and history reconciliation | Recheck a freshly created link on the published version, including QR on a real phone and revoked reload. The supplied Passport account's test merits and published target still need confirming. No need to repeat the local fixture chain or request a new recipient account; recipient is logged out.                                                                         |
 
 Account addresses, passwords, MFA, sessions and bearer share URLs are intentionally absent from this repository. Account addresses were requested together; only secure interactive login is appropriate for secrets. No external login was attempted against an unspecified environment.
+
+### Verified preview and minimum missing setup
+
+The existing [Lovable preview login](https://id-preview--9ec625ef-34a1-4b4b-8cbb-712cae168579.lovable.app/login) uses production `wrygicdfxwjnrugduxnt`. The exact deployed configuration and the real Google redirect both confirm that target. Google is enabled and the button reaches Google's sign-in page with the production Supabase callback; no sign-in or return was completed. This is routing evidence, not the remaining OAuth/account-ownership proof. **The preview is not isolated.** Accessible project inventory contains only production, and its branch inventory only default main.
+
+Read-only counts confirm that the supplied existing Passport accounts have production merits; their contents were not read or copied and synthetic status is not established. Google test account B has no account there. No production test merits or share links were created. The smallest setup for the full external tests is a separate empty Supabase project or schema-only development branch, an HTTPS test app exclusively configured for it, Google callback/redirect configuration and confirmation-enabled mail delivery. Reuse the existing synthetic Passport fixtures. A loopback-only stack cannot alone prove the real-phone cases. No more account addresses are needed; secure user-controlled login remains pending that isolated target.
+
+### Lovable generated types and source synchronization
+
+GitHub main and Lovable both report `13502d130d8715f0fc3605e60ef383f08c77cb94`. The exact-ref Lovable `types.ts` and the PR file have identical SHA-256 `3f9d7432a8f6379282a395cbbab61927e5c2179579be78f55f0d1f007fbac532`. All three nullable argument exceptions remain `string | null` and the existing nullable-contract guard passes. Lovable bot commit `55420b0` erased those exceptions and `9f698f9` restored them. This proves current synchronization, **not that future generator overwrites have stopped**. Keep the mandatory guard, and recheck Lovable's commit and file after an approved merge before a separately approved publication.
+
+The other generated changes were reviewed against existing migrations and read-only hosted metadata: employer-notices table and six RPCs (`20270205090000`), three inferred catalogue-view relationships, optional nullable certification `abbreviation` (`20270212090000`), and ordering/formatting-only changes to research fields and the case-capabilities RPC. No further generated-type patch is needed. The security PR branch is not yet Lovable's connected main or its published version.
 
 ## Real launch blockers and separate operations
 

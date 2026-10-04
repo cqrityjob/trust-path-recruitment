@@ -429,7 +429,9 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // Evidence: docs/release/2026-10-04-catalogue-publication-hosted-verification.md.
 // F09 applied once as hosted 20261004164027; see 2026-10-04 guard verification.
 // Owner-authorized canonical alias verified; deploy-plan independently proves an empty plan.
-const expectedPending: string[] = [];
+// #429 is schema-only and awaits explicit production approval. Remove this
+// entry only with hosted application/postflight evidence, never on merge alone.
+const expectedPending: string[] = ["20270216090000_participant_report_api_boundary.sql"];
 
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
