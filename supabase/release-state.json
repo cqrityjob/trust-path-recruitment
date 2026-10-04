@@ -2975,11 +2975,14 @@
     },
     {
       "file": "20270208090000_account_erasure_credential_details.sql",
-      "hostedState": "pending",
+      "hostedState": "applied",
+      "hostedVersion": "20270208090000",
+      "hostedName": "account_erasure_credential_details",
+      "evidenceSource": "Read-only verification 2026-10-04 07:56 UTC through the Supabase management connector on owner production wrygicdfxwjnrugduxnt, after PR #416 merged to main (abbc036e; head fbc6e4c3, every mandatory CI job green) following the independent pre-merge review (PR comment 5977855059) and the official integration applied it. supabase_migrations.schema_migrations holds 20270208090000 account_erasure_credential_details as the last row: 370 rows, md5 of version:name joined by newline 538769fe5724a0d4561a645d3faf79d6, equal to hosted-ledger.json; the first 369 rows unchanged (01357df572629d745e667d2fedb20ba1). md5(prosrc) of admin_delete_user_if_safe(uuid,text,text) e44122cc2ac48d4eaf1519f7847cde65 and of sp_evidence_extractions_append_only() 51ce2c13e5e69429072577eead7b8e47, both equal to the strict local replay; the shared sp_extractions_append_only() unchanged (f195784ba992176f199734d548be6f43). Trigger sp_extractions_append_only on sp_evidence_extractions runs sp_evidence_extractions_append_only(); sp_credential_policy_immutable and sp_credential_events_immutable still run the shared function. ACL of admin_delete_user_if_safe unchanged (postgres, authenticated, service_role EXECUTE; no anon, no PUBLIC); the new trigger function is SECURITY INVOKER with search_path empty and EXECUTE for postgres only. No production write was made and no personal data was read.",
       "introduces": [],
       "rollback": "supabase/rollback/20270208090000_account_erasure_credential_details_rollback.sql",
       "verify": "SELECT md5(prosrc), prosrc LIKE '%removed_dependents%' FROM pg_proc WHERE oid = 'public.admin_delete_user_if_safe(uuid,text,text)'::regprocedure; SELECT p.proname FROM pg_trigger t JOIN pg_proc p ON p.oid = t.tgfoid WHERE t.tgrelid = 'public.sp_evidence_extractions'::regclass AND t.tgname = 'sp_extractions_append_only'; -- expect true and sp_evidence_extractions_append_only; the share policy and share event triggers still use sp_extractions_append_only",
-      "note": "Account erasure removes the person's own sp_credential_details and sp_evidence_extractions rows before their Passport rows; the extraction append-only guard releases a DELETE only during admin_delete_user_if_safe() of the evidence holder by a superadmin. No data change on apply. Must be applied before 20270212090000 (catalogue research) or be renumbered after it. Pending, never mark applied without hosted evidence."
+      "note": "Account erasure removes the person's own sp_credential_details and sp_evidence_extractions rows before their Passport rows; the extraction append-only guard releases a DELETE only during admin_delete_user_if_safe() of the evidence holder by a superadmin. No data change on apply. Must be applied before 20270212090000 (catalogue research) or be renumbered after it. Applied to production and verified read-only 2026-10-04; see evidenceSource."
     }
   ], 
   "policyVersion": 2, 
