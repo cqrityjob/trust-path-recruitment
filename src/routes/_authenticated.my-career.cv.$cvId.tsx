@@ -26,7 +26,8 @@
 //
 // -- REGENERATION NEVER OVERWRITES ---------------------------------------
 //
-// "Create a new AI draft" produces a SUGGESTION held in component state.
+// "Create a new AI draft" (shown only when generative AI is on) produces a
+// SUGGESTION held in component state.
 // The saved document is untouched until the person accepts it, and the
 // accept path re-validates the draft server-side against a freshly rebuilt
 // bundle -- because a proposal that has been to a browser and back is not a
@@ -85,6 +86,7 @@ import {
 } from "@/lib/professional-identity/cv/cv-store.functions";
 import { generateMyCv } from "@/lib/professional-identity/cv/cv.functions";
 import { revealElement } from "@/lib/professional-identity/cv/reveal";
+import { GENERATIVE_AI_ENABLED } from "@/lib/ai/generative-ai-gate";
 
 export const Route = createFileRoute("/_authenticated/my-career/cv/$cvId")({
   ssr: false,
@@ -957,19 +959,33 @@ function CvDetailPage() {
             {/* -- regeneration ---------------------------------------- */}
             {!editing && (
               <div className="no-print mt-6 flex flex-wrap items-center gap-3">
-                <button
-                  type="button"
-                  disabled={propose.isPending}
-                  onClick={() => propose.mutate()}
-                  className="inline-flex min-h-10 items-center gap-1.5 rounded-md border border-border bg-background px-4 text-sm font-semibold text-foreground hover:bg-secondary disabled:opacity-60"
-                >
-                  {propose.isPending ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
-                  ) : (
-                    <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
-                  )}
-                  {L(propose.isPending ? CV.generating : CV.regenerate, l)}
-                </button>
+                {GENERATIVE_AI_ENABLED ? (
+                  <button
+                    type="button"
+                    disabled={propose.isPending}
+                    onClick={() => propose.mutate()}
+                    className="inline-flex min-h-10 items-center gap-1.5 rounded-md border border-border bg-background px-4 text-sm font-semibold text-foreground hover:bg-secondary disabled:opacity-60"
+                  >
+                    {propose.isPending ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                    ) : (
+                      <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+                    )}
+                    {L(propose.isPending ? CV.generating : CV.regenerateAssisted, l)}
+                  </button>
+                ) : (
+                  // Version 1 has no AI draft. What a person can do here is make a
+                  // new CV from their facts: the creator builds the draft, shows
+                  // it, and saves nothing until they choose to.
+                  <Link
+                    to="/my-career/cv/new"
+                    data-cv-new-draft
+                    className="inline-flex min-h-10 items-center gap-1.5 rounded-md border border-border bg-background px-4 text-sm font-semibold text-foreground hover:bg-secondary"
+                  >
+                    <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+                    {L(CV.regenerate, l)}
+                  </Link>
+                )}
 
                 {!confirmDelete ? (
                   <button

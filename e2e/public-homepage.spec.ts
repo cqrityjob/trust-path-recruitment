@@ -186,11 +186,13 @@ test.describe("the public homepage", () => {
     });
     expect(h1.align).toBe("center");
     expect(Math.abs(h1.centre - h1.viewport), "the headline is off centre").toBeLessThanOrEqual(24);
-    // The positioning (owner copy, refined in Lovable 2026-10-03). Its "AI-stöd"
-    // phrase is deliberately not asserted here: AI functions are off in
-    // production, so it is an open owner item.
-    await expect(page.locator("#hero")).toContainText("Jobb, kompetens, Security Passport");
+    // The positioning (owner copy, 2026-10-04). It promises no AI: version 1 has
+    // no generative AI.
+    await expect(page.locator("#hero")).toContainText(
+      "Karriär, säkerhetsjobb och verifierbara meriter på ett ställe.",
+    );
     await expect(page.locator("#hero")).toContainText("Rekryteringsverktyg för arbetsgivare");
+    await expect(page.locator("#hero")).not.toContainText(/\bAI\b/);
     // The English brand line sits below the two entrances as the slogan.
     await expect(page.locator('#hero p[lang="en"]')).toHaveText(
       "Security careers, without limits.",

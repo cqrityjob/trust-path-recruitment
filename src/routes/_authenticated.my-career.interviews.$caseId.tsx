@@ -259,8 +259,8 @@ function Page() {
           <p className="mt-3 max-w-[68ch] text-sm text-muted-foreground">
             {L(
               c(
-                "Ett AI-stöd hjälper arbetsgivaren att strukturera underlaget och föreslå var i dina svar det finns konkret information. AI:t poängsätter dig inte, rangordnar dig inte och rekommenderar ingen anställning. Varje uppgift som används måste en namngiven människa hos arbetsgivaren först bekräfta, och det är människor som bedömer och beslutar.",
-                "An AI assistant helps the employer structure the material and point to where your answers contain concrete information. It does not score you, rank you or recommend hiring anyone. Every item used must first be confirmed by a named person at the employer, and people do the assessing and deciding.",
+                "Arbetsgivaren använder ett strukturerat metodstöd för intervjun och bedömningen. Det är en människa som granskar underlaget och fattar beslut.",
+                "The employer uses a structured method aid for the interview and the assessment. A person reviews the material and makes the decision.",
               ),
               lang,
             )}
@@ -384,7 +384,7 @@ function Page() {
            *  processed at all. Every case WITHOUT a transcript therefore has
            *  none, and this region used to render as an absence: no line, no
            *  heading, no gap. A person told which of their material is in
-           *  use, who confirms it, what the AI does and does not do, and how
+           *  use, who confirms it, who decides, and how
            *  to correct a mistake, and told nothing at all about retention,
            *  reasonably concludes that retention is simply not part of what
            *  this page covers -- rather than that nobody has decided.

@@ -639,27 +639,32 @@ function CvNewPage() {
                 </section>
               )}
 
-              {outcome && outcome.status !== "succeeded" && outcome.status !== "not_ready" && (
-                <div
-                  role="status"
-                  className="no-print mb-5 flex gap-2.5 rounded-lg border border-border bg-secondary/50 p-4"
-                >
-                  {outcome.status === "fabrication_rejected" ? (
-                    <ShieldAlert
-                      className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--gold)]"
-                      aria-hidden="true"
-                    />
-                  ) : (
-                    <AlertTriangle
-                      className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground"
-                      aria-hidden="true"
-                    />
-                  )}
-                  <p className="text-sm leading-relaxed text-foreground">
-                    {L(CV_STATUS_NOTE[outcome.status], l)}
-                  </p>
-                </div>
-              )}
+              {/* "No AI engine" is the ordinary state in version 1, so it is not a
+                  notice. Anything else that stopped a draft still is. */}
+              {outcome &&
+                outcome.status !== "succeeded" &&
+                outcome.status !== "not_ready" &&
+                outcome.status !== "provider_unavailable" && (
+                  <div
+                    role="status"
+                    className="no-print mb-5 flex gap-2.5 rounded-lg border border-border bg-secondary/50 p-4"
+                  >
+                    {outcome.status === "fabrication_rejected" ? (
+                      <ShieldAlert
+                        className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--gold)]"
+                        aria-hidden="true"
+                      />
+                    ) : (
+                      <AlertTriangle
+                        className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground"
+                        aria-hidden="true"
+                      />
+                    )}
+                    <p className="text-sm leading-relaxed text-foreground">
+                      {L(CV_STATUS_NOTE[outcome.status], l)}
+                    </p>
+                  </div>
+                )}
 
               {outcome && outcome.quarantinedPassages.length > 0 && (
                 <p className="no-print mb-5 rounded-lg border border-border bg-secondary/50 p-4 text-sm text-foreground">

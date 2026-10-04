@@ -318,6 +318,14 @@ jobs:
       - name: Generative AI gate check
         run: bun run generative-ai-gate:check
 
+      # Launch (owner, 2026-10-04): no text a visitor, a candidate or a CV author
+      # reads promises AI that version 1 does not offer, the three texts the
+      # owner named are held at the owner's wording, and the texts stand only
+      # while the server gate is closed. Planted controls run in
+      # negative-controls:all.
+      - name: Generative AI texts check
+        run: bun run generative-ai-texts:check
+
       # NEGATIVE CONTROLS -- proof that the guards above would notice.
       #
       # Each mutation introduces the exact defect a guard exists to catch and
