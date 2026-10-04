@@ -6931,6 +6931,78 @@ export type Database = {
           },
         ]
       }
+      recruitment_employer_notices: {
+        Row: {
+          application_id: string
+          attempt_id: string | null
+          attempts: number
+          claimed_at: string | null
+          created_at: string
+          employer_id: string
+          id: string
+          kind: string
+          last_status: number | null
+          next_attempt_at: string
+          recipient_user_id: string
+          sent_at: string | null
+          settled_at: string | null
+          skip_reason: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          application_id: string
+          attempt_id?: string | null
+          attempts?: number
+          claimed_at?: string | null
+          created_at?: string
+          employer_id: string
+          id?: string
+          kind?: string
+          last_status?: number | null
+          next_attempt_at?: string
+          recipient_user_id: string
+          sent_at?: string | null
+          settled_at?: string | null
+          skip_reason?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          application_id?: string
+          attempt_id?: string | null
+          attempts?: number
+          claimed_at?: string | null
+          created_at?: string
+          employer_id?: string
+          id?: string
+          kind?: string
+          last_status?: number | null
+          next_attempt_at?: string
+          recipient_user_id?: string
+          sent_at?: string | null
+          settled_at?: string | null
+          skip_reason?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recruitment_employer_notices_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "job_applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recruitment_employer_notices_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       recruitment_interview_bookings: {
         Row: {
           application_id: string
@@ -15330,6 +15402,13 @@ export type Database = {
             foreignKeyName: "sp_catalogue_requests_answered_credential_code_fkey"
             columns: ["answered_credential_code"]
             isOneToOne: false
+            referencedRelation: "sp_approved_credential_catalogue"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "sp_catalogue_requests_answered_credential_code_fkey"
+            columns: ["answered_credential_code"]
+            isOneToOne: false
             referencedRelation: "sp_credential_types"
             referencedColumns: ["code"]
           },
@@ -15364,10 +15443,10 @@ export type Database = {
           mapped_credential_class: string | null
           mapped_professional_domain: string | null
           official_name: string
-          reconciliation_outcome: string
           recheck_checked_on: string | null
           recheck_note: string | null
           recommended_priority: string
+          reconciliation_outcome: string
           renewal_note: string | null
           required_action: string | null
           research_area: string
@@ -15407,10 +15486,10 @@ export type Database = {
           mapped_credential_class?: string | null
           mapped_professional_domain?: string | null
           official_name: string
-          reconciliation_outcome?: string
           recheck_checked_on?: string | null
           recheck_note?: string | null
           recommended_priority: string
+          reconciliation_outcome?: string
           renewal_note?: string | null
           required_action?: string | null
           research_area: string
@@ -15450,10 +15529,10 @@ export type Database = {
           mapped_credential_class?: string | null
           mapped_professional_domain?: string | null
           official_name?: string
-          reconciliation_outcome?: string
           recheck_checked_on?: string | null
           recheck_note?: string | null
           recommended_priority?: string
+          reconciliation_outcome?: string
           renewal_note?: string | null
           required_action?: string | null
           research_area?: string
@@ -15473,6 +15552,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "sp_catalogue_research_records_credential_code_fkey"
+            columns: ["credential_code"]
+            isOneToOne: false
+            referencedRelation: "sp_approved_credential_catalogue"
+            referencedColumns: ["code"]
+          },
           {
             foreignKeyName: "sp_catalogue_research_records_credential_code_fkey"
             columns: ["credential_code"]
@@ -15513,6 +15599,13 @@ export type Database = {
             foreignKeyName: "sp_certification_definition_aliases_credential_code_fkey"
             columns: ["credential_code"]
             isOneToOne: false
+            referencedRelation: "sp_approved_credential_catalogue"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "sp_certification_definition_aliases_credential_code_fkey"
+            columns: ["credential_code"]
+            isOneToOne: false
             referencedRelation: "sp_credential_types"
             referencedColumns: ["code"]
           },
@@ -15540,7 +15633,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          abbreviation: string | null
+          abbreviation?: string | null
           canonical_name_en: string
           created_at?: string
           credential_code: string
@@ -22688,6 +22781,23 @@ export type Database = {
           window_open: boolean
         }[]
       }
+      rec_claim_employer_notices: {
+        Args: { _application_id?: string; _kinds?: string[]; _limit?: number }
+        Returns: {
+          application_id: string
+          attempt_id: string
+          attempts: number
+          employer_name: string
+          employer_slug: string
+          job_title: string
+          kind: string
+          language: string
+          notice_id: string
+          provider_key: string
+          recipient_email: string
+          via: string
+        }[]
+      }
       rec_claim_message_send: {
         Args: { _message_id: string }
         Returns: {
@@ -22737,6 +22847,22 @@ export type Database = {
         Args: { _message_id: string }
         Returns: undefined
       }
+      rec_employer_notice_backoff: {
+        Args: { _attempts: number }
+        Returns: string
+      }
+      rec_employer_notice_recipients: {
+        Args: { _application_id: string }
+        Returns: {
+          recipient_email: string
+          recipient_user_id: string
+          via: string
+        }[]
+      }
+      rec_enqueue_employer_new_application_notices: {
+        Args: { _application_id: string }
+        Returns: number
+      }
       rec_is_member: { Args: { _employer_id: string }; Returns: boolean }
       rec_job_counts: {
         Args: { _employer_id: string; _job_id?: string }
@@ -22766,6 +22892,10 @@ export type Database = {
           title_en: string
           title_sv: string
         }[]
+      }
+      rec_purge_employer_notices: {
+        Args: { _older_than?: string }
+        Returns: number
       }
       rec_receipt_actor: {
         Args: {
@@ -22950,6 +23080,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      rec_settle_employer_notice: {
+        Args: { _attempt_id: string; _http_status?: number; _result: string }
+        Returns: string
       }
       rec_settle_message_send: {
         Args: { _error?: string; _message_id: string; _result: string }
@@ -23817,10 +23951,6 @@ export type Database = {
         Returns: undefined
       }
       scp_iv_build_report_basis: { Args: { _case_id: string }; Returns: Json }
-      scp_iv_case_capabilities: {
-        Args: { _case_id: string }
-        Returns: { ai_enabled: boolean; transcript_enabled: boolean }[]
-      }
       scp_iv_can_read_case: { Args: { _case_id: string }; Returns: boolean }
       scp_iv_can_write_case: { Args: { _case_id: string }; Returns: boolean }
       scp_iv_candidate_interview_detail: {
@@ -23836,6 +23966,13 @@ export type Database = {
           employer_name: string
           role_title: string
           updated_at: string
+        }[]
+      }
+      scp_iv_case_capabilities: {
+        Args: { _case_id: string }
+        Returns: {
+          ai_enabled: boolean
+          transcript_enabled: boolean
         }[]
       }
       scp_iv_case_employer: { Args: { _case_id: string }; Returns: string }
