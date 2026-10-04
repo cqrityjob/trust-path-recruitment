@@ -118,11 +118,11 @@ Three dependent releases, because the repository's schema-first contract forbids
 migration that is not applied, and because publishing 140 definitions to the old wizard would list them with raw class and
 subject codes.
 
-| #   | Release                      | Contains                                                                                                                                                                                                                                                                                                                                                                                                                       | Needs                                                                                                                   | Production effect                                                                                                                                                                          |
-| --- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 1   | **Schema and research data** | Migrations `20270212090000` (foundation) and `20270213090000` (import), rollbacks, SQL suite and planted controls, `release-state.json`, the two vocabulary mirrors (`CREDENTIAL_CLASSES`, nullable `abbreviation`), generated types, this document, the reconciliation report, and the **staged** publication (`research/…/staged/`, generated and verified, outside the migration path so merging release 1 cannot apply it) | —                                                                                                                       | Adds tables, functions, four classes and 140 **inactive** definitions. The approved catalogue is **unchanged** (nothing new is selectable). No claim, grant, market or trust state changes |
-| 2   | **Application**              | The registration search, filters, "not yet available" explanations, request path, admin Research and Requests views, a retired state, shared label mappings with neutral fallbacks, plate marks up to eight characters, tests and before/after screenshots (section 9)                                                                                                                                                         | Release 1 applied **and recorded applied with evidence** in `release-state.json` (the schema-first guard enforces this) | None until the owner publishes the app in Lovable                                                                                                                                          |
-| 3   | **Publication**              | The staged migration `20270214090000` moves into `supabase/migrations/` (and its rollback into `supabase/rollback/`): `is_active = true` on exactly the 140 added codes                                                                                                                                                                                                                                                        | Release 2 published                                                                                                     | The 140 become selectable for every signed-in holder. `legal_review_state` stays `pending`; no market opens                                                                                |
+| #   | Release                      | Contains                                                                                                                                                                                                                                                                       | Needs                                                                                                                   | Production effect                                                                                                                                                                          |
+| --- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1   | **Schema and research data** | Migrations `20270212090000` (foundation) and `20270213090000` (import), rollbacks, SQL suite and planted controls, `release-state.json`, the two vocabulary mirrors (`CREDENTIAL_CLASSES`, nullable `abbreviation`), generated types, this document, the reconciliation report | —                                                                                                                       | Adds tables, functions, four classes and 140 **inactive** definitions. The approved catalogue is **unchanged** (nothing new is selectable). No claim, grant, market or trust state changes |
+| 2   | **Application**              | The registration search, filters, "not yet available" explanations, request path, admin Research and Requests views, a retired state, shared label mappings with neutral fallbacks, plate marks up to eight characters, tests and before/after screenshots (section 9)         | Release 1 applied **and recorded applied with evidence** in `release-state.json` (the schema-first guard enforces this) | None until the owner publishes the app in Lovable                                                                                                                                          |
+| 3   | **Publication**              | Migration `20270214090000`: `is_active = true` on exactly the 140 added codes                                                                                                                                                                                                  | Release 2 published                                                                                                     | The 140 become selectable for every signed-in holder. `legal_review_state` stays `pending`; no market opens                                                                                |
 
 Merging a migration to `main` applies it to production (D3 of the completion work order), so approving a merge approves its
 release. **Nothing in this work was merged, published or written to hosted production.**
@@ -130,13 +130,13 @@ release. **Nothing in this work was merged, published or written to hosted produ
 ### Verification after each release (read-only)
 
 The `verify` entry of each migration in `supabase/release-state.json` carries the queries and expected values (counts, RLS,
-privileges, function fingerprints); release 3 adds its own entry when the staged file moves. After release 1, expect 170 research records (140 added, 14 matched, 16 retained),
+privileges, function fingerprints). After release 1, expect 170 research records (140 added, 14 matched, 16 retained),
 14 of 154 international definitions active, the approved catalogue count unchanged, 12 credential classes, and zero rows in
 `sp_catalogue_requests`. After release 3, expect 154 of 154 active and 154 selectable international definitions.
 
 ### Rollback
 
-Each migration has a rollback in `supabase/rollback/` (the publication's is staged beside it). They refuse rather than destroy: the foundation refuses while any
+Each migration has a rollback in `supabase/rollback/`. They refuse rather than destroy: the foundation refuses while any
 request, research record or new-class claim exists; the import refuses while any holder holds a claim against an added
 definition, any request refers to one, or an administrator has recorded a decision; the publication rollback only withdraws
 the definitions from **new** registration and never touches a claim. Order: publication, then import, then foundation. The
@@ -234,3 +234,29 @@ read, and the local service role is granted `SELECT` on the public tables.
 the service role after its own administrator check. A bare local replay of the migration history leaves `service_role` without
 `SELECT` on `sp_credential_types` and its neighbours, which is why the local harness grants it. I have not verified what the
 hosted project grants; if it matches the local replay, that page (which existed before this work) would fail there too.
+
+## 10. The publication release (release 3)
+
+`20270214090000_sp_catalogue_research_publish.sql` is the only thing this release adds to the database. It sets `is_active = true`
+on exactly the 140 codes the import added, and nothing else: no market pack, entitlement, pilot state, claim, prerequisite or
+equivalence changes, and `allows_no_expiry`, `legal_review_state` and every maintenance field stay as imported. The update only
+touches a definition that is inactive, global, and has no jurisdiction and no market pack, so one that had drifted from the import
+is not activated and fails the count. Its postflight proves exactly 140 researched definitions are active, that 154
+international definitions are active in total and that no other global definition is. The rollback sets the same 140 back to inactive; it never touches a claim, so a credential a holder registered
+meanwhile stays in their Passport and is simply no longer offered to new registrations.
+
+**What was proven for it, in both states of the database (before and after the publication).**
+
+- The existing SQL suites that counted "every definition" now count what was reviewed and treat the researched definitions
+  separately: `security_passport_catalogue_completeness_test.sql` saves and reads back every active researched definition as an
+  ordinary holder (140 saved, no country, the governed issuer, `self_declared`) and expects `SP_APPROVED_DEFINITION_REQUIRED`
+  for each when they are inactive (0 saved, 140 refused). It passed on a database without the publication and on one with it.
+- The full `scripts/db-test.sh` (replay, every suite, every rollback ladder, every planted control) passed on this branch.
+- The real-backend journey (`e2e/passport-catalogue-integration-local.spec.ts`) passed 9 of 9 on a database with the publication
+  applied (desktop and 390px): 210 credentials offered, OSCP and OSCP+ two distinct results, a researched certification found,
+  registered with no country and no inferred lifetime, and forged, unapproved and direct writes still refused.
+- `catalogue-coverage-matrix.md` is regenerated from the published catalogue: 217 definitions, 210 in scope and all of them
+  selectable (166 by every holder, 44 through the public pilot), 7 in the closed market.
+
+**Not in this release, on purpose.** The 16 retained records, the 12 unclosed rechecks and the owner decisions in section 8 are
+untouched: publishing them is a later reviewed migration, each after the single fact it needs is confirmed.

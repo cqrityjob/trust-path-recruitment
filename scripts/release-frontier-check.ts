@@ -396,15 +396,16 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // Evidence: docs/security/interview-access/expand-hosted-verification.md.
 //
 // Pending by design, none applied hosted: the certification research integration
-// (docs/passport/certification-catalogue-integration.md): the schema
-// (20270212090000) and the data that records all 170 research decisions and adds
-// 140 definitions INACTIVE (20270213090000). The publication that makes exactly
-// those 140 selectable (20270214090000) is staged outside the migration path
-// until the application that renders them is published. Each name comes OFF this
-// list in the change that records its production evidence.
+// (docs/passport/certification-catalogue-integration.md), in this order: the
+// schema (20270212090000), the data that records all 170 research decisions and
+// adds 140 definitions INACTIVE (20270213090000), and the publication that makes
+// exactly those 140 selectable (20270214090000), which is released only after the
+// application that renders them is published. Each name comes OFF this list in
+// the change that records its production evidence.
 const expectedPending: string[] = [
   "20270212090000_sp_catalogue_research_foundation.sql",
   "20270213090000_sp_catalogue_research_import.sql",
+  "20270214090000_sp_catalogue_research_publish.sql",
 ];
 
 const hostedIdentities = [

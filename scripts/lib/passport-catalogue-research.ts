@@ -7,7 +7,7 @@
  * artefacts that carry those dispositions into the existing catalogue:
  *
  *   supabase/migrations/20270213090000_sp_catalogue_research_import.sql
- *   docs/passport/research/2026-10-03-certification-catalogue/staged/20270214090000_sp_catalogue_research_publish.sql  (STAGED; released third)
+ *   supabase/migrations/20270214090000_sp_catalogue_research_publish.sql  (released third)
  *   src/lib/security-passport/catalogue-research-marks.ts
  *   docs/passport/research/2026-10-03-certification-catalogue/reconciliation.json
  *   docs/passport/research/2026-10-03-certification-catalogue/RECONCILIATION.md
@@ -48,15 +48,16 @@ export const RESEARCH_DIR = "docs/passport/research/2026-10-03-certification-cat
 export const IMPORT_MIGRATION =
   "supabase/migrations/20270213090000_sp_catalogue_research_import.sql";
 /**
- * The publication is STAGED here, outside supabase/migrations/, until the application
- * that renders the new kinds has been published. It is generated, reviewed and verified
- * by the guard like every other artefact, but nothing applies it: moving it into
- * supabase/migrations/ (and its rollback into supabase/rollback/) is the third release.
+ * The publication: the third release, after the application that renders the new kinds
+ * has been published. (Until then it was staged outside supabase/migrations/ so that
+ * merging the schema could not apply it.)
  */
-export const PUBLISH_MIGRATION = `${RESEARCH_DIR}/staged/20270214090000_sp_catalogue_research_publish.sql`;
+export const PUBLISH_MIGRATION =
+  "supabase/migrations/20270214090000_sp_catalogue_research_publish.sql";
 export const IMPORT_ROLLBACK =
   "supabase/rollback/20270213090000_sp_catalogue_research_import_rollback.sql";
-export const PUBLISH_ROLLBACK = `${RESEARCH_DIR}/staged/20270214090000_sp_catalogue_research_publish_rollback.sql`;
+export const PUBLISH_ROLLBACK =
+  "supabase/rollback/20270214090000_sp_catalogue_research_publish_rollback.sql";
 export const MARKS_FILE = "src/lib/security-passport/catalogue-research-marks.ts";
 export const RECONCILIATION_JSON = `${RESEARCH_DIR}/reconciliation.json`;
 export const RECONCILIATION_MD = `${RESEARCH_DIR}/RECONCILIATION.md`;
