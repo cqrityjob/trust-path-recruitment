@@ -42,6 +42,12 @@ import {
   inspectQuality,
   reviewTemplate,
 } from "./security-work-ai-quality-harness";
+import { __setGenerativeAiLabOverride } from "../src/lib/ai/generative-ai-gate";
+
+// Lab only: this script exercises the provider adapters against a fake transport (or, for the
+// quality run, an operator-supplied credential). Version 1 refuses every real provider call
+// (src/lib/ai/generative-ai-gate.ts); generative-ai-gate:check proves that with the gate closed.
+__setGenerativeAiLabOverride(true);
 
 const hash = (value: string) => createHash("sha256").update(value).digest("hex");
 function plannedCases(model: string, maxOutputTokens: number) {

@@ -30,6 +30,11 @@
 // docs/architecture/interview-intelligence-ai-governance.md §4.1, and no
 // credential exists in this environment.
 
+import {
+  GenerativeAiDisabledError,
+  assertExternalAiAllowed,
+  externalAiFetch,
+} from "../../../ai/generative-ai-gate";
 import { AiProviderError, type AiProvider, type AiRequest, type AiResponse } from "../provider";
 
 const API_URL = "https://api.anthropic.com/v1/messages";
@@ -277,13 +282,18 @@ export class AnthropicProvider implements AiProvider {
   async verifyModelAvailable(): Promise<{ readonly available: boolean; readonly detail: string }> {
     let response: Response;
     try {
-      response = await this.fetchImpl(`${MODELS_URL}/${encodeURIComponent(this.model)}`, {
-        method: "GET",
-        headers: {
-          "x-api-key": this.apiKey,
-          "anthropic-version": API_VERSION,
+      response = await externalAiFetch(
+        "anthropic.verifyModelAvailable",
+        this.fetchImpl,
+        `${MODELS_URL}/${encodeURIComponent(this.model)}`,
+        {
+          method: "GET",
+          headers: {
+            "x-api-key": this.apiKey,
+            "anthropic-version": API_VERSION,
+          },
         },
-      });
+      );
     } catch (error) {
       return {
         available: false,
@@ -341,6 +351,16 @@ export class AnthropicProvider implements AiProvider {
   }
 
   async complete(request: AiRequest): Promise<AiResponse> {
+    // Version 1 offers no generative AI: refuse before the model check, before
+    // a request is built and before any connection is opened (generative-ai-gate).
+    try {
+      assertExternalAiAllowed("anthropic.complete");
+    } catch (error) {
+      if (error instanceof GenerativeAiDisabledError) {
+        throw new AiProviderError(error.message, "configuration");
+      }
+      throw error;
+    }
     // Model availability is settled BEFORE any candidate material is built
     // into a request, let alone sent. See ensureModelVerified.
     await this.ensureModelVerified();
@@ -379,7 +399,7 @@ export class AnthropicProvider implements AiProvider {
     for (let attempt = 1; attempt <= MAX_TRANSPORT_ATTEMPTS; attempt += 1) {
       let response: Response;
       try {
-        response = await this.fetchImpl(API_URL, {
+        response = await externalAiFetch("anthropic.complete", this.fetchImpl, API_URL, {
           method: "POST",
           headers: {
             "content-type": "application/json",

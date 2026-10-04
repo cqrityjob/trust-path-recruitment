@@ -310,6 +310,14 @@ jobs:
       - name: Launch legal pages and signup acceptance check
         run: bun run launch-legal:check
 
+      # Launch (owner, 2026-10-04): version 1 has no generative AI. With a
+      # provider configured and a synthetic key, no external AI request is
+      # attempted on any path (interview, recruitment, CV draft, Security-work
+      # job and assistant), and no provider is reachable except through the
+      # one gate. Planted controls run in negative-controls:all.
+      - name: Generative AI gate check
+        run: bun run generative-ai-gate:check
+
       # NEGATIVE CONTROLS -- proof that the guards above would notice.
       #
       # Each mutation introduces the exact defect a guard exists to catch and
