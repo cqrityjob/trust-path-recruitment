@@ -515,10 +515,19 @@ for (const locale of ["sv", "en"] as const) {
     await expect(
       page.getByTestId("sw-report-content").getByText(l("Öppen", "Open"), { exact: true }),
     ).toBeVisible();
-    await page
-      .getByRole("button", { name: /Konto och inställningar|Account and settings/i })
-      .click();
-    await page.getByRole("menuitem", { name: /^logga ut$|^sign out$/i }).click();
+    if (page.viewportSize()!.width < 1024) {
+      await page.getByRole("button", { name: /^(Öppna menyn|Open menu)$/i }).click();
+      await page
+        .locator("#site-menu")
+        .getByRole("button", { name: /^logga ut$|^sign out$/i })
+        .click();
+    } else {
+      await page
+        .getByRole("button", { name: /Konto och inställningar|Account and settings/i })
+        .click();
+      await page.getByRole("menuitem", { name: /^logga ut$|^sign out$/i }).click();
+    }
+    await page.waitForURL((url) => url.pathname === "/login");
     await login(page, address, new URL(reportUrl).pathname);
     await expect(page.getByTestId("sw-report-content")).toBeVisible();
     await page.goto(analysisUrl);
