@@ -6887,7 +6887,7 @@ export const dictionaries = {
     "academy.home.noModulesTitle": "Inga övningar tillgängliga",
     "academy.home.noModulesBody": "Övningsmoduler visas här när de publicerats.",
     "academy.report.title": "Min utvecklingsrapport",
-    "academy.report.back": "Tillbaka",
+    "academy.report.back": "Till mina tester",
     "academy.report.releasedOn": "Delat",
     "academy.report.whatThisIs":
       "Rapporten beskriver hur starkt underlaget är — inte hur bra du är. Den innehåller inget godkänt eller underkänt, ingen procent och ingen jämförelse med andra.",
@@ -15622,7 +15622,7 @@ export const dictionaries = {
     "academy.home.noModulesTitle": "No practice available",
     "academy.home.noModulesBody": "Practice modules will appear here once published.",
     "academy.report.title": "My development report",
-    "academy.report.back": "Back",
+    "academy.report.back": "To my tests",
     "academy.report.releasedOn": "Shared",
     "academy.report.whatThisIs":
       "This report describes how strong the evidence is — not how good you are. It contains no pass or fail, no percentage, and no comparison with anybody else.",
