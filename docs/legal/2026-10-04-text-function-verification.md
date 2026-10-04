@@ -8,8 +8,8 @@ tas för givet.
 **Uppdaterad 2026-10-04, slutleverans.** Allt arbete för version 1 ligger nu i en enda lanserings-PR, #417: AI-spärren,
 de rättade texterna, den avstängda mätningen, gallringsrutinerna, juridiken och testerna (inklusive JWT-testerna för
 kontoradering som kom från #423 och raderingsbeviset). Läget "efter denna PR" betyder att raden stämmer när #417 är
-sammanslagen. Separata PR finns bara kvar där en databasmigration eller releaseordning kräver det (katalogstacken
-#410–#412 och dess releasepost #422). Verifierat klart, förberett för publicering, kvarstående fakta och faktiska hinder
+sammanslagen. Separata PR finns bara kvar där en databasmigration eller releaseordning kräver det (katalogstackens publicering,
+#412). Verifierat klart, förberett för publicering, kvarstående fakta och faktiska hinder
 redovisas i slutrapporten.
 
 **Vad som gäller:** ingenting här är skrivet till produktion. Siffror är antal och datum, aldrig innehåll.

@@ -16,8 +16,9 @@ kontoradering. Ersatta PR är stängda först efter att deras arbete fanns i #41
 |---|---|---|
 | #417 | **den samlade lanserings-PR:en** | |
 | #419, #420, #421, #425, #423, #424 | ersatta av #417 (stängda) | arbetet finns i #417 |
-| #410, #411, #412 | **separata, behålls** | databasmigrationer och releaseordning: schema, applikation, publicering (`20270212090000`–`20270214090000`). Ägs av katalogsessionen |
-| #422 | **separat, behålls** | releasepost för redan tillämpade migrationer (`release-state.json`, `hosted-ledger.json`). Måste följa verifieringen, inte köras om |
+| #410, #411 | redan sammanslagna i `main` (schema och applikation för certifikatkatalogen) | |
+| #412 | **separat, behålls** | databasmigration och releaseordning: publiceringen (`20270214090000`) som gör de 140 definitionerna valbara. Ägs av katalogsessionen och körs först när ägaren vill det |
+| #422 | redan sammanslagen (releasepost för `20270212090000` och `20270213090000`) | |
 
 #417 innehåller **ingen migration**. Ordningen mot katalogstacken spelar ingen roll för dess innehåll.
 
