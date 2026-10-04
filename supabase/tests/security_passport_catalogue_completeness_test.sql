@@ -59,16 +59,21 @@ CREATE TEMP TABLE seen(code text PRIMARY KEY, principal text, claim_id uuid);
 GRANT SELECT,INSERT ON seen TO authenticated;
 
 SELECT pg_temp.ok((SELECT count(*)=70 FROM expected),'the pinned expectation is 70 definitions: 14 international, 8 Sweden, 4 India, 13 GB, 1 NI, 30 Dubai');
--- 20270213090000 (the certification research import) ADDED 140 definitions, all
--- inactive: they are accounted for here by name of their record, never folded
--- into the 70 that are selectable. Their own suite pins them one by one.
+-- 20270213090000 (the certification research import) ADDED 140 definitions, inactive,
+-- and 20270214090000 (the publication) activates exactly those. They are accounted for
+-- here by name of their record and NEVER folded into the 70 pinned below: every count of
+-- "the 70" excludes them, and the suite is true both before and after the publication.
+-- Their own suite pins them one by one.
 CREATE TEMP TABLE research_added AS
   SELECT credential_code AS code FROM public.sp_catalogue_research_records
    WHERE reconciliation_outcome='added_approved' AND credential_code IS NOT NULL;
+CREATE TEMP TABLE research_active AS
+  SELECT a.code FROM research_added a JOIN public.sp_credential_types t ON t.code=a.code WHERE t.is_active;
+GRANT SELECT ON research_added, research_active TO authenticated;
 SELECT pg_temp.ok((SELECT count(*)=77 FROM public.sp_credential_types t WHERE NOT EXISTS(SELECT 1 FROM research_added a WHERE a.code=t.code)),'the taxonomy holds 77 definitions outside the research import: the 70 in scope and 7 Abu Dhabi rows');
 SELECT pg_temp.ok((SELECT count(*)=140 FROM research_added)
- AND NOT EXISTS(SELECT 1 FROM research_added a JOIN public.sp_credential_types t ON t.code=a.code WHERE t.is_active),
- 'the research import added 140 definitions and none of them is active: they are not part of the 70 until a publication migration says so');
+ AND (SELECT count(*) FROM research_active) IN (0, 140),
+ 'the research import added 140 definitions, and they are all inactive (before the publication) or all active (after it): never part-way, and never part of the 70');
 SELECT pg_temp.ok(NOT EXISTS(SELECT 1 FROM expected e WHERE NOT EXISTS(SELECT 1 FROM public.sp_credential_types t WHERE t.code=e.code)),
  'every pinned code is a real taxonomy row');
 SELECT pg_temp.ok(NOT EXISTS(SELECT 1 FROM public.sp_credential_types t WHERE t.market_pack_code IS DISTINCT FROM 'AE-AZ' AND NOT EXISTS(SELECT 1 FROM expected e WHERE e.code=t.code) AND NOT EXISTS(SELECT 1 FROM research_added a WHERE a.code=t.code)),
@@ -106,10 +111,15 @@ SELECT pg_temp.ok(NOT EXISTS(SELECT 1 FROM public.sp_pilot_members WHERE user_id
 -- ── BEFORE any approval: what the product offers today ──────────────────
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub','fc260000-0000-4000-8000-000000000001',true);
-SELECT pg_temp.ok((SELECT count(*)=70 FROM public.sp_approved_credential_catalogue),
+SELECT pg_temp.ok((SELECT count(*)=70 FROM public.sp_approved_credential_catalogue WHERE code NOT IN (SELECT code FROM research_added)),
  'today a Swedish holder, with no grant, is offered 70: all 14 international, all 8 Swedish (VU1, VU2 and SV included), the 4 Indian qualifications and the 44 UK and Dubai public-pilot definitions');
 SELECT pg_temp.ok((SELECT count(*)=3 FROM public.sp_approved_credential_catalogue WHERE code IN ('VU1','VU2','SV')),
  'VU1, VU2 and SV are no longer withheld');
+-- The researched definitions are offered exactly when they are active: every active one, no inactive one.
+SELECT pg_temp.ok((SELECT count(*) FROM public.sp_approved_credential_catalogue WHERE code IN (SELECT code FROM research_added))
+   = (SELECT count(*) FROM research_active)
+ AND NOT EXISTS(SELECT 1 FROM public.sp_approved_credential_catalogue c WHERE c.code IN (SELECT code FROM research_added) AND c.code NOT IN (SELECT code FROM research_active)),
+ 'a Swedish holder is offered every ACTIVE researched definition and no inactive one: nothing becomes selectable except by the publication');
 RESET ROLE;
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub','fc260000-0000-4000-8000-000000000004',true);
@@ -127,16 +137,21 @@ SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub','fc260000-0000-4000-8000-000000000001',true);
 SELECT set_config('request.path','/sp_approved_credential_catalogue',true);
 SELECT set_config('request.headers','{"user-agent":"an application deployed before the migration"}',true);
-SELECT pg_temp.ok((SELECT count(*)=27 FROM public.sp_approved_credential_catalogue)
+SELECT pg_temp.ok((SELECT count(*)=27 FROM public.sp_approved_credential_catalogue WHERE code NOT IN (SELECT code FROM research_added))
  AND NOT EXISTS(SELECT 1 FROM public.sp_approved_credential_catalogue c WHERE c.code IN ('VU1','VU2','SV'))
  AND NOT EXISTS(SELECT 1 FROM public.sp_approved_credential_catalogue c WHERE c.region='AE-DU'),
  'an OLD application lists the 27 it can save: no scoped and no document-issuer definition — so none of the four Indian qualifications and none of Dubai''s thirty, only the eight UK licences that need neither — is offered to it');
+-- A researched definition needs no scope and no document issuer, so even an application from
+-- before the contract can list and save it: the old application is offered all the active ones.
+SELECT pg_temp.ok((SELECT count(*) FROM public.sp_approved_credential_catalogue WHERE code IN (SELECT code FROM research_added))
+   = (SELECT count(*) FROM research_active),
+ 'an OLD application is offered exactly the active researched definitions too: it can save every one of them');
 SELECT set_config('request.headers','{"x-passport-catalogue-contract":"2"}',true);
-SELECT pg_temp.ok((SELECT count(*)=70 FROM public.sp_approved_credential_catalogue),
+SELECT pg_temp.ok((SELECT count(*)=70 FROM public.sp_approved_credential_catalogue WHERE code NOT IN (SELECT code FROM research_added)),
  'the NEW application declares the contract and is offered all 70');
 SELECT set_config('request.path','/rpc/sp_save_international_credential',true);
 SELECT set_config('request.headers','{}',true);
-SELECT pg_temp.ok((SELECT count(*)=70 FROM public.sp_approved_credential_catalogue),
+SELECT pg_temp.ok((SELECT count(*)=70 FROM public.sp_approved_credential_catalogue WHERE code NOT IN (SELECT code FROM research_added)),
  'the guard narrows the LISTING only: the save RPC and the table guards read the whole catalogue');
 SELECT set_config('request.path','',true);
 SELECT set_config('request.headers','',true);
@@ -191,6 +206,51 @@ SELECT pg_temp.ok((SELECT count(*)=15 FROM seen s JOIN public.sp_claims c ON c.i
  'SIRA is the issuer of the fifteen cadre cards and of no course: it approves the centres, it does not award the certificate');
 SELECT pg_temp.ok((SELECT count(*)=14 FROM seen s JOIN public.sp_claims c ON c.id=s.claim_id WHERE c.jurisdiction_code IS NULL AND c.sub_jurisdiction_code IS NULL),
  'the 14 international certifications carry no country: they did not inherit the holder''s');
+
+-- ── the researched definitions: saved and read back when active, refused when not ──
+-- State-agnostic. Before 20270214090000 every one of the 140 is inactive and every save is
+-- refused; after it every one is active and every save reads back as an international
+-- certification with no country, its governed issuer and no scope.
+CREATE TEMP TABLE research_seen(code text PRIMARY KEY, claim_id uuid);
+GRANT SELECT,INSERT ON research_seen TO authenticated;
+DO $$
+DECLARE r record; d public.sp_approved_credential_catalogue%ROWTYPE; _id uuid; _c public.sp_claims%ROWTYPE;
+ _saved integer := 0; _refused integer := 0; _msg text;
+BEGIN
+ FOR r IN SELECT a.code, EXISTS(SELECT 1 FROM research_active x WHERE x.code=a.code) AS active FROM research_added a ORDER BY a.code LOOP
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claim.sub','fc260000-0000-4000-8000-000000000001',true);
+  IF r.active THEN
+   SELECT * INTO d FROM public.sp_approved_credential_catalogue WHERE code=r.code;
+   IF NOT FOUND THEN RAISE EXCEPTION 'ASSERTION FAILED: active researched definition % is not offered to an ordinary holder',r.code; END IF;
+   _id := public.sp_save_international_credential(jsonb_build_object('definition_code',r.code,'market_country','','market_region','',
+            'identifier','','issued_on','2024-05-01','valid_until','2027-05-01','no_expiry',false));
+   SELECT * INTO _c FROM public.sp_claims WHERE id=_id AND holder_user_id=auth.uid();
+   IF NOT FOUND OR _c.credential_code<>r.code OR _c.jurisdiction_code IS NOT NULL OR _c.sub_jurisdiction_code IS NOT NULL
+      OR _c.claimed_issuer_name IS DISTINCT FROM d.issuer_name OR _c.authorisation_scope IS NOT NULL
+      OR _c.assertion_level<>'self_declared' OR _c.lifecycle_state<>'active' THEN
+     RAISE EXCEPTION 'ASSERTION FAILED: researched definition % read back wrong (territory %/% issuer % level %)',r.code,_c.jurisdiction_code,_c.sub_jurisdiction_code,_c.claimed_issuer_name,_c.assertion_level;
+   END IF;
+   INSERT INTO research_seen VALUES(r.code,_id);
+   _saved := _saved + 1;
+  ELSE
+   BEGIN
+    PERFORM public.sp_save_international_credential(jsonb_build_object('definition_code',r.code,'market_country','','market_region','',
+            'identifier','','issued_on','2024-05-01','valid_until','2027-05-01','no_expiry',false));
+    RAISE EXCEPTION 'ASSERTION FAILED: an inactive researched definition (%) was saved',r.code;
+   EXCEPTION WHEN OTHERS THEN
+    GET STACKED DIAGNOSTICS _msg = MESSAGE_TEXT;
+    IF position('ASSERTION FAILED' IN _msg) > 0 THEN RAISE; END IF;
+    IF position('SP_APPROVED_DEFINITION_REQUIRED' IN _msg) = 0 THEN RAISE EXCEPTION 'ASSERTION FAILED: % refused for another reason: %',r.code,_msg; END IF;
+    _refused := _refused + 1;
+   END;
+  END IF;
+  RESET ROLE;
+ END LOOP;
+ PERFORM pg_temp.ok(_saved + _refused = 140 AND _saved = (SELECT count(*) FROM research_active),
+   'every researched definition is saved and read back as an international certification (when active) or refused as unapproved (when not): '||_saved||' saved, '||_refused||' refused');
+END $$;
+RESET ROLE;
 
 -- ── Abu Dhabi stays closed even with its definitions approved ───────────
 SET LOCAL ROLE authenticated;

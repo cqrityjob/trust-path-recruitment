@@ -205,9 +205,17 @@ BEGIN
   RAISE NOTICE 'GROUP 1 -- the catalogue is exactly what was reviewed';
   -- =====================================================================
   SELECT count(*) INTO _n FROM public.sp_credential_types
-   WHERE scope_code = 'global_professional' AND is_active;
+   WHERE scope_code = 'global_professional' AND is_active
+     AND code NOT IN (SELECT code FROM pg_temp.research_added());
   PERFORM pg_temp.ok(_n = 14,
-    '1.1 exactly 14 active global_professional definitions (got ' || _n || ')');
+    '1.1 exactly 14 active reviewed global_professional definitions (got ' || _n || ')');
+  -- The researched definitions are inactive until their publication migration and active
+  -- after it: all or none, never part-way, and never the reviewed fourteen.
+  SELECT count(*) INTO _n FROM public.sp_credential_types
+   WHERE scope_code = 'global_professional' AND is_active
+     AND code IN (SELECT code FROM pg_temp.research_added());
+  PERFORM pg_temp.ok(_n IN (0, 140),
+    '1.1b the researched definitions are all inactive or all active (got ' || _n || ' active)');
 
   SELECT count(*) INTO _n FROM public.sp_certification_definitions
    WHERE credential_code NOT IN (SELECT code FROM pg_temp.research_added());

@@ -24,6 +24,14 @@
 -- Everything is inside one transaction and rolled back.
 \set ON_ERROR_STOP on
 BEGIN;
+-- The 140 definitions the certification research import added, by code, captured BEFORE any
+-- role switch: the research records are administrator-only, so an authenticated holder (the
+-- role these assertions count as) could not read them, and counting "except those" would
+-- silently count none.
+CREATE TEMP TABLE research_codes AS
+  SELECT credential_code AS code FROM public.sp_catalogue_research_records
+   WHERE reconciliation_outcome='added_approved' AND credential_code IS NOT NULL;
+GRANT SELECT ON research_codes TO authenticated;
 CREATE FUNCTION pg_temp.ok(b boolean,label text) RETURNS void LANGUAGE plpgsql AS $$ BEGIN
  IF b IS DISTINCT FROM true THEN RAISE EXCEPTION 'ASSERTION FAILED: %',label; END IF;
  RAISE NOTICE 'ok %',label; END $$;
@@ -90,12 +98,13 @@ SELECT pg_temp.ok(public.sp_market_access(auth.uid(),'GB')='public_pilot'
    AND public.sp_market_access(auth.uid(),'SE')='production'
    AND public.sp_market_access(auth.uid(),'ZZ')='closed',
  '1.5 the canonical decision, for a signed-in holder with no grant: public pilot for the three, closed for Abu Dhabi and the unknown');
-SELECT pg_temp.ok((SELECT count(*)=70 FROM public.sp_approved_credential_catalogue)
+SELECT pg_temp.ok((SELECT count(*)=70 FROM public.sp_approved_credential_catalogue WHERE code NOT IN (SELECT code FROM research_codes))
+   AND (SELECT count(*) FROM public.sp_approved_credential_catalogue WHERE code IN (SELECT code FROM research_codes)) IN (0,140)
    AND (SELECT count(*)=13 FROM public.sp_approved_credential_catalogue WHERE country='GB' AND region IS NULL)
    AND (SELECT count(*)=1 FROM public.sp_approved_credential_catalogue WHERE region='GB-NI')
    AND (SELECT count(*)=30 FROM public.sp_approved_credential_catalogue WHERE region='AE-DU')
    AND (SELECT count(*)=0 FROM public.sp_approved_credential_catalogue WHERE region='AE-AZ'),
- '1.6 the catalogue offers 70: 14 international, 8 Sweden, 4 India, 13 GB, 1 Northern Ireland, 30 Dubai -- no Abu Dhabi');
+ '1.6 the catalogue offers 70 (the 140 researched definitions are offered all or none, and counted apart): 14 international, 8 Sweden, 4 India, 13 GB, 1 Northern Ireland, 30 Dubai -- no Abu Dhabi');
 RESET ROLE;
 SELECT pg_temp.ok(public.sp_market_access(NULL,'GB')='closed' AND public.sp_market_access(NULL,'AE-DU')='closed',
  '1.7 without a signed-in user the public pilot is closed');
@@ -166,7 +175,7 @@ SELECT pg_temp.ok(NOT EXISTS(
  '4.1 moving to Dubai and then India changes none of the six: the international and foreign credentials keep their own territory');
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub','fe221000-0000-4000-8000-000000000005',true);
-SELECT pg_temp.ok((SELECT count(*)=70 FROM public.sp_approved_credential_catalogue),
+SELECT pg_temp.ok((SELECT count(*)=70 FROM public.sp_approved_credential_catalogue WHERE code NOT IN (SELECT code FROM research_codes)),
  '4.2 and availability does not follow the work country: the same 70');
 RESET ROLE;
 
