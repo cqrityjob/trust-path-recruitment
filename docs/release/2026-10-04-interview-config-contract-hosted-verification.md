@@ -44,7 +44,7 @@ This author did not observe the publication or the edge-log lines; they are the 
   live scoped reviewer grant reads a case it did not create and gets the two flags (both `false`) through
   `scp_iv_case_capabilities` while reading **0 rows** of `scp_interview_ai_config` directly (the test organisation has only its
   owner as member, so this was read in another organisation; counts and booleans only, rolled back; see
-  `evidence/2026-10-04-access-probes/`, probe 4). The three people who created interview cases are all platform administrators.
+  `evidence/2026-10-04-access-probes/`, probe 4). Production has exactly two platform administrator accounts, and they are the only people who created interview cases.
 - **Row untouched:** the configuration row is unchanged (`updated_at` 2026-08-28), 1 row.
 
 ## Not done, and why

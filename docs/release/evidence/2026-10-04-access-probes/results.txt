@@ -55,9 +55,10 @@ and gets both runtime flags through scp_iv_case_capabilities, while reading 0 ro
 scoped path works without any direct configuration read, and the table is closed to a non-admin. A platform administrator
 still reads the 1 configuration row.
 
-Note on the people in PROBE 1/2: the three people who created interview cases (two owners and the one member whose 5 cases
-are listed above) are all platform administrators, so no ordinary non-admin has created a case in production. The "ordinary
-member without a grant" of PROBE 1 (no. 7) is that member: not a reviewer, no readable use case for reports, and
+Note on the people in PROBE 1/2: production has exactly two platform administrator accounts (one 'admin', one 'superadmin').
+The people who created interview cases are those two accounts, each holding memberships in more than one organisation (an
+owner in one, a member in another), so no ordinary non-admin has created a case in production. The "ordinary member without a
+grant" of PROBE 1 (no. 7) is such an account: not a reviewer, no readable use case for reports in that organisation, and
 separately a platform administrator.
 
 == AFTER ==
