@@ -135,8 +135,9 @@ check(
   "public search, detail and apply wrapper perform no direct personal reads",
 );
 check(
-  /useState<string \| null>\(null\)/.test(apply) &&
-    /const \[authUserId, setAuthUserId\] = useState<string \| null>\(null\)/.test(apply),
+  /const \[authUserId, setAuthUserId\] = useState<string \| null \| undefined>\(undefined\)/.test(
+    apply,
+  ),
   "the application reader starts with no observed user identity",
 );
 check(
@@ -153,17 +154,19 @@ check(
   "the personal application query is enabled only for an observed user identity",
 );
 check(
-  /const \[signedIn, setSignedIn\] = useState<boolean \| null>\(null\)/.test(apply),
+  /const \[authUserId, setAuthUserId\] = useState<string \| null \| undefined>\(undefined\)/.test(
+    apply,
+  ),
   "sign-in starts unresolved rather than assuming a user",
 );
-const loadingGate = apply.indexOf("if (signedIn === null) {");
+const loadingGate = apply.indexOf("if (authUserId === undefined) {");
 const anonymousGate = apply.indexOf("if (!signedIn) {");
 const dialog = apply.indexOf("<Dialog\n");
 check(
   loadingGate >= 0 &&
     anonymousGate > loadingGate &&
     dialog > anonymousGate &&
-    /if \(signedIn === null\) \{\s*return /.test(apply),
+    /if \(authUserId === undefined\) \{\s*return /.test(apply),
   "unresolved auth returns before the anonymous branch and the personal dialog",
 );
 check(
