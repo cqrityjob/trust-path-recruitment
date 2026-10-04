@@ -152,12 +152,17 @@ ANON_KEY="$(LOCAL_JWT_SECRET="$JWT_SECRET" LOCAL_DB_URL="$DB_URL" \
   POSTGREST_URL="http://127.0.0.1:${PGREST_PORT}" \
   node scripts/local-stack/auth-gateway.mjs --print-anon-key)"
 
+SERVICE_KEY="$(LOCAL_JWT_SECRET="$JWT_SECRET" LOCAL_DB_URL="$DB_URL" \
+  POSTGREST_URL="http://127.0.0.1:${PGREST_PORT}" \
+  node scripts/local-stack/auth-gateway.mjs --print-service-key)"
+
 # --- the application's environment -----------------------------------------
 cat > .env.local <<ENV
 SUPABASE_URL=http://127.0.0.1:${GATEWAY_PORT}
 VITE_SUPABASE_URL=http://127.0.0.1:${GATEWAY_PORT}
 SUPABASE_PUBLISHABLE_KEY=${ANON_KEY}
 VITE_SUPABASE_PUBLISHABLE_KEY=${ANON_KEY}
+SUPABASE_SERVICE_ROLE_KEY=${SERVICE_KEY}
 SUPABASE_PROJECT_ID=local-beskt-evidence
 VITE_SUPABASE_PROJECT_ID=local-beskt-evidence
 VITE_EMPLOYER_PORTAL_ENABLED=true

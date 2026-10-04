@@ -124,6 +124,24 @@ function accessToken(user, sessionId) {
   });
 }
 
+/** The service-role key: a real JWT for the `service_role` role. The application's
+ *  server-side client uses it for the few reads that RLS deliberately does not allow
+ *  a signed-in person (the Auth Admin API, display names in the admin console). */
+export function serviceKey(secret = SECRET) {
+  const now = Math.floor(Date.now() / 1000);
+  const header = b64url(JSON.stringify({ alg: "HS256", typ: "JWT" }));
+  const body = b64url(
+    JSON.stringify({
+      iss: "local-gateway",
+      role: "service_role",
+      iat: now,
+      exp: now + 10 * 365 * 86400,
+    }),
+  );
+  const sig = b64url(createHmac("sha256", secret).update(`${header}.${body}`).digest());
+  return `${header}.${body}.${sig}`;
+}
+
 /** The anon key: a real JWT for the `anon` role, as the local stack publishes one. */
 export function anonKey(secret = SECRET) {
   const now = Math.floor(Date.now() / 1000);
@@ -340,6 +358,39 @@ async function handle(req, res) {
         disable_signup: false,
         mailer_autoconfirm: AUTOCONFIRM,
       });
+    }
+
+    // GoTrue's Admin API: the two reads the admin console makes, service role only
+    // (added 2026-10-04 for the account-erasure full-path evidence).
+    if (route === "admin/users" || route.startsWith("admin/users/")) {
+      const claims = verify(String(req.headers.authorization ?? "").replace(/^Bearer\s+/i, ""));
+      if (req.method !== "GET" || claims?.role !== "service_role") {
+        return send(res, 403, { code: 403, error_code: "not_admin", msg: "User not allowed" });
+      }
+      const ADMIN_USER = `json_build_object('id', u.id, 'aud', 'authenticated', 'role', 'authenticated',
+        'email', u.email, 'email_confirmed_at', u.email_confirmed_at, 'phone', '',
+        'created_at', u.created_at, 'updated_at', coalesce(u.updated_at, u.created_at),
+        'last_sign_in_at', u.last_sign_in_at, 'banned_until', u.banned_until,
+        'app_metadata', coalesce(u.raw_app_meta_data, '{}'::jsonb),
+        'user_metadata', coalesce(u.raw_user_meta_data, '{}'::jsonb), 'identities', '[]'::jsonb)`;
+      if (route === "admin/users") {
+        const users = await queryJson(
+          `SELECT coalesce(json_agg(${ADMIN_USER} ORDER BY u.created_at), '[]'::json) FROM auth.users u`,
+          {},
+        );
+        return send(res, 200, { users, aud: "authenticated" });
+      }
+      const id = route.slice("admin/users/".length);
+      if (!/^[0-9a-f-]{36}$/i.test(id)) {
+        return send(res, 400, { code: 400, error_code: "validation_failed", msg: "invalid id" });
+      }
+      const user = await queryJson(
+        `SELECT ${ADMIN_USER} FROM auth.users u WHERE u.id = :'id'::uuid`,
+        { id },
+      );
+      return user
+        ? send(res, 200, user)
+        : send(res, 404, { code: 404, error_code: "user_not_found", msg: "User not found" });
     }
 
     if (route === "token" && req.method === "POST") {
@@ -574,6 +625,8 @@ async function handle(req, res) {
 
 if (process.argv[2] === "--print-anon-key") {
   process.stdout.write(anonKey());
+} else if (process.argv[2] === "--print-service-key") {
+  process.stdout.write(serviceKey());
 } else {
   server.listen(PORT, "127.0.0.1", () => {
     console.log(`local gateway on http://127.0.0.1:${PORT} (auth local, rest -> ${POSTGREST})`);
