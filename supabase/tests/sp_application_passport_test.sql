@@ -431,6 +431,20 @@ BEGIN
   IF _n <> 1 THEN RAISE EXCEPTION 'AC6: the application did not survive'; END IF;
   _asserts := _asserts + 4;
 
+  -- F09: the after-submission RPC must enforce the same rule, even when a
+  -- caller bypasses the UI. A self-declared active credential is not enough.
+  BEGIN
+    PERFORM public.sp_share_passport_with_application(
+      'f0000000-0000-4000-8000-000000000009', 'employer_review', 30, NULL, NULL);
+    RAISE EXCEPTION 'F09: after-submission sharing accepted no verified content';
+  EXCEPTION WHEN check_violation THEN
+    IF SQLERRM <> 'SP_NO_VERIFIED_APPLICATION_CONTENT' THEN RAISE; END IF;
+  END;
+  SELECT count(*) INTO _n FROM public.sp_disclosures
+    WHERE application_id = 'f0000000-0000-4000-8000-000000000009';
+  IF _n <> 0 THEN RAISE EXCEPTION 'F09: refusal left an empty disclosure'; END IF;
+  _asserts := _asserts + 2;
+
   -- =========================================================================
   -- 7. Revocation. The employer loses the content, not just the label.
   -- =========================================================================

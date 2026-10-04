@@ -283,7 +283,7 @@ export const dictionaries = {
       "Just nu finns inga publicerade jobb. Titta gärna in igen – eller utforska säkerhetsyrken under Karriär.",
     "jobs.card.deadline": "Sista ansökningsdag {d}",
     "jobs.card.open": "Visa annons",
-    "jobs.detail.apply_jump": "Ansök",
+    "jobs.detail.apply_jump": "Sök jobbet",
 
     // §4 — The employer journey, benefit first. ANNONSERA → TA EMOT OCH
     // HANTERA → BEDÖM → INTERVJUA → BESLUTA, ending in the employer's own
@@ -569,16 +569,16 @@ export const dictionaries = {
     // The tab title of an ad that carries no title of its own in either language.
     "jobs.detail.titleFallback": "Säkerhetsjobb",
     "jobs.detail.backToResults": "← Tillbaka till jobben",
-    "jobs.detail.apply_external": "Ansök på arbetsgivarens webbplats",
-    "jobs.detail.apply_email": "Ansök via e-post",
-    "jobs.detail.apply_internal": "Ansök om jobbet",
+    "jobs.detail.apply_external": "Sök jobbet på arbetsgivarens webbplats",
+    "jobs.detail.apply_email": "Sök jobbet via e-post",
+    "jobs.detail.apply_internal": "Sök jobbet",
     "jobs.detail.apply_unavailable": "Ansökan är för närvarande inte tillgänglig via CQrityjob.",
 
     "jobs.apply.signInToApply": "Logga in för att ansöka",
     "jobs.apply.createAccountToApply": "Skapa konto och fortsätt till ansökan",
     "jobs.apply.signInToApplyHint":
       "Du behöver ett CQrityjob-konto för att ansöka via plattformen.",
-    "jobs.apply.dialog.title": "Ansök till tjänsten",
+    "jobs.apply.dialog.title": "Sök jobbet",
     "jobs.apply.dialog.body": "Din ansökan skickas direkt till {employer}.",
     "jobs.apply.dialog.bodyGeneric": "Din ansökan skickas direkt till arbetsgivaren.",
     "jobs.apply.reviewBeforeSend": "Granska dina uppgifter och bilagor innan du skickar ansökan.",
@@ -938,9 +938,9 @@ export const dictionaries = {
     // error instead of the instruction.
     "auth.confirm.heading": "Kontrollera din e-post",
     "auth.confirm.body":
-      "Vi har skickat en verifieringslänk till adressen nedan. Öppna länken för att aktivera ditt konto — du kommer tillbaka hit när det är klart.",
+      "Vi har skickat ett mejl till adressen nedan. Öppna mejlet och klicka på länken för att bekräfta din e-postadress. Återgå sedan till den här sidan för att fortsätta.",
     "auth.confirm.bodyEmployer":
-      "Vi har skickat en verifieringslänk till adressen nedan. Öppna länken för att aktivera ditt konto. Därefter granskar vi din företagsregistrering.",
+      "Vi har skickat ett mejl till adressen nedan. Öppna mejlet och klicka på länken för att bekräfta din e-postadress. Återgå sedan hit för att fortsätta. Därefter granskar vi din företagsregistrering.",
     "auth.confirm.sentTo": "Skickad till",
     "auth.confirm.notArrived": "Inget mejl? Kontrollera skräpposten först.",
     "auth.confirm.resend": "Skicka igen",
@@ -959,10 +959,10 @@ export const dictionaries = {
     // uppgifter, om adressen är bekräftad -- och säger annars klart att en
     // inloggning krävs.
     "auth.confirm.otherDevice":
-      "Öppnar du länken på en annan enhet, till exempel din mobil? Då aktiveras kontot där. För att fortsätta på den här datorn trycker du på knappen nedan – vi kontrollerar då att adressen är bekräftad och loggar in dig här. Ingen inloggning flyttas mellan enheter.",
+      "Öppnade du mejlet på mobilen? Bekräfta adressen där och återgå hit. Välj ”Kontrollera och fortsätt” så kontrollerar vi bekräftelsen och loggar in dig på den här enheten.",
     "auth.confirm.autoChecking":
       "Så länge den här sidan är öppen kontrollerar vi automatiskt om adressen har bekräftats.",
-    "auth.confirm.continue": "Jag har bekräftat – fortsätt",
+    "auth.confirm.continue": "Kontrollera och fortsätt",
     "auth.confirm.checking": "Kontrollerar…",
     "auth.confirm.notYet":
       "Adressen är inte bekräftad ännu. Öppna länken i mejlet och tryck sedan på knappen igen.",
@@ -2867,10 +2867,10 @@ export const dictionaries = {
     "jobs.apply.passport.credentialsCount": "verifierade behörigheter",
     "jobs.apply.passport.experienceCount": "verifierade anställningar",
     "jobs.apply.passport.nothing":
-      "Du har ännu inga verifierade Passport-uppgifter att bifoga. Ansökan skickas utan Security Passport.",
+      "Du har inga verifierade uppgifter att dela med den här ansökan. Ansökan skickas utan Security Passport.",
     "jobs.apply.passport.noPassport":
       "Du har inget Security Passport ännu. Ansökan skickas som vanligt — du kan skapa ett Passport när du vill.",
-    "jobs.apply.passport.openPassport": "Öppna mitt Passport",
+    "jobs.apply.passport.openPassport": "Öppna Security Passport",
     "jobs.apply.passport.sharedConfirm": "Security Passport skickades med ansökan.",
     "jobs.apply.passport.notSharedConfirm": "Ansökan skickades utan Security Passport.",
 
@@ -4186,9 +4186,9 @@ export const dictionaries = {
     "academy.eyebrow": "Kompetensutveckling",
     "academy.intro.title": "Bedömning av yrkeskompetens",
     "academy.intro.body":
-      "Du kommer att få ett antal situationer från arbetsvardagen. Det finns inget tidsstopp, och du kan pausa och återuppta när du vill — dina svar sparas medan du arbetar.",
+      "Du får svara på frågor om situationer i arbetslivet. Svaren sparas medan du arbetar. Välj ”Spara och fortsätt senare” om du vill pausa. Fortsätt innan sista svarsdag.",
     "academy.intro.purpose":
-      "Underlaget används för kompetensutveckling. Det är inte ett prov, det ger inget godkänt eller underkänt, och det rangordnar dig inte mot någon annan.",
+      "Bedömningen används för din kompetensutveckling. Den ger inget godkänt eller underkänt och jämför dig inte med andra.",
     // ── PURPOSE-AWARE WORDING (recruitment vs employee) ─────────────────
     //
     // The keys above describe an assessment an EMPLOYER asked of their own
@@ -4198,9 +4198,9 @@ export const dictionaries = {
     // and implied the result would not inform the decision. The recruitment
     // variants below say what is actually true — decision support, released to
     // the organisation that requested it, decided by a person.
-    "academy.eyebrowRecruitment": "Rekrytering",
+    "academy.eyebrowRecruitment": "Rekryteringstest",
     "academy.intro.purposeRecruitment":
-      "Underlaget används som beslutsstöd i rekryteringen hos den arbetsgivare som begärde bedömningen. Det är inte ett prov och ger inget automatiskt godkänt eller underkänt — en person hos arbetsgivaren fattar beslutet.",
+      "Testet ger beslutsstöd i rekryteringen. Den arbetsgivare som skickade testet får resultatet. En person hos arbetsgivaren fattar beslutet.",
     // ── Delivery language and what to expect (PR-V2) ────────────────────
     //
     // An assigned attempt is delivered in the language the employer chose,
@@ -4217,9 +4217,9 @@ export const dictionaries = {
     // authorised person at the organisation that asked -- never CQrityjob, and
     // never a model. Said on the intro, before the first task.
     "academy.intro.review":
-      "Vissa svar granskas av en behörig granskare hos din arbetsgivare. Ingen modell bedömer dina svar, och bedömningen fattar inga beslut på egen hand.",
+      "Dina fritextsvar läses av en behörig granskare hos din arbetsgivare. Ingen modell bedömer svaren.",
     "academy.intro.reviewRecruitment":
-      "Vissa svar, bland annat dina fritextsvar, granskas av en behörig granskare hos arbetsgivaren. Bedömningen används som underlag i en mänsklig rekryteringsprocess. CQrityjob fattar inte beslut om anställning, och ingen modell bedömer dina svar.",
+      "Dina fritextsvar läses av en behörig granskare hos arbetsgivaren som del av en mänsklig rekryteringsprocess. Ingen modell bedömer svaren. CQrityjob fattar inte beslut om anställning.",
     // "5 delar · 50 uppgifter · cirka 35–45 minuter". Counted from what was
     // served and from what the form declares; never typed in here.
     "academy.intro.structureHeading": "Testets upplägg",
@@ -4229,12 +4229,31 @@ export const dictionaries = {
     "academy.intro.tasks.other": "uppgifter",
     "academy.intro.approx": "cirka",
     "academy.intro.minutes": "minuter",
-    "academy.start": "Börja",
-    "academy.resume": "Fortsätt där du slutade",
+    "academy.intro.titleRecruitment": "Rekryteringstest",
+    "academy.pause.label": "Spara och fortsätt senare",
+    "academy.pause.saving": "Sparar dina svar …",
+    "academy.pause.saved": "Dina svar är sparade. Välj ”Till mina tester” för att lämna testet.",
+    "academy.pause.failed":
+      "Svaren kunde inte sparas. De finns kvar på den här sidan. Försök igen innan du lämnar testet.",
+    "academy.overview": "Till översikten",
+    "academy.done.abandonedTitle": "Testet är avslutat",
+    "academy.done.abandonedBody":
+      "Det här testet har avslutats utan inlämning. Kontakta organisationen som skickade det om du behöver fortsätta.",
+    "academy.invitation.open": "Öppna testet",
+    "academy.reflection.intro": "Beskriv kort dina erfarenheter. Några meningar per fråga räcker.",
+    "cc.cat.environment.title": "Arbetsmiljö",
+    "cc.cat.environment.empty":
+      "Katalogen har ännu ingen beskrivning av arbetsmiljön för det här yrket.",
+    "cc.cat.competencies.title": "Kompetenser i arbetet",
+    "cc.cat.experience.title": "Erfarenhet",
+    "cc.cat.experience.empty":
+      "Katalogen har inga registrerade erfarenhetskrav för det här yrket. Kontrollera vad den aktuella jobbannonsen kräver.",
+    "academy.start": "Starta testet",
+    "academy.resume": "Fortsätt testet",
     "academy.loading": "Hämtar dina frågor …",
     "academy.stage": "Yrkeskompetens",
     "academy.next": "Nästa",
-    "academy.submit": "Lämna in",
+    "academy.submit": "Lämna in testet",
     "academy.submitting": "Lämnar in dina svar …",
     "academy.safetyCritical": "Den här situationen rör säkerhetskritisk bedömning.",
     "academy.bestLegend": "Bästa handlingen",
@@ -4242,16 +4261,16 @@ export const dictionaries = {
     "academy.writtenAnswer": "Ditt svar",
     "academy.writtenPlaceholder": "Skriv med egna ord.",
     "academy.writtenNote": "Fritextsvar läses av en människa, inte av en modell.",
-    "academy.done.title": "Tack — dina svar är inlämnade",
+    "academy.done.title": "Dina svar är inlämnade",
     "academy.done.body":
-      "Svaren har sparats. Du får din utvecklingsrapport när den har frisläppts.",
+      "Dina svar har sparats och testet är inlämnat. Du kan följa statusen i din testlista.",
     "academy.done.reviewPending":
-      "Ett eller flera av dina svar ska läsas av en behörig granskare hos arbetsgivaren innan rapporten kan tas fram. Det är därför resultatet inte är klart ännu.",
+      "Ett eller flera svar väntar på att läsas av en behörig granskare hos arbetsgivaren.",
     "academy.done.alreadyTitle": "Dina svar är redan inlämnade",
     "academy.done.alreadyBody":
-      "Den här bedömningen är inlämnad och kan inte ändras. Dina svar finns kvar. Du får din utvecklingsrapport när den har frisläppts.",
+      "Testet är redan inlämnat och svaren kan inte ändras. Du kan följa statusen i din testlista.",
     "academy.done.releasedBody":
-      "Den här bedömningen är inlämnad och din utvecklingsrapport är frisläppt. Du hittar den under Min karriär.",
+      "Testet är inlämnat. Öppna din testlista för att se status och rapporter som har delats med dig.",
     "academy.error.title": "Det gick inte att öppna bedömningen",
     "academy.error.unavailableTitle": "Den här delen är inte tillgänglig ännu",
     "academy.error.unavailableBody":
@@ -6498,9 +6517,9 @@ export const dictionaries = {
     "academy.attempt.inProgress": "Pågår",
     "academy.attempt.submitted": "Inlämnad",
     "academy.attempt.scored": "Bedömd",
-    "academy.attempt.released": "Frisläppt",
+    "academy.attempt.released": "Delad",
     "academy.attempt.other": "Annan status",
-    "academy.attempt.exit": "Till Tester och utveckling",
+    "academy.attempt.exit": "Till mina tester",
     "academy.reviews.title": "Granskning",
     "academy.reviews.lede":
       "Här finns kandidatsvar som behöver mänsklig bedömning innan underlaget kan färdigställas. Den som tilldelade testet får aldrig granska det själv.",
@@ -6811,36 +6830,37 @@ export const dictionaries = {
     "academy.safety.followUp":
       "Detta visas oavsett hur underlaget ser ut i övrigt. En hög mognadsnivå tar aldrig bort en säkerhetskritisk notering.",
     "academy.limitations.title": "Begränsningar",
-    "academy.home.title": "Min kompetensutveckling",
+    "academy.home.title": "Tester och utveckling",
     "academy.home.lede":
-      "Här samlas det du blivit ombedd att göra, dina rapporter och det du kan öva på.",
+      "Här finns dina tester, utbildningar och rapporter. Välj ”Starta testet” eller ”Fortsätt testet” vid det test du vill göra.",
     "academy.home.assigned": "Tilldelat",
-    "academy.home.requestedBy": "Begärt av",
-    "academy.home.deadline": "Sista dag:",
-    "academy.home.deadlinePassed": "Sista dagen har passerat:",
+    "academy.home.requestedBy": "Skickat av",
+    "academy.home.deadline": "Sista svarsdag:",
+    "academy.home.deadlinePassed": "Sista svarsdag har passerat:",
     "academy.home.purpose": "Syfte och behandling",
     "academy.home.purposeFallback": "Kompetensutveckling.",
     "academy.home.privacy":
-      "Dina svar lagras hos CQrityjob. Din arbetsgivare ser en kompetensprofil när den frisläppts. Fritextsvar kan läsas av en behörig granskare hos din arbetsgivare — inte av en modell.",
+      "Dina svar sparas hos CQrityjob. Din arbetsgivare ser en kompetensprofil när resultatet har gjorts tillgängligt. Fritextsvar kan läsas av en behörig granskare hos din arbetsgivare, inte av en modell.",
     // Recruitment variants. See the academy.intro.purposeRecruitment comment
     // for why the employee wording above may not be shown to an applicant.
-    "academy.home.titleRecruitment": "Mina bedömningar",
+    "academy.home.titleRecruitment": "Tester och utveckling",
     "academy.home.ledeRecruitment":
-      "Här samlas de bedömningar du blivit ombedd att göra och de rapporter som frisläppts till dig.",
+      "Här finns dina rekryteringstester och rapporter som har delats med dig. Välj ”Starta testet” eller ”Fortsätt testet” för att börja.",
     "academy.home.assessmentLedeRecruitment":
-      "Bedömningar som en arbetsgivare begärt som en del av din ansökan. Resultatet frisläpps till den arbetsgivare som begärde bedömningen.",
+      "Rekryteringstester som en arbetsgivare har skickat till dig. Resultatet delas med den arbetsgivare som skickade testet.",
     "academy.home.purposeFallbackRecruitment": "Beslutsstöd i rekrytering.",
     "academy.home.privacyRecruitment":
-      "Dina svar lagras hos CQrityjob. Den arbetsgivare som begärde bedömningen ser en kompetensprofil när den frisläppts. Fritextsvar kan läsas av en behörig granskare hos arbetsgivaren — inte av en modell. CQrityjob fattar inte beslut om anställning.",
+      "Dina svar sparas hos CQrityjob. Den arbetsgivare som skickade testet ser en kompetensprofil när resultatet har gjorts tillgängligt. Fritextsvar kan läsas av en behörig granskare hos arbetsgivaren, inte av en modell. CQrityjob fattar inte beslut om anställning.",
     "academy.home.recruitmentDecision":
       "Bedömningen är ett underlag i rekryteringen. Den avgör ingenting på egen hand — en person hos arbetsgivaren fattar beslutet.",
     "academy.home.noneTitle": "Inget tilldelat just nu",
-    "academy.home.noneBody": "När din arbetsgivare tilldelar ett program dyker det upp här.",
+    "academy.home.noneBody":
+      "Här visas tester och utbildningar när en arbetsgivare gör dem tillgängliga för dig.",
     "academy.home.openReport": "Öppna rapport",
-    "academy.home.awaitingRelease": "Inlämnad. Rapporten visas när den frisläppts.",
+    "academy.home.awaitingRelease": "Testet är inlämnat. Ingen rapport har delats med dig ännu.",
     "academy.home.nextReview": "Vissa svar granskas av en behörig granskare hos arbetsgivaren.",
-    "academy.home.nextRelease": "Din arbetsgivare frisläpper rapporten när granskningen är klar.",
-    "academy.home.nextReport": "Du får då tillgång till din egen rapport här.",
+    "academy.home.nextRelease": "Arbetsgivaren kan dela rapporten när granskningen är klar.",
+    "academy.home.nextReport": "Rapporter som delas med dig visas här.",
     "academy.home.learning": "Övningsläge",
     "academy.home.learningLede":
       "Öva fritt, med återkoppling efter varje fråga. Övningsfrågorna är andra frågor än de i bedömningen.",
@@ -6849,10 +6869,10 @@ export const dictionaries = {
     // through Karriär. Tests & Development may name it and link to it --
     // it may not host the run. Same rule as the Passport pointing at the
     // profile.
-    "academy.home.careerDiscovery.title": "Karriäranalys (Career Discovery)",
+    "academy.home.careerDiscovery.title": "Självtest för din karriär",
     "academy.home.careerDiscovery.body":
       "Få insikter om vilka roller och karriärvägar som passar dig baserat på din profil och dina resultat.",
-    "academy.home.careerDiscovery.cta": "Starta karriäranalys",
+    "academy.home.careerDiscovery.cta": "Starta självtestet",
     "academy.home.practise": "Börja öva",
     "academy.home.practiseAgain": "Öva igen",
     "academy.home.noModulesTitle": "Inga övningar tillgängliga",
@@ -6871,10 +6891,10 @@ export const dictionaries = {
     "academy.report.suggestedRecruitment": "Att träna vidare på",
     "academy.report.progress": "Din utveckling",
     "academy.report.progressNeedsTwo":
-      "Utveckling går att visa först när du har minst två frisläppta resultat.",
+      "Din utveckling kan visas när minst två resultat har delats med dig.",
     "academy.report.notReadyTitle": "Rapporten är inte tillgänglig ännu",
     "academy.report.notReadyBody":
-      "Den visas här när den har frisläppts. Väntar ett svar på granskning tar det längre tid.",
+      "Ingen rapport har delats med dig ännu. Om arbetsgivaren delar en rapport kan du öppna den här.",
     "academy.report.noEvidenceTitle": "Inget underlag ännu",
     "academy.report.noEvidenceBody":
       "Det betyder att det inte finns tillräckligt att uttala sig om — inte att något saknas hos dig.",
@@ -9182,7 +9202,7 @@ export const dictionaries = {
     "nav.professionsAndPaths": "Professions and career paths",
     "nav.securityPassport": "Security Passport",
     "nav.career": "Career",
-    "nav.testsAndDevelopment": "Assessments and development",
+    "nav.testsAndDevelopment": "Tests and development",
     "nav.reviews": "Reviews",
     "appnav.aria": "Primary navigation",
     "nav.primary": "Primary navigation",
@@ -9895,9 +9915,9 @@ export const dictionaries = {
       "Verify your email address to continue. Your company registration will then be reviewed.",
     "auth.confirm.heading": "Check your email",
     "auth.confirm.body":
-      "We've sent a verification link to the address below. Open it to activate your account — you'll come back here when it's done.",
+      "We've sent an email to the address below. Open the email and click the link to confirm your email address. Then return to this page to continue.",
     "auth.confirm.bodyEmployer":
-      "We've sent a verification link to the address below. Open it to activate your account. Your company registration will then be reviewed.",
+      "We've sent an email to the address below. Open the email and click the link to confirm your email address. Then return here to continue. Your company registration will then be reviewed.",
     "auth.confirm.sentTo": "Sent to",
     "auth.confirm.notArrived": "No email? Check your spam folder first.",
     "auth.confirm.resend": "Send again",
@@ -9907,10 +9927,10 @@ export const dictionaries = {
     "auth.confirm.destinationKept":
       "You'll return to where you were heading once the address is verified.",
     "auth.confirm.otherDevice":
-      "Opening the link on another device, such as your phone? The account is activated there. To continue on this computer, press the button below – we check that the address is confirmed and sign you in here. No sign-in is ever moved between devices.",
+      "Opened the email on your phone? Confirm your address there, then return here. Select “Check and continue” so we can check the confirmation and sign you in on this device.",
     "auth.confirm.autoChecking":
       "While this page stays open we check automatically whether the address has been confirmed.",
-    "auth.confirm.continue": "I have confirmed – continue",
+    "auth.confirm.continue": "Check and continue",
     "auth.confirm.checking": "Checking…",
     "auth.confirm.notYet":
       "The address is not confirmed yet. Open the link in the email, then press the button again.",
@@ -11667,10 +11687,10 @@ export const dictionaries = {
     "jobs.apply.passport.credentialsCount": "verified credentials",
     "jobs.apply.passport.experienceCount": "verified employments",
     "jobs.apply.passport.nothing":
-      "You have no verified Passport records to attach yet. Your application will be sent without a Security Passport.",
+      "You have no verified information to share with this application. Your application will be sent without a Security Passport.",
     "jobs.apply.passport.noPassport":
       "You do not have a Security Passport yet. Your application is sent as normal — you can create one whenever you like.",
-    "jobs.apply.passport.openPassport": "Open my Passport",
+    "jobs.apply.passport.openPassport": "Open Security Passport",
     "jobs.apply.passport.sharedConfirm": "Your Security Passport was sent with the application.",
     "jobs.apply.passport.notSharedConfirm": "The application was sent without a Security Passport.",
 
@@ -12943,21 +12963,21 @@ export const dictionaries = {
     "academy.eyebrow": "Competence development",
     "academy.intro.title": "Professional competence assessment",
     "academy.intro.body":
-      "You will be given a number of situations from everyday working life. There is no time limit, and you can pause and pick up again whenever you like — your answers are saved as you go.",
+      "You will answer questions about situations at work. Answers are saved as you work. Choose “Save and continue later” to pause. Continue before the due date.",
     "academy.intro.purpose":
-      "This is used for competence development. It is not an exam, it produces no pass or fail, and it does not rank you against anybody else.",
-    "academy.eyebrowRecruitment": "Recruitment",
+      "The assessment supports your professional development. It does not produce a pass or fail or compare you with others.",
+    "academy.eyebrowRecruitment": "Recruitment test",
     "academy.intro.purposeRecruitment":
-      "This is used as decision support in recruitment by the organisation that requested it. It is not an exam and produces no automatic pass or fail — a person at the organisation makes the decision.",
+      "The test provides decision support in recruitment. The organisation that sent the test receives the result. A person at the organisation makes the decision.",
     "academy.language.name.sv": "Swedish",
     "academy.language.name.en": "English",
     "academy.language.deliveredIn": "This assessment is delivered in",
     "academy.language.lockedNote":
       "The language was chosen by the employer when the assessment was assigned and cannot be changed during the run.",
     "academy.intro.review":
-      "Some answers are reviewed by an authorised reviewer at your employer. No model assesses your answers, and the assessment makes no decision on its own.",
+      "An authorised reviewer at your employer reads your written answers. No model assesses them.",
     "academy.intro.reviewRecruitment":
-      "Some answers, including your written answers, are reviewed by an authorised reviewer at the employer. The assessment is used as evidence in a human recruitment process. CQrityjob does not make employment decisions, and no model assesses your answers.",
+      "An authorised reviewer at the employer reads your written answers as part of a human recruitment process. No model assesses them. CQrityjob does not make employment decisions.",
     "academy.intro.structureHeading": "How the assessment is structured",
     "academy.intro.parts.one": "part",
     "academy.intro.parts.other": "parts",
@@ -12965,12 +12985,32 @@ export const dictionaries = {
     "academy.intro.tasks.other": "tasks",
     "academy.intro.approx": "approximately",
     "academy.intro.minutes": "minutes",
-    "academy.start": "Begin",
-    "academy.resume": "Pick up where you left off",
+    "academy.intro.titleRecruitment": "Recruitment test",
+    "academy.pause.label": "Save and continue later",
+    "academy.pause.saving": "Saving your answers …",
+    "academy.pause.saved": "Your answers are saved. Choose “Back to my tests” to leave the test.",
+    "academy.pause.failed":
+      "Your answers could not be saved. They are still on this page. Try again before leaving the test.",
+    "academy.overview": "Back to overview",
+    "academy.done.abandonedTitle": "This test is closed",
+    "academy.done.abandonedBody":
+      "This test was closed without being submitted. Contact the organisation that sent it if you need to continue.",
+    "academy.invitation.open": "Open the test",
+    "academy.reflection.intro":
+      "Briefly describe your experience. A few sentences per question are enough.",
+    "cc.cat.environment.title": "Work environment",
+    "cc.cat.environment.empty":
+      "The catalogue does not yet describe the work environment for this profession.",
+    "cc.cat.competencies.title": "Skills used in the role",
+    "cc.cat.experience.title": "Experience",
+    "cc.cat.experience.empty":
+      "The catalogue has no recorded experience requirements for this profession. Check the requirements in the relevant job advert.",
+    "academy.start": "Start the test",
+    "academy.resume": "Continue the test",
     "academy.loading": "Loading your questions …",
     "academy.stage": "Professional competence",
     "academy.next": "Next",
-    "academy.submit": "Submit",
+    "academy.submit": "Submit the test",
     "academy.submitting": "Submitting your answers …",
     "academy.safetyCritical": "This situation involves safety-critical judgement.",
     "academy.bestLegend": "Best action",
@@ -12978,16 +13018,16 @@ export const dictionaries = {
     "academy.writtenAnswer": "Your answer",
     "academy.writtenPlaceholder": "Write in your own words.",
     "academy.writtenNote": "Written answers are read by a person, not by a model.",
-    "academy.done.title": "Thank you — your answers are submitted",
+    "academy.done.title": "Your answers have been submitted",
     "academy.done.body":
-      "Your answers have been saved. You will receive your development report once it has been released.",
+      "Your answers have been saved and the test has been submitted. You can follow its status in your test list.",
     "academy.done.reviewPending":
-      "One or more of your answers will be read by an authorised reviewer at the employer before the report can be produced. That is why the result is not ready yet.",
+      "One or more answers are waiting to be read by an authorised reviewer at the employer.",
     "academy.done.alreadyTitle": "Your answers are already submitted",
     "academy.done.alreadyBody":
-      "This assessment has been submitted and can no longer be changed. Your answers are safe. You will receive your development report once it has been released.",
+      "The test has already been submitted and your answers can no longer be changed. You can follow its status in your test list.",
     "academy.done.releasedBody":
-      "This assessment has been submitted and your development report has been released. You will find it under My Career.",
+      "The test has been submitted. Open your test list to see its status and any reports shared with you.",
     "academy.error.title": "This assessment could not be opened",
     "academy.error.unavailableTitle": "This area is not available yet",
     "academy.error.unavailableBody":
@@ -15204,9 +15244,9 @@ export const dictionaries = {
     "academy.attempt.inProgress": "In progress",
     "academy.attempt.submitted": "Submitted",
     "academy.attempt.scored": "Assessed",
-    "academy.attempt.released": "Released",
+    "academy.attempt.released": "Shared",
     "academy.attempt.other": "Other status",
-    "academy.attempt.exit": "To Assessments and development",
+    "academy.attempt.exit": "Back to my tests",
     "academy.reviews.title": "Review",
     "academy.reviews.lede":
       "These are the candidate responses that need a human assessment before the brief can be completed. Whoever assigned the test may never review it themselves.",
@@ -15520,42 +15560,45 @@ export const dictionaries = {
     "academy.safety.followUp":
       "This is shown regardless of the rest of the evidence. A high maturity level never removes a safety-critical finding.",
     "academy.limitations.title": "Limitations",
-    "academy.home.title": "My competence development",
+    "academy.home.title": "Tests and development",
     "academy.home.lede":
-      "Everything you have been asked to do, your reports, and what you can practise.",
+      "Find your tests, training and reports here. Choose “Start the test” or “Continue the test” for the test you want to take.",
     "academy.home.assigned": "Assigned to you",
-    "academy.home.requestedBy": "Requested by",
-    "academy.home.deadline": "Due by:",
-    "academy.home.deadlinePassed": "Due date, now past:",
+    "academy.home.requestedBy": "Sent by",
+    "academy.home.deadline": "Due date:",
+    "academy.home.deadlinePassed": "Past due date:",
     "academy.home.purpose": "Purpose and processing",
     "academy.home.purposeFallback": "Competence development.",
     "academy.home.privacy":
-      "Your answers are stored by CQrityjob. Your employer sees a competency profile once it is released. Written answers may be read by an authorised reviewer at your employer — not by a model.",
-    "academy.home.titleRecruitment": "My assessments",
+      "Your answers are stored by CQrityjob. Your employer sees a competency profile once the result is made available. Written answers may be read by an authorised reviewer at your employer, not by a model.",
+    "academy.home.titleRecruitment": "Tests and development",
     "academy.home.ledeRecruitment":
-      "Everything you have been asked to complete, and the reports that have been released to you.",
+      "Find your recruitment tests and reports shared with you here. Choose “Start the test” or “Continue the test” to begin.",
     "academy.home.assessmentLedeRecruitment":
-      "Assessments an organisation requested as part of your application. The result is released to the organisation that requested it.",
+      "Recruitment tests sent to you by an organisation. The result is shared with the organisation that sent the test.",
     "academy.home.purposeFallbackRecruitment": "Decision support in recruitment.",
     "academy.home.privacyRecruitment":
-      "Your answers are stored by CQrityjob. The organisation that requested the assessment sees a competence profile once it has been released. Written answers may be read by an authorised reviewer at the employer — not by a model. CQrityjob does not make employment decisions.",
+      "Your answers are stored by CQrityjob. The organisation that sent the test sees a competency profile once the result is made available. Written answers may be read by an authorised reviewer at the employer, not by a model. CQrityjob does not make employment decisions.",
     "academy.home.recruitmentDecision":
       "This assessment is evidence used in recruitment. It decides nothing on its own — a person at the organisation makes the decision.",
     "academy.home.noneTitle": "Nothing assigned right now",
-    "academy.home.noneBody": "When your employer assigns a programme it will appear here.",
+    "academy.home.noneBody":
+      "Tests and training appear here when an organisation makes them available to you.",
     "academy.home.openReport": "Open report",
-    "academy.home.awaitingRelease": "Submitted. Your report appears once it has been released.",
+    "academy.home.awaitingRelease":
+      "The test has been submitted. No report has been shared with you yet.",
     "academy.home.nextReview":
       "Some answers are reviewed by an authorised reviewer at the employer.",
-    "academy.home.nextRelease": "Your employer releases the report once the review is complete.",
-    "academy.home.nextReport": "You will then be able to open your own report here.",
+    "academy.home.nextRelease":
+      "The organisation can share the report when the review is complete.",
+    "academy.home.nextReport": "Reports shared with you appear here.",
     "academy.home.learning": "Learning Mode",
     "academy.home.learningLede":
       "Practise freely, with feedback after every question. The practice questions are different questions from the assessment ones.",
-    "academy.home.careerDiscovery.title": "Career analysis (Career Discovery)",
+    "academy.home.careerDiscovery.title": "Career self-assessment",
     "academy.home.careerDiscovery.body":
       "Get insight into which roles and career paths suit you, based on your profile and your results.",
-    "academy.home.careerDiscovery.cta": "Start career analysis",
+    "academy.home.careerDiscovery.cta": "Start the self-assessment",
     "academy.home.practise": "Start practising",
     "academy.home.practiseAgain": "Practise again",
     "academy.home.noModulesTitle": "No practice available",
@@ -15574,10 +15617,10 @@ export const dictionaries = {
     "academy.report.suggestedRecruitment": "Areas to keep practising",
     "academy.report.progress": "Your progress",
     "academy.report.progressNeedsTwo":
-      "Progress can be shown once you have at least two released results.",
+      "Your progress can be shown when at least two results have been shared with you.",
     "academy.report.notReadyTitle": "Your report is not available yet",
     "academy.report.notReadyBody":
-      "It appears here once released. If an answer is awaiting review, that takes longer.",
+      "No report has been shared with you yet. If the organisation shares a report, you can open it here.",
     "academy.report.noEvidenceTitle": "No evidence yet",
     "academy.report.noEvidenceBody":
       "That means there is not enough to say anything — not that something is lacking in you.",

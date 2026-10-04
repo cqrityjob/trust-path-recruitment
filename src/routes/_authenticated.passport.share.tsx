@@ -848,7 +848,7 @@ function PassportShareRoute() {
             aria-expanded={previewOpen}
             aria-controls="sel-preview-panel"
             onClick={() => setPreviewOpen((v) => !v)}
-            className="mt-3 inline-flex h-11 items-center gap-2 rounded-md border border-input px-4 text-sm font-medium text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            className="mt-3 inline-flex h-11 cursor-pointer items-center gap-2 rounded-md border border-input bg-background hover:bg-muted px-4 text-sm font-medium text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           >
             {previewOpen ? pt("sel.preview.hide") : pt("sel.preview.show")}
           </button>
@@ -857,7 +857,7 @@ function PassportShareRoute() {
             <div
               id="sel-preview-panel"
               data-share-preview
-              className="mt-4 overflow-x-auto rounded-lg border border-border bg-primary p-3 shadow-[var(--shadow-lg)] sm:p-5"
+              className="mt-4 overflow-x-auto rounded-lg border border-border bg-background p-3 shadow-[var(--shadow-lg)] sm:p-5"
             >
               {previewState === "loading" ? (
                 <p className="text-sm text-muted-foreground">{pt("common.loading")}</p>

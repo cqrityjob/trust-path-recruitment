@@ -684,6 +684,13 @@ async function shoot(page: Page, name: string) {
     await page.setViewportSize({ width: 1440, height: 900 });
   const dir = path.resolve(SHOT_DIR);
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+      ),
+  );
   await page.screenshot({ path: path.join(dir, `${SHOT_TAG}-${name}.png`), fullPage: true });
 }
 
@@ -742,7 +749,7 @@ test.describe("Security Passport — sharing, as the holder", () => {
     await page.locator('[data-merit-option="claim:c-self"] input').check();
     await expect(page.locator("[data-share-cta]")).toBeEnabled();
 
-    await page.getByRole("button", { name: /Förhandsgranska mottagarens vy/ }).click();
+    await page.getByRole("button", { name: /Förhandsgranska delningen/ }).click();
     await expect(page.locator("[data-share-preview] [data-recipient-view]")).toBeVisible({
       timeout: 20_000,
     });
@@ -778,6 +785,23 @@ test.describe("Security Passport — sharing, as the holder", () => {
 
     expect(pageErrors).toEqual([]);
     await shoot(page, "share-preview-sv");
+    const closePreview = page.getByRole("button", { name: "Dölj förhandsgranskningen" });
+    await closePreview.focus();
+    await page.keyboard.press("Enter");
+    await expect(page.locator("[data-share-preview]")).toHaveCount(0);
+    await expect(page.locator('[data-merit-option="claim:c-vu1"] input')).toBeChecked();
+    await expect(page.locator('[data-merit-option="claim:c-self"] input')).toBeChecked();
+    await expect(page.getByRole("button", { name: "Förhandsgranska delningen" })).toBeFocused();
+    const previewButton = page.getByRole("button", { name: "Förhandsgranska delningen" });
+    await previewButton.evaluate((el) => el.scrollIntoView({ block: "center" }));
+    expect(
+      await previewButton.evaluate((el) => {
+        const r = el.getBoundingClientRect();
+        const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+        return hit === el || el.contains(hit);
+      }),
+      "the preview action is not obscured by the header",
+    ).toBe(true);
   });
 
   test("3 · creating a link: copy, open, expiry, and a way back", async ({ page }) => {
@@ -974,7 +998,7 @@ test.describe("Security Passport — sharing, as the holder", () => {
     await mount(page, "/passport/share", { previewFails: true });
     await shareReady(page);
     await page.locator('[data-merit-option="claim:c-vu1"] input').check();
-    await page.getByRole("button", { name: /Förhandsgranska mottagarens vy/ }).click();
+    await page.getByRole("button", { name: /Förhandsgranska delningen/ }).click();
     await expect(page.locator("[data-share-preview]")).toContainText(
       "kunde inte visa mottagarens vy",
       { timeout: 20_000 },
@@ -994,7 +1018,7 @@ test.describe("Security Passport — sharing, as the holder", () => {
     await mount(page, "/passport/share", { shares: [SHARE_ROW] });
     await shareReady(page);
     await page.locator('[data-merit-option="claim:c-vu1"] input').check();
-    await page.getByRole("button", { name: /Förhandsgranska mottagarens vy/ }).click();
+    await page.getByRole("button", { name: /Förhandsgranska delningen/ }).click();
     await expect(page.locator("[data-share-preview] [data-recipient-view]")).toBeVisible({
       timeout: 20_000,
     });

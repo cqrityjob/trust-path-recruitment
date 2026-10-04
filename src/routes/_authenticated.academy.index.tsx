@@ -350,14 +350,18 @@ function AssessmentCard({ row, lang }: { row: AcademyWorkItem; lang: string }) {
             <p
               className={
                 "mt-1 text-[13px] " +
-                (Date.parse(row.deadline) < Date.now() ? "text-destructive" : "text-muted-foreground")
+                (Date.parse(row.deadline) < Date.now()
+                  ? "text-destructive"
+                  : "text-muted-foreground")
               }
               data-testid="assessment-deadline"
             >
               {Date.parse(row.deadline) < Date.now()
                 ? t("academy.home.deadlinePassed")
                 : t("academy.home.deadline")}{" "}
-              <span className="font-medium">{formatDate(row.deadline, lang === "en" ? "en" : "sv")}</span>
+              <span className="font-medium">
+                {formatDate(row.deadline, lang === "en" ? "en" : "sv")}
+              </span>
             </p>
           )}
         </div>
@@ -395,25 +399,12 @@ function AssessmentCard({ row, lang }: { row: AcademyWorkItem; lang: string }) {
         {done && !row.releasedAt && (
           <div className="w-full rounded-md bg-[color:var(--surface-subtle)] p-3">
             <p className="text-[13px] font-medium text-foreground">
-              {t("academy.home.awaitingRelease")}
+              {t(
+                row.status === "abandoned"
+                  ? "academy.done.abandonedBody"
+                  : "academy.home.awaitingRelease",
+              )}
             </p>
-            <ol className="mt-2 space-y-1.5">
-              {(
-                [
-                  "academy.home.nextReview",
-                  "academy.home.nextRelease",
-                  "academy.home.nextReport",
-                ] as const
-              ).map((k) => (
-                <li
-                  key={k}
-                  className="flex gap-2 text-[13px] leading-relaxed text-muted-foreground"
-                >
-                  <span aria-hidden="true">·</span>
-                  <span>{t(k)}</span>
-                </li>
-              ))}
-            </ol>
           </div>
         )}
       </div>

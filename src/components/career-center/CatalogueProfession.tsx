@@ -145,6 +145,7 @@ function CatalogueProfessionBody({
 
   const sections: SectionLink[] = [
     { id: "om-yrket", label: t("cc.nav.about") },
+    { id: "arbetsmiljo", label: t("cc.cat.environment.title") },
     { id: "krav", label: t("cc.nav.requirements") },
     { id: "utbildning", label: t("cc.nav.education") },
     { id: "karriarsteg", label: t("cc.nav.next") },
@@ -208,8 +209,33 @@ function CatalogueProfessionBody({
       <Section id="om-yrket" className="scroll-mt-14 py-12 md:py-14">
         <h2 className="text-2xl font-semibold tracking-tight text-foreground">{t("cc.p.about")}</h2>
         <p className="mt-4 max-w-[70ch] text-base leading-relaxed text-muted-foreground">
-          {overview || t("cc.cat.about.empty")}
+          {overview || summary || t("cc.cat.about.empty")}
         </p>
+        {(detail.competencies ?? []).length > 0 && (
+          <>
+            <h3 className="mt-8 text-lg font-semibold text-foreground">
+              {t("cc.cat.competencies.title")}
+            </h3>
+            <RequirementList items={detail.competencies} sv={sv} />
+          </>
+        )}
+      </Section>
+
+      <Section bordered id="arbetsmiljo" className="scroll-mt-14 py-12 md:py-14">
+        <h2 className="text-2xl font-semibold tracking-tight text-foreground">
+          {t("cc.cat.environment.title")}
+        </h2>
+        {(detail.workEnvironments ?? []).length > 0 ? (
+          <ul className="mt-4 max-w-[70ch] list-disc space-y-2 pl-5 text-base text-muted-foreground">
+            {detail.workEnvironments.map((environment) => (
+              <li key={environment.titleSv}>{sv ? environment.titleSv : environment.titleEn}</li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-4 max-w-[70ch] text-sm leading-relaxed text-muted-foreground">
+            {t("cc.cat.environment.empty")}
+          </p>
+        )}
       </Section>
 
       {/* ── FORMELLA KRAV ─────────────────────────────────────────────── */}
@@ -240,6 +266,16 @@ function CatalogueProfessionBody({
         ) : (
           <p className="mt-4 max-w-[70ch] text-sm leading-relaxed text-muted-foreground">
             {t("cc.cat.education.empty")}
+          </p>
+        )}
+        <h3 className="mt-8 text-lg font-semibold text-foreground">
+          {t("cc.cat.experience.title")}
+        </h3>
+        {(detail.experience ?? []).length > 0 ? (
+          <RequirementList items={detail.experience} sv={sv} />
+        ) : (
+          <p className="mt-4 max-w-[70ch] text-sm leading-relaxed text-muted-foreground">
+            {t("cc.cat.experience.empty")}
           </p>
         )}
       </Section>
@@ -417,6 +453,11 @@ function RequirementList({
           <span className="rounded-full border border-border px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
             {REQUIREMENT_LEVEL_LABEL[item.level][sv ? "sv" : "en"]}
           </span>
+          {"descriptionSv" in item && (sv ? item.descriptionSv : item.descriptionEn) && (
+            <p className="w-full text-sm leading-relaxed text-muted-foreground">
+              {sv ? item.descriptionSv : item.descriptionEn}
+            </p>
+          )}
         </li>
       ))}
     </ul>

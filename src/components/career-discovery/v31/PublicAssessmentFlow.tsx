@@ -72,6 +72,7 @@
 // succeed: a run refused at the result or at the save because the control
 // moved mid-run is told as that, not as "something went wrong, try again".
 
+import { accountConfirmationCopy } from "@/lib/auth/account-confirmation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -280,6 +281,10 @@ export function PublicAssessmentFlow() {
   const [buffer, setBuffer] = useState<PublicBuffer | null>(null);
   const [index, setIndex] = useState(0);
   const [signedIn, setSignedIn] = useState(false);
+  const [activeAccount, setActiveAccount] = useState<{ id: string; email?: string } | null>(null);
+  const [accountNotice, setAccountNotice] = useState<string | null>(null);
+  const [switchingAccount, setSwitchingAccount] = useState(false);
+  const accountCopy = accountConfirmationCopy[lang === "sv" ? "sv" : "en"];
   const [careerContext, setCareerContext] = useState<CareerContext>(EMPTY_CAREER_CONTEXT);
   /** The canonical Professional Profile, for a signed-in candidate. Read
    *  once at boot; `null` means "not signed in, or genuinely empty". */
@@ -332,6 +337,7 @@ export function PublicAssessmentFlow() {
         if (!alive) return;
         const isSignedIn = Boolean(session.data.session);
         setSignedIn(isSignedIn);
+        setActiveAccount(session.data.session?.user ?? null);
         const urlToken = new URLSearchParams(window.location.search).get("claim");
 
         // ── CLOSED FOR EVERYONE: THE RELEASE CONTROL, OR THE INSTRUMENT ─
@@ -684,6 +690,16 @@ export function PublicAssessmentFlow() {
     persistingRef.current = true;
     setPhase("persisting");
     try {
+      // Re-read identity at the action, since another tab can switch accounts.
+      const { data: current, error } = await supabase.auth.getUser();
+      if (error || !current.user || current.user.id !== activeAccount?.id) {
+        setActiveAccount(current.user ?? null);
+        setSignedIn(Boolean(current.user));
+        setAccountNotice(accountCopy.changed);
+        persistingRef.current = false;
+        setPhase("result");
+        return;
+      }
       const result = await persist({
         data: {
           locale: buffer.locale,
@@ -704,6 +720,7 @@ export function PublicAssessmentFlow() {
           // timeout that had in fact succeeded all reach the same report
           // rather than minting a second one (see v31-claim-id.ts).
           claimToken: claimToken ?? undefined,
+          expectedUserId: current.user.id,
         },
       });
       // ONLY now. Clearing before a confirmed write would destroy the
@@ -844,15 +861,30 @@ export function PublicAssessmentFlow() {
     if (copied) setShareFeedback("copied");
   }
 
-  // A signed-in visitor returning with a complete buffer persists immediately
-  // rather than sitting on the client-computed preview — they already have
-  // somewhere for the canonical, saved report to live.
-  useEffect(() => {
-    if (phase === "result" && signedIn && buffer && isComplete(buffer)) {
-      void onSaveAndSignIn();
+  async function onSwitchAccount() {
+    if (!buffer || switchingAccount) return;
+    setSwitchingAccount(true);
+    setAccountNotice(null);
+    // The staged result survives local sign-out and the next account's login.
+    const token = claimToken ?? stageClaim(buffer, careerContext);
+    if (!token) {
+      setAccountNotice(accountCopy.switchFailed);
+      setSwitchingAccount(false);
+      return;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, signedIn]);
+    const { error } = await supabase.auth.signOut({ scope: "local" });
+    if (error) {
+      setAccountNotice(accountCopy.switchFailed);
+      setSwitchingAccount(false);
+      return;
+    }
+    await navigate({
+      to: "/login",
+      search: {
+        redirect: `/security-career-assessment?claim=${encodeURIComponent(token)}`,
+      } as never,
+    });
+  }
 
   // ── THE CANONICAL RESULT ────────────────────────────────────────────
   //
@@ -1379,8 +1411,8 @@ export function PublicAssessmentFlow() {
 
   // phase === "result" — the full report, no account required. See
   // canonicalSnapshot above: this is the actual fix for "no login wall before
-  // the result". Signed-in visitors pass through here for a moment before
-  // the effect above hands off to the real, saved report.
+  // the result". Signed-in visitors confirm the displayed account before
+  // saving the result, including after returning from sign-in.
   // DOWNLOAD / SHARE — section 5's intended order (complete -> see result ->
   // download/share -> optionally save). Rendered for every candidate,
   // signed in or not: keeping a copy or sharing it never required an
@@ -1428,6 +1460,16 @@ export function PublicAssessmentFlow() {
       <p className="mx-auto mt-3 max-w-[52ch] text-[15px] leading-relaxed text-muted-foreground">
         {t("cd.public.doneBody")}
       </p>
+      {signedIn && activeAccount && (
+        <p className="mt-4 break-words text-sm font-medium" data-testid="claim-active-account">
+          {accountCopy.signedIn}: {activeAccount.email ?? activeAccount.id}
+        </p>
+      )}
+      {accountNotice && (
+        <p role="alert" className="mt-3 text-sm">
+          {accountNotice}
+        </p>
+      )}
       {/* PRIMARY: create an account. Somebody who has just finished the
           assessment anonymously most likely does not have one — leading with
           "log in", as this did, asked them to do the one thing they could
@@ -1438,8 +1480,20 @@ export function PublicAssessmentFlow() {
         onClick={() => void onSaveAndSignIn()}
         className="mt-7 inline-flex h-12 w-full items-center justify-center rounded-[10px] bg-accent px-7 text-sm font-semibold text-accent-foreground transition-colors hover:bg-[color:var(--accent-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:w-auto motion-reduce:transition-none"
       >
-        {signedIn ? t("cd.public.saveNow") : t("cd.public.createAccountToSave")}
+        {signedIn ? accountCopy.save : t("cd.public.createAccountToSave")}
       </button>
+      {signedIn && (
+        <p className="mt-4">
+          <button
+            type="button"
+            onClick={() => void onSwitchAccount()}
+            disabled={switchingAccount}
+            className="inline-flex min-h-11 items-center text-sm font-medium text-accent underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-60"
+          >
+            {switchingAccount ? accountCopy.switching : accountCopy.switch}
+          </button>
+        </p>
+      )}
       {!signedIn && (
         <p className="mt-4">
           <button
@@ -1529,9 +1583,8 @@ export function PublicAssessmentFlow() {
           scoring: canonicalSnapshot.versions.scoringVersion,
           taxonomy: canonicalSnapshot.versions.taxonomyVersion,
         }}
-        // Anonymous mode even for a signed-in visitor who is mid-save: the
-        // stored report, with its history links, is one navigation away and
-        // this screen is not it.
+        // This is the unsaved report even for a signed-in visitor. History
+        // links become available after they confirm the account and save.
         mode="anonymous"
         // Null for an anonymous candidate, which is what makes the journey
         // section render its honest "we do not know your background yet"
@@ -1555,7 +1608,7 @@ export function PublicAssessmentFlow() {
         // there is exactly ONE save control on the page, not a second copy
         // at the bottom, because two controls for one action is the
         // duplication this whole pass is removing.
-        afterRanking={!signedIn ? saveCta : undefined}
+        afterRanking={saveCta}
       />
       {resultActions}
     </CareerDiscoveryShell>

@@ -36,7 +36,7 @@ import {
   type ApplicationDisclosureRecord,
 } from "@/lib/security-passport/application-disclosure.functions";
 import { revokeDisclosure } from "@/lib/security-passport/disclosure.functions";
-import { getMyPassport } from "@/lib/security-passport/passport.functions";
+import { getApplicationPassportOffer } from "@/lib/security-passport/passport.functions";
 import type { PassportCopyKey } from "@/lib/security-passport/i18n";
 
 const STATE_KEY: Readonly<Record<ApplicationDisclosureRecord["state"], PassportCopyKey>> = {
@@ -59,7 +59,7 @@ export function ApplicationPassportShare({ applicationId }: { applicationId: str
   const listFn = useServerFn(listMyApplicationDisclosures);
   const shareFn = useServerFn(sharePassportWithApplication);
   const revokeFn = useServerFn(revokeDisclosure);
-  const passportFn = useServerFn(getMyPassport);
+  const passportFn = useServerFn(getApplicationPassportOffer);
 
   const [error, setError] = useState<string | null>(null);
 
@@ -77,7 +77,7 @@ export function ApplicationPassportShare({ applicationId }: { applicationId: str
   });
 
   const passport = useQuery({
-    queryKey: ["passport", "profile"],
+    queryKey: ["passport", "application-offer"],
     queryFn: () => passportFn(),
   });
 
@@ -110,7 +110,7 @@ export function ApplicationPassportShare({ applicationId }: { applicationId: str
     onError: () => setError(pt("ad.revokeError")),
   });
 
-  const hasPassport = Boolean(passport.data?.profile);
+  const hasShareableContent = passport.data?.hasPassport && passport.data.hasShareableContent;
   const currentMeta = current
     ? LIVE_PACKAGES.find((p) => p.code === current.packageCode)
     : undefined;
@@ -131,9 +131,9 @@ export function ApplicationPassportShare({ applicationId }: { applicationId: str
         </p>
       )}
 
-      {!passport.isLoading && !hasPassport ? (
+      {!passport.isLoading && !hasShareableContent && !current ? (
         <p className="mt-3 text-xs text-muted-foreground">
-          {pt("ad.needPassport")}{" "}
+          {pt("ad.noVerified")}{" "}
           <Link to="/passport" className="font-medium text-accent hover:underline">
             {pt("ad.openPassport")}
           </Link>
@@ -175,7 +175,7 @@ export function ApplicationPassportShare({ applicationId }: { applicationId: str
           <p className="mt-1 text-xs text-muted-foreground">{pt("sc.verifiedOnlyNote")}</p>
           <button
             type="button"
-            disabled={share.isPending}
+            disabled={share.isPending || passport.isLoading || !hasShareableContent}
             onClick={() => share.mutate()}
             className="mt-2 inline-flex min-h-[44px] items-center rounded-md bg-accent px-3 text-xs font-semibold text-accent-foreground disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           >

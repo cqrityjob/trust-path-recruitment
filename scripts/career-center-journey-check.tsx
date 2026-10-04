@@ -832,6 +832,23 @@ group("8 · The catalogue page: content, failure, not published — never anothe
     requirements: [],
     education: [],
     certifications: [],
+    competencies: [
+      {
+        titleSv: "Situationsmedvetenhet",
+        titleEn: "Situational awareness",
+        level: "employer_requirement" as const,
+        descriptionSv: "Uppmärksamma omgivningen.",
+        descriptionEn: "Notice your surroundings.",
+      },
+    ],
+    workEnvironments: [{ titleSv: "Utomhuspatrullering", titleEn: "Outdoor patrol" }],
+    experience: [
+      {
+        titleSv: "Relevant erfarenhet",
+        titleEn: "Relevant experience",
+        level: "recommended_development" as const,
+      },
+    ],
     pathway: [
       {
         direction: "to" as const,
@@ -872,6 +889,17 @@ group("8 · The catalogue page: content, failure, not published — never anothe
     ck(
       `8.6 [${lang}] the page says it is a catalogue summary, not a guide`,
       html.includes(t["cc.cat.notice"].slice(0, 30)),
+    );
+    ck(
+      `8.10 [${lang}] catalogue work environments and competency definitions reach the reader`,
+      html.includes(lang === "sv" ? "Utomhuspatrullering" : "Outdoor patrol") &&
+        html.includes(lang === "sv" ? "Uppmärksamma omgivningen." : "Notice your surroundings."),
+    );
+    ck(
+      `8.11 [${lang}] recorded experience retains its requirement level without invented years`,
+      html.includes(lang === "sv" ? "Relevant erfarenhet" : "Relevant experience") &&
+        html.includes(lang === "sv" ? "Rekommenderad utveckling" : "Recommended development") &&
+        !html.includes(lang === "sv" ? "års erfarenhet" : "years of experience"),
     );
 
     const noSteps = new QueryClient();

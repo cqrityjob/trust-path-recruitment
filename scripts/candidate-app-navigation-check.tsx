@@ -190,12 +190,12 @@ group("1 · one canonical link per product, desktop and mobile");
     // released results AND employer-assigned training. "Tester och resultat"
     // named half of it; the two are separated INSIDE the page. Spelled out
     // with "och" / "and" since the MVP text specification (§3, 2026-09-27),
-    // which also names the English side "Assessments and development".
+    // which also names the English side "Tests and development".
     {
       key: "assessments",
       to: "/academy",
       sv: "Tester och utveckling",
-      en: "Assessments and development",
+      en: "Tests and development",
     },
   ];
 

@@ -424,8 +424,7 @@ group("9 · Where a claim LANDS (Emsoms #4)");
     "utf8",
   );
   ok(
-    /validateSearch/.test(overview) &&
-      /\[0-9a-f\]\{8\}-\[0-9a-f\]\{4\}/.test(overview),
+    /validateSearch/.test(overview) && /\[0-9a-f\]\{8\}-\[0-9a-f\]\{4\}/.test(overview),
     "9.5 the overview VALIDATES savedReport as a uuid -- it is rendered into a link, so an unvalidated value would be a redirect surface",
   );
   ok(
@@ -446,7 +445,7 @@ group("9 · Where a claim LANDS (Emsoms #4)");
   // genuinely beside the result, and the slot the retired Career Card CTA
   // used to hold.
   ok(
-    /afterRanking=\{!signedIn \? saveCta : undefined\}/.test(flowSrc),
+    /afterRanking=\{saveCta\}/.test(flowSrc),
     "9.8 the save action is handed to the slot under the ranking, next to the result",
   );
   // Exactly one. Two controls for one action is the duplication this pass

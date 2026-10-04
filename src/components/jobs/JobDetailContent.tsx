@@ -11,7 +11,10 @@ import {
   type PublicJobDetail,
 } from "@/lib/job-intelligence/public-queries";
 import { getCareerAreaLabel } from "@/lib/job-intelligence/career-area-labels";
-import { getProfession } from "@/lib/career-center/professions";
+import {
+  professionInfoDestination,
+  resolveProfessionRef,
+} from "@/lib/career-center/profession-links";
 import { jobAdReturnPath } from "@/lib/job-intelligence/job-search";
 import { JobAdHeading, JobAdSections } from "./JobAdContent";
 import { EmployerPresentation } from "./EmployerPresentation";
@@ -30,8 +33,10 @@ export function JobDetailContent({
 }) {
   const { lang } = useT();
   const expired = isJobExpired(job);
-  const area = job.family_id ? getCareerAreaLabel(job.family_id) : undefined;
-  const profession = job.profession_slug ? getProfession(job.profession_slug) : undefined;
+  const profession = resolveProfessionRef(job.profession_slug)?.profession;
+  // About the profession uses its canonical family, not an independently
+  // selected advert category. Never infer an occupation from the job title.
+  const area = getCareerAreaLabel(profession?.family ?? job.family_id);
   const related = useQuery({
     queryKey: ["public-job-related", job.id, job.profession_slug, job.family_id],
     queryFn: () =>
@@ -47,77 +52,74 @@ export function JobDetailContent({
     enabled: !!job.employer_id,
   });
   return (
-    <article
-      className={`min-w-0 wrap-break-word bg-card ${embedded ? "" : "rounded-2xl border border-border"}`}
-      data-job-detail={job.slug}
-    >
-      <div className="p-5 sm:p-8">
-        {embedded && (
-          <Link
-            to="/jobs/$slug"
-            params={{ slug: job.slug }}
-            search={from ? { from } : {}}
-            className="mb-3 inline-flex min-h-11 items-center gap-1.5 text-xs font-medium text-accent hover:underline focus-visible:outline-2 focus-visible:outline-ring"
-          >
-            {lang === "sv" ? "Öppna annonsen på egen sida" : "Open job on its own page"}
-            <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
-          </Link>
-        )}
-        <JobAdHeading
-          job={job}
-          employerName={job.employer?.name}
-          employerLogoUrl={job.employer?.logo_url}
-          expired={expired}
-          headingLevel={embedded ? "h2" : "h1"}
-        />
-      </div>
-      <div
-        id={`apply-${job.id}`}
-        tabIndex={-1}
-        className={`z-10 border-y border-border bg-card px-5 py-4 sm:px-8 lg:sticky ${embedded ? "lg:top-0" : "lg:top-20"}`}
+    <div className="space-y-8">
+      <article
+        className={`min-w-0 wrap-break-word bg-card ${embedded ? "" : "rounded-2xl border border-border"}`}
+        data-job-detail={job.slug}
       >
-        <JobApplicationPanel
-          job={job}
-          expired={expired}
-          returnTo={jobAdReturnPath(job.slug, from)}
-        />
-      </div>
-      <div className="space-y-8 p-5 sm:p-8 [&_p]:wrap-break-word">
-        <JobAdSections job={job} />
-        <VacancyRequirements jobId={job.id} />
-        {job.employer && (
-          <EmployerPresentation
-            employer={job.employer}
-            jobs={(employerJobs.data ?? []).filter((row) => row.id !== job.id).slice(0, 3)}
-            from={from}
+        <div className="p-5 sm:p-8">
+          {embedded && (
+            <Link
+              to="/jobs/$slug"
+              params={{ slug: job.slug }}
+              search={from ? { from } : {}}
+              className="mb-3 inline-flex min-h-11 items-center gap-1.5 text-xs font-medium text-accent hover:underline focus-visible:outline-2 focus-visible:outline-ring"
+            >
+              {lang === "sv" ? "Öppna annonsen på egen sida" : "Open job on its own page"}
+              <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+            </Link>
+          )}
+          <JobAdHeading
+            job={job}
+            employerName={job.employer?.name}
+            employerLogoUrl={job.employer?.logo_url}
+            expired={expired}
+            headingLevel={embedded ? "h2" : "h1"}
           />
-        )}
-        {(area || profession) && (
-          <CareerContext
-            familyId={area?.id ?? null}
-            familyName={area?.name[lang] ?? null}
-            professionSlug={profession?.slug ?? null}
-            professionName={
-              profession ? (lang === "sv" ? profession.titleSv : profession.titleEn) : null
-            }
+        </div>
+        <div
+          id={`apply-${job.id}`}
+          tabIndex={-1}
+          className={`z-10 border-y border-border bg-card px-5 py-4 sm:px-8 lg:sticky ${embedded ? "lg:top-0" : "lg:top-20"}`}
+        >
+          <JobApplicationPanel
+            job={job}
+            expired={expired}
+            returnTo={jobAdReturnPath(job.slug, from)}
           />
-        )}
-        <RelatedJobs
-          loading={related.isLoading}
-          rows={related.data ?? []}
-          lang={lang}
-          from={from}
-        />
-        {!expired && (
-          <a
-            href={`#apply-${job.id}`}
-            className="inline-flex min-h-11 items-center rounded-md bg-primary px-5 text-sm font-semibold text-primary-foreground focus-visible:outline-2 focus-visible:outline-ring lg:hidden"
-          >
-            {lang === "sv" ? "Till ansökan" : "Go to application"}
-          </a>
-        )}
-      </div>
-    </article>
+        </div>
+        <div className="space-y-8 p-5 sm:p-8 [&_p]:wrap-break-word">
+          <JobAdSections job={job} />
+          <VacancyRequirements jobId={job.id} />
+          {job.employer && (
+            <EmployerPresentation
+              employer={job.employer}
+              jobs={(employerJobs.data ?? []).filter((row) => row.id !== job.id).slice(0, 3)}
+              from={from}
+            />
+          )}
+          {(area || profession) && (
+            <CareerContext
+              familyId={area?.id ?? null}
+              familyName={area?.name[lang] ?? null}
+              professionSlug={profession ? job.profession_slug : null}
+              professionName={
+                profession ? (lang === "sv" ? profession.titleSv : profession.titleEn) : null
+              }
+            />
+          )}
+          {!expired && (
+            <a
+              href={`#apply-${job.id}`}
+              className="inline-flex min-h-11 items-center rounded-md bg-primary px-5 text-sm font-semibold text-primary-foreground focus-visible:outline-2 focus-visible:outline-ring lg:hidden"
+            >
+              {lang === "sv" ? "Till ansökan" : "Go to application"}
+            </a>
+          )}
+        </div>
+      </article>
+      <RelatedJobs loading={related.isLoading} rows={related.data ?? []} lang={lang} from={from} />
+    </div>
   );
 }
 
@@ -133,6 +135,7 @@ function CareerContext({
   professionName: string | null;
 }) {
   const { t } = useT();
+  const destination = professionInfoDestination({ cigSlug: professionSlug });
   return (
     <section className="rounded-lg border border-border bg-background p-5">
       <h2 className="text-xl font-semibold">{t("jobs.detail.career.title")}</h2>
@@ -170,15 +173,11 @@ function CareerContext({
           </div>
         )}
       </dl>
-      {professionSlug && (
+      {destination.kind !== "none" && (
         <div className="mt-4 border-t border-border pt-4">
-          <Link
-            to="/career-center/$profession"
-            params={{ profession: professionSlug }}
-            className="text-sm text-primary hover:underline"
-          >
+          <a href={destination.href} className="text-sm text-primary hover:underline">
             {t("jobs.detail.career.explore")}
-          </Link>
+          </a>
         </div>
       )}
     </section>
@@ -200,8 +199,16 @@ function RelatedJobs({
   const { t } = useT();
   if (!loading && rows.length === 0) return null;
   return (
-    <section>
+    <section
+      aria-label={t("jobs.detail.related.title")}
+      className="border-t-2 border-border bg-muted/40 p-5 sm:p-8"
+    >
       <h2 className="text-xl font-semibold">{t("jobs.detail.related.title")}</h2>
+      <p className="mt-2 text-sm text-muted-foreground">
+        {lang === "sv"
+          ? "Andra annonser som kan vara intressanta för dig."
+          : "Other job adverts you may be interested in."}
+      </p>
       {loading ? (
         <p className="mt-3 text-sm text-muted-foreground">{t("jobs.results.loading")}</p>
       ) : (

@@ -1052,7 +1052,7 @@ group("T15 · sv/en parity");
   ck(
     '"Tester och utveckling" is the candidate label',
     dictionaries.sv["nav.testsAndDevelopment"] === "Tester och utveckling" &&
-      dictionaries.en["nav.testsAndDevelopment"] === "Assessments and development",
+      dictionaries.en["nav.testsAndDevelopment"] === "Tests and development",
   );
   for (const kind of Object.keys(ACTION_CLASSIFICATION) as (keyof typeof ACTION_CLASSIFICATION)[]) {
     const w = actionCopy.wordsFor(kind, null);

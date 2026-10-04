@@ -293,12 +293,14 @@ console.log("\n4. A written answer is not held in one browser tab");
     ),
   );
   check(
-    "4.6 unmounting flushes the typed answer",
-    /removeEventListener\("beforeunload"[\s\S]{0,120}flushText\(\);/.test(runtime),
+    "4.6 unmount cancels old-identity saves; the router saves before navigation",
+    /removeEventListener\("beforeunload"[\s\S]{0,220}disposed\.current = true/.test(runtime) &&
+      runtime.includes("if (disposed.current) return;") &&
+      runtime.includes("await saveBeforeLeaving()"),
   );
   check(
     "4.7 leaving the page warns only when something really is unsaved",
-    /const unsaved = \(\) => textDirty\.current !== null \|\| queue\.current\.size\(\) > 0/.test(
+    /const unsaved = \(\) =>\s*textDirty\.current !== null \|\| queue\.current\.size\(\) > 0 \|\| failedSaves\.current\.size > 0/.test(
       runtime,
     ) && /if \(!unsaved\(\)\) return;/.test(runtime),
   );
@@ -426,8 +428,10 @@ console.log("\n7. Submission stays single-flight and idempotent");
     /\} finally \{[\s\S]{0,80}submittingRef\.current = false;/.test(runtime),
   );
   check(
-    "7.3 'already submitted' is reported as done, not as a failure",
-    /if \(code === "not_open"\)[\s\S]{0,200}setPhase\("done"\)/.test(runtime),
+    "7.3 a closed attempt uses the verified server status, including abandoned",
+    /if \(state && !state\.isOpen\) \{[\s\S]{0,100}setClosedStatus\(state\.status\)/.test(
+      runtime,
+    ) && !/if \(code === "not_open"\)[\s\S]{0,100}setPhase\("done"\)/.test(runtime),
   );
   check(
     "7.4 an ambiguous failure asks the server before saying anything",
@@ -576,11 +580,12 @@ console.log("\n10. Recruitment is not addressed in workforce words");
       `sv: ${sv[key] ?? "MISSING"} | en: ${en[key] ?? "MISSING"}`,
     );
   }
-  // The workforce strings must survive untouched — this is a fork, not a
-  // rename, and an employee IS owed a development report.
+  // Submission does not itself prove that a participant report is available.
+  // Workforce report titles remain distinct when a report is actually shared.
   check(
-    "10.7 the workforce wording is unchanged for the workforce case",
-    WORKFORCE_EN.test(en["academy.done.body"] ?? "") &&
+    "10.7 submission confirms saved answers without promising a report",
+    /saved.*submitted/i.test(en["academy.done.body"] ?? "") &&
+      !/will receive.*report/i.test(en["academy.done.body"] ?? "") &&
       WORKFORCE_EN.test(en["academy.report.title"] ?? ""),
   );
 }

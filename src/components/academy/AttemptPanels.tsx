@@ -182,27 +182,35 @@ export function SubmittedNotice({
 }) {
   const { t } = useT();
   const bodyKey =
-    closedStatus === "released"
-      ? recruitment
-        ? "academy.done.releasedBodyRecruitment"
-        : "academy.done.releasedBody"
-      : closedStatus
+    closedStatus === "abandoned"
+      ? "academy.done.abandonedBody"
+      : closedStatus === "released"
         ? recruitment
-          ? "academy.done.alreadyBodyRecruitment"
-          : "academy.done.alreadyBody"
-        : recruitment
-          ? "academy.done.bodyRecruitment"
-          : "academy.done.body";
+          ? "academy.done.releasedBodyRecruitment"
+          : "academy.done.releasedBody"
+        : closedStatus
+          ? recruitment
+            ? "academy.done.alreadyBodyRecruitment"
+            : "academy.done.alreadyBody"
+          : recruitment
+            ? "academy.done.bodyRecruitment"
+            : "academy.done.body";
   return (
     <>
       <h1 className="flex items-center gap-2 text-lg font-semibold text-foreground">
         <CheckCircle2 className="h-5 w-5 text-accent" aria-hidden="true" />
-        {t(closedStatus ? "academy.done.alreadyTitle" : "academy.done.title")}
+        {t(
+          closedStatus === "abandoned"
+            ? "academy.done.abandonedTitle"
+            : closedStatus
+              ? "academy.done.alreadyTitle"
+              : "academy.done.title",
+        )}
       </h1>
       <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{t(bodyKey)}</p>
       {/* Said plainly, because a result that is not final yet must not look
           final. */}
-      {reviewsOpened > 0 && (
+      {closedStatus !== "abandoned" && reviewsOpened > 0 && (
         <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
           {t("academy.done.reviewPending")}
         </p>

@@ -176,7 +176,7 @@ test.describe("Test → interview → final report", () => {
     await page.locator(`a[href$="/academy/${state.attemptId}"]`).first().click();
     await expect(page).toHaveURL(new RegExp(`/academy/${state.attemptId}$`), { timeout: 60_000 });
     await page
-      .getByRole("button", { name: /^Börja$|^Fortsätt där du slutade$/ })
+      .getByRole("button", { name: /^Starta testet$|^Fortsätt testet$/ })
       .first()
       .click();
 

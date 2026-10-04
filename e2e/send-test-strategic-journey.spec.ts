@@ -366,7 +366,7 @@ test.describe("Skicka test — the strategic level, end to end", () => {
     await expect(intro).toContainText(/Arbetsbeteende som ledare/);
     await expect(intro).not.toContainText(/50 uppgifter/);
     await page
-      .getByRole("button", { name: /^Börja$|^Fortsätt där du slutade$/ })
+      .getByRole("button", { name: /^Starta testet$|^Fortsätt testet$/ })
       .first()
       .click();
 
@@ -398,7 +398,7 @@ test.describe("Skicka test — the strategic level, end to end", () => {
         interrupted = true;
         await page.reload();
         await page
-          .getByRole("button", { name: /^Fortsätt där du slutade$|^Börja$/ })
+          .getByRole("button", { name: /^Fortsätt testet$|^Starta testet$/ })
           .first()
           .click();
         expect(

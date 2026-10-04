@@ -762,6 +762,12 @@ jobs:
       # what made "Kandidater" a filter instead of a page). Also holds the
       # vocabulary, the pseudonymity of the list, and the keyboard/touch
       # properties of the controls.
+      - name: Invitation links and requirement explanations
+        run: |
+          bun run scripts/invitation-message-check.tsx
+          bun run scripts/requirement-explanation-check.ts
+          bun test scripts/auth-account-boundary.test.ts
+
       - name: Recruitment assessment UX check
         run: bun run recruitment-assessment-ux:check
 
@@ -1658,7 +1664,6 @@ jobs:
       - name: Invitation email guard check
         run: bun run invitation-email-guard:check
 
-
       # ── ADMIN PORTAL ────────────────────────────────────────────────────
       #
       # These guards were written alongside the Admin Portal and defined in
@@ -1757,7 +1762,6 @@ jobs:
       # controls run in negative-controls:all.
       - name: Page head language check
         run: bun run head-language:check
-
 
       - name: Production build
         run: bun run build
@@ -1920,7 +1924,6 @@ jobs:
           name: cv-export-pdfs
           path: artifacts/cv-export/*.pdf
           if-no-files-found: error
-
 
   # ── The signed-in CV journey, in a real browser ─────────────────────────
   #
@@ -2239,6 +2242,11 @@ jobs:
         env:
           E2E_BASE_URL: http://localhost:3100
         run: bun run e2e e2e/jobs-product-experience.spec.ts --project=chromium
+
+      - name: Reported user flows — desktop and mobile, Swedish and English
+        env:
+          E2E_BASE_URL: http://localhost:3100
+        run: bun run e2e e2e/cqrity-user-flows.spec.ts e2e/academy-user-flow.spec.ts e2e/career-analysis-availability.spec.ts e2e/application-draft-account-isolation.spec.ts --project=chromium --project=mobile-375
 
       - name: Upload jobs responsive evidence
         if: always()
