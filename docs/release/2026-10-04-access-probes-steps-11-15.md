@@ -45,17 +45,59 @@ They need a signed-in browser session; see below.
 
 ## Browser steps that need the owner (about 10 minutes)
 
-Accounts: the owner (platform administrator) and one more approved test account that is not the owner and not the test
-candidate. All pages are on `https://www.cqrityjob.com`.
+Corrected 2026-10-04 against the current UI (`src/i18n/dictionaries.ts`) and production (read-only):
 
-1. **Second account requests access.** Log in as the second test account (private window). Open `/employer/join?org=cqrityjob`
-   and send the access request.
-2. **Owner approves as an ordinary member.** Log in as the owner. Open `/employer/cqrityjob/settings`, the Team part, and
-   approve the request with the role **Member**. Do not give reviewer access.
-3. **Step 11 in the browser.** As the second account open `/employer/cqrityjob/reports`. Expected: a plain statement that
-   there is no access to results in this organisation, **not** an empty list. Save a screenshot.
-4. **Step 15 in the browser.** As the owner (platform administrator) open `/admin/employers`, the organisation
-   `cqrityjob`, its members, and suspend the second account. As the second account reload `/employer/cqrityjob/reports`
-   (denied) and open `/employer/join?org=cqrityjob` and send a request again. Expected: refused with the text containing
-   `ACCESS_REQUEST_MEMBERSHIP_BLOCKED` (access suspended or ended by a platform administrator). Save a screenshot.
-5. **Clean up.** As the owner/administrator remove the second account's membership again.
+- The join link takes the organisation **id**, not its slug. `?org=cqrityjob` shows "Länken saknar organisation".
+- The organisation `cqrityjob` has id `b901bdaf-6931-4b55-92b5-11053cf8ab6b`. Its only active member is the owner, who is both owner and platform administrator.
+- The owner approves the member role with "Godkänn som rekryterare". Owners cannot suspend members; only a platform administrator can, from `/admin/employers`.
+- The blocked request shows a Swedish sentence, not the error code.
+
+### People and accounts
+
+- **Owner**: the owner's own account. It is owner in `cqrityjob` and platform administrator.
+- **Test member**: a second, signed-in account that is neither the owner nor a member of `cqrityjob`. Use a private window for it.
+
+All pages are on `https://www.cqrityjob.com`.
+
+### Steps
+
+**1. The test member asks for access.**
+- Open `/employer/join?org=b901bdaf-6931-4b55-92b5-11053cf8ab6b`.
+- Expect the heading "Begär åtkomst till organisationen".
+- Click **Skicka begäran**. The message is optional.
+- Expect "Begäran skickad".
+
+**2. The owner approves as an ordinary member.**
+- Open `/employer/cqrityjob/settings` and scroll to **Team & behörigheter**.
+- Under "Väntar på ditt svar (1)", click **Godkänn som rekryterare**.
+- Do **not** click "Ge granskningsbehörighet".
+- Expect the person to appear with role "Rekryterare" and status "Aktiv".
+
+**3. Step 11: an ordinary member sees no reports.**
+- As the test member, open `/employer/cqrityjob/reports`.
+- Expect a notice, not a list:
+  - "Du har inte tillgång till organisationens intervjuer"
+  - followed by "… Just nu finns ingen intervju du har rätt att öppna."
+  - and "Be en ägare eller administratör i organisationen om åtkomst om du behöver den."
+- Take a screenshot.
+
+**4. Step 15: suspension blocks access and a new request.**
+- As the owner, open `/admin/employers` and choose the filter **Aktiva**.
+- Click **Granska** on CQrityjob, or open `/admin/employers/b901bdaf-6931-4b55-92b5-11053cf8ab6b` directly.
+- Under **Medlemmar**, click **Stäng av åtkomst** on the test member, then **Bekräfta**.
+- Expect "<namn>: åtkomsten är avstängd."
+- As the test member, reload `/employer/cqrityjob/reports`. Expect "Åtkomst ej tillgänglig".
+- As the test member, open the join link from step 1 again and click **Skicka begäran**.
+- Expect a red text: "Din åtkomst till den här organisationen har pausats eller avslutats av en plattformsadministratör, så du kan inte begära åtkomst på nytt. …".
+- Take a screenshot.
+
+**5. Clean up.**
+- As the owner, on the same member row, click **Ta bort** and then **Bekräfta**.
+- Expect "<namn> har tagits bort från organisationen."
+- The row stays, marked "Borttagen", as a trail.
+- Do not reactivate the test member.
+
+### What to send back
+
+- The two screenshots, from steps 3 and 4.
+- Anything that differs from the expected texts above.
