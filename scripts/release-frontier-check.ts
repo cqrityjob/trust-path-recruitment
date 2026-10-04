@@ -401,7 +401,25 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // is_platform_admin(auth.uid()), the grants are unchanged (authenticated SELECT only, no
 // client write), the functions that read the table are unchanged. Nothing is pending by
 // design now. Evidence: docs/release/2026-10-04-interview-config-contract-hosted-verification.md.
-const expectedPending: string[] = [];
+// 2026-10-04 07:56 UTC: #416 (merge abbc036e, every mandatory CI job green on fbc6e4c3)
+// verified applied read-only: 20270208090000_account_erasure_credential_details is the
+// last ledger row (370 rows, digest 538769fe5724a0d4561a645d3faf79d6; the first 369
+// unchanged, 01357df572629d745e667d2fedb20ba1); admin_delete_user_if_safe and the new
+// extraction trigger function equal the strict local replay; the shared append-only
+// function is unchanged. Nothing is pending by design now.
+// Evidence: docs/release/2026-10-04-account-erasure-hosted-verification.md.
+//
+// Pending by design, none applied hosted: the certification research integration
+// (docs/passport/certification-catalogue-integration.md): the schema
+// (20270212090000) and the data that records all 170 research decisions and adds
+// 140 definitions INACTIVE (20270213090000). The publication that makes exactly
+// those 140 selectable (20270214090000) is staged outside the migration path
+// until the application that renders them is published. Each name comes OFF this
+// list in the change that records its production evidence.
+const expectedPending: string[] = [
+  "20270212090000_sp_catalogue_research_foundation.sql",
+  "20270213090000_sp_catalogue_research_import.sql",
+];
 
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",

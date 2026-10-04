@@ -39,6 +39,23 @@ BEGIN
   RAISE NOTICE 'ok  %', _label;
 END $$;
 
+-- ── SINCE 20270213090000: THE REVIEWED FOURTEEN, NOT "EVERYTHING" ─────────
+-- The certification research import ADDS 140 definitions and 31 issuers, all
+-- inactive. This suite pins the fourteen definitions and five issuers that
+-- 20261111090000 reviewed; it must keep pinning exactly those, and must keep
+-- passing on a database that has not received the import at all (the rollback
+-- ladder runs it both ways). The additions have their own suite
+-- (security_passport_catalogue_research_test.sql). Looked up dynamically so the
+-- suite never names a table the schema under test might not have.
+CREATE OR REPLACE FUNCTION pg_temp.research_added()
+RETURNS TABLE (code text) LANGUAGE plpgsql AS $$
+BEGIN
+  IF to_regclass('public.sp_catalogue_research_records') IS NULL THEN RETURN; END IF;
+  RETURN QUERY EXECUTE
+    $q$SELECT credential_code FROM public.sp_catalogue_research_records
+        WHERE reconciliation_outcome = 'added_approved' AND credential_code IS NOT NULL$q$;
+END $$;
+
 /** One claim INSERT as role authenticated, reporting 'OK' or the SP_ code it
  *  was refused with. `_jur` and `_sub` are explicit so the suite can file the
  *  forged shapes as well as the canonical one. */
@@ -192,16 +209,19 @@ BEGIN
   PERFORM pg_temp.ok(_n = 14,
     '1.1 exactly 14 active global_professional definitions (got ' || _n || ')');
 
-  SELECT count(*) INTO _n FROM public.sp_certification_definitions;
-  PERFORM pg_temp.ok(_n = 14, '1.2 exactly 14 certification definitions');
+  SELECT count(*) INTO _n FROM public.sp_certification_definitions
+   WHERE credential_code NOT IN (SELECT code FROM pg_temp.research_added());
+  PERFORM pg_temp.ok(_n = 14, '1.2 exactly 14 reviewed certification definitions');
 
-  SELECT count(*) INTO _n FROM public.sp_certification_issuers;
-  PERFORM pg_temp.ok(_n = 5, '1.3 exactly 5 issuers');
+  SELECT count(DISTINCT d.issuer_id) INTO _n FROM public.sp_certification_definitions d
+   WHERE d.credential_code NOT IN (SELECT code FROM pg_temp.research_added());
+  PERFORM pg_temp.ok(_n = 5, '1.3 exactly 5 issuers behind them');
 
   FOR _r, _n IN
     SELECT i.issuer_code, count(*)::int
       FROM public.sp_certification_definitions d
       JOIN public.sp_certification_issuers i ON i.id = d.issuer_id
+     WHERE d.credential_code NOT IN (SELECT code FROM pg_temp.research_added())
      GROUP BY i.issuer_code ORDER BY i.issuer_code
   LOOP
     PERFORM pg_temp.ok(
@@ -210,7 +230,8 @@ BEGIN
   END LOOP;
 
   SELECT array_agg(code ORDER BY code) INTO _codes
-    FROM public.sp_credential_types WHERE scope_code = 'global_professional';
+    FROM public.sp_credential_types WHERE scope_code = 'global_professional'
+     AND code NOT IN (SELECT code FROM pg_temp.research_added());
   PERFORM pg_temp.ok(_codes = ARRAY[
       'INTL_ACAMS_CAMS','INTL_ACFE_CFE','INTL_ASIS_APP','INTL_ASIS_CPP',
       'INTL_ASIS_PCI','INTL_ASIS_PSP','INTL_ISACA_CISA','INTL_ISACA_CISM',
@@ -246,16 +267,35 @@ BEGIN
     '1.11 ISO is not an issuer: it publishes standards and awards no personal credential');
   PERFORM pg_temp.ok(NOT EXISTS (SELECT 1 FROM public.sp_credential_types
     WHERE scope_code = 'global_professional'
+      AND code NOT IN (SELECT code FROM pg_temp.research_added())
       AND (name_en ILIKE '%ISO 31000%' OR name_en ILIKE '%ISO 22301%'
            OR name_en ILIKE '%27001%')),
     '1.12 no ISO standard is seeded as a personal certification');
+  -- The research import later added PECB's personal certifications that are NAMED
+  -- after a standard ("PECB Certified ISO 22301 Lead Auditor"). They are awards
+  -- of a certification body to a person, not the standard: every definition it
+  -- added whose name mentions an ISO standard must be awarded by PECB, and
+  -- ISO itself must still not be an issuer (1.11).
+  PERFORM pg_temp.ok(NOT EXISTS (SELECT 1 FROM public.sp_credential_types t
+      JOIN public.sp_certification_definitions d ON d.credential_code = t.code
+      JOIN public.sp_certification_issuers i ON i.id = d.issuer_id
+     WHERE t.code IN (SELECT code FROM pg_temp.research_added())
+       AND (t.name_en ILIKE '%ISO 31000%' OR t.name_en ILIKE '%ISO 22301%' OR t.name_en ILIKE '%27001%')
+       AND (i.issuer_code <> 'PECB' OR t.name_en NOT ILIKE 'PECB Certified %')),
+    '1.12b an ISO-named definition added later is a PECB-awarded personal certification, never the standard itself');
 
   -- =====================================================================
   RAISE NOTICE 'GROUP 2 -- the sources were reviewed, and the honest gaps are honest';
   -- =====================================================================
   SELECT count(*) INTO _n FROM public.sp_certification_sources
-   WHERE reviewed_on <> DATE '2026-09-12';
-  PERFORM pg_temp.ok(_n = 0, '2.1 every source carries the review date 2026-09-12');
+   WHERE reviewed_on <> DATE '2026-09-12'
+     AND (credential_code IS NULL OR credential_code NOT IN (SELECT code FROM pg_temp.research_added()));
+  PERFORM pg_temp.ok(_n = 0, '2.1 every reviewed source carries the review date 2026-09-12');
+  -- The research import's own sources are dated by the research, never by this review.
+  SELECT count(*) INTO _n FROM public.sp_certification_sources
+   WHERE credential_code IN (SELECT code FROM pg_temp.research_added())
+     AND (reviewed_on <> DATE '2026-10-03' OR source_kind <> 'programme');
+  PERFORM pg_temp.ok(_n = 0, '2.1b and the sources the research import added carry the research date and are programme sources');
 
   SELECT count(*) INTO _n FROM public.sp_certification_sources WHERE url !~ '^https://';
   PERFORM pg_temp.ok(_n = 0, '2.2 every source URL is https');
@@ -426,7 +466,8 @@ BEGIN
   -- Its name says "International" and mentions CPP. Neither upgrades it.
   PERFORM pg_temp.ok(
     (SELECT count(*) FROM public.sp_credential_types
-      WHERE scope_code = 'global_professional') = 14,
+      WHERE scope_code = 'global_professional'
+        AND code NOT IN (SELECT code FROM pg_temp.research_added())) = 14,
     '4.3 the word "International" in a name changes no count');
 
   -- No certification detail may attach to it, because it is not global.
@@ -497,7 +538,8 @@ BEGIN
   -- Every one of the fourteen saves, canonically.
   _n := 0;
   FOR _r IN SELECT code FROM public.sp_credential_types
-             WHERE scope_code = 'global_professional' ORDER BY code
+             WHERE scope_code = 'global_professional'
+               AND code NOT IN (SELECT a.code FROM pg_temp.research_added() a) ORDER BY code
   LOOP
     IF pg_temp.file_canonical(_gb, _r, 'active') = 'OK' THEN _n := _n + 1; END IF;
   END LOOP;

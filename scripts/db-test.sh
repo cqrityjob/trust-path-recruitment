@@ -223,6 +223,56 @@ psql_q -d "$TEST_DB" -f supabase/tests/client_table_privilege_hardening_test.sql
 echo "==> Manual retention routines (docs/legal/retention-runbook-v1.md), run as written on synthetic data"
 psql_q -d "$TEST_DB" -f supabase/tests/retention_manual_routines_test.sql
 
+# 20270208090000: account erasure removes the person's credential metadata and
+# document readings, which used to keep their Passport rows alive and make
+# admin_delete_user_if_safe() refuse with ERASURE_INCOMPLETE. Run straight after
+# the replay: later blocks re-execute older migrations, and 20260917090000
+# would put the pre-fix body back. Each planted control must fail on its NAMED
+# assertion, or the suite proves nothing.
+echo "==> Running account erasure with credential metadata assertions"
+ER_SUITE=supabase/tests/account_erasure_credential_details_test.sql
+ER_MIG=supabase/migrations/20270208090000_account_erasure_credential_details.sql
+ER_RB=supabase/rollback/20270208090000_account_erasure_credential_details_rollback.sql
+ER_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f "$ER_SUITE" 2>&1)" || { echo "$ER_OUT" | grep -E "ERROR|FAILED" | head -5; echo "FAIL: account erasure suite"; exit 1; }
+ER_PASSED="$(printf '%s\n' "$ER_OUT" | grep -c "ok  " || true)"
+[ "$ER_PASSED" -ge 22 ] || { echo "FAIL: account erasure assertion shortfall: $ER_PASSED (floor 22)"; exit 1; }
+echo "    ok  $ER_PASSED account erasure assertions passed"
+er_nc_expect_fail() {
+  local label="$1" expect="$2" mutation="$3" out rc
+  set +e
+  out="$(printf 'BEGIN;\n%s\n\\i %s\n' "$mutation" "$ER_SUITE" | psql -v ON_ERROR_STOP=1 -d "$TEST_DB" 2>&1)"
+  rc=$?
+  set -e
+  if [ "$rc" -eq 0 ] || ! echo "$out" | grep -q "ASSERTION FAILED: ${expect}"; then
+    echo "FAIL: planted control '${label}': the suite did not fail on ${expect} -- it proves nothing" >&2
+    echo "$out" | grep -E "ERROR|FAILED" | head -3 >&2 || true
+    exit 1
+  fi
+  echo "    ok  NC ${label}: the suite fails on ${expect}"
+}
+ER_FN="$(sed -n '/^CREATE OR REPLACE FUNCTION public.admin_delete_user_if_safe(/,/^\$\$;$/p' "$ER_MIG")"
+ER_FN_NO_BLOCK="$(printf '%s\n' "$ER_FN" | sed '/^  -- ── Dependents that do not name the account/,/^  IF _n > 0 THEN _dependents := _dependents || jsonb_build_object(.sp_credential_details/d')"
+[ -n "$ER_FN" ] && [ "$ER_FN_NO_BLOCK" != "$ER_FN" ] || { echo "FAIL: account erasure control anchors not found"; exit 1; }
+er_nc_expect_fail "ER NC1 full rollback of 20270208090000" "ER1.2" "$(cat "$ER_RB")"
+er_nc_expect_fail "ER NC2 the dependents are not removed first" "ER2.0" "$ER_FN_NO_BLOCK"
+er_nc_expect_fail "ER NC3 the reading is append-only with no erasure exception" "ER2.0" "$(cat <<'SQL'
+DROP TRIGGER sp_extractions_append_only ON public.sp_evidence_extractions;
+CREATE TRIGGER sp_extractions_append_only BEFORE UPDATE OR DELETE ON public.sp_evidence_extractions
+  FOR EACH ROW EXECUTE FUNCTION public.sp_extractions_append_only();
+SQL
+)"
+er_nc_expect_fail "ER NC4 the exception ignores who is being erased" "ER4.4" "$(cat <<'SQL'
+CREATE OR REPLACE FUNCTION public.sp_evidence_extractions_append_only()
+RETURNS trigger LANGUAGE plpgsql SET search_path = '' AS $$
+BEGIN
+  IF TG_OP = 'DELETE' AND nullif(current_setting('trustpath.deleting_account', true), '') IS NOT NULL
+     AND public.is_superadmin(auth.uid()) THEN RETURN OLD; END IF;
+  RAISE EXCEPTION 'SP_EXTRACTION_APPEND_ONLY';
+END $$;
+SQL
+)"
+echo "    ok  four planted defects, each caught on its named assertion"
+
 # ---------------------------------------------------------------------------
 # 20270202090000 / 20270203090000 / 20270204090000: who may read what an
 # organisation learned about a person, and the circumvention of a suspension.
@@ -2710,12 +2760,37 @@ psql_q -d postgres -c "DROP DATABASE ${TEST_DB}_sw_race;" >/dev/null
 
 # International Passport: test fixtures roll back; rollback refuses adoption.
 for passport_round in before after; do
-  for passport_suite in international_foundation international_wallet credential_sharing_v2 closed_catalogue organisation_roles pilot_scope catalogue_completeness hayat_assessments india_national_qualifications public_pilot_availability open_uk_dubai; do
+  for passport_suite in international_foundation international_wallet credential_sharing_v2 closed_catalogue organisation_roles pilot_scope catalogue_completeness hayat_assessments india_national_qualifications public_pilot_availability open_uk_dubai catalogue_research; do
     passport_output="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f "supabase/tests/security_passport_${passport_suite}_test.sql" 2>&1)" || { echo "$passport_output"; exit 1; }
     passport_count="$(printf '%s\n' "$passport_output" | grep -c 'NOTICE:  ok ' || true)"
     echo "    $passport_count assertions passed: Passport $passport_suite ($passport_round rollback/reapply)"
   done
   if [ "$passport_round" = before ]; then
+    # 20270212090000 / 20270213090000 (the certification research integration:
+    # foundation, then the import) are the newest Passport units and stand down
+    # FIRST, import then foundation. (The publication is staged outside the
+    # migration path until the application is published: docs/passport/
+    # certification-catalogue-integration.md.) The import removes exactly what it
+    # added; the foundation refuses while anything depends on it. Each must leave
+    # nothing behind, and the suite must notice.
+    if psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" -f "supabase/rollback/20270212090000_sp_catalogue_research_foundation_rollback.sql" >/dev/null 2>&1; then
+      echo "FAIL: the foundation rollback ran while the import still existed" >&2
+      exit 1
+    fi
+    echo "    ok  the foundation rollback refuses while the import exists, and changes nothing"
+    psql_q -d "$TEST_DB" -f "supabase/rollback/20270213090000_sp_catalogue_research_import_rollback.sql" >/dev/null
+    rs_import_left="$(psql_q -d "$TEST_DB" -Atc "SELECT (SELECT count(*) FROM public.sp_catalogue_research_records) + (SELECT count(*) FROM public.sp_credential_types WHERE code LIKE 'INTL\\_%') - 14 + (SELECT count(*) FROM public.sp_certification_issuers) - 5 + (SELECT count(*) FROM public.sp_certification_definitions) - 14")"
+    [ "$rs_import_left" = "0" ] || { echo "FAIL: 20270213090000 rollback left a residue ($rs_import_left)"; exit 1; }
+    echo "    ok  the research import stood down: no record, definition or issuer it added remains"
+    psql_q -d "$TEST_DB" -f "supabase/rollback/20270212090000_sp_catalogue_research_foundation_rollback.sql" >/dev/null
+    rs_found_left="$(psql_q -d "$TEST_DB" -Atc "SELECT (to_regclass('public.sp_catalogue_research_records') IS NOT NULL)::int + (to_regclass('public.sp_catalogue_requests') IS NOT NULL)::int + (to_regclass('public.sp_certification_definition_aliases') IS NOT NULL)::int + (SELECT count(*) FROM pg_proc WHERE pronamespace='public'::regnamespace AND proname IN ('sp_catalogue_unavailable_matches','sp_request_catalogue_definition','sp_list_my_catalogue_requests','sp_admin_resolve_catalogue_request','sp_admin_review_research_record','sp_catalogue_research_provenance_immutable')) + (SELECT count(*) FROM public.sp_credential_classes) - 8")"
+    [ "$rs_found_left" = "0" ] || { echo "FAIL: 20270212090000 rollback left $rs_found_left object(s) behind"; exit 1; }
+    echo "    ok  the research foundation stood down: no table, function or class remains"
+    if psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_passport_catalogue_research_test.sql >/dev/null 2>&1; then
+      echo "FAIL: the research suite passed WITHOUT its migrations -- it proves nothing" >&2
+      exit 1
+    fi
+    echo "    ok  and the research suite refuses to pass without the migrations (negative control)"
     # 20261221090000 (the UK and Dubai opened as a public pilot) is DATA only
     # and the newest Passport migration: it stands down FIRST, returning the
     # three markets and their 44 definitions to internal pilot and touching no
@@ -2840,8 +2915,77 @@ for passport_round in before after; do
     ou_back="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" -f "supabase/migrations/20261221090000_sp_open_uk_dubai_public_pilot.sql" 2>&1)" || { echo "$ou_back"; exit 1; }
     printf '%s' "$ou_back" | grep -q 'SP_OPEN_UK_DUBAI_PROOF ok' || { echo "FAIL: 20261221090000 did not re-apply on top of its rollback"; exit 1; }
     echo "    ok  the UK and Dubai reopened as a public pilot on top of the availability model: proof ok"
+    # The certification research integration, back on top: foundation, then import.
+    for rs_migration in 20270212090000_sp_catalogue_research_foundation 20270213090000_sp_catalogue_research_import; do
+      psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" -f "supabase/migrations/${rs_migration}.sql" >/dev/null 2>&1 || { echo "FAIL: ${rs_migration} did not re-apply on top of its rollback"; exit 1; }
+    done
+    rs_back="$(psql_q -d "$TEST_DB" -Atc "SELECT (SELECT count(*) FROM public.sp_catalogue_research_records) || '/' || (SELECT count(*) FROM public.sp_credential_types WHERE code LIKE 'INTL\_%' AND is_active)")"
+    [ "$rs_back" = "170/14" ] || { echo "FAIL: the research integration re-applied to $rs_back, expected 170 records and only the original 14 active international definitions"; exit 1; }
+    echo "    ok  the research integration reapplied from nothing: 170 records, 140 inactive additions, the original 14 definitions still the only active ones"
   fi
 done
+
+# Negative controls for the certification research suite. Each plants ONE defect in
+# a throwaway clone of the finished database and requires the suite to fail on a
+# NAMED assertion; a control that changes nothing, or that fails elsewhere, proves
+# nothing and stops the run. Nothing needs restoring: the clone is dropped.
+RS_FOUNDATION=supabase/migrations/20270212090000_sp_catalogue_research_foundation.sql
+RS_SUITE=supabase/tests/security_passport_catalogue_research_test.sql
+rs_fn() { sed -n "/^CREATE OR REPLACE FUNCTION public.$1(/,/^END \$fn\$;/p" "$RS_FOUNDATION"; }
+rs_nc_expect_fail() {
+  local label="$1" expect="$2" mutation="$3"
+  local ncdb="${TEST_DB}_rs_nc"
+  psql_q -d postgres -c "DROP DATABASE IF EXISTS ${ncdb};" >/dev/null
+  psql_q -d postgres -c "CREATE DATABASE ${ncdb} TEMPLATE ${TEST_DB};" >/dev/null
+  psql_q -d "$ncdb" -c "$mutation" >/dev/null
+  set +e
+  local out; out="$(psql -v ON_ERROR_STOP=1 -d "$ncdb" -f "$RS_SUITE" 2>&1)"; local rc=$?
+  set -e
+  psql_q -d postgres -c "DROP DATABASE ${ncdb};" >/dev/null
+  if [ "$rc" -eq 0 ] || ! echo "$out" | grep -q "ASSERTION FAILED: ${expect} "; then
+    echo "FAIL: research negative control '${label}': the suite did not fail on ${expect} -- it proves nothing" >&2
+    echo "$out" | grep -E "ERROR|FAILED" | head -3 >&2 || true
+    exit 1
+  fi
+  echo "    ok  NC ${label}: the suite fails (ASSERTION FAILED: ${expect})"
+}
+rs_planted() {
+  local fn="$1" from="$2" to="$3" orig mutated
+  orig="$(rs_fn "$fn")"
+  mutated="$(printf '%s' "$orig" | sed "s/$from/$to/")"
+  if [ -z "$orig" ] || [ "$mutated" = "$orig" ]; then
+    echo "FAIL: research negative control anchor not found in $fn: $from" >&2
+    exit 1
+  fi
+  printf '%s' "$mutated"
+}
+echo "==> Running the certification research negative controls"
+rs_nc_expect_fail "RS NC1 a holder may decide a research record" RS9.2 "$(rs_planted sp_admin_review_research_record 'IF NOT public.is_platform_admin(_caller) THEN' 'IF false THEN')"
+rs_nc_expect_fail "RS NC2 a holder may resolve a request" RS9.1 "$(rs_planted sp_admin_resolve_catalogue_request 'IF NOT public.is_platform_admin(_caller) THEN' 'IF false THEN')"
+rs_nc_expect_fail "RS NC3 an in-app decision may approve" RS9.13 "$(rs_planted sp_admin_review_research_record "NOT IN ('pending', 'needs_information', 'excluded')" "NOT IN ('pending', 'needs_information', 'excluded', 'approved')")"
+rs_nc_expect_fail "RS NC4 a published record may be withdrawn in-app" RS9.14 "$(rs_planted sp_admin_review_research_record 'IF _r.credential_code IS NOT NULL THEN' 'IF false THEN')"
+rs_nc_expect_fail "RS NC5 a request may carry a non-https link" RS7.8 "$(rs_planted sp_request_catalogue_definition '_url !~ ' 'false AND _url !~ ')"
+rs_nc_expect_fail "RS NC6 the unavailable search lists available awards" RS8.2 "$(rs_planted sp_catalogue_unavailable_matches 'r.credential_code IS NULL' 'true' | sed "s/r.reconciliation_outcome IN ('retained_for_review', 'excluded')/true/")"
+rs_nc_expect_fail "RS NC7 the researched facts may be edited" RS1.11 "DROP TRIGGER sp_catalogue_research_provenance_immutable_trg ON public.sp_catalogue_research_records;"
+rs_nc_expect_fail "RS NC8 every holder may read the research records" RS9.3 "DROP POLICY sp_catalogue_research_records_admin_read ON public.sp_catalogue_research_records; CREATE POLICY sp_catalogue_research_records_admin_read ON public.sp_catalogue_research_records FOR SELECT TO authenticated USING (true);"
+rs_nc_expect_fail "RS NC9 a double submit is not refused by the database" RS7.5 "DROP INDEX public.sp_catalogue_requests_one_open;"
+rs_nc_expect_fail "RS NC10 a holder may write a request row directly" RS9.7 "GRANT INSERT ON public.sp_catalogue_requests TO authenticated;"
+rs_nc_expect_fail "RS NC11 a retained record may lose its issue" RS1.15 "ALTER TABLE public.sp_catalogue_research_records DROP CONSTRAINT sp_research_retained_is_actionable;"
+rs_nc_expect_fail "RS NC12 a new definition infers lifetime validity" RS3.3 "UPDATE public.sp_credential_types SET allows_no_expiry = true WHERE code = 'INTL_NEBOSH_IGC';"
+rs_nc_expect_fail "RS NC13 a new definition is given a country" RS3.2 "UPDATE public.sp_credential_types SET jurisdiction_code = 'GB', scope_code = 'national_regulated' WHERE code = 'INTL_CII_DIPLOMA_INSURANCE';"
+rs_nc_expect_fail "RS NC14 an administrator may reopen past the allowance" RS9.28 "$(rs_planted sp_admin_resolve_catalogue_request "IF _status = 'open' AND _q.status <> 'open' AND" 'IF false AND')"
+echo "    ok  fourteen planted defects, each caught on its named assertion"
+
+# The ten-open allowance under real concurrency: two sessions at once, for two
+# distinct requests and for a request racing an administrator's reopen, then
+# the same races against the functions with the per-holder lock stripped (the
+# negative control must reproduce the overrun). In a throwaway clone: the
+# fixtures are committed and the control replaces two functions.
+echo "==> Running the catalogue request allowance race (two sessions)"
+psql_q -d postgres -c "DROP DATABASE IF EXISTS ${TEST_DB}_rs_race;" >/dev/null
+psql_q -d postgres -c "CREATE DATABASE ${TEST_DB}_rs_race TEMPLATE ${TEST_DB};" >/dev/null
+PGDATABASE="${TEST_DB}_rs_race" bash scripts/catalogue-request-race-test.sh
+psql_q -d postgres -c "DROP DATABASE ${TEST_DB}_rs_race;" >/dev/null
 
 # Proof case K: the administrator's diagnosis (catalogue-diagnostics.ts, the
 # code behind /admin/passport-catalogue) against what the database actually
@@ -9021,6 +9165,11 @@ psql_q -d postgres -c "DROP DATABASE ${PASSPORT_MAIN_TEST_DB}_pristine;" >/dev/n
 # as adoption to 20261118100000's rollback. Then 20261204090000 (HAYAT
 # assessments), whose triggers sit on sp_claims and sp_evidence. This database
 # is discarded at the end of the block, so none is reapplied here.
+# The certification research integration (20270212090000, 20270213090000) is
+# newer than all of these and stands down first, in its own reverse order:
+# import, then foundation.
+psql_q -d "$TEST_DB" -f supabase/rollback/20270213090000_sp_catalogue_research_import_rollback.sql >/dev/null
+psql_q -d "$TEST_DB" -f supabase/rollback/20270212090000_sp_catalogue_research_foundation_rollback.sql >/dev/null
 psql_q -d "$TEST_DB" -f supabase/rollback/20261221090000_sp_open_uk_dubai_public_pilot_rollback.sql >/dev/null
 psql_q -d "$TEST_DB" -f supabase/rollback/20261220090000_sp_public_pilot_availability_rollback.sql >/dev/null
 psql_q -d "$TEST_DB" -f supabase/rollback/20261214090000_sp_india_national_qualifications_rollback.sql >/dev/null
@@ -10416,6 +10565,11 @@ fi
 # rollbacks below restore, and its rows would read as adoption to the
 # foundation rollback further down. None is re-applied: none of the remaining
 # suites reads them.
+# The certification research integration (20270212090000, 20270213090000) is
+# newer than all of these and stands down first, in its own reverse order:
+# import, then foundation.
+psql_q -d "$TEST_DB" -f supabase/rollback/20270213090000_sp_catalogue_research_import_rollback.sql >/dev/null
+psql_q -d "$TEST_DB" -f supabase/rollback/20270212090000_sp_catalogue_research_foundation_rollback.sql >/dev/null
 psql_q -d "$TEST_DB" -f supabase/rollback/20261221090000_sp_open_uk_dubai_public_pilot_rollback.sql >/dev/null
 psql_q -d "$TEST_DB" -f supabase/rollback/20261220090000_sp_public_pilot_availability_rollback.sql >/dev/null
 psql_q -d "$TEST_DB" -f supabase/rollback/20261214090000_sp_india_national_qualifications_rollback.sql >/dev/null
