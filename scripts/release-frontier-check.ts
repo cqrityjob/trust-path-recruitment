@@ -419,7 +419,11 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // those 140 selectable (20270214090000) is staged outside the migration path until the
 // application that renders them is published.
 // Evidence: docs/release/2026-10-04-catalogue-schema-hosted-verification.md.
-const expectedPending: string[] = [];
+//
+// Pending by design, not applied hosted: the publication of the 140 researched definitions
+// (20270214090000), released only after the application that renders them is published and
+// verified. The name comes OFF this list in the change that records its production evidence.
+const expectedPending: string[] = ["20270214090000_sp_catalogue_research_publish.sql"];
 
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",

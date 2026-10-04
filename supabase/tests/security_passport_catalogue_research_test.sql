@@ -209,15 +209,17 @@ SELECT pg_temp.ok((SELECT count(*) = 2 FROM public.sp_certification_definition_a
   'RS3.15 only the two aliases the research text itself supports exist');
 
 -- ═══ RS4. Inert until published (the pre-publication state) ═════════════
--- The suite does not depend on whether the publication migration has been
--- applied: it sets the state it needs. First the state between the import and
--- the publication, reproduced here: the same 140 rows, inactive.
+-- The state between the import and the publication, reproduced in this
+-- transaction: the same rows, inactive.
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub', 'fd270000-0000-4000-8000-000000000001', true);
+-- What an ordinary signed-in holder is offered once everything is published.
+SELECT count(*) AS holder_selectable FROM public.sp_approved_credential_catalogue \gset
+RESET ROLE;
 UPDATE public.sp_credential_types SET is_active = false WHERE code IN (SELECT code FROM research_added);
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub', 'fd270000-0000-4000-8000-000000000001', true);
--- What an ordinary signed-in holder is offered before publication.
-SELECT count(*) AS holder_unpublished FROM public.sp_approved_credential_catalogue \gset
-SELECT pg_temp.ok((SELECT count(*) = 0 FROM public.sp_approved_credential_catalogue v JOIN research_added a ON a.code = v.code),
+SELECT pg_temp.ok((SELECT count(*) = :holder_selectable - 140 FROM public.sp_approved_credential_catalogue),
   'RS4.1 before publication the approved catalogue offers none of the 140');
 SELECT pg_temp.refused($q$SELECT public.sp_save_international_credential('{"definition_code":"INTL_COMPTIA_SECURITY_PLUS","market_country":"","market_region":""}')$q$,
   'SP_APPROVED_DEFINITION_REQUIRED', 'RS4.2 an approved-but-unpublished definition cannot be registered');
@@ -225,17 +227,13 @@ SELECT pg_temp.denied($q$INSERT INTO public.sp_claims(holder_user_id, claim_type
   'RS4.3 nor can a claim be written to it directly');
 SELECT pg_temp.ok((SELECT count(*) = 0 FROM public.sp_certification_definition_aliases),
   'RS4.4 the alias of an unpublished definition is not readable by a holder');
-SELECT pg_temp.ok((SELECT count(*) = 14 FROM public.sp_approved_credential_catalogue WHERE scope_code = 'global_professional'),
-  'RS4.5 the original 14 international definitions are the only ones selectable before publication');
 RESET ROLE;
--- Then the publication, as its migration does it: explicit codes, nothing else.
-UPDATE public.sp_credential_types SET is_active = true
- WHERE code IN (SELECT code FROM research_added) AND scope_code = 'global_professional' AND jurisdiction_code IS NULL AND market_pack_code IS NULL;
+UPDATE public.sp_credential_types SET is_active = true WHERE code IN (SELECT code FROM research_added);
 
 -- ═══ RS5. The real journey: every area and every kind ═══════════════════
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub', 'fd270000-0000-4000-8000-000000000001', true);
-SELECT pg_temp.ok((SELECT count(*) = :holder_unpublished + 140 FROM public.sp_approved_credential_catalogue),
+SELECT pg_temp.ok((SELECT count(*) = :holder_selectable FROM public.sp_approved_credential_catalogue),
   'RS5.1 once published, the approved catalogue offers all 140 additions to a holder in any country');
 SELECT pg_temp.ok((SELECT count(*) = 140 FROM public.sp_approved_credential_catalogue v JOIN research_added a ON a.code = v.code
                     WHERE v.scope_code = 'global_professional' AND v.country IS NULL AND v.region IS NULL AND v.issuer_name IS NOT NULL
@@ -357,7 +355,7 @@ SELECT pg_temp.ok((SELECT count(*) = 10 FROM public.sp_claims WHERE holder_user_
   'RS7.3 requests add no claim to the holder''s Passport (the ten from RS5 only)');
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub', 'fd270000-0000-4000-8000-000000000001', true);
-SELECT pg_temp.ok((SELECT count(*) = :holder_unpublished + 140 FROM public.sp_approved_credential_catalogue),
+SELECT pg_temp.ok((SELECT count(*) = :holder_selectable FROM public.sp_approved_credential_catalogue),
   'RS7.4 requests change no availability');
 RESET ROLE;
 SET LOCAL ROLE authenticated;

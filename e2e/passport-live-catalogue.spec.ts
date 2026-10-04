@@ -326,13 +326,13 @@ test("6 · admin: the catalogue page says WHY each researched definition is or i
     await page.goto(`${base}/admin/passport-catalogue`);
     const root = page.locator("[data-admin-passport-catalogue]");
     await expect(root.locator("[data-catalogue-counts]")).toBeVisible({ timeout: 30_000 });
-    // 14 international + 8 Swedish are selectable by everyone; all 44 GB, NI and
+    // 14 international + 8 Swedish + the 140 definitions the certification research
+    // publication approved (20270214090000) are selectable by everyone; all 44 GB, NI and
     // Dubai definitions by their own market's pilot members; Abu Dhabi is closed.
-    await expect(root.locator('[data-count="selectable"]')).toHaveText("22");
+    await expect(root.locator('[data-count="selectable"]')).toHaveText("162");
     await expect(root.locator('[data-count="selectable_pilot_members"]')).toHaveText("44");
-    // The 140 definitions the certification research import added are inactive: they await
-    // the publication migration, and nothing about them is selectable.
-    await expect(root.locator('[data-count="awaiting_definition_approval"]')).toHaveText("140");
+    // Nothing is left awaiting approval once the publication has been applied.
+    await expect(root.locator('[data-count="awaiting_definition_approval"]')).toHaveText("0");
     await expect(root.locator('[data-count="retired"]')).toHaveText("0");
     await expect(root.locator('[data-count="market_closed"]')).toHaveText("7");
     await expect(root.locator('[data-count="blocked"]')).toHaveText("0");

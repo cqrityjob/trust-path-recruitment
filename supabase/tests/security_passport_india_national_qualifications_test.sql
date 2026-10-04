@@ -23,6 +23,14 @@
 -- Everything is inside one transaction and rolled back.
 \set ON_ERROR_STOP on
 BEGIN;
+-- The 140 definitions the certification research import added, by code, captured BEFORE any
+-- role switch: the research records are administrator-only, so an authenticated holder (the
+-- role these assertions count as) could not read them, and counting "except those" would
+-- silently count none.
+CREATE TEMP TABLE research_codes AS
+  SELECT credential_code AS code FROM public.sp_catalogue_research_records
+   WHERE reconciliation_outcome='added_approved' AND credential_code IS NOT NULL;
+GRANT SELECT ON research_codes TO authenticated;
 CREATE FUNCTION pg_temp.ok(b boolean,label text) RETURNS void LANGUAGE plpgsql AS $$ BEGIN
  IF b IS DISTINCT FROM true THEN RAISE EXCEPTION 'ASSERTION FAILED: %',label; END IF;
  RAISE NOTICE 'ok %',label; END $$;
@@ -98,12 +106,15 @@ SELECT pg_temp.ok((SELECT count(*)=4 FROM public.sp_approved_credential_catalogu
  '2.2 the holder is offered all four, with the issuer to be stated from the certificate');
 SELECT count(*) AS se_n FROM public.sp_approved_credential_catalogue WHERE country='SE' \gset
 SELECT count(*) AS intl_n FROM public.sp_approved_credential_catalogue WHERE scope_code='global_professional' \gset
+-- 20270214090000 publishes the 140 researched definitions as international certifications:
+-- they are counted apart from the 14 reviewed ones (zero before the publication, 140 after).
+SELECT count(*) AS research_n FROM public.sp_approved_credential_catalogue WHERE code IN (SELECT code FROM research_codes) \gset
 -- Since 20261221090000 the UK and Dubai are a public pilot: their 44 opened
 -- definitions reach this holder too, with no grant, and Abu Dhabi none.
-SELECT pg_temp.ok(:se_n=8 AND :intl_n=14
+SELECT pg_temp.ok(:se_n=8 AND :intl_n-:research_n=14 AND :research_n IN (0,140)
    AND (SELECT count(*)=44 FROM public.sp_approved_credential_catalogue WHERE country IN ('GB','AE'))
    AND (SELECT count(*)=0 FROM public.sp_approved_credential_catalogue WHERE region='AE-AZ'),
- '2.3 Sweden (8) and the international certifications (14) are unchanged; GB and Dubai are their 44 public-pilot definitions, Abu Dhabi none');
+ '2.3 Sweden (8) and the 14 reviewed international certifications are unchanged (the 140 researched ones are all offered or none); GB and Dubai are their 44 public-pilot definitions, Abu Dhabi none');
 
 -- GUARDED RELEASE. Over PostgREST's listing path, an application that does not
 -- send the catalogue contract (one deployed before this release) is offered no
