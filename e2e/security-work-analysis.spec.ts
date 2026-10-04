@@ -1,3 +1,4 @@
+import { selectSiteLanguage } from "./support/site-language";
 /** Real local auth/storage/parser/database journey. No private references or live AI calls. */
 import { test, expect, type Page } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
@@ -104,20 +105,9 @@ for (const locale of ["sv", "en"] as const) {
     const l = (sv: string, en: string) => (locale === "sv" ? sv : en);
     const address = `sw-${test.info().project.name}-${locale}-ordinary${process.env.SW_BROWSER_RUN_ID ? `-${process.env.SW_BROWSER_RUN_ID}` : ""}@example.test`;
     await login(page, address, "/my-career");
-    // Choose the language only once the signed-in chrome has settled. The
-    // candidate nav renders only after hydration AND the header's session
-    // read, which is also what hides the desktop utility bar's switcher.
-    // Clicking before that raced it: the resolved switcher could be swapped
-    // out and hidden mid-click (CI, 2026-09-26). The settled page keeps a
-    // visible switcher, and the switch itself is then proven, not assumed.
-    const desktopNav = page.locator('[data-candidate-app-nav="desktop"]');
-    await expect(desktopNav).toBeAttached();
-    const switcher = page.getByRole("button", { name: locale, exact: true }).first();
-    await switcher.click();
-    await expect(switcher).toHaveAttribute("aria-pressed", "true");
-    await expect(page.locator("html")).toHaveAttribute("lang", new RegExp(`^${locale}`));
+    await selectSiteLanguage(page, locale);
     if (page.viewportSize()!.width < 1024)
-      await page.getByRole("button", { name: /Öppna meny|Open menu/i }).click();
+      await page.getByRole("button", { name: /Öppna menyn|Open menu/i }).click();
     const navigation = page.locator("[data-candidate-app-nav]").filter({ visible: true });
     await expect(navigation.locator("a")).toHaveCount(7);
     expect(

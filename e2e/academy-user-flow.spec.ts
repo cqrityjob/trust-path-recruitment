@@ -1,3 +1,4 @@
+import { selectSiteLanguage } from "./support/site-language";
 import { fromJSON } from "seroval";
 import { test, expect, type Route } from "@playwright/test";
 import { mount, ok, takeMountBookkeeping, ATTEMPT_ID } from "./support/career-home-harness";
@@ -401,4 +402,35 @@ test("same-document account switch clears answers, and a fresh session resumes s
   await switchTo(accountA);
   await page.goto(`/academy/${ATTEMPT_ID}`);
   await resume();
+});
+
+test("shared language controls switch both ways from Security Work", async ({ page }) => {
+  await mount(page, "hub_active", {
+    lang: "sv",
+    path: "/security-work",
+    ready: '[data-testid="sw-entry"]',
+    overrides: { getSecurityWorkEntry: ok({ ok: true, data: { workspaces: [] } }) },
+  });
+  await selectSiteLanguage(page, "en");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("My Security Work");
+  await expect(page).toHaveURL((url) => url.pathname === "/security-work");
+  if ((page.viewportSize()?.width ?? 1280) >= 1024) {
+    const account = page
+      .locator("header")
+      .getByRole("button", { name: "Account and settings", exact: true });
+    await account.focus();
+    await page.keyboard.press("Enter");
+    await expect(page.getByRole("menuitemradio", { name: "English", exact: true })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+    const swedish = page.getByRole("menuitemradio", { name: "Svenska", exact: true });
+    await swedish.focus();
+    await page.keyboard.press("Enter");
+    await expect(page.locator("html")).toHaveAttribute("lang", "sv");
+  } else {
+    await selectSiteLanguage(page, "sv");
+  }
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Mitt säkerhetsarbete");
+  await expect(page.locator('[role="menu"]')).toHaveCount(0);
 });

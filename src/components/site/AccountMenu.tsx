@@ -62,6 +62,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useT } from "@/i18n/context";
+import { LanguageSwitcher } from "./LanguageSwitcher";
 import { workspaceStatusLabelKey } from "./workspace-status";
 
 /** One organisation this person actually belongs to, as the database
@@ -154,6 +155,9 @@ export function AccountMenu({
             </span>
           ) : null}
         </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+
+        <LanguageSwitcher menu />
         <DropdownMenuSeparator />
 
         {/* ── Workspaces ─────────────────────────────────────────────── */}

@@ -66,8 +66,8 @@ Observation nedan är vad testaren rapporterade. Diagnos är vad kod, lokal data
 
 - **Observation:** Efterhandsdelning var klickbar utan verifierade uppgifter.
 - **Diagnos:** Efterhands-RPC kunde skapa en tom/identitetsbaserad delning. Mottagarurvalet filtrerade fortfarande verified/active; klickbarheten bevisar inte överföring av overifierade meriter.
-- **Ändring:** Båda gränssnitt använder samma verifierade innehållserbjudande; databasfunktionen nekar även direktanrop när verifierat innehåll saknas. Konkret tomtext och ”Öppna Security Passport”. Allmän delning behåller sina regler och statusetiketter.
-- **Verifiering:** Ny isolerad databas från hela migrationskedjan. Ansökningsdelning 38 + 7 och allmän selected-sharing 122 assertions godkända. Migrationen är **pending**, inte applicerad i produktion; rollback och verifiering registrerade i release-state.
+- **Ändring:** Båda gränssnitt använder samma verifierade innehållserbjudande; databasfunktionen nekar även direktanrop när verifierat innehåll saknas. Konkret tomtext och ”Öppna Security Passport”. En fokuserad ansökningsdelning återkallas om meriten raderas, så att kontoradering fungerar utan att urvalet breddas. Allmän delning behåller sina regler och statusetiketter.
+- **Verifiering:** Ny isolerad databas från hela migrationskedjan. Ansökningsdelning 38 + 5 + 7 och allmän selected-sharing 122 assertions godkända; kontoradering ingår i admin-lifecycle-testets 144 assertions. Migrationen är **pending**, inte applicerad i produktion. Rollback har körts och kontrollerats i en lokal transaktion som sedan återställts.
 
 ### F10 Klickbar testinbjudan
 
@@ -132,3 +132,7 @@ Observation nedan är vad testaren rapporterade. Diagnos är vad kod, lokal data
 ## Bilder
 
 Bilderna under [screenshots](screenshots) är nya, med syntetiska konton och data där inloggning behövs. `before-`/`cqrity-flow-before-` kommer från oförändrad main; `after-`/`cqrity-flow-` från arbetsbranchen. [Språkevidens](language-evidence.json) beskriver SSR/fixture-gränsen för yrke och mejlbekräftelse. Originalrapportens privata bilder och token ingår inte.
+
+### F15 – språkbyte i gemensam navigation
+
+På desktop finns svenska/engelska i kontomenyn som tangentbordstillgängliga radioval. På mobil finns språkknapparna i huvudmenyn. Båda använder samma `LanguageSwitcher` och språkstate. Syntetisk browserregression växlar svenska → engelska → svenska från Mitt säkerhetsarbete, inklusive tangentbord i desktopmenyn. Security Work-testerna använder dessa faktiska kontroller och särskiljer arbetsytans navigation från huvudnavigationen.

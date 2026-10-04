@@ -425,9 +425,12 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // 868e9c610f78ced1c5f529596ca273c2). Exactly the 140 researched definitions are active (166
 // credential types active, 154 international), and every other credential-type column, market
 // pack, pilot member, definition table and claim equals its fingerprint from before the apply.
-// Nothing is pending by design now.
+// That catalogue publication left nothing pending.
 // Evidence: docs/release/2026-10-04-catalogue-publication-hosted-verification.md.
-const expectedPending: string[] = [];
+// F09 application-disclosure guard is proposed and locally verified; no hosted apply.
+const expectedPending: string[] = [
+  "20270215090000_application_passport_verified_content_guard.sql",
+];
 
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",

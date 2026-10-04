@@ -29,6 +29,7 @@ async function switchAccount(page: Page, userId: string) {
 }
 
 test("application drafts and live fields belong to their signed-in account", async ({ page }) => {
+  test.setTimeout(60_000); // Includes a cold dev-server fixture bootstrap.
   await installJobsFixture(page, "en");
   const key = await observeSupabaseStorageKey(page);
   await plantSession(page, key);

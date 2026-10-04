@@ -99,6 +99,8 @@ await mock.module("@/components/ui/dropdown-menu", () => ({
   DropdownMenuContent: passthrough("div"),
   DropdownMenuItem: passthrough("div"),
   DropdownMenuLabel: passthrough("div"),
+  DropdownMenuRadioGroup: passthrough("div"),
+  DropdownMenuRadioItem: passthrough("div"),
   DropdownMenuSeparator: passthrough("hr"),
 }));
 
@@ -152,8 +154,8 @@ ck(
 ck(
   "the shell RENDERS it, and inside the signed-in branch only",
   /<EmployerRegistrationCompletion\s*\/>/.test(shell) &&
-    /if \(!signedIn\) return null;/.test(shell) &&
-    shell.indexOf("if (!signedIn) return null;") <
+    /if \(!signedInUserId\) return null;/.test(shell) &&
+    shell.indexOf("if (!signedInUserId) return null;") <
       shell.indexOf("<EmployerRegistrationCompletion />"),
 );
 ck(

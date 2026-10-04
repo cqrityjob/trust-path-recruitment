@@ -485,7 +485,10 @@ test("a new organisation walks the programme end to end, in Swedish, without AI"
       await shot(page, "01b-mobile-menu");
       await page.getByRole("button", { name: /stäng menyn/i }).click();
     } else {
-      const nav = page.getByRole("navigation", { name: /navigering/i });
+      const nav = page.getByRole("navigation", {
+        name: "Navigering för mitt säkerhetsarbete",
+        exact: true,
+      });
       for (const label of ["Programme", "Löpande arbete", "Rapportering"])
         await expect(nav).toContainText(label);
     }

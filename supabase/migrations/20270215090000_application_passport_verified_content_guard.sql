@@ -5,6 +5,22 @@ RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER
 SET search_path TO 'public', 'pg_temp' AS $$
 BEGIN
   IF NEW.application_id IS NULL THEN RETURN NEW; END IF;
+  -- ON DELETE SET NULL clears the focus while a claim/account is erased.
+  -- That referential cleanup is not a new sharing decision. Allow only the
+  -- nested FK change after the old claim has actually gone; direct updates
+  -- and changes to the holder/application/package still require content.
+  IF TG_OP = 'UPDATE'
+     AND OLD.focus_claim_id IS NOT NULL AND NEW.focus_claim_id IS NULL
+     AND NEW.holder_user_id IS NOT DISTINCT FROM OLD.holder_user_id
+     AND NEW.application_id IS NOT DISTINCT FROM OLD.application_id
+     AND NEW.package_code IS NOT DISTINCT FROM OLD.package_code
+     AND pg_trigger_depth() > 1
+     AND NOT EXISTS (SELECT 1 FROM public.sp_claims WHERE id = OLD.focus_claim_id)
+  THEN
+    -- Losing a focused merit must not broaden consent to the remaining ones.
+    NEW.revoked_at := coalesce(NEW.revoked_at, now());
+    RETURN NEW;
+  END IF;
   IF NOT (
     EXISTS (
       SELECT 1 FROM public.sp_claims c
