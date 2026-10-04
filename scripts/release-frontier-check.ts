@@ -391,9 +391,23 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // (#393) is published AFTER this, and the transactional-email function
 // (employer_new_application) is verified in production before that publication.
 // Evidence: docs/release/2026-10-03-employer-notice-hosted-verification.md.
-// Contract remains pending until the scoped application is published and verified.
 // #404 / 20270206090000 verified applied read-only at 2026-10-03T21:11:18.678365+00:00.
 // Evidence: docs/security/interview-access/expand-hosted-verification.md.
+// 2026-10-04 ~06:20 UTC: #406 (merge e022ec52, every mandatory CI job green on b4dc4e0e)
+// verified applied read-only, after the scoped application (#405) was published and
+// (according to the production session) verified in the running app: 20270207090000_interview_ai_config_contract is the last ledger row (369 rows,
+// digest 01357df572629d745e667d2fedb20ba1; the first 368 unchanged, digest
+// c086806d9fb5f0c92609678f037b73ba); scp_interview_ai_config_read is limited to
+// is_platform_admin(auth.uid()), the grants are unchanged (authenticated SELECT only, no
+// client write), the functions that read the table are unchanged. Nothing is pending by
+// design now. Evidence: docs/release/2026-10-04-interview-config-contract-hosted-verification.md.
+// 2026-10-04 07:56 UTC: #416 (merge abbc036e, every mandatory CI job green on fbc6e4c3)
+// verified applied read-only: 20270208090000_account_erasure_credential_details is the
+// last ledger row (370 rows, digest 538769fe5724a0d4561a645d3faf79d6; the first 369
+// unchanged, 01357df572629d745e667d2fedb20ba1); admin_delete_user_if_safe and the new
+// extraction trigger function equal the strict local replay; the shared append-only
+// function is unchanged. Nothing is pending by design now.
+// Evidence: docs/release/2026-10-04-account-erasure-hosted-verification.md.
 //
 // Pending by design, none applied hosted: the certification research integration
 // (docs/passport/certification-catalogue-integration.md): the schema
@@ -403,7 +417,6 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // until the application that renders them is published. Each name comes OFF this
 // list in the change that records its production evidence.
 const expectedPending: string[] = [
-  "20270207090000_interview_ai_config_contract.sql",
   "20270212090000_sp_catalogue_research_foundation.sql",
   "20270213090000_sp_catalogue_research_import.sql",
 ];

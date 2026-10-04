@@ -221,6 +221,56 @@ psql_q -d "$TEST_DB" -f supabase/tests/interview_access_expand_test.sql
 echo "==> Running complete client catalogue and privilege audit"
 psql_q -d "$TEST_DB" -f supabase/tests/client_table_privilege_hardening_test.sql
 
+# 20270208090000: account erasure removes the person's credential metadata and
+# document readings, which used to keep their Passport rows alive and make
+# admin_delete_user_if_safe() refuse with ERASURE_INCOMPLETE. Run straight after
+# the replay: later blocks re-execute older migrations, and 20260917090000
+# would put the pre-fix body back. Each planted control must fail on its NAMED
+# assertion, or the suite proves nothing.
+echo "==> Running account erasure with credential metadata assertions"
+ER_SUITE=supabase/tests/account_erasure_credential_details_test.sql
+ER_MIG=supabase/migrations/20270208090000_account_erasure_credential_details.sql
+ER_RB=supabase/rollback/20270208090000_account_erasure_credential_details_rollback.sql
+ER_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f "$ER_SUITE" 2>&1)" || { echo "$ER_OUT" | grep -E "ERROR|FAILED" | head -5; echo "FAIL: account erasure suite"; exit 1; }
+ER_PASSED="$(printf '%s\n' "$ER_OUT" | grep -c "ok  " || true)"
+[ "$ER_PASSED" -ge 22 ] || { echo "FAIL: account erasure assertion shortfall: $ER_PASSED (floor 22)"; exit 1; }
+echo "    ok  $ER_PASSED account erasure assertions passed"
+er_nc_expect_fail() {
+  local label="$1" expect="$2" mutation="$3" out rc
+  set +e
+  out="$(printf 'BEGIN;\n%s\n\\i %s\n' "$mutation" "$ER_SUITE" | psql -v ON_ERROR_STOP=1 -d "$TEST_DB" 2>&1)"
+  rc=$?
+  set -e
+  if [ "$rc" -eq 0 ] || ! echo "$out" | grep -q "ASSERTION FAILED: ${expect}"; then
+    echo "FAIL: planted control '${label}': the suite did not fail on ${expect} -- it proves nothing" >&2
+    echo "$out" | grep -E "ERROR|FAILED" | head -3 >&2 || true
+    exit 1
+  fi
+  echo "    ok  NC ${label}: the suite fails on ${expect}"
+}
+ER_FN="$(sed -n '/^CREATE OR REPLACE FUNCTION public.admin_delete_user_if_safe(/,/^\$\$;$/p' "$ER_MIG")"
+ER_FN_NO_BLOCK="$(printf '%s\n' "$ER_FN" | sed '/^  -- ── Dependents that do not name the account/,/^  IF _n > 0 THEN _dependents := _dependents || jsonb_build_object(.sp_credential_details/d')"
+[ -n "$ER_FN" ] && [ "$ER_FN_NO_BLOCK" != "$ER_FN" ] || { echo "FAIL: account erasure control anchors not found"; exit 1; }
+er_nc_expect_fail "ER NC1 full rollback of 20270208090000" "ER1.2" "$(cat "$ER_RB")"
+er_nc_expect_fail "ER NC2 the dependents are not removed first" "ER2.0" "$ER_FN_NO_BLOCK"
+er_nc_expect_fail "ER NC3 the reading is append-only with no erasure exception" "ER2.0" "$(cat <<'SQL'
+DROP TRIGGER sp_extractions_append_only ON public.sp_evidence_extractions;
+CREATE TRIGGER sp_extractions_append_only BEFORE UPDATE OR DELETE ON public.sp_evidence_extractions
+  FOR EACH ROW EXECUTE FUNCTION public.sp_extractions_append_only();
+SQL
+)"
+er_nc_expect_fail "ER NC4 the exception ignores who is being erased" "ER4.4" "$(cat <<'SQL'
+CREATE OR REPLACE FUNCTION public.sp_evidence_extractions_append_only()
+RETURNS trigger LANGUAGE plpgsql SET search_path = '' AS $$
+BEGIN
+  IF TG_OP = 'DELETE' AND nullif(current_setting('trustpath.deleting_account', true), '') IS NOT NULL
+     AND public.is_superadmin(auth.uid()) THEN RETURN OLD; END IF;
+  RAISE EXCEPTION 'SP_EXTRACTION_APPEND_ONLY';
+END $$;
+SQL
+)"
+echo "    ok  four planted defects, each caught on its named assertion"
+
 # ---------------------------------------------------------------------------
 # 20270202090000 / 20270203090000 / 20270204090000: who may read what an
 # organisation learned about a person, and the circumvention of a suspension.
