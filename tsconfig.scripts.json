@@ -184,6 +184,19 @@
     "scripts/employer-registration-notice-check.ts",
     "scripts/negative-controls/employer-registration-notice-controls.ts",
     "scripts/negative-controls/runner.ts",
+    // The preview-image evidence scripts and the test-deployment guard: new,
+    // no pre-existing type debt, and the guard RUNS the validator and the
+    // isolation check with planted inputs, so a type slip there is a guard
+    // that silently stopped guarding.
+    // (og-worker-stub.ts is a Bun.serve loopback and is left out, as the other
+    // Bun-only helpers are.)
+    "scripts/og-worker-fixture.ts",
+    "scripts/og-test-stub-worker.ts",
+    "scripts/og-build-isolation-check.ts",
+    "scripts/og-public-test-workflow-check.ts",
+    "scripts/og-worker-evidence.ts",
+    "scripts/og-worker-shots.ts",
+    "scripts/negative-controls/og-public-test-controls.ts",
     "src/**/*.ts",
     "src/**/*.tsx"
   ],

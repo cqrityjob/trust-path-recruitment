@@ -1539,7 +1539,8 @@ const sv = {
   "shr.notOffered":
     "Här visas bara aktuella meriter du själv har lagt in. Anställningar, dokument och meriter som gått ut delas inte offentligt.",
   "shr.nameHidden":
-    "Ditt namn visas inte i den här delningen, eftersom ditt integritetsval döljer det.",
+    "Ditt integritetsval döljer ditt namn, och en delning av ditt Security Passport visar ditt namn och ditt Passport-nummer. Inget delas förrän du själv har ändrat valet. Ändringen gäller även tidigare delningar som du godkände med namn.",
+  "shr.nameHidden.action": "Öppna integritetsval",
   "shr.consentNotice":
     "Du delar detta offentligt. Sociala medier kan behålla bilden även om du senare återkallar länken.",
   "shr.consentCheck": "Jag har sett förhandsvisningen och vill dela detta offentligt.",
@@ -1580,6 +1581,8 @@ const sv = {
   "shr.error.too_many": "Du har redan 25 aktiva offentliga delningar. Återkalla en först.",
   "shr.error.key_conflict": "Den här delningen ändrades under tiden. Försök igen.",
   "shr.error.no_passport": "Du behöver ett Passport för att dela.",
+  "shr.error.name_not_approved":
+    "Ditt integritetsval döljer ditt namn, så ingenting har delats. Ändra valet själv under Integritet om du vill dela med namn.",
   "shr.error.unknown": "Delningen kunde inte skapas. Försök igen.",
   "shr.fullExport": "Alla meriter i text",
   "shr.fullExportHint":
@@ -3891,7 +3894,9 @@ const en: Record<PassportCopyKey, string> = {
   "shr.noneSelected": "No credentials are selected. Select at least one to share.",
   "shr.notOffered":
     "Only current credentials you added yourself are listed. Employment, documents and credentials that have expired are not shared publicly.",
-  "shr.nameHidden": "Your name is not shown in this share, because your privacy setting hides it.",
+  "shr.nameHidden":
+    "Your privacy setting hides your name, and a share of your Security Passport shows your name and Passport number. Nothing is shared until you change the setting yourself. The change also applies to earlier shares you approved with your name.",
+  "shr.nameHidden.action": "Open privacy settings",
   "shr.consentNotice":
     "You are sharing this publicly. Social networks may keep the image even if you later withdraw the link.",
   "shr.consentCheck": "I have seen the preview and want to share this publicly.",
@@ -3932,6 +3937,8 @@ const en: Record<PassportCopyKey, string> = {
   "shr.error.too_many": "You already have 25 active public shares. Withdraw one first.",
   "shr.error.key_conflict": "This share changed in the meantime. Please try again.",
   "shr.error.no_passport": "You need a Passport to share.",
+  "shr.error.name_not_approved":
+    "Your privacy setting hides your name, so nothing was shared. Change the setting yourself under Privacy if you want to share with your name.",
   "shr.error.unknown": "The share could not be created. Please try again.",
   "shr.fullExport": "All credentials as text",
   "shr.fullExportHint":

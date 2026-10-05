@@ -1,0 +1,211 @@
+name: Passport preview — public test deployment (manual, owner's Cloudflare account)
+
+# ── WHAT THIS IS, AND WHAT IT IS NOT ────────────────────────────────────
+#
+# The external checks of the personal preview (LinkedIn's Post Inspector, the
+# real LinkedIn share box, a phone) need the application on a PUBLIC https
+# address. This workflow puts a TEST BUILD of the application on a temporary
+# Cloudflare Worker in the owner's own account, next to a second Worker that
+# stands in for the database and answers only `sp_get_social_share` for
+# INVENTED people. No real project, person, merit or account is involved.
+#
+# ── CUT OFF FROM THE REAL PROJECT, CLIENT AND SERVER ───────────────────
+#
+# The browser's Supabase address and key are inlined at BUILD time from the
+# tracked .env, so overriding the server's variables at deploy would leave a
+# client that still reaches the real project. The build step therefore sets the
+# synthetic address, key and project ref for BOTH tiers (VITE_* for the client,
+# the plain names for the server), and `og-build-isolation:check` reads the
+# built output and refuses the deploy if the real key is anywhere in it, if the
+# real ref was inlined as configuration, or if the synthetic values are missing
+# (an override that was silently ignored). Nothing secret is printed.
+#
+# ── NO FREE TEXT REACHES A SHELL ────────────────────────────────────────
+#
+# Both inputs are closed choices, and they are still validated by
+# scripts/og-public-test-validate.sh, which receives them ONLY through the
+# environment and compares them against the two actions and the synthetic ids
+# the stand-in knows. No `${{ inputs.* }}` or other workflow expression appears
+# inside any `run:` block (scripts/og-public-test-workflow-check.ts enforces
+# that), so an input can never be interpreted as shell on a runner that holds a
+# Cloudflare credential. JSON, where needed, is built with jq --arg.
+#
+# ── THE STAND-IN IS STATELESS ───────────────────────────────────────────
+#
+# A Worker's memory is per isolate and gone on restart, so there are no
+# "revoke / expire" buttons: each synthetic id ALWAYS answers the same way (one
+# active, one as revoked, one as expired, one whose read fails; see
+# scripts/og-worker-fixture.ts). They prove how the application answers each
+# kind of database answer. Production's real revocation and expiry are proved
+# against a real database, in the SQL tests and the pilot spec's case S.
+#
+# Runs only by hand (workflow_dispatch), never on a push. Needs two repository
+# secrets the OWNER adds in GitHub (Settings → Secrets and variables → Actions),
+# never in chat:
+#
+#   CLOUDFLARE_API_TOKEN   a token limited to "Workers Scripts: Edit" on ONE account
+#   CLOUDFLARE_ACCOUNT_ID  that account's id
+#
+# Actions: deploy (both Workers, then a smoke read of the chosen synthetic
+# share) and teardown (delete both Workers). Nothing is posted anywhere.
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "deploy | teardown"
+        required: true
+        default: deploy
+        type: choice
+        options: [deploy, teardown]
+      share:
+        description: "Which synthetic share the smoke read after deploy checks"
+        required: true
+        default: "AbCdEfGhIjKlMnOpQrStUvWx"
+        type: choice
+        options:
+          - AbCdEfGhIjKlMnOpQrStUvWx
+          - LongLongLongLongLongLong
+          - ArabicArabicArabicArabic
+          - FounderFounderFounderFou
+          - RevokedRevokedRevokedRev
+          - ExpiredExpiredExpiredExp
+          - ReadErrorReadErrorReadEr
+
+permissions:
+  contents: read
+
+env:
+  APP_WORKER: cqrity-og-test-app
+  STUB_WORKER: cqrity-og-test-stub
+  WRANGLER: wrangler@4.147.0
+  # Plainly synthetic; the same constants scripts/og-worker-fixture.ts exports.
+  SYNTHETIC_KEY: sb_publishable_synthetic_test_only_not_a_key
+  SYNTHETIC_REF: synthetictestrefzzzz
+
+jobs:
+  run:
+    name: ${{ inputs.action }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # The inputs reach the shell only through the environment, and only
+      # after this step has accepted them. Every later step uses the validated
+      # outputs, never the raw inputs.
+      - name: Validate the inputs (closed lists, nothing evaluated)
+        id: inputs
+        env:
+          OG_ACTION: ${{ inputs.action }}
+          OG_SHARE: ${{ inputs.share }}
+        run: bash scripts/og-public-test-validate.sh
+
+      - name: Refuse without the secrets
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          for v in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID; do
+            if [ -z "${!v}" ]; then echo "$v is not set as a repository secret" >&2; exit 1; fi
+          done
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - name: Work out the two public addresses
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          SUB="$(curl -sf -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/subdomain" | jq -r '.result.subdomain')"
+          if [ -z "$SUB" ] || [ "$SUB" = "null" ] || ! [[ "$SUB" =~ ^[a-z0-9-]+$ ]]; then
+            echo "this account has no usable workers.dev subdomain: enable one in Cloudflare (Workers & Pages) first" >&2; exit 1
+          fi
+          echo "APP_URL=https://${APP_WORKER}.${SUB}.workers.dev" >> "$GITHUB_ENV"
+          echo "STUB_URL=https://${STUB_WORKER}.${SUB}.workers.dev" >> "$GITHUB_ENV"
+
+      - name: Install dependencies
+        if: steps.inputs.outputs.action == 'deploy'
+        run: bun install --frozen-lockfile
+
+      - name: Deploy the stand-in database Worker (stateless, invented people)
+        if: steps.inputs.outputs.action == 'deploy'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          npx --yes "$WRANGLER" deploy scripts/og-test-stub-worker.ts \
+            --name "$STUB_WORKER" --compatibility-date 2026-09-01
+
+      - name: Build the application for the test (synthetic project, both tiers)
+        if: steps.inputs.outputs.action == 'deploy'
+        env:
+          # Share addresses and og:image are built on the configured public
+          # origin, never the browser's: here that is this test deployment.
+          VITE_PUBLIC_SITE_URL: ${{ env.APP_URL }}
+          # The client's values are inlined now; the server's are set here too
+          # so the SSR bundle carries the same synthetic project.
+          VITE_SUPABASE_URL: ${{ env.STUB_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ env.SYNTHETIC_KEY }}
+          VITE_SUPABASE_PROJECT_ID: ${{ env.SYNTHETIC_REF }}
+          SUPABASE_URL: ${{ env.STUB_URL }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ env.SYNTHETIC_KEY }}
+          SUPABASE_PROJECT_ID: ${{ env.SYNTHETIC_REF }}
+        run: bun run build
+
+      - name: Refuse to deploy a build that still carries the real project
+        if: steps.inputs.outputs.action == 'deploy'
+        run: bun run og-build-isolation:check -- --root .output --url "$STUB_URL"
+
+      - name: Deploy the application Worker, pointed at the stand-in
+        if: steps.inputs.outputs.action == 'deploy'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          npx --yes "$WRANGLER" deploy --name "$APP_WORKER" \
+            --var "SUPABASE_URL:${STUB_URL}" \
+            --var "SUPABASE_PUBLISHABLE_KEY:${SYNTHETIC_KEY}" \
+            --var "SUPABASE_PROJECT_ID:${SYNTHETIC_REF}"
+
+      - name: Smoke read of the chosen synthetic share
+        if: steps.inputs.outputs.action == 'deploy'
+        env:
+          SHARE: ${{ steps.inputs.outputs.share }}
+        run: |
+          set -euo pipefail
+          status="$(curl -s -o /dev/null -w '%{http_code}' "${APP_URL}/og/share/${SHARE}")"
+          jq -n --arg app "$APP_URL" --arg share "$SHARE" --arg status "$status" \
+            '{application: $app, share: $share, image_status: $status}'
+          {
+            echo "## Public test deployment"
+            echo
+            echo "* Application: ${APP_URL}"
+            echo "* Always active: ${APP_URL}/s/AbCdEfGhIjKlMnOpQrStUvWx (image: ${APP_URL}/og/share/AbCdEfGhIjKlMnOpQrStUvWx)"
+            echo "* The founder card (English): ${APP_URL}/s/FounderFounderFounderFou"
+            echo "* Forty credentials, six on the image: ${APP_URL}/s/LongLongLongLongLongLong"
+            echo "* Always answers as revoked: ${APP_URL}/s/RevokedRevokedRevokedRev"
+            echo "* Always answers as expired: ${APP_URL}/s/ExpiredExpiredExpiredExp"
+            echo "* The read always fails: ${APP_URL}/og/share/ReadErrorReadErrorReadEr"
+            echo
+            echo "Smoke read of ${SHARE}: image status ${status}."
+            echo
+            echo "Everything here is invented and every id always answers the same way; these show how the application answers each kind of database answer. Real revocation and expiry are proved against a real database (SQL tests, pilot case S). Run this workflow with teardown when finished."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Tear both Workers down
+        if: steps.inputs.outputs.action == 'teardown'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          npx --yes "$WRANGLER" delete --name "$APP_WORKER" --force || true
+          npx --yes "$WRANGLER" delete --name "$STUB_WORKER" --force || true

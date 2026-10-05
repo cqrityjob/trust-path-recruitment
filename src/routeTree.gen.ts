@@ -60,6 +60,7 @@ import { Route as JobsIndexRouteImport } from './routes/jobs.index'
 import { Route as JobsSlugRouteImport } from './routes/jobs.$slug'
 import { Route as PTokenRouteImport } from './routes/p.$token'
 import { Route as SPublicIdRouteImport } from './routes/s.$publicId'
+import { Route as OgSharePublicIdRouteImport } from './routes/og.share.$publicId'
 import { Route as SecurityPassportIndexRouteImport } from './routes/security-passport.index'
 import { Route as SecurityPassportIndiaRouteImport } from './routes/security-passport.india'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
@@ -475,6 +476,11 @@ const PTokenRoute = PTokenRouteImport.update({
 const SPublicIdRoute = SPublicIdRouteImport.update({
   id: '/s/$publicId',
   path: '/s/$publicId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OgSharePublicIdRoute = OgSharePublicIdRouteImport.update({
+  id: '/og/share/$publicId',
+  path: '/og/share/$publicId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SecurityPassportIndexRoute = SecurityPassportIndexRouteImport.update({
@@ -1487,6 +1493,7 @@ export interface FileRoutesByFullPath {
   '/jobs/$slug': typeof JobsSlugRoute
   '/p/$token': typeof PTokenRoute
   '/s/$publicId': typeof SPublicIdRoute
+  '/og/share/$publicId': typeof OgSharePublicIdRoute
   '/security-passport/india': typeof SecurityPassportIndiaRoute
   '/career-center/': typeof CareerCenterIndexRoute
   '/jobs/': typeof JobsIndexRoute
@@ -1684,6 +1691,7 @@ export interface FileRoutesByTo {
   '/jobs/$slug': typeof JobsSlugRoute
   '/p/$token': typeof PTokenRoute
   '/s/$publicId': typeof SPublicIdRoute
+  '/og/share/$publicId': typeof OgSharePublicIdRoute
   '/security-passport/india': typeof SecurityPassportIndiaRoute
   '/career-center': typeof CareerCenterIndexRoute
   '/jobs': typeof JobsIndexRoute
@@ -1876,6 +1884,7 @@ export interface FileRoutesById {
   '/jobs/$slug': typeof JobsSlugRoute
   '/p/$token': typeof PTokenRoute
   '/s/$publicId': typeof SPublicIdRoute
+  '/og/share/$publicId': typeof OgSharePublicIdRoute
   '/security-passport/india': typeof SecurityPassportIndiaRoute
   '/career-center/': typeof CareerCenterIndexRoute
   '/jobs/': typeof JobsIndexRoute
@@ -2083,6 +2092,7 @@ export interface FileRouteTypes {
     | '/jobs/$slug'
     | '/p/$token'
     | '/s/$publicId'
+    | '/og/share/$publicId'
     | '/security-passport/india'
     | '/career-center/'
     | '/jobs/'
@@ -2280,6 +2290,7 @@ export interface FileRouteTypes {
     | '/jobs/$slug'
     | '/p/$token'
     | '/s/$publicId'
+    | '/og/share/$publicId'
     | '/security-passport/india'
     | '/career-center'
     | '/jobs'
@@ -2471,6 +2482,7 @@ export interface FileRouteTypes {
     | '/jobs/$slug'
     | '/p/$token'
     | '/s/$publicId'
+    | '/og/share/$publicId'
     | '/security-passport/india'
     | '/career-center/'
     | '/jobs/'
@@ -2664,6 +2676,7 @@ export interface RootRouteChildren {
   InviteTokenRoute: typeof InviteTokenRoute
   PTokenRoute: typeof PTokenRoute
   SPublicIdRoute: typeof SPublicIdRoute
+  OgSharePublicIdRoute: typeof OgSharePublicIdRoute
   SecurityPassportIndiaRoute: typeof SecurityPassportIndiaRoute
   SecurityPassportIndexRoute: typeof SecurityPassportIndexRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -3027,6 +3040,13 @@ declare module '@tanstack/react-router' {
       path: '/s/$publicId'
       fullPath: '/s/$publicId'
       preLoaderRoute: typeof SPublicIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/og/share/$publicId': {
+      id: '/og/share/$publicId'
+      path: '/og/share/$publicId'
+      fullPath: '/og/share/$publicId'
+      preLoaderRoute: typeof OgSharePublicIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/security-passport/': {
@@ -4863,6 +4883,7 @@ const rootRouteChildren: RootRouteChildren = {
   InviteTokenRoute: InviteTokenRoute,
   PTokenRoute: PTokenRoute,
   SPublicIdRoute: SPublicIdRoute,
+  OgSharePublicIdRoute: OgSharePublicIdRoute,
   SecurityPassportIndiaRoute: SecurityPassportIndiaRoute,
   SecurityPassportIndexRoute: SecurityPassportIndexRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,

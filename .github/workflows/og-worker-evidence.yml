@@ -1,0 +1,155 @@
+name: Passport preview image — Cloudflare Worker runtime evidence
+
+# ── WHY THIS IS A WORKFLOW OF ITS OWN ───────────────────────────────────
+#
+# Production serves the application from a Cloudflare Worker (the default Nitro
+# preset, `cloudflare-module`). A Worker may not compile WebAssembly from bytes,
+# has no file system for the application's assets and has a memory ceiling, so
+# "it renders in Node" proves nothing about it. This job builds the application
+# exactly as the default build does, serves THAT BUNDLE in workerd (Cloudflare's
+# own runtime) and asks it for the personal preview image of a public share:
+# first and later requests, a valid 1200×630 PNG, an unknown id, a revoked share,
+# an expired one and a failed read.
+#
+# The database is a loopback stub that answers only `sp_get_social_share`, with
+# synthetic people. The real project is never contacted.
+
+on:
+  pull_request:
+    paths:
+      - "src/lib/security-passport/og-image/**"
+      - "src/routes/og.share.$publicId.ts"
+      - "src/routes/s.$publicId.tsx"
+      - "scripts/og-*"
+      - ".github/workflows/og-worker-evidence.yml"
+      - "package.json"
+      - "bun.lock"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  worker:
+    name: Preview image in workerd (Cloudflare Worker runtime)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      # The client's Supabase address and key are inlined at build time from the
+      # tracked .env, so the build is given the loopback stand-in and plainly
+      # synthetic values for BOTH tiers, and the built output is then checked:
+      # the real key nowhere, the real ref not inlined as configuration, the
+      # synthetic values present. The same rule the public test deployment
+      # follows, exercised on every PR.
+      - name: Build the application for the test (default Cloudflare preset, synthetic project)
+        env:
+          VITE_SUPABASE_URL: http://127.0.0.1:54399
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_synthetic_test_only_not_a_key
+          VITE_SUPABASE_PROJECT_ID: synthetictestrefzzzz
+          SUPABASE_URL: http://127.0.0.1:54399
+          SUPABASE_PUBLISHABLE_KEY: sb_publishable_synthetic_test_only_not_a_key
+          SUPABASE_PROJECT_ID: synthetictestrefzzzz
+        run: bun run build
+
+      - name: The built client and server carry only the synthetic project
+        run: bun run og-build-isolation:check -- --root .output --url http://127.0.0.1:54399
+
+      - name: Start the stand-in database (loopback, synthetic people)
+        run: |
+          set -euo pipefail
+          nohup bun run scripts/og-worker-stub.ts 54399 > /tmp/og-stub.log 2>&1 &
+          disown
+          for i in $(seq 1 30); do
+            if curl -sf -o /dev/null -X POST http://127.0.0.1:54399/__reset; then echo "stub up"; exit 0; fi
+            sleep 1
+          done
+          cat /tmp/og-stub.log; exit 1
+
+      - name: Serve the BUILT Worker bundle in workerd
+        run: |
+          set -euo pipefail
+          test -f .output/server/index.mjs && test -f .output/server/wrangler.json
+          echo "the bundle's own Worker configuration:"; cat .output/server/wrangler.json
+          # The build leaves .wrangler/deploy/config.json in the repository root,
+          # pointing at the bundle: wrangler is started from the root, as the
+          # build intends, and follows that redirect.
+          echo "the build's deploy redirect:"; cat .wrangler/deploy/config.json
+          # The same variables the host gives the Worker. Nothing else is set:
+          # the real project is never contacted.
+          nohup npx --yes wrangler@4.147.0 dev --local --port 8787 \
+            --var SUPABASE_URL:http://127.0.0.1:54399 \
+            --var SUPABASE_PUBLISHABLE_KEY:sb_publishable_synthetic_test_only_not_a_key \
+            --var SUPABASE_PROJECT_ID:synthetictestrefzzzz \
+            > /tmp/og-worker.log 2>&1 &
+          disown
+          for i in $(seq 1 120); do
+            if curl -s -o /dev/null http://127.0.0.1:8787/og-security-passport.png; then echo "worker up after ${i}s"; exit 0; fi
+            sleep 1
+          done
+          echo "the Worker did not come up"; tail -n 80 /tmp/og-worker.log; exit 1
+
+      - name: Preview image over http, in the Worker runtime
+        run: |
+          set -euo pipefail
+          echo "workerd resident memory BEFORE any image request (whole runtime):"
+          ps -o rss=,comm= -C workerd || true
+          OG_IMAGES_DIR=/tmp/og-evidence/images \
+            bun run scripts/og-worker-evidence.ts http://127.0.0.1:8787 http://127.0.0.1:54399 | tee /tmp/og-http.txt
+          echo "workerd resident memory after the run (the whole runtime, not one isolate):"
+          ps -o rss=,comm= -C workerd || true
+
+      - name: Preview image over https, behind the host-like front
+        run: |
+          set -euo pipefail
+          openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj "/CN=127.0.0.1" \
+            -addext "subjectAltName=IP:127.0.0.1,DNS:localhost" \
+            -keyout /tmp/og-tls.key -out /tmp/og-tls.crt 2>/dev/null
+          # The front terminates TLS and injects the host's analytics tag into
+          # HTML, as the published site's host does.
+          TLS_FRONT_CERT=/tmp/og-tls.crt TLS_FRONT_KEY=/tmp/og-tls.key TLS_FRONT_HOST_ANALYTICS=1 \
+            nohup node scripts/local-tls-front.mjs 8788 8787 > /tmp/og-tls-front.log 2>&1 &
+          disown
+          for i in $(seq 1 30); do
+            if curl -skf -o /dev/null https://127.0.0.1:8788/og-security-passport.png; then break; fi
+            sleep 1
+          done
+          # The certificate is this job's own throwaway, on loopback.
+          NODE_TLS_REJECT_UNAUTHORIZED=0 \
+            bun run scripts/og-worker-evidence.ts https://127.0.0.1:8788 http://127.0.0.1:54399 | tee /tmp/og-https.txt
+
+      - name: Install Chromium
+        run: bunx playwright install --with-deps chromium
+
+      - name: What a person sees behind the link (https, desktop and 390px)
+        run: |
+          set -euo pipefail
+          # The client was built against the loopback stand-in, so a request
+          # there is allowed; anything else (a real project) fails the run.
+          OG_ALLOWED_HOSTS=127.0.0.1:54399 NODE_TLS_REJECT_UNAUTHORIZED=0 \
+            bun run scripts/og-worker-shots.ts https://127.0.0.1:8788 /tmp/og-evidence/pages
+
+      - name: Upload the pictures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: passport-preview-evidence
+          path: /tmp/og-evidence/
+          if-no-files-found: ignore
+
+      - name: Worker and stub logs
+        if: always()
+        run: |
+          tail -n 60 /tmp/og-worker.log || true
+          tail -n 20 /tmp/og-stub.log || true
+          tail -n 10 /tmp/og-tls-front.log || true

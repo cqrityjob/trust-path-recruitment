@@ -301,6 +301,21 @@ jobs:
       - name: Security Passport public share check
         run: bun run passport-public-share:check
 
+      # The personal link-preview image, drawn on the server from that same
+      # public payload: a valid PNG, an unselected merit cannot be drawn, nothing
+      # private reaches it, each shield level has its own shape, long lists are
+      # capped, and the named-share rule is enforced on the server.
+      - name: Security Passport preview image check
+        run: bun run passport-og-image:check
+
+      # The public test deployment and the Worker evidence job: no workflow
+      # expression inside a shell, closed-choice inputs validated through the
+      # environment (run here with hostile dummy values), a test build cut off
+      # from the real project on both tiers with the built output checked, and a
+      # stateless stand-in with deterministic fixtures.
+      - name: Passport preview test-deployment guard
+        run: bun run og-public-test:check
+
       # A Passport decision names the version its decider saw
       # (20270125090000): the reviewer workspace and the employer page send
       # the loaded submitted_at, never decide without it, and reload the entry
@@ -2110,7 +2125,19 @@ jobs:
       - name: Passport sharing browser suite (desktop and 375px)
         env:
           E2E_BASE_URL: http://localhost:3100
+          # The share screen's pictures (founder card in Swedish and English,
+          # the studio with four and eleven credentials, the recipient page) at
+          # about 1440 and 375, kept as evidence of what the holder sees.
+          PASSPORT_SHOTS: test-results/passport-sharing-shots
         run: bun run e2e:sharing
+
+      - name: Upload the share screen pictures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: passport-sharing-screens
+          path: test-results/passport-sharing-shots/
+          if-no-files-found: ignore
 
       - name: Server log
         if: failure()

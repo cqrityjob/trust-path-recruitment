@@ -224,6 +224,8 @@ export type SocialShareErrorCode =
   | "too_many"
   | "key_conflict"
   | "no_passport"
+  // The holder's privacy setting hides their name; a personal share shows it.
+  | "name_not_approved"
   | "unknown";
 
 /** The database's own refusal codes, mapped to a closed set the page words. */
@@ -233,6 +235,7 @@ export function socialShareErrorCode(message: string): SocialShareErrorCode {
   if (message.includes("SP_TOO_MANY_SOCIAL_SHARES")) return "too_many";
   if (message.includes("SP_REQUEST_KEY_CONFLICT")) return "key_conflict";
   if (message.includes("SP_NO_PASSPORT")) return "no_passport";
+  if (message.includes("SP_NAME_NOT_APPROVED")) return "name_not_approved";
   return "unknown";
 }
 
