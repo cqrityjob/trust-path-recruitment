@@ -30,6 +30,7 @@
 
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { resolveHolderDisplayName } from "@/lib/security-passport/holder-display-name";
 import type {
   IdentityClaim,
   IdentityEmployment,
@@ -139,7 +140,7 @@ export async function readProfessionalIdentity(
       .maybeSingle(),
     supabase
       .from("sp_passport_profiles")
-      .select("headline, jurisdiction_code, sub_jurisdiction_code")
+      .select("display_name, headline, jurisdiction_code, sub_jurisdiction_code")
       .eq("holder_user_id", userId)
       .maybeSingle(),
     supabase
@@ -399,7 +400,12 @@ export async function readProfessionalIdentity(
   return {
     identityVersion: "professional-identity-v1",
 
-    displayName: (accountRow?.display_name as string | null) ?? null,
+    // The holder's Passport name ("Namn som visas"), the account name only as
+    // the reserve: the one rule in holder-display-name.ts.
+    displayName: resolveHolderDisplayName(
+      passportRow?.display_name as string | null | undefined,
+      accountRow?.display_name as string | null | undefined,
+    ),
     accountCountry: (accountRow?.country as string | null) ?? null,
     locale: (accountRow?.locale as string | null) ?? "sv",
 

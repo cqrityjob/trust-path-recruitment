@@ -42,6 +42,10 @@
 //      cannot raise their own trust, through the pages or the API;
 //   B  a mixed-market holder adds all four Indian qualifications and reloads;
 //   J  a Passport of fifteen, one expired, renders on the card and the wallet;
+//   N  the holder's own name: the Passport name ("Namn som visas") on the
+//      card, the profile header and the international overview, the account
+//      name only when the Passport name is missing or blank, and a saved
+//      change visible without signing out;
 //   K  the administrator's availability answer is what the holders are offered.
 //
 // Runs only when E2E_LOCAL_STACK=1 and every URL is loopback. CI:
@@ -1654,6 +1658,104 @@ test.describe("the public pilot, on a real backend", () => {
       await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth),
     ).toBeLessThanOrEqual(1);
     await evidence(page, "sv-passport-large");
+  });
+
+  test("N · the holder's own name: the Passport name on the card, the profile header and the international overview; the account name only when it is blank; a saved change shows without signing out", async ({
+    page,
+  }) => {
+    test.info().annotations.push({ type: "proof", description: "N" });
+    // Found live on the first real Passport: "Namn som visas" was saved to
+    // the Passport row while the card, the header and the initials read the
+    // registration name from the account row, with nothing that could change
+    // it. Walked here against the real tables.
+    const email = who("large");
+    const uid = uidOf(email);
+    const setNames = (passport: string | null, account: string) =>
+      sql(`begin;
+        update public.sp_passport_profiles set display_name = ${passport === null ? "null" : `'${passport}'`} where holder_user_id = '${uid}';
+        update public.profiles set display_name = '${account}' where id = '${uid}';
+        commit;`);
+    const exportOf = (url: string): string | null => {
+      const m = /\/_serverFn\/([A-Za-z0-9_-]+)/.exec(url);
+      if (!m) return null;
+      try {
+        return String(
+          (
+            JSON.parse(
+              Buffer.from(m[1]!.replace(/-/g, "+").replace(/_/g, "/"), "base64").toString("utf8"),
+            ) as { export?: string }
+          ).export ?? "",
+        ).replace(/_createServerFn_handler$/, "");
+      } catch {
+        return null;
+      }
+    };
+    /** The international overview's own read, as the Passport page makes it. */
+    const internationalName = async () => {
+      const response = page.waitForResponse(
+        (r) => exportOf(r.url()) === "getInternationalPassportMetadata",
+        { timeout: 60_000 },
+      );
+      await page.goto(`${BASE}/passport`);
+      return (await response).text();
+    };
+    const holderHeading = page.locator("[data-passport-holder-name]");
+    const initials = page.locator("[data-passport-holder-initials]");
+    const profileName = page.locator("[data-profile-name]");
+
+    await inLanguage(page, "sv");
+    await atEvidenceWidth(page);
+    await signIn(page, email, "/passport");
+
+    try {
+      // Different names in the two columns: the Passport name, everywhere.
+      setNames("Nadia Passport", "Nadia Konto");
+      let intl = await internationalName();
+      await expect(holderHeading).toHaveText("Nadia Passport", { timeout: 60_000 });
+      await expect(initials).toHaveText("NP");
+      expect(intl).toContain("Nadia Passport");
+      expect(intl).not.toContain("Nadia Konto");
+      await page.goto(`${BASE}/my-career/profile`);
+      await expect(profileName).toHaveText("Nadia Passport", { timeout: 60_000 });
+      await evidence(page, "sv-profile-passport-name");
+
+      // A missing, an empty and a whitespace Passport name: the account name.
+      for (const [label, value] of [
+        ["missing", null],
+        ["empty", ""],
+        ["whitespace", "   "],
+      ] as const) {
+        setNames(value, "Nadia Konto");
+        intl = await internationalName();
+        await expect(holderHeading, label).toHaveText("Nadia Konto", { timeout: 60_000 });
+        await expect(initials, label).toHaveText("NK");
+        expect(intl, label).toContain("Nadia Konto");
+        await page.goto(`${BASE}/my-career/profile`);
+        await expect(profileName, label).toHaveText("Nadia Konto", { timeout: 60_000 });
+      }
+
+      // The holder changes "Namn som visas" and saves: the header on the same
+      // page, then the card and the overview, show the new name -- no sign-out,
+      // no reload of the profile page.
+      await page.goto(`${BASE}/my-career/profile`);
+      const field = page.locator("#sp-basics-identity-displayName");
+      await expect(field).toBeVisible({ timeout: 60_000 });
+      await field.fill("Nadia Ändrad");
+      await page.locator("[data-basics-save]").click();
+      await expect(profileName).toHaveText("Nadia Ändrad", { timeout: 60_000 });
+      expect(
+        sql(`select display_name from public.sp_passport_profiles where holder_user_id='${uid}'`),
+      ).toBe("Nadia Ändrad");
+      expect(sql(`select display_name from public.profiles where id='${uid}'`)).toBe("Nadia Konto");
+      intl = await internationalName();
+      await expect(holderHeading).toHaveText("Nadia Ändrad", { timeout: 60_000 });
+      await expect(initials).toHaveText("NÄ");
+      expect(intl).toContain("Nadia Ändrad");
+      await evidence(page, "sv-passport-changed-name");
+    } finally {
+      // The fixture's name, for whatever runs after this.
+      setNames(holderName(), holderName());
+    }
   });
 
   test("K · the administrator's availability answer is exactly what the holders are offered", async ({

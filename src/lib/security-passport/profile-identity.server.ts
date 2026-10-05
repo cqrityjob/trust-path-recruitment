@@ -1,26 +1,29 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import type { PassportProfileIdentity } from "./credential-passport";
+import { readHolderDisplayName } from "./holder-display-name";
 
 /** Read the same canonical sources as ProfessionalIdentityV1. Never fall back
- * to the old Passport headline or a credential-derived eligibility title. */
+ * to the old Passport headline or a credential-derived eligibility title.
+ * The name is the holder's Passport name, with the account name as the
+ * reserve (holder-display-name.ts). */
 export async function readPassportProfileIdentity(
   db: SupabaseClient<Database>,
   userId: string,
 ): Promise<PassportProfileIdentity> {
-  const [profile, career] = await Promise.all([
-    db.from("profiles").select("display_name").eq("id", userId).maybeSingle(),
+  const [holder, career] = await Promise.all([
+    readHolderDisplayName(db, userId),
     db
       .from("security_career_profiles")
       .select("current_profession_slug, current_profession_other")
       .eq("user_id", userId)
       .maybeSingle(),
   ]);
-  if (profile.error || career.error) throw new Error("Passport profile identity unavailable");
+  if (holder.failed || career.error) throw new Error("Passport profile identity unavailable");
   const slug = career.data?.current_profession_slug;
   if (!slug) {
     const title = career.data?.current_profession_other?.trim() || null;
-    return { displayName: profile.data?.display_name ?? null, titleSv: title, titleEn: title };
+    return { displayName: holder.name, titleSv: title, titleEn: title };
   }
   const profession = await db
     .from("cig_professions")
@@ -30,7 +33,7 @@ export async function readPassportProfileIdentity(
     .maybeSingle();
   if (profession.error) throw new Error("Passport profession catalogue unavailable");
   return {
-    displayName: profile.data?.display_name ?? null,
+    displayName: holder.name,
     titleSv:
       profession.data?.title_sv?.trim() || career.data?.current_profession_other?.trim() || null,
     titleEn:

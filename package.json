@@ -232,6 +232,7 @@
     "candidate-notification:check": "bun run scripts/candidate-notification-check.ts",
     "emma-uat:check": "bun run scripts/emma-uat-reconciliation-check.ts",
     "passport-recipient-card:check": "bun run scripts/passport-recipient-card-check.tsx",
+    "passport-holder-name:check": "bun run scripts/passport-holder-name-check.ts",
     "header-entry:check": "bun run scripts/header-entry-check.ts",
     "site-origin:check": "bun run scripts/site-origin-check.ts",
     "job-board-launch:check": "bun run scripts/job-board-launch-check.ts",
