@@ -15,6 +15,71 @@
       "note": "Owner decision after #428: close employee development report, progression and recommendation access through direct RPC/RLS, and revoke client funnel writes. Changes existing functions/policy/privileges only; introduces no new object and rewrites no data. Read-only production preflight confirms the old access is still installed. Local SQL and direct HTTP tests prove migration, old-access negative controls, rollback/reapply and historical-row preservation. Production application requires explicit owner approval; rollback reopens the launch blocker. Do not mark applied or change hosted history until the approved migration and postflight succeed."
     },
     {
+      "file": "20270217090000_sp_passport_number_and_social_share.sql",
+      "hostedState": "pending",
+      "introduces": [
+        {
+          "kind": "function",
+          "object": "sp_passport_numbers_retire()"
+        },
+        {
+          "kind": "function",
+          "object": "sp_network_counts_holder(uuid)"
+        },
+        {
+          "kind": "function",
+          "object": "sp_assign_passport_number(uuid)"
+        },
+        {
+          "kind": "function",
+          "object": "sp_passport_number_on_complete()"
+        },
+        {
+          "kind": "function",
+          "object": "sp_my_passport_number()"
+        },
+        {
+          "kind": "function",
+          "object": "sp_designate_founder(uuid)"
+        },
+        {
+          "kind": "function",
+          "object": "sp_create_social_share(uuid[],text,integer,text,uuid)"
+        },
+        {
+          "kind": "function",
+          "object": "sp_revoke_social_share(text)"
+        },
+        {
+          "kind": "function",
+          "object": "sp_list_my_social_shares()"
+        },
+        {
+          "kind": "function",
+          "object": "sp_get_social_share(text)"
+        },
+        {
+          "kind": "table",
+          "object": "sp_passport_numbers"
+        },
+        {
+          "kind": "table",
+          "object": "sp_passport_numbers_retired"
+        },
+        {
+          "kind": "table",
+          "object": "sp_social_shares"
+        },
+        {
+          "kind": "table",
+          "object": "sp_social_share_items"
+        }
+      ],
+      "rollback": "supabase/rollback/20270217090000_sp_passport_number_and_social_share_rollback.sql",
+      "verify": "SELECT to_regclass('public.sp_passport_numbers'), to_regclass('public.sp_social_shares'); -- both present. SELECT has_function_privilege('anon','public.sp_get_social_share(text)','EXECUTE'); -- true (the one new anon read). SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public' AND p.proname LIKE 'sp\\_%' AND has_function_privilege('anon',p.oid,'EXECUTE'); -- expect 2 (sp_network_stats, sp_get_social_share). SELECT public.sp_network_stats(); -- expect {\"display\":\"hidden\"} while the policy is hidden. SELECT count(*) FROM public.sp_passport_numbers; -- expect 0 until a holder completes or the founder is designated. Compare md5 of the function bodies with the merged file.",
+      "note": "Security Passport number, protected founder designation, narrow founder count rule and the separate public social share (random public id, no stored image, live status). Migration-only (schema-first-release rule): the app that calls these functions ships in a second PR after this is applied and verified. Adds ONE reviewed anon-executable function, sp_get_social_share (allowlisted in security_hardening_test S3.1, the method-library ML10.8, sql-security-guard-check and the Passport anon-execute suites). Changes no existing Passport table, policy or grant; replaces sp_network_stats() (previous body restored verbatim by the rollback). Does NOT designate a founder, exclude an account, publish statistics or write any row: sp_designate_founder is an owner-approved production action."
+    },
+    {
       "file": "20261004164027_application_passport_verified_content_guard.sql",
       "hostedState": "applied",
       "hostedVersion": "20261004164027",

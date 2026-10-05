@@ -9739,6 +9739,237 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# Security Passport number, founder rule and public social share
+# (20270217090000). Executed assertions, then three REAL races between two
+# psql processes: one holder numbered twice at once, two holders numbered at
+# once, and one share request key submitted twice at once. A sequential test
+# cannot show these: its second call reads a committed row whether or not
+# anything blocked, so each race times the second session and requires that it
+# WAITED while the first held its transaction open.
+# ---------------------------------------------------------------------------
+echo "==> Running Security Passport number and social share assertions"
+set +e
+SPNS_OUT="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/tests/sp_passport_number_and_social_share_test.sql 2>&1)"
+SPNS_RC=$?
+set -e
+
+echo "$SPNS_OUT" | grep -E "GROUP |ok  |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+SPNS_PASSED="$(echo "$SPNS_OUT" | grep -c "ok  " || true)"
+
+if [ "$SPNS_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the Passport number and social share suite exited with code ${SPNS_RC}." >&2
+  echo "$SPNS_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "Security Passport number and social share"
+else
+  echo "    ok  ${SPNS_PASSED} Passport number and social share assertions passed"
+  if [ "$SPNS_PASSED" -lt 90 ]; then
+    echo "FAIL: expected at least 90 Passport number and social share assertions, only ${SPNS_PASSED} ran." >&2
+    suite_failed "Security Passport number and social share (assertion shortfall: floor 90)"
+  fi
+fi
+
+echo "==> Running Security Passport number and social share races"
+SPNR_FAILED=0
+SPNR_USERS="'5e000000-0000-4000-8000-000000000001','5e000000-0000-4000-8000-000000000002','5e000000-0000-4000-8000-000000000003'"
+psql -q -v ON_ERROR_STOP=1 -d "$TEST_DB" >/dev/null <<SQL
+INSERT INTO auth.users (id, email) VALUES
+  ('5e000000-0000-4000-8000-000000000001', 'num-race-1@example.test'),
+  ('5e000000-0000-4000-8000-000000000002', 'num-race-2@example.test'),
+  ('5e000000-0000-4000-8000-000000000003', 'num-race-3@example.test')
+ON CONFLICT (id) DO NOTHING;
+INSERT INTO public.sp_passport_profiles
+  (holder_user_id, display_name, onboarding_state, jurisdiction_code, work_location_confirmed_at)
+SELECT u, 'Race ' || u::text, 'in_progress', 'SE', now()
+  FROM unnest(ARRAY[${SPNR_USERS}]::uuid[]) AS u
+ON CONFLICT DO NOTHING;
+INSERT INTO public.sp_claims
+  (id, holder_user_id, claim_type, title, credential_code, claimed_issuer_name, issued_on)
+VALUES ('5e00c000-0000-4000-8000-000000000001', '5e000000-0000-4000-8000-000000000003',
+        'certification', 'Certified Protection Professional (CPP)', 'INTL_ASIS_CPP',
+        'ASIS International', DATE '2024-01-01')
+ON CONFLICT DO NOTHING;
+SQL
+
+# spnr_wait_lock <sql-fragment-for-pg_locks> : wait until A holds its lock.
+spnr_held() {
+  local held=0
+  for _ in $(seq 1 200); do
+    held="$(psql -tAq -d "$TEST_DB" -c "select count(*) from pg_locks where locktype='advisory' and granted and pid <> pg_backend_pid();" 2>/dev/null || echo 0)"
+    [ "${held:-0}" -gt 0 ] && break
+    sleep 0.05
+  done
+  echo "${held:-0}"
+}
+
+# --- Race 1: ONE holder numbered by two sessions at once -------------------
+SPNR_H1='5e000000-0000-4000-8000-000000000001'
+SPNR_A="$(mktemp)"; SPNR_B="$(mktemp)"
+(
+  psql -tAq -v ON_ERROR_STOP=1 -d "$TEST_DB" >"$SPNR_A" 2>&1 <<SQL
+BEGIN;
+UPDATE public.sp_passport_profiles SET onboarding_state='completed', declared_accurate_at=now() WHERE holder_user_id='${SPNR_H1}';
+SELECT 'A=' || passport_number FROM public.sp_passport_numbers WHERE holder_user_id='${SPNR_H1}';
+SELECT pg_sleep(3);
+COMMIT;
+SQL
+  echo "RC=$?" >>"$SPNR_A"
+) &
+SPNR_PID=$!
+SPNR_HELD="$(spnr_held)"
+SPNR_T0="$(date +%s)"
+set +e
+psql -tAq -v ON_ERROR_STOP=1 -d "$TEST_DB" >"$SPNR_B" 2>&1 <<SQL
+SELECT 'B=' || public.sp_assign_passport_number('${SPNR_H1}');
+SQL
+SPNR_B_RC=$?
+set -e
+SPNR_WAITED=$(( $(date +%s) - SPNR_T0 ))
+wait "$SPNR_PID" || true
+SPNR_NA="$(grep -o '^A=[0-9]*' "$SPNR_A" | cut -d= -f2)"
+SPNR_NB="$(grep -o '^B=[0-9]*' "$SPNR_B" | cut -d= -f2)"
+SPNR_ROWS="$(psql -tAq -d "$TEST_DB" -c "select count(*) from public.sp_passport_numbers where holder_user_id='${SPNR_H1}'")"
+if [ "$SPNR_HELD" -eq 0 ]; then
+  echo "FAIL: session A never held its lock; the sessions were not concurrent." >&2; SPNR_FAILED=1
+elif [ "$SPNR_B_RC" -ne 0 ] || [ -z "$SPNR_NA" ] || [ "$SPNR_NA" != "$SPNR_NB" ] || [ "$SPNR_ROWS" != "1" ]; then
+  echo "FAIL: one holder numbered twice at once gave A=${SPNR_NA:-?} B=${SPNR_NB:-?} rows=${SPNR_ROWS}." >&2
+  cat "$SPNR_A" "$SPNR_B" >&2; SPNR_FAILED=1
+elif [ "$SPNR_WAITED" -lt 2 ]; then
+  echo "FAIL: the second numbering returned after ${SPNR_WAITED}s without waiting." >&2; SPNR_FAILED=1
+else
+  echo "    ok  one holder numbered by two sessions at once: one row, number ${SPNR_NA} twice, B waited ${SPNR_WAITED}s"
+fi
+
+# --- Race 2: TWO holders numbered at once get two different numbers --------
+rm -f "$SPNR_A" "$SPNR_B"; SPNR_A="$(mktemp)"; SPNR_B="$(mktemp)"
+(psql -tAq -v ON_ERROR_STOP=1 -d "$TEST_DB" -c "select 'N=' || public.sp_assign_passport_number('5e000000-0000-4000-8000-000000000002')" >"$SPNR_A" 2>&1) &
+SPNR_P1=$!
+(psql -tAq -v ON_ERROR_STOP=1 -d "$TEST_DB" -c "select 'N=' || public.sp_assign_passport_number('5e000000-0000-4000-8000-000000000003')" >"$SPNR_B" 2>&1) &
+SPNR_P2=$!
+wait "$SPNR_P1" || true; wait "$SPNR_P2" || true
+# Holders 2 and 3 are still in_progress, so neither qualifies: the answer must be
+# NULL for both and no number may be consumed or invented.
+SPNR_UNQ="$(psql -tAq -d "$TEST_DB" -c "select count(*) from public.sp_passport_numbers where holder_user_id in ('5e000000-0000-4000-8000-000000000002','5e000000-0000-4000-8000-000000000003')")"
+if [ "$SPNR_UNQ" != "0" ]; then
+  echo "FAIL: an unfinished Passport was numbered." >&2; SPNR_FAILED=1
+else
+  echo "    ok  two unfinished holders raced and neither was numbered"
+fi
+# Now complete both at the same moment: each completion fires the trigger.
+rm -f "$SPNR_A" "$SPNR_B"
+for H in 5e000000-0000-4000-8000-000000000002 5e000000-0000-4000-8000-000000000003; do
+  (psql -q -v ON_ERROR_STOP=1 -d "$TEST_DB" -c "UPDATE public.sp_passport_profiles SET onboarding_state='completed', declared_accurate_at=now() WHERE holder_user_id='${H}'" >/dev/null 2>&1) &
+done
+wait
+SPNR_DISTINCT="$(psql -tAq -d "$TEST_DB" -c "select count(*) || '/' || count(distinct passport_number) from public.sp_passport_numbers where holder_user_id in ('5e000000-0000-4000-8000-000000000001','5e000000-0000-4000-8000-000000000002','5e000000-0000-4000-8000-000000000003')")"
+SPNR_MIN="$(psql -tAq -d "$TEST_DB" -c "select min(passport_number) from public.sp_passport_numbers where holder_user_id in ('5e000000-0000-4000-8000-000000000001','5e000000-0000-4000-8000-000000000002','5e000000-0000-4000-8000-000000000003')")"
+if [ "$SPNR_DISTINCT" != "3/3" ] || [ "${SPNR_MIN:-0}" -lt 2 ]; then
+  echo "FAIL: three holders did not receive three distinct ordinary numbers (got ${SPNR_DISTINCT}, min ${SPNR_MIN})." >&2; SPNR_FAILED=1
+else
+  echo "    ok  holders completed at the same moment received 3 distinct numbers, none below 2"
+fi
+
+# --- Race 3: ONE share request key submitted twice at once -----------------
+SPNR_U3='5e000000-0000-4000-8000-000000000003'
+SPNR_KEY='5e00e000-0000-4000-8000-0000000000aa'
+SPNR_CALL="select 'S=' || (public.sp_create_social_share(ARRAY['5e00c000-0000-4000-8000-000000000001']::uuid[], 'sv', 30, 'full_name', '${SPNR_KEY}'::uuid)->>'status')"
+rm -f "$SPNR_A" "$SPNR_B"; SPNR_A="$(mktemp)"; SPNR_B="$(mktemp)"
+(
+  psql -tAq -v ON_ERROR_STOP=1 -d "$TEST_DB" >"$SPNR_A" 2>&1 <<SQL
+BEGIN;
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub', '${SPNR_U3}', true);
+${SPNR_CALL};
+SELECT pg_sleep(3);
+COMMIT;
+SQL
+  echo "RC=$?" >>"$SPNR_A"
+) &
+SPNR_PID=$!
+SPNR_HELD="$(spnr_held)"
+SPNR_T0="$(date +%s)"
+set +e
+psql -tAq -v ON_ERROR_STOP=1 -d "$TEST_DB" >"$SPNR_B" 2>&1 <<SQL
+BEGIN;
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub', '${SPNR_U3}', true);
+${SPNR_CALL};
+COMMIT;
+SQL
+SPNR_B_RC=$?
+set -e
+SPNR_WAITED=$(( $(date +%s) - SPNR_T0 ))
+wait "$SPNR_PID" || true
+SPNR_SROWS="$(psql -tAq -d "$TEST_DB" -c "select count(*) from public.sp_social_shares where holder_user_id='${SPNR_U3}' and request_key='${SPNR_KEY}'")"
+if [ "$SPNR_HELD" -eq 0 ]; then
+  echo "FAIL: session A never held its lock; the share sessions were not concurrent." >&2; SPNR_FAILED=1
+elif [ "$SPNR_B_RC" -ne 0 ] || ! grep -q '^S=already_created' "$SPNR_B" || ! grep -q '^S=created' "$SPNR_A" || [ "$SPNR_SROWS" != "1" ]; then
+  echo "FAIL: one share request key submitted twice at once did not give created + already_created + 1 row (rows=${SPNR_SROWS})." >&2
+  cat "$SPNR_A" "$SPNR_B" >&2; SPNR_FAILED=1
+elif [ "$SPNR_WAITED" -lt 2 ]; then
+  echo "FAIL: the second share returned after ${SPNR_WAITED}s without waiting." >&2; SPNR_FAILED=1
+else
+  echo "    ok  one share request key submitted twice at once: one share, B waited ${SPNR_WAITED}s and was told already_created"
+fi
+rm -f "$SPNR_A" "$SPNR_B"
+
+# --- Race 4: the cap of 25 holds under concurrency -------------------------
+# The holder already has 1 active share. Raise it to 24, then submit two
+# creates with DIFFERENT request keys at once: exactly one may succeed.
+psql -q -v ON_ERROR_STOP=1 -d "$TEST_DB" >/dev/null <<SQL
+INSERT INTO public.sp_social_shares (public_id, holder_user_id, locale, expires_at, holder_label, request_key, request_fingerprint)
+SELECT translate(encode(gen_random_bytes(18), 'base64'), '+/', '-_'), '${SPNR_U3}', 'sv', now() + interval '30 days',
+       'full_name', gen_random_uuid(), 'cap-fixture-' || g
+  FROM generate_series(1, 23) g;
+SQL
+SPNR_CAP_BEFORE="$(psql -tAq -d "$TEST_DB" -c "select count(*) from public.sp_social_shares where holder_user_id='${SPNR_U3}' and revoked_at is null and expires_at > now()")"
+SPNR_CAP_CALL() { echo "select 'S=' || (public.sp_create_social_share(ARRAY['5e00c000-0000-4000-8000-000000000001']::uuid[], 'sv', 30, 'full_name', '$1'::uuid)->>'status')"; }
+SPNR_A="$(mktemp)"; SPNR_B="$(mktemp)"
+(
+  psql -tAq -v ON_ERROR_STOP=1 -d "$TEST_DB" >"$SPNR_A" 2>&1 <<SQL
+BEGIN;
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub', '${SPNR_U3}', true);
+$(SPNR_CAP_CALL 5e00e000-0000-4000-8000-0000000000b1);
+SELECT pg_sleep(3);
+COMMIT;
+SQL
+  echo "RC=$?" >>"$SPNR_A"
+) &
+SPNR_PID=$!
+SPNR_HELD="$(spnr_held)"
+SPNR_T0="$(date +%s)"
+set +e
+psql -tAq -v ON_ERROR_STOP=1 -d "$TEST_DB" >"$SPNR_B" 2>&1 <<SQL
+BEGIN;
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub', '${SPNR_U3}', true);
+$(SPNR_CAP_CALL 5e00e000-0000-4000-8000-0000000000b2);
+COMMIT;
+SQL
+SPNR_B_RC=$?
+set -e
+SPNR_WAITED=$(( $(date +%s) - SPNR_T0 ))
+wait "$SPNR_PID" || true
+SPNR_CAP_AFTER="$(psql -tAq -d "$TEST_DB" -c "select count(*) from public.sp_social_shares where holder_user_id='${SPNR_U3}' and revoked_at is null and expires_at > now()")"
+if [ "$SPNR_HELD" -eq 0 ] || [ "$SPNR_CAP_BEFORE" != "24" ]; then
+  echo "FAIL: cap race setup is not as intended (held=${SPNR_HELD}, before=${SPNR_CAP_BEFORE})." >&2; SPNR_FAILED=1
+elif ! grep -q '^S=created' "$SPNR_A" || [ "$SPNR_B_RC" -eq 0 ] || ! grep -q 'SP_TOO_MANY_SOCIAL_SHARES' "$SPNR_B" || [ "$SPNR_CAP_AFTER" != "25" ]; then
+  echo "FAIL: two creates at 24 shares must give exactly one success and one refusal (after=${SPNR_CAP_AFTER})." >&2
+  cat "$SPNR_A" "$SPNR_B" >&2; SPNR_FAILED=1
+elif [ "$SPNR_WAITED" -lt 2 ]; then
+  echo "FAIL: the second create returned after ${SPNR_WAITED}s without waiting." >&2; SPNR_FAILED=1
+else
+  echo "    ok  two concurrent creates at 24 shares: exactly one succeeded, one was refused, total 25 (B waited ${SPNR_WAITED}s)"
+fi
+rm -f "$SPNR_A" "$SPNR_B"
+
+if [ "$SPNR_FAILED" -ne 0 ]; then
+  suite_failed "Security Passport number and social share races"
+fi
+
+# ---------------------------------------------------------------------------
 # The internal reviewer note, against a crafted read.
 #
 # `decision_note` is reviewer reasoning; `holder_message` is what the candidate
@@ -11273,6 +11504,30 @@ fi
 # 20261109090000's policy calls sp_market_access(), which the entitlement
 # rollback DROPs; Postgres refuses that drop while the policy depends on it.
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# The Passport number and public social share (20270217090000) roll back FIRST
+# in this chain, as the newest migration does in a real rollback:
+# sp_get_social_share reads sp_sub_jurisdictions, which the far-end three-market
+# rollback drops. The suite proves the refusal without confirmation and the
+# byte-equal restore of sp_network_stats(); here the DATA the races left behind
+# is destroyed on purpose, with the confirmation the rollback demands.
+# ---------------------------------------------------------------------------
+echo "==> Verifying the Passport number and social share rollback"
+set +e
+SPNSRB_OUT="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -c "SET app.sp_rollback_confirm = 'drop-numbers-and-shares';" \
+  -f supabase/rollback/20270217090000_sp_passport_number_and_social_share_rollback.sql 2>&1)"
+SPNSRB_RC=$?
+set -e
+SPNSRB_LEFT="$(psql -tAq -d "$TEST_DB" -c "SELECT (SELECT count(*) FROM pg_class WHERE relnamespace='public'::regnamespace AND relname IN ('sp_passport_numbers','sp_passport_numbers_retired','sp_social_shares','sp_social_share_items','sp_passport_number_seq')) + (SELECT count(*) FROM pg_proc WHERE pronamespace='public'::regnamespace AND proname IN ('sp_get_social_share','sp_create_social_share','sp_revoke_social_share','sp_list_my_social_shares','sp_my_passport_number','sp_designate_founder','sp_assign_passport_number','sp_network_counts_holder'))")"
+if [ "$SPNSRB_RC" -ne 0 ] || [ "$SPNSRB_LEFT" != "0" ]; then
+  echo "FAIL: the Passport number and social share rollback exited with code ${SPNSRB_RC}, ${SPNSRB_LEFT} object(s) left." >&2
+  echo "$SPNSRB_OUT" | grep -iE "ERROR:|FEL:" | head -10 >&2
+  suite_failed "Passport number and social share rollback"
+else
+  echo "    ok  the Passport number and social share objects roll back cleanly"
+fi
+
 echo "==> Verifying the pilot catalogue visibility rollback"
 set +e
 SPCVF_OUT="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
@@ -11850,6 +12105,7 @@ echo "              ${SPRDS_PASSED} rollback data-safety assertions"
 echo "              ${SPBF1_PASSED} pilot bug fix #1 assertions,"
 echo "              ${SPTB_PASSED} trust boundary assertions,"
 echo "              ${SPTSC_PASSED} trust-source containment assertions,"
+echo "              ${SPNS_PASSED} Passport number and social share assertions,"
 echo "              ${EEV_PASSED} employer employment verification assertions,"
 echo "              ${RACE_PASSED} concurrent-decision assertions,"
 echo "              ${SPFM_PASSED} first-merit assertions,"
