@@ -301,6 +301,13 @@ jobs:
       - name: Security Passport public share check
         run: bun run passport-public-share:check
 
+      # The personal link-preview image, drawn on the server from that same
+      # public payload: a valid PNG, an unselected merit cannot be drawn, nothing
+      # private reaches it, each shield level has its own shape, long lists are
+      # capped, and the named-share rule is enforced on the server.
+      - name: Security Passport preview image check
+        run: bun run passport-og-image:check
+
       # A Passport decision names the version its decider saw
       # (20270125090000): the reviewer workspace and the employer page send
       # the loaded submitted_at, never decide without it, and reload the entry

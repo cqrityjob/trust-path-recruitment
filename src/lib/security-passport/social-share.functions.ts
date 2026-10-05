@@ -55,10 +55,12 @@ const createInput = z
     claimIds: z.array(z.string().uuid()).min(1).max(200),
     locale: z.enum(["sv", "en"]),
     expiresDays: z.number().refine((v) => [7, 30, 90].includes(v)),
-    // How much of the name the holder approved. The personal flow sends
-    // "full_name"; the page still shows the more restrictive of this and the
-    // holder's privacy setting at the moment of each read.
-    holderLabel: z.enum(["full_name", "initials", "anonymous"]),
+    // A personal share is NAMED: there is no anonymity or initials choice in
+    // this flow, so anything but "full_name" is refused before it reaches the
+    // database. (The page still shows the more restrictive of this and the
+    // holder's privacy setting at the moment of each read, so a share made
+    // earlier can never show more than it was approved to.)
+    holderLabel: z.literal("full_name"),
     requestKey: z.string().uuid(),
   })
   .strict();
@@ -67,6 +69,25 @@ export const createSocialShare = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((data: unknown) => createInput.parse(data))
   .handler(async ({ context, data }): Promise<CreateSocialShareResult> => {
+    // ── THE NAME CONDITION, CHECKED HERE AS WELL AS ON SCREEN ─────────────
+    //
+    // A named share must not be made while the holder's own privacy setting
+    // hides their name: it would publish something other than what they saw
+    // and approved. This is the holder's own row read as the holder, and it
+    // FAILS CLOSED: a read that cannot be completed creates nothing. Nothing is
+    // changed on the holder's behalf, neither the setting nor any earlier
+    // share's approval; the page sends them to the setting to change it
+    // themselves.
+    const { data: profile, error: profileError } = await context.supabase
+      .from("sp_passport_profiles")
+      .select("privacy_mode")
+      .eq("holder_user_id", context.userId)
+      .maybeSingle();
+    if (profileError) return { status: "failed", code: "unknown" };
+    if (profile && profile.privacy_mode !== "full_name") {
+      return { status: "failed", code: "name_not_approved" };
+    }
+
     const { data: raw, error } = await context.supabase.rpc("sp_create_social_share", {
       _claim_ids: data.claimIds,
       _locale: data.locale,

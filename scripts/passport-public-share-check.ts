@@ -317,8 +317,16 @@ if (ok.status === "active") {
     /isWellFormedPublicId\(data\.publicId\)/.test(fns),
     "a malformed id is answered without a query",
   );
+  // The PUBLIC read is one function and no table read. The only table read in
+  // this file is the holder's own privacy setting inside createSocialShare
+  // (the named-share rule), as the holder, never anonymously.
+  const publicRead = fns.slice(
+    fns.indexOf("export const getPublicSocialShare"),
+    fns.indexOf("const createInput"),
+  );
   expect(
-    /\.rpc\("sp_get_social_share", \{\s*_public_id/.test(fns) && !/\.from\(/.test(fns),
+    /\.rpc\("sp_get_social_share", \{\s*_public_id/.test(publicRead) &&
+      !/\.from\(/.test(publicRead),
     "one function, no table read",
   );
   expect(

@@ -36,6 +36,7 @@
 // can press.
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Link } from "@tanstack/react-router";
 import { Check, ChevronDown, Copy, Download, ExternalLink, Share2 } from "lucide-react";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import { passportT, type PassportCopyKey, type PassportLang } from "@/lib/security-passport/i18n";
@@ -278,7 +279,10 @@ export function SocialShareFlow({
   }, [readMine]);
 
   const allState = selectState(allKeys, selected);
-  const canAct = selectedCount > 0 && model !== null && previewState !== "failed";
+  // A personal share is named. While the holder's privacy setting hides their
+  // name nothing public is created from this screen; the notice below sends
+  // them to the setting, which only they change.
+  const canAct = selectedCount > 0 && model !== null && previewState !== "failed" && !nameHidden;
 
   /** The public link for what is on screen, creating it if there is none.
    *  Null when it could not be made (the reason is on screen). */
@@ -496,9 +500,20 @@ export function SocialShareFlow({
         )}
 
         {nameHidden ? (
-          <p data-social-name-hidden role="status" className="mt-2 text-sm text-muted-foreground">
-            {pt("shr.nameHidden")}
-          </p>
+          <div
+            data-social-name-hidden
+            role="alert"
+            className="mt-3 rounded-xl border border-amber-500/50 bg-amber-500/10 p-4"
+          >
+            <p className="text-sm leading-relaxed text-foreground">{pt("shr.nameHidden")}</p>
+            <Link
+              to="/passport/privacy"
+              data-social-name-settings
+              className="mt-3 inline-flex min-h-[44px] items-center text-sm font-medium text-accent underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            >
+              {pt("shr.nameHidden.action")}
+            </Link>
+          </div>
         ) : null}
         {notDrawn ? (
           <p
@@ -968,5 +983,6 @@ const ERROR_KEY: Readonly<Record<SocialShareErrorCode, PassportCopyKey>> = {
   too_many: "shr.error.too_many",
   key_conflict: "shr.error.key_conflict",
   no_passport: "shr.error.no_passport",
+  name_not_approved: "shr.error.name_not_approved",
   unknown: "shr.error.unknown",
 };

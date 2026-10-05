@@ -14,14 +14,16 @@
 // approved credentials; they claim no standing (standing is on the page, which
 // is read again on every open).
 //
-// ── THE PREVIEW IMAGE IS NOT PERSONAL ──────────────────────────────────
+// ── THE PREVIEW IMAGE IS PERSONAL, AND DRAWN HERE ──────────────────────
 //
-// og:image is the branded CQrityjob Security Passport image, identical for
-// every share. A personalised image would have to be supplied by someone, and a
-// client-supplied picture can show credentials the holder does not have. A
-// personalised image is drawn from the controlled payload by the application
-// or not at all; until that renderer exists, the text beside the image is the
-// personal part.
+// og:image points at `/og/share/<publicId>`, which this application draws from
+// the SAME controlled payload as the page: the holder's number, name, country
+// and approved credentials, each shield at its true evidence level. No client
+// ever supplies the picture, because a client-supplied picture can show
+// credentials the holder does not have. The address stops answering the moment
+// the share is revoked or expires; a platform that already fetched the image may
+// keep its own copy, which the holder is told before sharing. An unavailable
+// share points at the branded static image and nothing personal.
 //
 // ── noindex ────────────────────────────────────────────────────────────
 //
@@ -57,8 +59,16 @@ export const Route = createFileRoute("/s/$publicId")({
     const share = (loaderData ?? { status: "unavailable" }) as PublicSocialShare;
     const preview = linkPreviewFor(share);
     const origin = publicShareOrigin();
-    const image = `${origin}/og-security-passport.png`;
     const active = share.status === "active";
+    // A version in the address, so a platform that cached an earlier card for
+    // this share (before it was changed) fetches the current one.
+    const image = active
+      ? `${origin}/og/share/${params.publicId}?v=${Date.parse(share.approvedAt) || 0}`
+      : `${origin}/og-security-passport.png`;
+    const imageAlt =
+      active && share.passportNumber !== null
+        ? `CQrityjob Security Passport #${share.passportNumber}`
+        : "CQrityjob Security Passport";
     return {
       meta: [
         { title: preview.title },
@@ -75,7 +85,8 @@ export const Route = createFileRoute("/s/$publicId")({
         { property: "og:image", content: image },
         { property: "og:image:width", content: "1200" },
         { property: "og:image:height", content: "630" },
-        { property: "og:image:alt", content: "CQrityjob Security Passport" },
+        { property: "og:image:alt", content: imageAlt },
+        { name: "twitter:image:alt", content: imageAlt },
         { name: "twitter:card", content: "summary_large_image" },
         { name: "twitter:title", content: preview.title },
         { name: "twitter:description", content: preview.description },
