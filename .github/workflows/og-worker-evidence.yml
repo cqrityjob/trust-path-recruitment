@@ -20,7 +20,7 @@ on:
       - "src/lib/security-passport/og-image/**"
       - "src/routes/og.share.$publicId.ts"
       - "src/routes/s.$publicId.tsx"
-      - "scripts/og-worker-*"
+      - "scripts/og-*"
       - ".github/workflows/og-worker-evidence.yml"
       - "package.json"
       - "bun.lock"
@@ -46,8 +46,24 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Production build (default Cloudflare preset)
+      # The client's Supabase address and key are inlined at build time from the
+      # tracked .env, so the build is given the loopback stand-in and plainly
+      # synthetic values for BOTH tiers, and the built output is then checked:
+      # the real key nowhere, the real ref not inlined as configuration, the
+      # synthetic values present. The same rule the public test deployment
+      # follows, exercised on every PR.
+      - name: Build the application for the test (default Cloudflare preset, synthetic project)
+        env:
+          VITE_SUPABASE_URL: http://127.0.0.1:54399
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_synthetic_test_only_not_a_key
+          VITE_SUPABASE_PROJECT_ID: synthetictestrefzzzz
+          SUPABASE_URL: http://127.0.0.1:54399
+          SUPABASE_PUBLISHABLE_KEY: sb_publishable_synthetic_test_only_not_a_key
+          SUPABASE_PROJECT_ID: synthetictestrefzzzz
         run: bun run build
+
+      - name: The built client and server carry only the synthetic project
+        run: bun run og-build-isolation:check -- --root .output --url http://127.0.0.1:54399
 
       - name: Start the stand-in database (loopback, synthetic people)
         run: |
@@ -73,7 +89,8 @@ jobs:
           # the real project is never contacted.
           nohup npx --yes wrangler@4.147.0 dev --local --port 8787 \
             --var SUPABASE_URL:http://127.0.0.1:54399 \
-            --var SUPABASE_PUBLISHABLE_KEY:sb_publishable_synthetic_key \
+            --var SUPABASE_PUBLISHABLE_KEY:sb_publishable_synthetic_test_only_not_a_key \
+            --var SUPABASE_PROJECT_ID:synthetictestrefzzzz \
             > /tmp/og-worker.log 2>&1 &
           disown
           for i in $(seq 1 120); do
@@ -117,7 +134,9 @@ jobs:
       - name: What a person sees behind the link (https, desktop and 390px)
         run: |
           set -euo pipefail
-          NODE_TLS_REJECT_UNAUTHORIZED=0 \
+          # The client was built against the loopback stand-in, so a request
+          # there is allowed; anything else (a real project) fails the run.
+          OG_ALLOWED_HOSTS=127.0.0.1:54399 NODE_TLS_REJECT_UNAUTHORIZED=0 \
             bun run scripts/og-worker-shots.ts https://127.0.0.1:8788 /tmp/og-evidence/pages
 
       - name: Upload the pictures

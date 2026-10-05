@@ -13,7 +13,16 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { unzlibSync } from "fflate";
 import { renderShareImage } from "../src/lib/security-passport/og-image/render";
 import { parsePublicSocialShare } from "../src/lib/security-passport/social-share-public";
-import { ACTIVE_ID, ARABIC_ID, FOUNDER_ID, LONG_ID, payloadFor } from "./og-worker-fixture";
+import {
+  ACTIVE_ID,
+  ARABIC_ID,
+  EXPIRED_ID,
+  FOUNDER_ID,
+  LONG_ID,
+  payloadFor,
+  READ_ERROR_ID,
+  REVOKED_ID,
+} from "./og-worker-fixture";
 
 const [app, stub] = process.argv.slice(2);
 if (!app || !stub) throw new Error("usage: og-worker-evidence.ts <app url> <stub url>");
@@ -147,6 +156,39 @@ async function main(): Promise<void> {
       `${id.slice(0, 12)}: 404, not cacheable`,
     );
   }
+
+  // ── the deterministic fixtures: what the public test deployment answers ─
+  // Each id always answers the same way, so these prove how the application
+  // handles each kind of database answer (the public stand-in keeps no state).
+  for (const [id, what] of [
+    [REVOKED_ID, "revoked"],
+    [EXPIRED_ID, "expired"],
+  ] as const) {
+    const r = await get(`/og/share/${id}`);
+    expect(
+      r.status === 404 && r.headers.get("cache-control") === "no-store",
+      `fixture ${what}: no image, not cacheable`,
+    );
+    const page = await (await get(`/s/${id}`)).text();
+    expect(
+      /data-public-share="unavailable"/.test(page) && !page.includes("Selma Dahlberg"),
+      `fixture ${what}: the page is unavailable and names nobody`,
+    );
+    expect(
+      /og-security-passport\.png/.test(page) && !page.includes(`/og/share/${id}`),
+      `fixture ${what}: the preview is the generic image`,
+    );
+  }
+  const readError = await get(`/og/share/${READ_ERROR_ID}`);
+  expect(
+    readError.status === 503 && readError.headers.get("retry-after") === "60",
+    "fixture read-error: 503 with retry-after, never 'gone'",
+  );
+  const readErrorPage = await (await get(`/s/${READ_ERROR_ID}`)).text();
+  expect(
+    /data-public-share="error"/.test(readErrorPage),
+    "fixture read-error: the page says the read failed, not that the share is gone",
+  );
 
   // ── withdrawal takes effect on the very next request ───────────────────
   const before = await rpcCalls();

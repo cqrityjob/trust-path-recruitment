@@ -1,55 +1,33 @@
 // The stand-in database for the PUBLIC test deployment of the preview image.
 //
-// A Cloudflare Worker that answers ONLY `sp_get_social_share` for synthetic,
-// invented people, so the built application can be reached on a real public
-// https address (LinkedIn's Post Inspector, a phone) without any real project,
-// person or merit behind it. A share's state can be flipped at run time with the
-// admin token, to test that revocation, expiry and a failed read stop the page
-// and the image on the very next request.
+// A Cloudflare Worker that answers ONLY `sp_get_social_share`, for the
+// synthetic, invented people in og-worker-fixture.ts, so the built application
+// can be reached on a real public https address (LinkedIn's Post Inspector, a
+// phone) without any real project, person or merit behind it.
 //
-//   POST /__state  {"id","state"}   state: active | revoked | expired | error
-//   GET  /__calls                   how many reads the app has made
+// ── STATELESS, ON PURPOSE ──────────────────────────────────────────────
 //
-// The state lives in this isolate's memory: a restart returns every share to
-// "active". That is acceptable for a short manual test and is said in the
-// instructions. The admin token is a deployment secret (OG_TEST_ADMIN_TOKEN).
+// It keeps nothing. Cloudflare runs a Worker in many isolates and restarts
+// them freely, so anything remembered in memory would differ from one request
+// to the next and vanish on a restart; a "revoke this share" button backed by
+// such memory would give evidence that could not be trusted. Instead, each id
+// always answers the same way: one is always active, one always answers as a
+// revoked share, one as an expired share, one always fails to read. They prove
+// how the application answers each kind of database answer. Production's real
+// revocation and expiry are proved against a real database (the SQL tests and
+// the pilot spec's case S), not here.
+//
+// There is no admin path and no secret: nothing to authenticate, nothing to
+// change.
 
-import { payloadFor } from "./og-worker-fixture";
-
-interface Env {
-  readonly OG_TEST_ADMIN_TOKEN?: string;
-}
-
-type State = "active" | "revoked" | "expired" | "error";
-const states = new Map<string, State>();
-let reads = 0;
+import { fixtureAnswer, rpcResponse } from "./og-worker-fixture";
 
 export default {
-  async fetch(req: Request, env: Env): Promise<Response> {
+  async fetch(req: Request): Promise<Response> {
     const url = new URL(req.url);
-    if (url.pathname.startsWith("/__")) {
-      const token = req.headers.get("authorization") ?? "";
-      const expected = env.OG_TEST_ADMIN_TOKEN ?? "";
-      if (expected.length < 16 || token !== `Bearer ${expected}`) {
-        return new Response("Not found", { status: 404 });
-      }
-      if (url.pathname === "/__state" && req.method === "POST") {
-        const { id, state } = (await req.json()) as { id: string; state: State };
-        states.set(id, state);
-        return new Response("ok");
-      }
-      if (url.pathname === "/__calls") return Response.json({ reads });
-      return new Response("Not found", { status: 404 });
-    }
     if (url.pathname === "/rest/v1/rpc/sp_get_social_share" && req.method === "POST") {
-      reads += 1;
       const { _public_id: id } = (await req.json()) as { _public_id: string };
-      const state = states.get(id) ?? "active";
-      if (state === "error") return new Response("boom", { status: 500 });
-      if (state === "revoked" || state === "expired") {
-        return Response.json({ status: "unavailable" });
-      }
-      return Response.json(payloadFor(id) ?? { status: "unavailable" });
+      return rpcResponse(fixtureAnswer(typeof id === "string" ? id : ""));
     }
     return new Response("Not found", { status: 404 });
   },

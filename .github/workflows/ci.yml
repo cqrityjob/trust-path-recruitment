@@ -308,6 +308,14 @@ jobs:
       - name: Security Passport preview image check
         run: bun run passport-og-image:check
 
+      # The public test deployment and the Worker evidence job: no workflow
+      # expression inside a shell, closed-choice inputs validated through the
+      # environment (run here with hostile dummy values), a test build cut off
+      # from the real project on both tiers with the built output checked, and a
+      # stateless stand-in with deterministic fixtures.
+      - name: Passport preview test-deployment guard
+        run: bun run og-public-test:check
+
       # A Passport decision names the version its decider saw
       # (20270125090000): the reviewer workspace and the employer page send
       # the loaded submitted_at, never decide without it, and reload the entry

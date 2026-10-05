@@ -159,6 +159,19 @@ was built.
   `/og/share/<id>` and requires the served bytes to equal what the controlled
   model draws from the database payload, that the query selects nothing, that a
   stricter privacy setting, expiry and revocation change or stop it.
+* `.github/workflows/og-worker-evidence.yml` — the BUILT Cloudflare bundle in
+  workerd, over http and https, against a loopback stand-in: the image on first
+  and later requests, the deterministic revoked / expired / read-error fixtures,
+  a flipped answer taking effect on the very next request, the whole selection
+  behind the link, and pictures at 1440 and 390. The build is given a synthetic
+  project for both tiers and `og-build-isolation:check` refuses an output that
+  still carries the real key or address; the browser evidence fails on any
+  request that leaves the test origin.
+* `bun run og-public-test:check` — the manual public test deployment: no
+  workflow expression inside a shell, closed-choice inputs validated through the
+  environment (run with hostile dummy values), a test build cut off from the real
+  project with the built output checked, a stateless stand-in. 11 negative
+  controls (`negative-controls:og-public-test`).
 * **Not proven by any of this:** LinkedIn's Post Inspector, LinkedIn's real share
   box and a real phone's share sheet. They need an HTTPS test environment with a
   synthetic Passport and a person logged in; see the release note.
