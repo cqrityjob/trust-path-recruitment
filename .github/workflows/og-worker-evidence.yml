@@ -65,7 +65,10 @@ jobs:
           set -euo pipefail
           test -f .output/server/index.mjs && test -f .output/server/wrangler.json
           echo "the bundle's own Worker configuration:"; cat .output/server/wrangler.json
-          cd .output/server
+          # The build leaves .wrangler/deploy/config.json in the repository root,
+          # pointing at the bundle: wrangler is started from the root, as the
+          # build intends, and follows that redirect.
+          echo "the build's deploy redirect:"; cat .wrangler/deploy/config.json
           # The same variables the host gives the Worker. Nothing else is set:
           # the real project is never contacted.
           nohup npx --yes wrangler@4.147.0 dev --local --port 8787 \
