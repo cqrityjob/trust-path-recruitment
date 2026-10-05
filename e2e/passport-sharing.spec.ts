@@ -1323,6 +1323,8 @@ test.describe("Security Passport — Dela mitt Security Passport", () => {
       expect(svg).not.toContain(absent);
     expect(words.join("\n")).not.toMatch(/VERIFIERAD|KÄLLBEKRÄFTAD/);
 
+    await shoot(page, `share-founder-sv-${page.viewportSize()!.width > 600 ? 1440 : 375}`);
+
     // "Välj alla delbara meriter (4)" is on, with all four counted.
     const all = flow.locator("[data-select-all]");
     await expect(all).toHaveAttribute("data-select-all", "all");
@@ -1428,6 +1430,29 @@ test.describe("Security Passport — Dela mitt Security Passport", () => {
     expect(got).toEqual([]);
     await expect(flow.locator("[data-social-error]")).toHaveCount(0);
     await expect(flow.locator('[data-social-notice="device"]')).toHaveCount(0);
+  });
+
+  test("23b · the founder's card in English: the number, and the designation as its own line", async ({
+    page,
+  }) => {
+    await mount(page, "/passport/share", {
+      fourCredentials: true,
+      lang: "en",
+      passportNumber: { number: 1, designation: "founder" },
+    });
+    await shareReady(page, "social");
+    const flow = page.locator("[data-social-flow]");
+    const preview = flow.locator('[data-social-preview="square"]');
+    await expect(preview).toBeVisible({ timeout: 30_000 });
+    const words = [...(await svgOf(preview)).matchAll(/<text\b[^>]*>([^<]*)<\/text>/g)].map(
+      (m) => m[1] ?? "",
+    );
+    expect(words).toContain("Security Passport #1");
+    expect(words).toContain("Founder of CQrityjob");
+    // A designation of the product, never a credential: no shield carries it.
+    expect(words.join("\n")).not.toMatch(/Grundare av/);
+    await shoot(page, `share-founder-en-${page.viewportSize()!.width > 600 ? 1440 : 375}`);
+    expect(socialCreateBodies).toEqual([]);
   });
 
   test("26 · select all: global and per group, with the in-between state, and the preview follows", async ({

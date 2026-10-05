@@ -9,10 +9,11 @@
 // expired one and a failed read each answer correctly on the very next request
 // (every request re-reads the share, so withdrawal cannot be served from memory).
 
+import { mkdirSync, writeFileSync } from "node:fs";
 import { unzlibSync } from "fflate";
 import { renderShareImage } from "../src/lib/security-passport/og-image/render";
 import { parsePublicSocialShare } from "../src/lib/security-passport/social-share-public";
-import { ACTIVE_ID, ARABIC_ID, LONG_ID, payloadFor } from "./og-worker-fixture";
+import { ACTIVE_ID, ARABIC_ID, FOUNDER_ID, LONG_ID, payloadFor } from "./og-worker-fixture";
 
 const [app, stub] = process.argv.slice(2);
 if (!app || !stub) throw new Error("usage: og-worker-evidence.ts <app url> <stub url>");
@@ -179,6 +180,31 @@ async function main(): Promise<void> {
   expect(
     back.status === 200 && same(first!, new Uint8Array(await back.arrayBuffer())),
     "and an active share serves again, unchanged",
+  );
+
+  // ── keep the pictures the Worker served, as evidence ───────────────────
+  const dir = process.env.OG_IMAGES_DIR;
+  if (dir) {
+    mkdirSync(dir, { recursive: true });
+    for (const [name, id] of [
+      ["sv-three-credentials", ACTIVE_ID],
+      ["sv-forty-credentials-six-shown", LONG_ID],
+      ["en-founder", FOUNDER_ID],
+    ] as const) {
+      const r = await get(`/og/share/${id}`);
+      const body = new Uint8Array(await r.arrayBuffer());
+      expect(r.status === 200 && validPng(body).ok, `${name}: served and valid`);
+      writeFileSync(`${dir}/og-${name}.png`, body);
+    }
+  }
+
+  // ── the link opens the WHOLE selected Passport, not the six on the image ─
+  const whole = await (await get(`/s/${LONG_ID}`)).text();
+  const shown = (whole.match(/Merit nummer \d+ med/g) ?? []).length;
+  report.credentialsOnPageForForty = shown;
+  expect(
+    shown >= 40,
+    `the page behind the link lists all 40 selected credentials (found ${shown}), the image only six`,
   );
 
   // ── the page a crawler reads ───────────────────────────────────────────

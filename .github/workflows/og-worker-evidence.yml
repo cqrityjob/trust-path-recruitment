@@ -85,7 +85,10 @@ jobs:
       - name: Preview image over http, in the Worker runtime
         run: |
           set -euo pipefail
-          bun run scripts/og-worker-evidence.ts http://127.0.0.1:8787 http://127.0.0.1:54399 | tee /tmp/og-http.txt
+          echo "workerd resident memory BEFORE any image request (whole runtime):"
+          ps -o rss=,comm= -C workerd || true
+          OG_IMAGES_DIR=/tmp/og-evidence/images \
+            bun run scripts/og-worker-evidence.ts http://127.0.0.1:8787 http://127.0.0.1:54399 | tee /tmp/og-http.txt
           echo "workerd resident memory after the run (the whole runtime, not one isolate):"
           ps -o rss=,comm= -C workerd || true
 
@@ -107,6 +110,23 @@ jobs:
           # The certificate is this job's own throwaway, on loopback.
           NODE_TLS_REJECT_UNAUTHORIZED=0 \
             bun run scripts/og-worker-evidence.ts https://127.0.0.1:8788 http://127.0.0.1:54399 | tee /tmp/og-https.txt
+
+      - name: Install Chromium
+        run: bunx playwright install --with-deps chromium
+
+      - name: What a person sees behind the link (https, desktop and 390px)
+        run: |
+          set -euo pipefail
+          NODE_TLS_REJECT_UNAUTHORIZED=0 \
+            bun run scripts/og-worker-shots.ts https://127.0.0.1:8788 /tmp/og-evidence/pages
+
+      - name: Upload the pictures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: passport-preview-evidence
+          path: /tmp/og-evidence/
+          if-no-files-found: ignore
 
       - name: Worker and stub logs
         if: always()

@@ -2117,7 +2117,19 @@ jobs:
       - name: Passport sharing browser suite (desktop and 375px)
         env:
           E2E_BASE_URL: http://localhost:3100
+          # The share screen's pictures (founder card in Swedish and English,
+          # the studio with four and eleven credentials, the recipient page) at
+          # about 1440 and 375, kept as evidence of what the holder sees.
+          PASSPORT_SHOTS: test-results/passport-sharing-shots
         run: bun run e2e:sharing
+
+      - name: Upload the share screen pictures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: passport-sharing-screens
+          path: test-results/passport-sharing-shots/
+          if-no-files-found: ignore
 
       - name: Server log
         if: failure()
