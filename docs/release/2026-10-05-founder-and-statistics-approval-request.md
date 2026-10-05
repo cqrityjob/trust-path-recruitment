@@ -15,16 +15,16 @@ operator's own session and passed to the statement at run time (`<founder-holder
 The target was chosen by its **internal id** and confirmed against two further
 facts, never by name or e-mail address alone:
 
-| Check (read-only `select`)                                    | Result              |
-| ------------------------------------------------------------- | ------------------- |
-| The id matches the profile recorded in the earlier read-only match | yes            |
-| The profile's display name                                    | `Mostafa Alshawi`   |
-| The account's e-mail local part is the one recorded for the owner | yes             |
-| Role                                                          | `superadmin`        |
-| Passport profile completed and declared                       | yes / yes           |
-| Privacy setting                                               | `full_name`         |
-| Work jurisdiction                                             | `SE`                |
-| Passport numbers assigned so far / #1 taken / #1 ever retired | 0 / no / no         |
+| Check (read-only `select`)                                         | Result            |
+| ------------------------------------------------------------------ | ----------------- |
+| The id matches the profile recorded in the earlier read-only match | yes               |
+| The profile's display name                                         | `Mostafa Alshawi` |
+| The account's e-mail local part is the one recorded for the owner  | yes               |
+| Role                                                               | `superadmin`      |
+| Passport profile completed and declared                            | yes / yes         |
+| Privacy setting                                                    | `full_name`       |
+| Work jurisdiction                                                  | `SE`              |
+| Passport numbers assigned so far / #1 taken / #1 ever retired      | 0 / no / no       |
 
 **Two accounts, both the owner's, both kept.** A second completed profile with
 the **same display name** exists (role `admin`, a different account). The owner
@@ -32,8 +32,8 @@ has confirmed that both accounts are theirs and that both are kept for admin
 redundancy and tests, with **no merge, no deletion and no move of merits** between
 them:
 
-* the account with the role `superadmin` is the **founder account** and gets Passport #1;
-* the account with the role `admin` stays a **separate admin account**, takes no number from this plan, and is left out of
+- the account with the role `superadmin` is the **founder account** and gets Passport #1;
+- the account with the role `admin` stays a **separate admin account**, takes no number from this plan, and is left out of
   the statistics by the **existing staff rule** (`user_roles`), so **no extra
   exclusion row is needed**.
 
@@ -94,14 +94,14 @@ counter on the Passport page shows nothing in that state and never a fake zero.
 
 Two ways to change it, both existing and nothing new:
 
-* **As a signed-in platform administrator** (the function checks `auth.uid()`):
+- **As a signed-in platform administrator** (the function checks `auth.uid()`):
 
   ```sql
   select public.sp_set_network_stats_display('passport_page',
          'Shown on the Passport page by owner approval 2026-10-05.');
   ```
 
-* **As the operator** (service role has `UPDATE` on the policy row; the function
+- **As the operator** (service role has `UPDATE` on the policy row; the function
   needs a signed-in caller, so the operator updates the row directly and leaves
   `changed_by` empty):
 
@@ -142,3 +142,17 @@ posts anything or contacts any external service.
 
 Steps 3, 5 and 6 each need the owner's explicit approval; the work order approved
 none of them.
+
+## 7. Outcome (2026-10-05)
+
+All six steps are done, in the order above, each after the owner's explicit
+approval: the application PR merged and was published; the identity read was
+repeated read-only and matched; the founder designation returned number 1 and
+its post-checks pass (one row, number 1, designation `founder`, the owner's
+main account); the external tests ran on the production domain with the owner's
+own shares; the statistics display was set to `passport_page` as the owner's
+account and reads back so, with a logged-out `sp_network_stats` returning 1
+Passport and 9 credentials. The owner's second account keeps its merits and
+stays excluded by the staff rule. No migration was applied and nothing else on
+either account changed. Details: `2026-10-05-security-passport-v1-readiness.md`,
+sections 4, 6 and 7.
