@@ -102,9 +102,11 @@ export function DirectionC({
               — so the separator was doing the asserting, silently, on the one
               surface that leaves the product. The work location now carries
               its own label. */}
-          <p className="mt-2 text-sm" style={{ color: TRUST_PALETTE.inkMuted }}>
-            {c.profession}
-          </p>
+          {c.profession ? (
+            <p className="mt-2 text-sm" style={{ color: TRUST_PALETTE.inkMuted }}>
+              {c.profession}
+            </p>
+          ) : null}
           <p
             className="mt-3 text-[10px] uppercase tracking-[0.18em]"
             style={{ color: TRUST_PALETTE.inkMuted }}

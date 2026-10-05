@@ -896,7 +896,7 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the navigation moves into onError as well, so a save that FAILED still leaves the page and the work looks saved",
     file: PANEL,
-    find: "    onError: (e: unknown) => setActionError(besktErrorKey(e)),\n  });\n\n  // \"Nästa\" saves and moves on.",
+    find: '    onError: (e: unknown) => setActionError(besktErrorKey(e)),\n  });\n\n  // "Nästa" saves and moves on.',
     replace:
       '    onError: (e: unknown) => {\n      setActionError(besktErrorKey(e));\n      void navigate({ to: "/my-career/applications" });\n    },\n  });\n\n  // \"Nästa\" saves and moves on.',
     guard: GUARD,

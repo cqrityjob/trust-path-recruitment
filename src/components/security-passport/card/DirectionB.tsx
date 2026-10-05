@@ -75,9 +75,11 @@ export function DirectionB({
             {/* Separated for the same reason as DirectionA and DirectionC: a
                 middot between a derived title and a work country asserts that
                 one holds in the other. */}
-            <p className="mt-1 text-xs" style={{ color: TRUST_PALETTE.inkMuted }}>
-              {c.profession}
-            </p>
+            {c.profession ? (
+              <p className="mt-1 text-xs" style={{ color: TRUST_PALETTE.inkMuted }}>
+                {c.profession}
+              </p>
+            ) : null}
             <p className="mt-0.5 text-[10px]" style={{ color: TRUST_PALETTE.inkMuted }}>
               <span className="uppercase tracking-[0.16em]">{c.currentMarketLabel}</span>{" "}
               <span style={{ color: TRUST_PALETTE.ink }}>{c.jurisdiction}</span>

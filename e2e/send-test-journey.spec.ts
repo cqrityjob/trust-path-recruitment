@@ -233,7 +233,9 @@ test.describe("Skicka test — both levels, end to end", () => {
     await expect(operational).toHaveAttribute("data-state", "already_sent", { timeout: 60_000 });
     await expect(operational).toContainText(/Redan skickat/);
     await expect(page.getByTestId("send-test-submit")).toBeDisabled();
-    await page.screenshot({ path: "artifacts/assessment-dispatch/journey/send-test-3-already-sent.png" });
+    await page.screenshot({
+      path: "artifacts/assessment-dispatch/journey/send-test-3-already-sent.png",
+    });
 
     // The underlying send, repeated over the real API with the owner's own
     // token: the database answers with the SAME attempt.

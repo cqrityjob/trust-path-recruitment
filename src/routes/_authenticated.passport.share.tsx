@@ -81,6 +81,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { Check, ChevronLeft, Copy, ExternalLink, Link2, Share2, ShieldCheck } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import { getMyPassport, type PassportSnapshot } from "@/lib/security-passport/passport.functions";
 import { listMyVerificationRequests } from "@/lib/security-passport/verification.functions";
@@ -114,7 +115,19 @@ import type { PassportCopyKey } from "@/lib/security-passport/i18n";
 import type { PassportLang } from "@/lib/security-passport/i18n";
 import { passportT } from "@/lib/security-passport/i18n";
 import { buildSelectedSocialCard } from "@/lib/security-passport/social";
-import { SocialShareFlow } from "@/components/security-passport/live/SocialShareFlow";
+import {
+  SocialShareFlow,
+  type SocialShareApi,
+} from "@/components/security-passport/live/SocialShareFlow";
+import { SelectAllBox } from "@/components/security-passport/live/SelectAllBox";
+import { selectState, withAll } from "@/lib/security-passport/merit-selection";
+import {
+  createSocialShare,
+  getMyPassportNumber,
+  listMySocialShares,
+  revokeSocialShare,
+  type MyPassportNumber,
+} from "@/lib/security-passport/social-share.functions";
 
 export const Route = createFileRoute("/_authenticated/passport/share")({
   ssr: false,
@@ -216,12 +229,117 @@ type CreateOutcome =
 
 type LoadState = "loading" | "ready" | "failed";
 
+/** The page, keyed by WHO is signed in. A different account (another tab, a
+ *  refreshed session) mounts a fresh page, so no selection, prepared image,
+ *  public link or result from the previous account can be seen or used by the
+ *  next one. */
+/** Who this page was last shown to, for the life of the app (not of one mount).
+ *  The authenticated layout re-mounts everything below it when the account
+ *  changes, which would otherwise take the notice that something was cleared
+ *  away together with the state it describes. */
+let lastShareUser: string | null = null;
+/** Set when a different account is seen while the page is open, consumed by the
+ *  page the layout mounts next. */
+let switchNoticePending = false;
+
 function PassportShareRoute() {
+  const { pt } = usePassportCopy();
+  const [userId, setUserId] = useState<string | null | undefined>(undefined);
+  const [switched, setSwitched] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    /** A different person than the last one this page was shown to. */
+    const differs = (next: string | null): boolean =>
+      lastShareUser !== null && next !== null && next !== lastShareUser;
+    /** Another account was seen while this page is open: say so on the page
+     *  that replaces it, since the layout re-mounts this one. */
+    const flag = (next: string | null) => {
+      if (!differs(next)) return;
+      switchNoticePending = true;
+      setSwitched(true);
+    };
+    void supabase.auth.getSession().then(({ data }) => {
+      if (!alive) return;
+      const id = data.session?.user.id ?? null;
+      if (differs(id) || switchNoticePending) setSwitched(true);
+      switchNoticePending = false;
+      if (id !== null) lastShareUser = id;
+      setUserId(id);
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "INITIAL_SESSION") return;
+      const next = session?.user.id ?? null;
+      flag(next);
+      setUserId(next);
+    });
+    // Another tab signing in as someone else changes the stored session before
+    // this tab's client has been told. The key is supabase-js's own.
+    const onStorage = (e: StorageEvent) => {
+      if (!e.key || !/^sb-.+-auth-token$/.test(e.key)) return;
+      let next: string | null = null;
+      try {
+        const parsed = e.newValue ? (JSON.parse(e.newValue) as { user?: { id?: unknown } }) : null;
+        next = typeof parsed?.user?.id === "string" ? parsed.user.id : null;
+      } catch {
+        return;
+      }
+      if (next === null) return; // sign-out is the authenticated layout's to handle
+      flag(next);
+      setUserId(next);
+    };
+    window.addEventListener("storage", onStorage);
+    return () => {
+      alive = false;
+      sub.subscription.unsubscribe();
+      window.removeEventListener("storage", onStorage);
+    };
+  }, []);
+
+  if (userId === undefined) {
+    return (
+      <div className="mx-auto w-full max-w-2xl">
+        <p className="text-sm text-muted-foreground">{pt("common.loading")}</p>
+      </div>
+    );
+  }
+  return (
+    <>
+      {switched ? (
+        <p
+          role="status"
+          data-share-reset
+          className="mx-auto mb-4 w-full max-w-3xl rounded-lg border border-border bg-secondary/40 p-3 text-sm text-foreground"
+        >
+          {pt("shr.reset")}
+        </p>
+      ) : null}
+      <PassportShareInner key={userId ?? "signed-out"} />
+    </>
+  );
+}
+
+function PassportShareInner() {
   const { pt, lang } = usePassportCopy();
 
   const loadPassport = useServerFn(getMyPassport);
   const loadRequests = useServerFn(listMyVerificationRequests);
   const loadShares = useServerFn(listMyShares);
+  const loadNumber = useServerFn(getMyPassportNumber);
+  const doSocialCreate = useServerFn(createSocialShare);
+  const doSocialList = useServerFn(listMySocialShares);
+  const doSocialRevoke = useServerFn(revokeSocialShare);
+  // Stable between renders: the studio reads its shares when this changes.
+  const socialApi: SocialShareApi = useMemo(
+    () => ({
+      create: (input) => doSocialCreate({ data: { ...input, claimIds: [...input.claimIds] } }),
+      list: () => doSocialList({ data: undefined }),
+      revoke: async (publicId) => {
+        await doSocialRevoke({ data: { publicId } });
+      },
+    }),
+    [doSocialCreate, doSocialList, doSocialRevoke],
+  );
   const doPreview = useServerFn(previewCredentialShare);
   const doCreate = useServerFn(createCredentialShare);
   const doRevoke = useServerFn(revokeShare);
@@ -260,7 +378,7 @@ function PassportShareRoute() {
   const [reissueError, setReissueError] = useState<PassportCopyKey | null>(null);
 
   /** The screen's one choice. The link flow is where it always was. */
-  const [via, setVia] = useState<"link" | "social">("link");
+  const [via, setVia] = useState<"link" | "social">("social");
   // The social image: its own selection, because fewer merits may appear on
   // a public image than may be sent to one reader.
   const [socialSelected, setSocialSelected] = useState<ReadonlySet<string>>(new Set());
@@ -268,20 +386,14 @@ function PassportShareRoute() {
   const [socialPreview, setSocialPreview] = useState<RecipientPayload | null>(null);
   const [socialPreviewState, setSocialPreviewState] = useState<LoadState>("loading");
   /** A link created FOR the image, with the selection it was created for. */
-  const [socialLink, setSocialLink] = useState<{
-    readonly token: string;
-    readonly claimIds: readonly string[];
-  } | null>(null);
-  const [socialLinkExpiry, setSocialLinkExpiry] = useState<number>(DEFAULT_EXPIRY_DAYS);
-  const [includeLink, setIncludeLink] = useState(false);
-  const [socialCreating, setSocialCreating] = useState(false);
-  const [socialCreateError, setSocialCreateError] = useState<PassportCopyKey | null>(null);
+  const [numberInfo, setNumberInfo] = useState<MyPassportNumber | null>(null);
+  /** Selected once by default; after that the holder's changes stand. */
+  const socialPreselected = useRef(false);
 
   // Held across retries so a lost response cannot become two links. Cleared
   // only once a create has succeeded.
   const requestKey = useRef<string>(newRequestKey());
   const reissueKey = useRef<string>(newRequestKey());
-  const socialRequestKey = useRef<string>(newRequestKey());
   const linkFieldRef = useRef<HTMLInputElement | null>(null);
 
   /* ---------------------------------------------------------------- */
@@ -314,6 +426,22 @@ function PassportShareRoute() {
     void readPassport();
     void readShares();
   }, [readPassport, readShares]);
+
+  // The number is the server's: this reads it and can set nothing. A failed
+  // read draws no number, never a guessed one.
+  useEffect(() => {
+    let alive = true;
+    void loadNumber({ data: undefined })
+      .then((n) => {
+        if (alive) setNumberInfo(n);
+      })
+      .catch(() => {
+        if (alive) setNumberInfo(null);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [loadNumber]);
 
   useEffect(() => {
     let alive = true;
@@ -359,6 +487,11 @@ function PassportShareRoute() {
     }
     return keys;
   }, [selection]);
+
+  const linkKeys = useMemo(
+    () => (selection?.groups ?? []).flatMap((g) => g.candidates.map((c) => meritKey(c.merit))),
+    [selection],
+  );
 
   const droppedCount = useMemo(
     () => [...selected].filter((k) => !availableKeys.has(k)).length,
@@ -423,8 +556,35 @@ function PassportShareRoute() {
     [selection],
   );
 
+  const socialKeys = useMemo(
+    () => socialGroups.flatMap((g) => g.candidates.map((c) => meritKey(c.merit))),
+    [socialGroups],
+  );
+  const socialGroupKeys = useMemo(
+    () => socialGroups.map((g) => g.candidates.map((c) => meritKey(c.merit))),
+    [socialGroups],
+  );
+
+  // Every shareable merit is in from the start, so nobody has to tick each
+  // education before every share. Done once: after that, the holder's own
+  // changes stand, including choosing none.
+  useEffect(() => {
+    if (socialPreselected.current || socialKeys.length === 0) return;
+    socialPreselected.current = true;
+    setSocialSelected(new Set(socialKeys));
+  }, [socialKeys]);
+
+  // A merit that vanished (withdrawn or lapsed in another tab) leaves the
+  // selection rather than failing the share with a database error.
+  useEffect(() => {
+    if (!socialPreselected.current) return;
+    const live = new Set(socialKeys);
+    setSocialSelected((prev) =>
+      [...prev].every((k) => live.has(k)) ? prev : new Set([...prev].filter((k) => live.has(k))),
+    );
+  }, [socialKeys]);
+
   const socialIds = useMemo(() => splitSelection(socialSelected), [socialSelected]);
-  const socialCount = socialSelected.size;
 
   // Through the one builder, as the link preview is: the image names what the
   // selected disclosure's presentation says, in the image's language.
@@ -446,7 +606,8 @@ function PassportShareRoute() {
       .then((payload) => {
         if (!alive) return;
         setSocialPreview(payload);
-        setSocialPreviewState("ready");
+        // An unavailable preview is a failed one: say so, never "loading".
+        setSocialPreviewState(payload.status === "active" ? "ready" : "failed");
       })
       .catch((err) => {
         console.error("[passport] share: image preview failed", err);
@@ -457,28 +618,26 @@ function PassportShareRoute() {
     };
   }, [via, socialIds, imageLang, doPreview]);
 
-  const sameSelection = (a: readonly string[], b: readonly string[]) =>
-    a.length === b.length && [...a].sort().join(",") === [...b].sort().join(",");
-  const socialLinkUrl =
-    socialLink && sameSelection(socialLink.claimIds, socialIds.claimIds)
-      ? publicShareUrl(socialLink.token)
-      : null;
-  // Printed only when the holder chose it, for a link to exactly this image.
-  const imageLink = includeLink && socialLinkUrl ? socialLinkUrl : null;
-
   const socialModel = useMemo(() => {
     if (!snapshot?.profile || socialPreview?.status !== "active") return null;
-    return buildSelectedSocialCard(
+    const card = buildSelectedSocialCard(
       snapshot.holder,
       today(),
       buildRecipientPresentation(socialPreview, today()).credentials,
       {
         privacyMode: snapshot.profile.privacyMode,
         anonymousLabel: passportT("share.anonymousLabel", imageLang),
-        verifyUrl: imageLink,
+        // The image carries no link: the public link is made separately, after
+        // the holder has seen and approved what it opens.
+        verifyUrl: null,
       },
     );
-  }, [snapshot, socialPreview, imageLang, imageLink]);
+    return {
+      ...card,
+      passportNumber: numberInfo?.number ?? null,
+      designation: numberInfo?.designation ?? null,
+    };
+  }, [snapshot, socialPreview, imageLang, numberInfo]);
 
   /** The holder as far as the image goes: the LinkedIn profile entry offers
    *  only what the image's link opens. */
@@ -592,41 +751,6 @@ function PassportShareRoute() {
     }
   }
 
-  /** A link for exactly what the image shows. It is shown nowhere until the
-   *  holder ticks the box that prints it; the same create and the same
-   *  idempotency as the link flow. */
-  async function onCreateSocialLink() {
-    setSocialCreating(true);
-    setSocialCreateError(null);
-    try {
-      const result = await doCreate({
-        data: {
-          claimIds: socialIds.claimIds,
-          permittedFields: [],
-          expiresDays: socialLinkExpiry,
-          locale: imageLang,
-          requestKey: socialRequestKey.current,
-        },
-      });
-      if (result.status === "created") {
-        trackFunnelOnce("passport_share_link_created");
-        setSocialLink({ token: result.token, claimIds: [...socialIds.claimIds] });
-        setIncludeLink(false);
-      } else {
-        // Reconciled after a lost answer: only its hash exists, so there is
-        // no link to show, as on the link flow.
-        setSocialCreateError("sel.already.body");
-      }
-      socialRequestKey.current = newRequestKey();
-      await readShares();
-    } catch (err) {
-      console.error("[passport] share: image link create failed", err);
-      setSocialCreateError(CREATE_ERROR_KEY[shareErrorCode(err)]);
-    } finally {
-      setSocialCreating(false);
-    }
-  }
-
   async function onRevoke(id: string) {
     setRevoking(id);
     setRevokeError(false);
@@ -696,32 +820,28 @@ function PassportShareRoute() {
           className="mt-3 text-2xl font-semibold !text-primary-foreground sm:text-3xl"
           style={{ fontFamily: "var(--font-display)" }}
         >
-          {pt("sel.title")}
+          {pt(via === "social" ? "shr.title" : "sel.title")}
         </h1>
         <p className="mt-2 max-w-2xl text-sm leading-relaxed text-primary-foreground/70">
-          {pt("sel.lead")}
+          {pt(via === "social" ? "shr.lead" : "sel.lead")}
         </p>
       </header>
 
-      {/* ── The one choice: a private link, or an image to post ────── */}
+      {/* ── The main way is the Passport itself; a private link is the quiet
+              alternative for one recipient ───────────────────────────── */}
       <fieldset data-share-via className="min-w-0">
         <legend className="sr-only">{pt("share.via.legend")}</legend>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="inline-flex flex-wrap gap-2">
           {(
             [
-              { id: "link", Icon: Link2, title: "share.via.link", hint: "share.via.linkHint" },
-              {
-                id: "social",
-                Icon: Share2,
-                title: "share.via.social",
-                hint: "share.via.socialHint",
-              },
+              { id: "social", Icon: Share2, title: "shr.tabPublic" },
+              { id: "link", Icon: Link2, title: "shr.tabPrivate" },
             ] as const
-          ).map(({ id, Icon, title, hint }) => (
+          ).map(({ id, Icon, title }) => (
             <label
               key={id}
               data-share-choice={id}
-              className="flex min-h-[44px] cursor-pointer items-start gap-3 rounded-xl border border-border bg-card p-4 shadow-[var(--shadow-xs)] transition-colors hover:bg-accent/5 has-[:checked]:border-accent has-[:checked]:bg-accent/5 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ring"
+              className="inline-flex min-h-[44px] cursor-pointer items-center gap-2 rounded-full border border-border bg-card px-4 text-sm font-medium text-foreground transition-colors hover:bg-accent/5 has-[:checked]:border-accent has-[:checked]:bg-accent/5 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ring"
             >
               <input
                 type="radio"
@@ -729,17 +849,10 @@ function PassportShareRoute() {
                 value={id}
                 checked={via === id}
                 onChange={() => setVia(id)}
-                className="mt-1 h-4 w-4 shrink-0"
+                className="h-4 w-4 shrink-0"
               />
-              <span className="min-w-0 flex-1">
-                <span className="flex items-center gap-2 text-base font-semibold text-foreground">
-                  <Icon aria-hidden="true" className="h-4 w-4 shrink-0" />
-                  {pt(title)}
-                </span>
-                <span className="mt-1 block text-sm leading-relaxed text-muted-foreground">
-                  {pt(hint)}
-                </span>
-              </span>
+              <Icon aria-hidden="true" className="h-4 w-4 shrink-0" />
+              {pt(title)}
             </label>
           ))}
         </div>
@@ -804,6 +917,16 @@ function PassportShareRoute() {
           ) : null}
 
           <div className="mt-3 space-y-5">
+            {linkKeys.length > 1 ? (
+              <SelectAllBox
+                state={selectState(linkKeys, selected)}
+                label={pt("shr.selectAll")}
+                count={linkKeys.length}
+                onChange={(on) => setSelected((prev) => withAll(prev, linkKeys, on))}
+                idPrefix="sel-all"
+                dataAttr="data-select-all"
+              />
+            ) : null}
             {/* `min-w-0`: a fieldset defaults to `min-inline-size: min-content`,
                 which at 320px is wider than its own container and scrolls the
                 whole page sideways. It is what lets the box shrink like every
@@ -811,14 +934,8 @@ function PassportShareRoute() {
             <MeritChoices
               groups={selection?.groups ?? []}
               selected={selected}
-              onToggle={(key, on) =>
-                setSelected((prev) => {
-                  const next = new Set(prev);
-                  if (on) next.add(key);
-                  else next.delete(key);
-                  return next;
-                })
-              }
+              onToggle={(key, on) => setSelected((prev) => withAll(prev, [key], on))}
+              onToggleMany={(keys, on) => setSelected((prev) => withAll(prev, keys, on))}
               idPrefix="sel"
               lang={lang}
               pt={pt}
@@ -1009,71 +1126,61 @@ function PassportShareRoute() {
       {via === "social" && socialHolder ? (
         <SocialShareFlow
           chooser={
-            <div className="mt-3 space-y-5">
-              <MeritChoices
-                groups={socialGroups}
-                selected={socialSelected}
-                onToggle={(key, on) =>
-                  setSocialSelected((prev) => {
-                    const next = new Set(prev);
-                    if (on) next.add(key);
-                    else next.delete(key);
-                    return next;
-                  })
-                }
-                idPrefix="soc"
-                lang={lang}
-                pt={pt}
-              />
-            </div>
+            <MeritChoices
+              groups={socialGroups}
+              selected={socialSelected}
+              onToggle={(key, on) => setSocialSelected((prev) => withAll(prev, [key], on))}
+              onToggleMany={(keys, on) => setSocialSelected((prev) => withAll(prev, keys, on))}
+              idPrefix="soc"
+              lang={lang}
+              pt={pt}
+            />
           }
+          allKeys={socialKeys}
+          groupKeys={socialGroupKeys}
+          selected={socialSelected}
+          onSelectMany={(keys, on) => setSocialSelected((prev) => withAll(prev, keys, on))}
           hasCandidates={socialGroups.length > 0}
-          selectedCount={socialCount}
+          claimIds={socialIds.claimIds}
           previewState={socialPreviewState}
           model={socialModel}
-          notDrawn={socialModel !== null && socialModel.credentials.length < socialCount}
+          notDrawn={socialModel !== null && socialModel.credentials.length < socialSelected.size}
           imageLang={imageLang}
           onImageLang={setImageLang}
           holder={socialHolder}
-          link={{
-            url: socialLinkUrl,
-            stale: socialLink !== null && socialLinkUrl === null,
-            include: includeLink,
-            onInclude: setIncludeLink,
-            expiryDays: socialLinkExpiry,
-            expiryChoices: EXPIRY_CHOICES,
-            recommendedDays: DEFAULT_EXPIRY_DAYS,
-            onExpiry: setSocialLinkExpiry,
-            creating: socialCreating,
-            error: socialCreateError,
-            onCreate: () => void onCreateSocialLink(),
-          }}
+          nameHidden={snapshot.profile.privacyMode !== "full_name"}
+          api={socialApi}
+          hasNonShareable={(selection?.groups ?? []).some((g) =>
+            g.candidates.some((c) => c.merit.kind !== "claim"),
+          )}
         />
       ) : null}
 
       {/* ── Existing links ─────────────────────────────────────────── */}
-      <ShareList
-        shares={shares}
-        state={sharesState}
-        revoking={revoking}
-        revokeError={revokeError}
-        reissueFor={reissueFor}
-        reissueRevoke={reissueRevoke}
-        reissuing={reissuing}
-        reissueError={reissueError}
-        onRetry={() => void readShares()}
-        onRevoke={(id) => void onRevoke(id)}
-        onOpenReissue={(id) => {
-          setReissueError(null);
-          setReissueRevoke(true);
-          setReissueFor(id);
-        }}
-        onCancelReissue={() => setReissueFor(null)}
-        onToggleReissueRevoke={setReissueRevoke}
-        onReissue={(id) => void onReissue(id, reissueRevoke)}
-        pt={pt}
-        lang={lang}
-      />
+      {via === "link" ? (
+        <ShareList
+          shares={shares}
+          state={sharesState}
+          revoking={revoking}
+          revokeError={revokeError}
+          reissueFor={reissueFor}
+          reissueRevoke={reissueRevoke}
+          reissuing={reissuing}
+          reissueError={reissueError}
+          onRetry={() => void readShares()}
+          onRevoke={(id) => void onRevoke(id)}
+          onOpenReissue={(id) => {
+            setReissueError(null);
+            setReissueRevoke(true);
+            setReissueFor(id);
+          }}
+          onCancelReissue={() => setReissueFor(null)}
+          onToggleReissueRevoke={setReissueRevoke}
+          onReissue={(id) => void onReissue(id, reissueRevoke)}
+          pt={pt}
+          lang={lang}
+        />
+      ) : null}
 
       <BackLink label={pt("sel.back")} />
     </div>
@@ -1113,6 +1220,7 @@ function MeritChoices({
   groups,
   selected,
   onToggle,
+  onToggleMany,
   idPrefix,
   lang,
   pt,
@@ -1120,6 +1228,8 @@ function MeritChoices({
   groups: readonly ShareGroup[];
   selected: ReadonlySet<string>;
   onToggle: (key: string, on: boolean) => void;
+  /** Select or clear several at once: a group's "select all". */
+  onToggleMany?: (keys: readonly string[], on: boolean) => void;
   idPrefix: string;
   lang: PassportLang;
   pt: (key: PassportCopyKey) => string;
@@ -1135,6 +1245,24 @@ function MeritChoices({
           <legend className="px-1 text-sm font-semibold tracking-tight text-foreground">
             {pt(group.titleKey)}
           </legend>
+          {onToggleMany && group.candidates.length > 1 ? (
+            <SelectAllBox
+              state={selectState(
+                group.candidates.map((c) => meritKey(c.merit)),
+                selected,
+              )}
+              label={pt("shr.selectGroup")}
+              count={group.candidates.length}
+              onChange={(on) =>
+                onToggleMany(
+                  group.candidates.map((c) => meritKey(c.merit)),
+                  on,
+                )
+              }
+              idPrefix={`${idPrefix}-${group.id}`}
+              dataAttr="data-group-select-all"
+            />
+          ) : null}
           <ul className="mt-2 divide-y divide-border">
             {group.candidates.map(({ merit, caveat }) => {
               const key = meritKey(merit);

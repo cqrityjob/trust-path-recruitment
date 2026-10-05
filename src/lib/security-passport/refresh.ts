@@ -44,6 +44,12 @@ export const PASSPORT_QUERY_KEYS: readonly (readonly string[])[] = [
   ["cv", "list"],
 ];
 
+/** The public Passport count. A Passport completed, or a merit added, moves the
+ *  aggregate; a mounted counter re-reads at once instead of waiting for its next
+ *  minute. Kept apart from the list above, which is exactly what My Career
+ *  reads: the counter is not part of the career home. */
+export const NETWORK_STATS_KEY: readonly string[] = ["sp-network-stats"];
+
 /**
  * Tell every cached Passport-derived read that the world moved.
  *
@@ -53,7 +59,8 @@ export const PASSPORT_QUERY_KEYS: readonly (readonly string[])[] = [
  * that corrects itself a moment later in front of the reader.
  */
 export async function invalidatePassportAndCareer(qc: QueryClient): Promise<void> {
-  await Promise.all(
-    PASSPORT_QUERY_KEYS.map((queryKey) => qc.invalidateQueries({ queryKey: [...queryKey] })),
-  );
+  await Promise.all([
+    ...PASSPORT_QUERY_KEYS.map((queryKey) => qc.invalidateQueries({ queryKey: [...queryKey] })),
+    qc.invalidateQueries({ queryKey: [...NETWORK_STATS_KEY] }),
+  ]);
 }

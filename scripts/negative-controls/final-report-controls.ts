@@ -1146,7 +1146,8 @@ const MUTATIONS: readonly Mutation[] = [
   },
   {
     id: "E4-EVIDENCE-ACCEPTED-WITHOUT-STATUS",
-    defect: "the index loses its explicit accepted status while leaving reassuring provenance prose behind",
+    defect:
+      "the index loses its explicit accepted status while leaving reassuring provenance prose behind",
     file: "artifacts/employer-final-report-e4/INDEX.md",
     find: "**STATUS: ACCEPTED.**",
     replace: "**STATUS: complete.**",
@@ -1182,7 +1183,8 @@ const MUTATIONS: readonly Mutation[] = [
   },
   {
     id: "E4-EVIDENCE-ACCEPTED-WITHOUT-ALL-CAPTURES",
-    defect: "the record claims acceptance after fewer than the required seventeen captures were reviewed",
+    defect:
+      "the record claims acceptance after fewer than the required seventeen captures were reviewed",
     file: "artifacts/employer-final-report-e4/INDEX.md",
     find: "| Captures | 17 reviewed · both languages · both widths |",
     replace: "| Captures | 16 reviewed · both languages · both widths |",
@@ -1194,7 +1196,8 @@ const MUTATIONS: readonly Mutation[] = [
     defect: "the record claims acceptance after fewer than all six traces were checked",
     file: "artifacts/employer-final-report-e4/INDEX.md",
     find: "| Traces | 6 archives opened and integrity-checked · no recorded page, console or action errors |",
-    replace: "| Traces | 5 archives opened and integrity-checked · no recorded page, console or action errors |",
+    replace:
+      "| Traces | 5 archives opened and integrity-checked · no recorded page, console or action errors |",
     guard: E4,
     expect: "13.9b accepted evidence is bound to its code HEAD",
   },

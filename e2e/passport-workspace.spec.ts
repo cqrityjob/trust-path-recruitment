@@ -611,6 +611,13 @@ async function mount(
       // reads this one now (PR #197); the old package list is gone.
       case "listMyShares":
         return ok(route, []);
+      // The public-share studio on the same screen.
+      case "getMyPassportNumber":
+        return ok(route, { number: null, designation: null });
+      case "listMySocialShares":
+        return ok(route, []);
+      case "previewCredentialShare":
+        return ok(route, { status: "unavailable" });
 
       // /passport/credentials/new
       case "listMyCredentialDrafts":

@@ -16,6 +16,7 @@ import { Section } from "@/components/site/Section";
 import { useT } from "@/i18n/context";
 import {
   formatCount,
+  formatUpdatedAt,
   marketName,
   mayShowNetworkStats,
   NETWORK_STATS_QUERY,
@@ -28,9 +29,12 @@ const DISPLAY = { fontFamily: "var(--font-display)" } as const;
 export function SecurityPassportNetworkView({
   stats,
   showLink = false,
+  updatedAt = null,
 }: {
   stats: NetworkStats;
   showLink?: boolean;
+  /** When the figures were last read (epoch ms), or null when not known. */
+  updatedAt?: number | null;
 }) {
   const { t, lang } = useT();
   const markets = stats.markets.map((code) => marketName(code, lang));
@@ -99,6 +103,11 @@ export function SecurityPassportNetworkView({
         ) : null}
 
         <p className="mt-6 text-xs leading-relaxed text-muted-foreground">{t("network.note")}</p>
+        {updatedAt ? (
+          <p data-network-updated className="mt-1 text-xs tabular-nums text-muted-foreground">
+            {t("network.updated")} {formatUpdatedAt(updatedAt, lang)}
+          </p>
+        ) : null}
 
         {showLink ? (
           <Link
@@ -120,5 +129,11 @@ export function SecurityPassportNetwork({ surface }: { surface: "homepage" | "pa
   const query = useQuery(NETWORK_STATS_QUERY);
   const stats = query.data ?? null;
   if (!mayShowNetworkStats(stats, surface)) return null;
-  return <SecurityPassportNetworkView stats={stats} showLink={surface === "homepage"} />;
+  return (
+    <SecurityPassportNetworkView
+      stats={stats}
+      showLink={surface === "homepage"}
+      updatedAt={query.dataUpdatedAt || null}
+    />
+  );
 }

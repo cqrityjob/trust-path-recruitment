@@ -38,8 +38,7 @@ const ACADEMY_FNS = "src/lib/security-competency/academy-employer.functions.ts";
 const WORKFORCE_FNS = "src/lib/job-intelligence/employer-workforce.functions.ts";
 const RUNTIME = "src/lib/interview-intelligence/runtime.functions.ts";
 const DICT = "src/i18n/dictionaries.ts";
-const WORKFORCE_MIGRATION =
-  "supabase/migrations/20261205090000_employer_workforce_active_only.sql";
+const WORKFORCE_MIGRATION = "supabase/migrations/20261205090000_employer_workforce_active_only.sql";
 const TRAINING_MIGRATION =
   "supabase/migrations/20261206090000_scp_training_assignment_person_context.sql";
 
@@ -115,7 +114,7 @@ const MUTATIONS: readonly Mutation[] = [
       "a filter whose reads have not answered matches every row, so the list shows people who are not being assessed",
     file: APPLICATIONS,
     find: '        (openAssessments.read === "ready" && openAssessments.ids.has(r.id));',
-    replace: "        openAssessments.ids.has(r.id) ||\n        openAssessments.read !== \"ready\";",
+    replace: '        openAssessments.ids.has(r.id) ||\n        openAssessments.read !== "ready";',
     guard: G,
     expect: "a filter whose read has not answered matches nothing rather than everything",
   },
@@ -136,8 +135,9 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the workload counter goes back to its own copy of the statuses, so the number and the filtered list can drift apart",
     file: RUNTIME,
-    find: "      inPreparation: count(\"inPreparation\"),",
-    replace: "      inPreparation: cases.filter((c) =>\n        [\"draft\", \"sources_ready\"].includes(c.status),\n      ).length,",
+    find: '      inPreparation: count("inPreparation"),',
+    replace:
+      '      inPreparation: cases.filter((c) =>\n        ["draft", "sources_ready"].includes(c.status),\n      ).length,',
     guard: G,
     expect: "the inPreparation count goes through the shared stage table",
   },
@@ -146,7 +146,7 @@ const MUTATIONS: readonly Mutation[] = [
     defect: "a finalised report is counted as an interview still in flight",
     file: STAGE,
     find: '  done: ["reported"],',
-    replace: '  done: [],',
+    replace: "  done: [],",
     guard: G,
     expect: "it is done",
   },
@@ -214,8 +214,7 @@ const MUTATIONS: readonly Mutation[] = [
   },
   {
     id: "EL-DEVELOPMENT-NOT-FILTERED-TO-THE-PERSON",
-    defect:
-      "the employee's development section shows every assignment in the organisation again",
+    defect: "the employee's development section shows every assignment in the organisation again",
     file: EMPLOYEE_FNS,
     find: "      (r) => String(r.subject_id) === employee.subjectId,",
     replace: "      () => true,",
@@ -238,9 +237,9 @@ const MUTATIONS: readonly Mutation[] = [
     id: "EL-COMPETENCE-COMPUTES-A-READINESS",
     defect: "the competence section starts computing how ready the person is for their role",
     file: EMPLOYEE_FNS,
-    find: "      state: \"ready\",\n      professionSlug: String(profession.slug),",
+    find: '      state: "ready",\n      professionSlug: String(profession.slug),',
     replace:
-      "      readiness: requirements.length === 0 ? 0 : 100,\n      state: \"ready\",\n      professionSlug: String(profession.slug),",
+      '      readiness: requirements.length === 0 ? 0 : 100,\n      state: "ready",\n      professionSlug: String(profession.slug),',
     guard: G,
     expect: "the competence read computes no readiness",
   },
@@ -269,7 +268,8 @@ const MUTATIONS: readonly Mutation[] = [
     defect: "a released report hands the employer's browser the subject behind it",
     file: ACADEMY_FNS,
     find: "export type ReportSnapshot = {\n  id: string;\n  attemptId: string;",
-    replace: "export type ReportSnapshot = {\n  id: string;\n  attemptId: string;\n  subjectId: string;",
+    replace:
+      "export type ReportSnapshot = {\n  id: string;\n  attemptId: string;\n  subjectId: string;",
     guard: G,
     expect: "a released report carries no subject",
   },
@@ -279,7 +279,8 @@ const MUTATIONS: readonly Mutation[] = [
       "resolving who a participant is goes back to taking the subject from the browser rather than the attempt",
     file: ACADEMY_FNS,
     find: "    z.object({ employerId: z.string().uuid(), attemptId: z.string().uuid() }).parse(d),",
-    replace: "    z.object({ employerId: z.string().uuid(), subjectId: z.string().uuid() }).parse(d),",
+    replace:
+      "    z.object({ employerId: z.string().uuid(), subjectId: z.string().uuid() }).parse(d),",
     guard: G,
     expect: "identity resolution takes the attempt",
   },
@@ -309,7 +310,7 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the development section stops saying that a completed programme is not evidence of competence",
     file: DICT,
-    find: "      \"Programmes assigned to this person, and how far they have got. A completed programme is a development activity and is never evidence of verified competence.\",",
+    find: '      "Programmes assigned to this person, and how far they have got. A completed programme is a development activity and is never evidence of verified competence.",',
     replace: '      "Programmes assigned to this person, and how far they have got.",',
     guard: G,
     expect: "the section's own lede states the boundary",
@@ -361,7 +362,7 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the workforce migration starts touching jobs, which would stop a pending organisation preparing an advertisement",
     file: WORKFORCE_MIGRATION,
-    find: "DROP POLICY IF EXISTS \"employees_employer_insert\" ON public.employees;",
+    find: 'DROP POLICY IF EXISTS "employees_employer_insert" ON public.employees;',
     replace:
       'DROP POLICY IF EXISTS "jobs_employer_insert_own" ON public.jobs;\nDROP POLICY IF EXISTS "employees_employer_insert" ON public.employees;',
     guard: G,

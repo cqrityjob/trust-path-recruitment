@@ -439,12 +439,37 @@ ok(
   "N8.5 no table is read from the browser",
 );
 ok(
-  !/\.channel\(|\.subscribe\(|postgres_changes|refetchInterval|setInterval/.test(
+  !/\.channel\(|\.subscribe\(|postgres_changes|setInterval/.test(
     libSrc + read("src/components/site/SecurityPassportNetwork.tsx"),
   ),
-  "N8.6 no realtime, polling or timers",
+  "N8.6 no realtime channel or hand-rolled timer: liveness is the query's own refetch",
 );
-ok(/staleTime:\s*10 \* 60 \* 1000/.test(libSrc), "N8.7 cached for ten minutes");
+ok(
+  /refetchInterval:\s*NETWORK_STATS_REFETCH_MS/.test(libSrc) &&
+    /NETWORK_STATS_REFETCH_MS\s*=\s*60_000/.test(libSrc),
+  "N8.7 re-read about once a minute",
+);
+ok(
+  /refetchIntervalInBackground:\s*false/.test(libSrc) &&
+    /refetchOnWindowFocus:\s*true/.test(libSrc),
+  "N8.7b only while the page is visible, and again on returning to it",
+);
+ok(
+  /if \(error\) throw new Error/.test(libSrc),
+  "N8.7c a failed read throws, so the last good figures stay and a failure is never a zero",
+);
+ok(
+  /NETWORK_STATS_KEY/.test(read("src/lib/security-passport/refresh.ts")) &&
+    /invalidateQueries\(\{ queryKey: \[\.\.\.NETWORK_STATS_KEY\] \}\)/.test(
+      read("src/lib/security-passport/refresh.ts"),
+    ),
+  "N8.7d a Passport write invalidates the counter",
+);
+ok(
+  /data-network-updated/.test(read("src/components/site/SecurityPassportNetwork.tsx")) &&
+    /dataUpdatedAt/.test(read("src/components/site/SecurityPassportNetwork.tsx")),
+  "N8.7e the update time is shown",
+);
 ok(
   /useQuery\(NETWORK_STATS_QUERY\)/.test(read("src/components/site/SecurityPassportNetwork.tsx")),
   "N8.8 both surfaces share one query key (one request per page view)",

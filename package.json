@@ -295,6 +295,7 @@
     "passport-hayat:check": "bun run scripts/passport-hayat-check.ts",
     "negative-controls:passport-hayat": "bun run scripts/negative-controls/passport-hayat-controls.ts",
     "passport-network-stats:check": "bun run scripts/passport-network-stats-check.tsx",
+    "passport-public-share:check": "bun run scripts/passport-public-share-check.ts",
     "passport-review-stale:check": "bun run scripts/passport-review-stale-check.tsx",
     "negative-controls:passport-network-stats": "bun run scripts/negative-controls/passport-network-stats-controls.ts",
     "negative-controls:passport-review-stale": "bun run scripts/negative-controls/passport-review-stale-controls.ts",

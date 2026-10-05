@@ -28,6 +28,11 @@ export interface SocialImageStrings {
   /** The micro label under the brand mark. */
   readonly brand: string;
   readonly professionLine: string;
+  /** "Security Passport #1", or null when the holder has no number. */
+  readonly numberLine: string | null;
+  /** The founder designation, a separate line; null for everyone else. A
+   *  product designation, never a professional qualification. */
+  readonly designationLine: string | null;
   /** Printed beside the QR code, only when the image carries a link. */
   readonly verifyAtSource: string;
   /** Printed instead when it carries none: an image is not the record. */
@@ -46,9 +51,14 @@ export function socialImageStrings(
   return {
     brand: pt("card.brand"),
     professionLine: titleWithJurisdictionOnce(
-      joinTitles(model.titles, lang, pt("identity.none")),
+      // No title is simply no line: "no active professional title" is a
+      // statement about the person that a card has no business making.
+      joinTitles(model.titles, lang, ""),
       formatJurisdiction(model.jurisdictionCode, lang),
     ),
+    numberLine:
+      model.passportNumber != null ? `${pt("rec.passportNumber")} #${model.passportNumber}` : null,
+    designationLine: model.designation === "founder" ? pt("rec.designation.founder") : null,
     verifyAtSource: pt("card.verifyAtSource"),
     snapshotNote: pt("social.snapshotNote"),
     noVerified: pt("card.noVerifiedYet"),

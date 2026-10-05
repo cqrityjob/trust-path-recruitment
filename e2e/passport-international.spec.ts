@@ -97,6 +97,11 @@ async function mount(page: Page, path: string, lang: "sv" | "en" = "en", empty =
     getInternationalPassportMetadata: metadata,
     listMyVerificationRequests: { requests: [], decisions: [] },
     listMyShares: [],
+    getMyPassportNumber: { number: null, designation: null },
+    listMySocialShares: [],
+    // The studio previews the whole Passport on load; these scenarios do not
+    // look at the preview.
+    previewCredentialShare: { status: "unavailable" },
     countMyAcademyWork: { total: 0, actionable: 0 },
     countMyReviewQueue: 0,
     listMyEmployerWorkspaces: [],
@@ -191,6 +196,7 @@ test("closed catalogue selects approved definitions and never accepts custom met
 test("sharing offers credentials only and defaults optional fields off", async ({ page }) => {
   const refusals = await mount(page, "/passport/share");
   await expect(page.locator("[data-share-screen]")).toBeVisible();
+  await page.locator('[data-share-choice="link"]').click();
   await expect(page.locator("main")).toContainText("Original international credential");
   await expect(page.locator("main")).not.toContainText("PRIVATE CV EDUCATION");
   await expect(page.getByLabel("My name (subject to privacy settings)")).not.toBeChecked();
@@ -282,6 +288,7 @@ test("v2 consent travels to preview and creation, then the link can be revoked",
     }
     return route.fallback();
   });
+  await page.locator('[data-share-choice="link"]').click();
   await page.locator(`[data-merit-option="claim:${claim.id}"] input`).check();
   await page.getByLabel("Credential identifiers", { exact: true }).check();
   await page.getByRole("button", { name: /Preview.*recipient/ }).click();

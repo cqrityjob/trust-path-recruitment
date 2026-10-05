@@ -99,6 +99,11 @@ async function mount(
     getInternationalPassportMetadata: metadata,
     listMyVerificationRequests: { requests: [], decisions: [] },
     listMyShares: [],
+    getMyPassportNumber: { number: null, designation: null },
+    listMySocialShares: [],
+    // The studio previews the whole Passport on load; these scenarios do not
+    // look at the preview.
+    previewCredentialShare: { status: "unavailable" },
     countMyAcademyWork: { total: 0, actionable: 0 },
     countMyReviewQueue: 0,
     listMyEmployerWorkspaces: [],

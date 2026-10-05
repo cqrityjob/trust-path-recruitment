@@ -42,7 +42,8 @@ const MUTATIONS: readonly Mutation[] = [
   /* ---- The link itself ------------------------------------------- */
   {
     id: "E1-BATCH-WRONG-APPLICATION",
-    defect: "a batch send uses the outer application's id instead of each selected recipient's application",
+    defect:
+      "a batch send uses the outer application's id instead of each selected recipient's application",
     file: "src/components/recruitment/SendTestDialog.tsx",
     find: "applicationId: recipient.applicationId,",
     replace: "applicationId,",

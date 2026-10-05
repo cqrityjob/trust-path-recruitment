@@ -255,6 +255,7 @@ export const dictionaries = {
     "network.markets.other": "Övriga marknader",
     "network.note":
       "Sammanräknad och anonym statistik som uppdateras automatiskt. Marknader med få Security Passport visas samlat.",
+    "network.updated": "Uppdaterad",
     "network.cta": "Läs mer om Security Passport",
     "home.individual.career.title": "Karriär",
     "home.individual.career.body":
@@ -9305,6 +9306,7 @@ export const dictionaries = {
     "network.markets.other": "Other markets",
     "network.note":
       "Aggregated, anonymous figures that update automatically. Markets with few Security Passports are shown together.",
+    "network.updated": "Updated",
     "network.cta": "Learn more about Security Passport",
     "home.individual.career.title": "Career",
     "home.individual.career.body":

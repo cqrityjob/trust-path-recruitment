@@ -229,7 +229,7 @@ export function useCardContent(
   return {
     brandLabel: pt("card.brand"),
     holderName: card.holderDisplayName,
-    profession: professionLine(card.identity, lang, pt("identity.none")),
+    profession: professionLine(card.identity, lang, ""),
     jurisdiction: formatWorkLocation(card.jurisdictionCode, card.subJurisdictionCode, lang),
     workLabel: pt("card.workLabel"),
     milestone,

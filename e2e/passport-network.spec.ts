@@ -207,8 +207,13 @@ test.describe("what the band says", () => {
       await open(page, "/", POPULATED, lang);
       const text = await page.locator(BAND).innerText();
       expect(text).not.toMatch(/#\s?\d|\b(rank|ranking|leaderboard|top)\b|nummer 1|\bplats \d/i);
-      // The only numbers in the band are the two figures.
-      const numbers = plain(text).match(/\d[\d ,]*/g) ?? [];
+      // The time the figures were last read is shown, and is a time of day --
+      // not a figure. Everything else numeric is the two figures.
+      const updated = await page.locator(`${BAND} [data-network-updated]`).innerText();
+      expect(updated).toMatch(
+        lang === "sv" ? /^Uppdaterad \d{2}[:.]\d{2}$/ : /^Updated \d{2}[:.]\d{2}$/,
+      );
+      const numbers = plain(text.replace(updated, "")).match(/\d[\d ,]*/g) ?? [];
       expect(numbers.map((n) => n.replace(/\D/g, ""))).toEqual(["1247", "3841"]);
     }
   });

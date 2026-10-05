@@ -151,11 +151,10 @@ const mutations: readonly Mutation[] = [
   // ── What is shared is what is previewed, and it is one file ────────────
   {
     id: "ONE-PASSPORT-SHARE-NOT-PREVIEW",
-    defect:
-      "the share sheet and the platforms are handed a file made from a different drawing than the preview",
+    defect: "the share sheet and the saved file are made from a different drawing than the preview",
     file: FLOW,
-    find: "  const file = svg && prepared && prepared.svg === svg ? prepared.file : null;",
-    replace: "  const file = prepared ? prepared.file : null;",
+    find: "  const prepared = svg && file && file.svg === svg ? file.file : null;",
+    replace: "  const prepared = file ? file.file : null;",
     guard,
     expect: "the file handed over is the one made from the SVG on screen",
   },
@@ -189,12 +188,41 @@ const mutations: readonly Mutation[] = [
   // ── A link only on the holder's own press ──────────────────────────────
   {
     id: "ONE-PASSPORT-LINK-IMPLICIT",
-    defect: "downloading the image quietly creates a public link as well",
+    defect: "saving the image quietly creates a public share as well",
     file: FLOW,
-    find: "  function download() {\n    if (!file) return;",
-    replace: "  function download() {\n    link.onCreate();\n    if (!file) return;",
+    find: "  function saveImage() {\n    if (!prepared) return;",
+    replace: "  function saveImage() {\n    void ensureShare();\n    if (!prepared) return;",
     guard,
-    expect: "the social flow creates a link from one place",
+    expect: "a public share is created from one function",
+  },
+  {
+    id: "ONE-PASSPORT-CONSENT-BYPASS",
+    defect: "the consent gate lets a press through without the holder's confirmation",
+    file: FLOW,
+    find: "    if (!consent) {\n      setConsentHint(true);",
+    replace: "    if (false as boolean) {\n      setConsentHint(true);",
+    guard,
+    expect: "and both go through the consent gate",
+  },
+  {
+    id: "ONE-PASSPORT-POPUP-AFTER-AWAIT",
+    defect:
+      "the destination window is opened after the share is created, where a browser blocks it",
+    file: FLOW,
+    find: '    const popup = isMail ? null : window.open("", "_blank");',
+    replace: "    const popup = null as Window | null;",
+    guard,
+    expect: "the destination window is opened inside the click",
+  },
+  {
+    id: "ONE-PASSPORT-CANCEL-DOWNLOADS",
+    defect: "cancelling the device share sheet saves the image anyway",
+    file: FLOW,
+    find: '      if (err instanceof DOMException && err.name === "AbortError") return;',
+    replace:
+      '      if (err instanceof DOMException && err.name === "AbortError") {\n        saveImage();\n        return;\n      }',
+    guard,
+    expect: "cancelling the device share is a decision",
   },
   {
     id: "ONE-PASSPORT-QR-WITHOUT-LINK",
@@ -217,12 +245,12 @@ const mutations: readonly Mutation[] = [
   // ── Accessibility ──────────────────────────────────────────────────────
   {
     id: "ONE-PASSPORT-NO-WORDS-BESIDE-PREVIEW",
-    defect: "the preview loses its textual companion, so a screen reader depends on the drawing",
+    defect: "the whole list as text is dropped, so a crowded image silently loses credentials",
     file: FLOW,
-    find: "                <figcaption>\n                  <PassportGroupList",
-    replace: "                <figcaption hidden>\n                  {null && <PassportGroupList",
+    find: "              <div data-social-export>",
+    replace: "              <div>",
     guard,
-    expect: "the preview is accompanied by the Passport in words",
+    expect: "the whole Passport is also given in words",
   },
 ];
 
