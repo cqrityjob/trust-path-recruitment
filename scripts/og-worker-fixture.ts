@@ -2,9 +2,9 @@
 // exactly like `sp_get_social_share`'s answer. Invented people and merits only.
 
 export const ACTIVE_ID = "AbCdEfGhIjKlMnOpQrStUvWx";
-export const LONG_ID = "LongLongLongLongLongLong1";
-export const ARABIC_ID = "ArabicArabicArabicArabic1";
-export const FOUNDER_ID = "FounderFounderFounderFo01";
+export const LONG_ID = "LongLongLongLongLongLong";
+export const ARABIC_ID = "ArabicArabicArabicArabic";
+export const FOUNDER_ID = "FounderFounderFounderFou";
 
 const claim = (n: number, title: string, assertion = "self_declared") => ({
   key: `c${n}`,
