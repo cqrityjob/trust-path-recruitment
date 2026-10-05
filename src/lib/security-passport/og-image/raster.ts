@@ -145,7 +145,7 @@ export class Canvas {
       raw[y * (rowBytes + 1)] = 0; // filter: none
       raw.set(this.data.subarray(y * rowBytes, (y + 1) * rowBytes), y * (rowBytes + 1) + 1);
     }
-    const idat = zlibSync(raw, { level: 4 });
+    const idat = zlibSync(raw, { level: 1 });
     const ihdr = new Uint8Array(13);
     const dv = new DataView(ihdr.buffer);
     dv.setUint32(0, this.width);

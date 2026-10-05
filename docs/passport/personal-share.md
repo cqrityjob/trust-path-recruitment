@@ -94,7 +94,7 @@ call itself. To regenerate: decode `public/fonts/{sora-700,manrope-500,manrope-7
 to TTF (for example with `wawoff2`) and write the three base64 strings.
 
 First request costs about 0.3 s of CPU in Node (parsing three fonts, then the
-fill and a level-4 deflate of 2.3 MB); the parsed fonts are kept for the life of
+fill and a level-1 deflate of 2.3 MB); the parsed fonts are kept for the life of
 the isolate. **Measure it on the real Worker** in the HTTPS test environment
 before publication.
 

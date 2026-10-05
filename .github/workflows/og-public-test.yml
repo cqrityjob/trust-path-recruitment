@@ -1,0 +1,143 @@
+name: Passport preview — public test deployment (manual, owner's Cloudflare account)
+
+# ── WHAT THIS IS, AND WHAT IT IS NOT ────────────────────────────────────
+#
+# The external checks of the personal preview (LinkedIn's Post Inspector, the
+# real LinkedIn share box, a phone) need the application on a PUBLIC https
+# address. This workflow puts the BUILT application, exactly as the default
+# build produces it, on a temporary Cloudflare Worker in the owner's own account,
+# next to a second Worker that stands in for the database and answers only
+# `sp_get_social_share` for INVENTED people. No real project, person, merit or
+# account is involved, and the application's Supabase address is the stand-in.
+#
+# It runs only when started by hand (workflow_dispatch), never on a push, and
+# needs two repository secrets that the OWNER adds in GitHub (Settings, Secrets
+# and variables, Actions) -- never in chat:
+#
+#   CLOUDFLARE_API_TOKEN   a token limited to "Workers Scripts: Edit" on ONE account
+#   CLOUDFLARE_ACCOUNT_ID  that account's id
+#   OG_TEST_ADMIN_TOKEN    any random string of 32+ characters (the stand-in's admin key)
+#
+# The application's own `og:image` and `og:url` are built on the configured
+# public origin, so the deploy step builds with VITE_PUBLIC_SITE_URL set to the
+# test deployment's own address.
+#
+# Actions: deploy (both Workers), revoke / expire / error / restore (flip the
+# synthetic share's state, to see the page and the image stop), teardown
+# (delete both Workers). Nothing is posted anywhere.
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "deploy | revoke | expire | error | restore | teardown"
+        required: true
+        default: deploy
+        type: choice
+        options: [deploy, revoke, expire, error, restore, teardown]
+      share:
+        description: "Which synthetic share a state change applies to"
+        required: false
+        default: "AbCdEfGhIjKlMnOpQrStUvWx"
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  APP_WORKER: cqrity-og-test-app
+  STUB_WORKER: cqrity-og-test-stub
+  WRANGLER: wrangler@4.147.0
+
+jobs:
+  run:
+    name: ${{ inputs.action }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      OG_TEST_ADMIN_TOKEN: ${{ secrets.OG_TEST_ADMIN_TOKEN }}
+    steps:
+      - name: Refuse without the secrets
+        run: |
+          for v in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID OG_TEST_ADMIN_TOKEN; do
+            if [ -z "${!v}" ]; then echo "$v is not set as a repository secret" >&2; exit 1; fi
+          done
+          if [ "${#OG_TEST_ADMIN_TOKEN}" -lt 32 ]; then echo "OG_TEST_ADMIN_TOKEN must be 32+ characters" >&2; exit 1; fi
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - name: Work out the two public addresses
+        run: |
+          set -euo pipefail
+          SUB="$(curl -sf -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/subdomain" | jq -r '.result.subdomain')"
+          if [ -z "$SUB" ] || [ "$SUB" = "null" ]; then
+            echo "this account has no workers.dev subdomain: enable one in Cloudflare (Workers & Pages) first" >&2; exit 1
+          fi
+          echo "APP_URL=https://${APP_WORKER}.${SUB}.workers.dev" >> "$GITHUB_ENV"
+          echo "STUB_URL=https://${STUB_WORKER}.${SUB}.workers.dev" >> "$GITHUB_ENV"
+
+      - name: Install dependencies
+        if: inputs.action == 'deploy'
+        run: bun install --frozen-lockfile
+
+      - name: Deploy the stand-in database Worker
+        if: inputs.action == 'deploy'
+        run: |
+          set -euo pipefail
+          npx --yes "$WRANGLER" deploy scripts/og-test-stub-worker.ts \
+            --name "$STUB_WORKER" --compatibility-date 2026-09-01
+          printf '%s' "$OG_TEST_ADMIN_TOKEN" | npx --yes "$WRANGLER" secret put OG_TEST_ADMIN_TOKEN --name "$STUB_WORKER"
+
+      - name: Build the application (default Cloudflare preset)
+        if: inputs.action == 'deploy'
+        env:
+          # Share addresses and og:image are built on the configured public
+          # origin, never the browser's: here that is this test deployment.
+          VITE_PUBLIC_SITE_URL: ${{ env.APP_URL }}
+        run: bun run build
+
+      - name: Deploy the application Worker, pointed at the stand-in
+        if: inputs.action == 'deploy'
+        run: |
+          set -euo pipefail
+          npx --yes "$WRANGLER" deploy --name "$APP_WORKER" \
+            --var "SUPABASE_URL:${STUB_URL}" \
+            --var "SUPABASE_PUBLISHABLE_KEY:sb_publishable_synthetic_key"
+          {
+            echo "## Public test deployment"
+            echo
+            echo "* Application: ${APP_URL}"
+            echo "* A synthetic share: ${APP_URL}/s/AbCdEfGhIjKlMnOpQrStUvWx"
+            echo "* Its personal image: ${APP_URL}/og/share/AbCdEfGhIjKlMnOpQrStUvWx"
+            echo "* The founder card (English): ${APP_URL}/s/FounderFounderFounderFou"
+            echo "* Forty credentials: ${APP_URL}/s/LongLongLongLongLongLong"
+            echo
+            echo "Everything here is invented. Run this workflow again with revoke / expire / error / restore to change the share's state, and teardown when finished."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Change the synthetic share's state
+        if: contains(fromJSON('["revoke","expire","error","restore"]'), inputs.action)
+        run: |
+          set -euo pipefail
+          case "${{ inputs.action }}" in
+            revoke) STATE=revoked ;; expire) STATE=expired ;; error) STATE=error ;; restore) STATE=active ;;
+          esac
+          echo "setting ${{ inputs.share }} to ${STATE}"
+          curl -sf -X POST "${STUB_URL}/__state" -H "authorization: Bearer ${OG_TEST_ADMIN_TOKEN}" \
+            -d "{\"id\":\"${{ inputs.share }}\",\"state\":\"${STATE}\"}"
+          echo "now ${APP_URL}/og/share/${{ inputs.share }} -> $(curl -s -o /dev/null -w '%{http_code}' "${APP_URL}/og/share/${{ inputs.share }}")"
+
+      - name: Tear both Workers down
+        if: inputs.action == 'teardown'
+        run: |
+          npx --yes "$WRANGLER" delete --name "$APP_WORKER" --force || true
+          npx --yes "$WRANGLER" delete --name "$STUB_WORKER" --force || true
