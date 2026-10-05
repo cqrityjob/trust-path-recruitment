@@ -233,24 +233,44 @@ type LoadState = "loading" | "ready" | "failed";
  *  refreshed session) mounts a fresh page, so no selection, prepared image,
  *  public link or result from the previous account can be seen or used by the
  *  next one. */
+/** Who this page was last shown to, for the life of the app (not of one mount).
+ *  The authenticated layout re-mounts everything below it when the account
+ *  changes, which would otherwise take the notice that something was cleared
+ *  away together with the state it describes. */
+let lastShareUser: string | null = null;
+/** Set when a different account is seen while the page is open, consumed by the
+ *  page the layout mounts next. */
+let switchNoticePending = false;
+
 function PassportShareRoute() {
   const { pt } = usePassportCopy();
   const [userId, setUserId] = useState<string | null | undefined>(undefined);
   const [switched, setSwitched] = useState(false);
-  const last = useRef<string | null>(null);
 
   useEffect(() => {
     let alive = true;
+    /** A different person than the last one this page was shown to. */
+    const differs = (next: string | null): boolean =>
+      lastShareUser !== null && next !== null && next !== lastShareUser;
+    /** Another account was seen while this page is open: say so on the page
+     *  that replaces it, since the layout re-mounts this one. */
+    const flag = (next: string | null) => {
+      if (!differs(next)) return;
+      switchNoticePending = true;
+      setSwitched(true);
+    };
     void supabase.auth.getSession().then(({ data }) => {
       if (!alive) return;
-      last.current = data.session?.user.id ?? null;
-      setUserId(last.current);
+      const id = data.session?.user.id ?? null;
+      if (differs(id) || switchNoticePending) setSwitched(true);
+      switchNoticePending = false;
+      if (id !== null) lastShareUser = id;
+      setUserId(id);
     });
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "INITIAL_SESSION") return;
       const next = session?.user.id ?? null;
-      if (last.current !== null && next !== last.current) setSwitched(true);
-      last.current = next;
+      flag(next);
       setUserId(next);
     });
     // Another tab signing in as someone else changes the stored session before
@@ -265,8 +285,7 @@ function PassportShareRoute() {
         return;
       }
       if (next === null) return; // sign-out is the authenticated layout's to handle
-      if (last.current !== null && next !== last.current) setSwitched(true);
-      last.current = next;
+      flag(next);
       setUserId(next);
     };
     window.addEventListener("storage", onStorage);
