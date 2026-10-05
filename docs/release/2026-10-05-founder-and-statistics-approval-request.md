@@ -32,10 +32,8 @@ has confirmed that both accounts are theirs and that both are kept for admin
 redundancy and tests, with **no merge, no deletion and no move of merits** between
 them:
 
-* the account with the e-mail local part `sandleradam…` (role `superadmin`) is the
-  **founder account** and gets Passport #1;
-* the account with the e-mail local part `mostafa…` (role `admin`) stays a
-  **separate admin account**, takes no number from this plan, and is left out of
+* the account with the role `superadmin` is the **founder account** and gets Passport #1;
+* the account with the role `admin` stays a **separate admin account**, takes no number from this plan, and is left out of
   the statistics by the **existing staff rule** (`user_roles`), so **no extra
   exclusion row is needed**.
 
