@@ -196,6 +196,7 @@ test("closed catalogue selects approved definitions and never accepts custom met
 test("sharing offers credentials only and defaults optional fields off", async ({ page }) => {
   const refusals = await mount(page, "/passport/share");
   await expect(page.locator("[data-share-screen]")).toBeVisible();
+  await page.locator('[data-share-choice="link"]').click();
   await expect(page.locator("main")).toContainText("Original international credential");
   await expect(page.locator("main")).not.toContainText("PRIVATE CV EDUCATION");
   await expect(page.getByLabel("My name (subject to privacy settings)")).not.toBeChecked();

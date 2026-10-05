@@ -1143,6 +1143,7 @@ test.describe("the public pilot, on a real backend", () => {
 
       // Revocation, and the same recipient reloads.
       await page.goto(`${BASE}/passport/share`);
+      await page.locator('[data-share-choice="link"]').click();
       await page.locator(`[data-share-revoke="${share}"]`).click();
       await expect(page.locator(`[data-share-row="${share}"]`)).toHaveAttribute(
         "data-share-state",
