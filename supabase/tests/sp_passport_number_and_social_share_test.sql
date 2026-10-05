@@ -451,7 +451,7 @@ SELECT pg_temp.ok(
             'snapshot_at','status'],
   '3.23 the payload has exactly the approved top-level keys (no image unless asked)');
 SELECT pg_temp.ok(
-  (SELECT bool_and(k IN ('key','title','credential_code','jurisdiction','sub_jurisdiction',
+  (SELECT bool_and(k IN ('key','type','title','credential_code','jurisdiction','sub_jurisdiction','scope_code','no_expiry',
                          'valid_until','assertion','lifecycle','verified_at',
                          'verifier_organisation','verification_method'))
      FROM got, jsonb_array_elements(got.j->'claims') c, jsonb_object_keys(c) k),

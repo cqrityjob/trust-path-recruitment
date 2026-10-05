@@ -657,10 +657,15 @@ BEGIN
     'claims', coalesce((
       SELECT jsonb_agg(jsonb_build_object(
         'key', 'c' || t.ord,
+        'type', t.claim_type,
         'title', t.title,
         'credential_code', t.credential_code,
         'jurisdiction', t.jurisdiction_code,
         'sub_jurisdiction', t.sub_jurisdiction_code,
+        -- The DEFINITION's own scope from the governed catalogue, never the
+        -- claim's: a globe may be drawn for 'global_professional' only.
+        'scope_code', t.scope_code,
+        'no_expiry', coalesce(t.no_expiry, false),
         'valid_until', t.valid_until,
         'assertion', t.assertion_level,
         'lifecycle', t.lifecycle_state,
@@ -672,7 +677,8 @@ BEGIN
             ELSE 'external' END,
         'verification_method', t.verification_method) ORDER BY t.ord)
       FROM (
-        SELECT c.*, row_number() OVER (ORDER BY c.issued_on DESC NULLS LAST, c.id) AS ord,
+        SELECT c.*, ct.scope_code AS scope_code, m.no_expiry AS no_expiry,
+               row_number() OVER (ORDER BY c.issued_on DESC NULLS LAST, c.id) AS ord,
                (SELECT d2.decider_organisation
                   FROM public.sp_verification_decisions d2
                   JOIN public.sp_verification_requests r2 ON r2.id = d2.request_id
@@ -685,6 +691,8 @@ BEGIN
                  ORDER BY d2.decided_at DESC LIMIT 1) AS verification_method
           FROM public.sp_claims c
           JOIN public.sp_social_share_items i ON i.claim_id = c.id AND i.share_id = _s.id
+          LEFT JOIN public.sp_credential_details m ON m.claim_id = c.id
+          LEFT JOIN public.sp_credential_types ct ON ct.code = c.credential_code
          WHERE c.holder_user_id = _s.holder_user_id AND c.lifecycle_state = 'active'
       ) t), '[]'::jsonb));
 
