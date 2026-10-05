@@ -56,7 +56,7 @@
         },
         {
           "kind": "function",
-          "object": "sp_get_social_share(text,boolean)"
+          "object": "sp_get_social_share(text)"
         },
         {
           "kind": "table",
@@ -76,8 +76,8 @@
         }
       ],
       "rollback": "supabase/rollback/20270217090000_sp_passport_number_and_social_share_rollback.sql",
-      "verify": "SELECT to_regclass('public.sp_passport_numbers'), to_regclass('public.sp_social_shares'); -- both present. SELECT has_function_privilege('anon','public.sp_get_social_share(text,boolean)','EXECUTE'); -- true (the one new anon read). SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public' AND p.proname LIKE 'sp\\_%' AND has_function_privilege('anon',p.oid,'EXECUTE'); -- expect 2 (sp_network_stats, sp_get_social_share). SELECT public.sp_network_stats(); -- expect {\"display\":\"hidden\"} while the policy is hidden. SELECT count(*) FROM public.sp_passport_numbers; -- expect 0 until a holder completes or the founder is designated. Compare md5 of the function bodies with the merged file.",
-      "note": "Security Passport number, protected founder designation, narrow founder count rule and the separate public social share (random public id, snapshot image, live status). Migration-only (schema-first-release rule): the app that calls these functions ships in a second PR after this is applied and verified. Adds ONE reviewed anon-executable function, sp_get_social_share (allowlisted in security_hardening_test S3.1, the method-library ML10.8, sql-security-guard-check and the Passport anon-execute suites). Changes no existing Passport table, policy or grant; replaces sp_network_stats() (previous body restored verbatim by the rollback). Does NOT designate a founder, exclude an account, publish statistics or write any row: sp_designate_founder is an owner-approved production action."
+      "verify": "SELECT to_regclass('public.sp_passport_numbers'), to_regclass('public.sp_social_shares'); -- both present. SELECT has_function_privilege('anon','public.sp_get_social_share(text)','EXECUTE'); -- true (the one new anon read). SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public' AND p.proname LIKE 'sp\\_%' AND has_function_privilege('anon',p.oid,'EXECUTE'); -- expect 2 (sp_network_stats, sp_get_social_share). SELECT public.sp_network_stats(); -- expect {\"display\":\"hidden\"} while the policy is hidden. SELECT count(*) FROM public.sp_passport_numbers; -- expect 0 until a holder completes or the founder is designated. Compare md5 of the function bodies with the merged file.",
+      "note": "Security Passport number, protected founder designation, narrow founder count rule and the separate public social share (random public id, no stored image, live status). Migration-only (schema-first-release rule): the app that calls these functions ships in a second PR after this is applied and verified. Adds ONE reviewed anon-executable function, sp_get_social_share (allowlisted in security_hardening_test S3.1, the method-library ML10.8, sql-security-guard-check and the Passport anon-execute suites). Changes no existing Passport table, policy or grant; replaces sp_network_stats() (previous body restored verbatim by the rollback). Does NOT designate a founder, exclude an account, publish statistics or write any row: sp_designate_founder is an owner-approved production action."
     },
     {
       "file": "20261004164027_application_passport_verified_content_guard.sql",

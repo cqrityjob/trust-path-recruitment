@@ -24866,7 +24866,7 @@ export type Database = {
         Args: {
           _claim_ids: string[]
           _expires_days: number
-          _image_base64: string
+          _holder_label: string
           _locale: string
           _request_key: string
         }
@@ -24921,10 +24921,7 @@ export type Database = {
         }
         Returns: string
       }
-      sp_get_social_share: {
-        Args: { _public_id: string; _with_image: boolean }
-        Returns: Json
-      }
+      sp_get_social_share: { Args: { _public_id: string }; Returns: Json }
       sp_get_disclosure: { Args: { _token: string }; Returns: Json }
       sp_get_disclosure_session: { Args: { _session: string }; Returns: Json }
       sp_grant_pilot_member: {

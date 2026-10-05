@@ -84,32 +84,34 @@
 --   sp_social_shares        a random PUBLIC id (not a secret, not a token, not
 --                           derived from any private token, user id or e-mail),
 --                           the pinned claims, a locale, an expiry, a revocation
---                           stamp and the PNG the holder previewed;
+--                           stamp and how much of their name the holder approved;
 --   sp_get_social_share()   the one anon read: a bounded payload built from the
---                           holder's CURRENT rows (so the opened page shows the
---                           current standing of exactly the pinned credentials)
---                           and, on request, the PNG as base64.
+--                           holder's CURRENT rows, so the opened page shows the
+--                           current standing of exactly the pinned credentials.
 --
 -- What is public is a reduction of sp_selected_merits_payload: the holder's
--- label under their own privacy setting, work country, number and designation,
--- and per credential the title, taxonomy code, jurisdictions, expiry, assertion
--- and lifecycle (the inputs the shared trust engine needs to print the same
--- words as the card). Issuer names, issue dates, protected-object scopes,
--- employments, documents and the verifier's name never leave: a verifier is
--- reduced to 'CQrityjob' or 'external', which is all the engine branches on.
+-- label, work country, number and designation, and per credential the title,
+-- taxonomy code, jurisdictions, expiry, assertion and lifecycle (the inputs the
+-- shared trust engine needs to print the same words as the card). Issuer names,
+-- issue dates, protected-object scopes, employments, documents and the
+-- verifier's name never leave: a verifier is reduced to 'CQrityjob' or
+-- 'external', which is all the engine branches on.
 --
--- The PNG is the image the holder previewed and approved, rendered in the
--- browser from the same drawing as the preview (there is no server-side
--- renderer, and adding one is a cost and bundle decision). It is therefore
--- holder-supplied bytes: they are validated as a PNG of exactly 1200 x 630
--- and at most 900 kB, but their pixels are not re-derived. The page behind the
--- link, which IS derived from the database, is the authority, and the image is
--- described everywhere as a dated snapshot.
+-- NO IMAGE IS STORED. A client-supplied PNG can only be checked for its header,
+-- size and weight, never for what it SAYS, so a public preview image supplied by
+-- a client could show credentials the holder does not have. The preview image
+-- is therefore drawn by the application from this controlled payload and from
+-- nothing else, which also means it follows the holder's CURRENT privacy
+-- setting and stops with the share. Until that renderer ships, a share has no
+-- personalised image.
+--
+-- The name shown is the MORE RESTRICTIVE of what the holder approved when
+-- creating the share and their privacy setting at the moment of the read.
 --
 -- Expiry and revocation stop access at CQrityjob: the read answers the same
 -- single 'unavailable' payload for an unknown id, an expired share and a
--- revoked one, and revocation deletes the stored image. Platforms may keep
--- what they already fetched; nothing here claims otherwise.
+-- revoked one. Platforms may keep what they already fetched; nothing here
+-- claims otherwise.
 --
 -- The migration publishes nothing and changes no existing table, policy or grant.
 -- =============================================================================
@@ -413,19 +415,20 @@ CREATE TABLE public.sp_social_shares (
   created_at          timestamptz NOT NULL DEFAULT now(),
   expires_at          timestamptz NOT NULL,
   revoked_at          timestamptz,
-  image_png           bytea,
-  image_sha256        text,
+  -- What the holder APPROVED to show of their name. The page shows the more
+  -- restrictive of this and the holder's CURRENT privacy setting, so a later
+  -- tightening takes effect at once and nothing ever shows more than approved.
+  holder_label        text NOT NULL CHECK (holder_label IN ('full_name', 'initials', 'anonymous')),
   request_key         uuid NOT NULL,
   request_fingerprint text NOT NULL,
   CONSTRAINT sp_social_shares_expiry_after_creation CHECK (expires_at > created_at),
-  CONSTRAINT sp_social_shares_image_bounded
-    CHECK (image_png IS NULL OR octet_length(image_png) BETWEEN 100 AND 900000),
   CONSTRAINT sp_social_shares_request_unique UNIQUE (holder_user_id, request_key)
 );
 COMMENT ON TABLE public.sp_social_shares IS
   'An explicitly PUBLIC social share: a random public id, the pinned credentials '
-  '(sp_social_share_items), an expiry, a revocation stamp and the PNG the holder '
-  'previewed. Separate from the private, token-based sp_disclosures.';
+  '(sp_social_share_items), an expiry and a revocation stamp. It stores NO image: '
+  'the public preview image is drawn by the application from the controlled '
+  'merit model, never supplied by a client. Separate from the private, token-based sp_disclosures.';
 
 CREATE TABLE public.sp_social_share_items (
   share_id uuid NOT NULL REFERENCES public.sp_social_shares(id) ON DELETE CASCADE,
@@ -439,9 +442,8 @@ ALTER TABLE public.sp_social_shares ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.sp_social_share_items ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.sp_social_shares FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON public.sp_social_share_items FROM PUBLIC, anon, authenticated, service_role;
--- A holder reads their own share METADATA. The stored image is never readable
--- through a table grant.
-GRANT SELECT (id, public_id, holder_user_id, locale, created_at, expires_at, revoked_at)
+-- A holder reads their own share METADATA.
+GRANT SELECT (id, public_id, holder_user_id, locale, holder_label, created_at, expires_at, revoked_at)
   ON public.sp_social_shares TO authenticated;
 CREATE POLICY sp_social_shares_self_select ON public.sp_social_shares
   FOR SELECT TO authenticated USING (holder_user_id = auth.uid());
@@ -450,14 +452,12 @@ GRANT SELECT ON public.sp_social_shares, public.sp_social_share_items TO service
 -- The create path: the server pins the holder's OWN current, unexpired
 -- credentials; it never accepts a payload from the client.
 CREATE FUNCTION public.sp_create_social_share(
-  _claim_ids uuid[], _locale text, _expires_days integer, _image_base64 text, _request_key uuid)
+  _claim_ids uuid[], _locale text, _expires_days integer, _holder_label text, _request_key uuid)
 RETURNS jsonb
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, extensions, pg_temp AS $$
 DECLARE
   _uid uuid := auth.uid();
   _c uuid[];
-  _png bytea;
-  _sha text;
   _fp text;
   _existing public.sp_social_shares%ROWTYPE;
   _id uuid;
@@ -472,6 +472,10 @@ BEGIN
       USING ERRCODE = 'check_violation';
   END IF;
   PERFORM public.sp_assert_share_inputs(_expires_days, _locale, NULL, NULL);
+  IF _holder_label IS NULL OR _holder_label NOT IN ('full_name', 'initials', 'anonymous') THEN
+    RAISE EXCEPTION 'SP_HOLDER_LABEL_INVALID: say how much of your name this share shows.'
+      USING ERRCODE = 'check_violation';
+  END IF;
 
   IF coalesce(cardinality(_claim_ids), 0) > 200 THEN
     RAISE EXCEPTION 'SP_TOO_MANY_MERITS' USING ERRCODE = 'check_violation';
@@ -483,32 +487,15 @@ BEGIN
       USING ERRCODE = 'check_violation';
   END IF;
 
-  -- The image: a PNG, exactly the previewed size, bounded.
-  IF _image_base64 IS NULL OR length(_image_base64) > 1300000 THEN
-    RAISE EXCEPTION 'SP_SOCIAL_IMAGE_INVALID' USING ERRCODE = 'check_violation';
-  END IF;
-  BEGIN
-    _png := decode(_image_base64, 'base64');
-  EXCEPTION WHEN others THEN
-    RAISE EXCEPTION 'SP_SOCIAL_IMAGE_INVALID' USING ERRCODE = 'check_violation';
-  END;
-  IF octet_length(_png) NOT BETWEEN 100 AND 900000
-     OR substring(_png FROM 1 FOR 8) <> '\x89504e470d0a1a0a'::bytea
-     OR substring(_png FROM 13 FOR 4) <> 'IHDR'::bytea
-     OR get_byte(_png, 16) * 16777216 + get_byte(_png, 17) * 65536
-          + get_byte(_png, 18) * 256 + get_byte(_png, 19) <> 1200
-     OR get_byte(_png, 20) * 16777216 + get_byte(_png, 21) * 65536
-          + get_byte(_png, 22) * 256 + get_byte(_png, 23) <> 630 THEN
-    RAISE EXCEPTION 'SP_SOCIAL_IMAGE_INVALID: a 1200 x 630 PNG of at most 900 kB is required.'
-      USING ERRCODE = 'check_violation';
-  END IF;
-  _sha := encode(digest(_png, 'sha256'), 'hex');
-
   _fp := encode(digest(
            _uid::text || '|' || array_to_string(_c, ',') || '|' || _locale || '|'
-             || _expires_days::text || '|' || _sha, 'sha256'), 'hex');
+             || _expires_days::text || '|' || _holder_label, 'sha256'), 'hex');
 
-  PERFORM pg_advisory_xact_lock(hashtextextended('sp_social_share:' || _uid::text || ':' || _request_key::text, 0));
+  -- ONE lock per holder, taken before the idempotency lookup AND before the cap
+  -- count. The cap is a count-then-insert, so it is only a cap if two creates by
+  -- one holder cannot both read the count before either inserts. A retry of the
+  -- same request key queues behind the first and finds its row.
+  PERFORM pg_advisory_xact_lock(hashtextextended('sp_social_share_holder:' || _uid::text, 0));
 
   SELECT * INTO _existing FROM public.sp_social_shares
    WHERE holder_user_id = _uid AND request_key = _request_key;
@@ -548,9 +535,9 @@ BEGIN
   _public  := translate(encode(gen_random_bytes(18), 'base64'), '+/', '-_');
 
   INSERT INTO public.sp_social_shares (
-    public_id, holder_user_id, locale, expires_at, image_png, image_sha256,
+    public_id, holder_user_id, locale, expires_at, holder_label,
     request_key, request_fingerprint)
-  VALUES (_public, _uid, _locale, _expires, _png, _sha, _request_key, _fp)
+  VALUES (_public, _uid, _locale, _expires, _holder_label, _request_key, _fp)
   RETURNING id INTO _id;
 
   INSERT INTO public.sp_social_share_items (share_id, claim_id)
@@ -588,7 +575,7 @@ BEGIN
   END IF;
   IF _row.revoked_at IS NULL THEN
     UPDATE public.sp_social_shares
-       SET revoked_at = now(), image_png = NULL, image_sha256 = NULL
+       SET revoked_at = now()
      WHERE id = _row.id;
     INSERT INTO public.sp_passport_events (
       holder_user_id, actor_user_id, event_type, subject_type, subject_id, detail)
@@ -625,7 +612,7 @@ GRANT EXECUTE ON FUNCTION public.sp_list_my_social_shares() TO authenticated, se
 -- THE ONE ANONYMOUS READ. The same single 'unavailable' payload answers an
 -- unknown id, an expired share and a revoked one. Bounded: no private row, no
 -- token, no user id, no e-mail, no issuer, no date of issue, no employment.
-CREATE FUNCTION public.sp_get_social_share(_public_id text, _with_image boolean)
+CREATE FUNCTION public.sp_get_social_share(_public_id text)
 RETURNS jsonb
 LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public, extensions, pg_temp AS $$
 DECLARE
@@ -647,14 +634,21 @@ BEGIN
   _out := jsonb_build_object(
     'status', 'active',
     'locale', _s.locale,
-    -- The date of the SNAPSHOT: the image was approved on this day.
+    -- The date the holder approved this share.
     'snapshot_at', _s.created_at,
     'expires_at', _s.expires_at,
-    'holder', CASE _p.privacy_mode
-                WHEN 'anonymous' THEN NULL
-                WHEN 'initials'  THEN regexp_replace(coalesce(_p.display_name,''), '(\S)\S*', '\1.', 'g')
+    -- The MORE RESTRICTIVE of what was approved and what the holder's privacy
+    -- setting says NOW: tightening it later takes effect on the next open, and
+    -- an older share can never show more than it was approved to show.
+    'holder', CASE
+                WHEN _s.holder_label = 'anonymous' OR _p.privacy_mode = 'anonymous' THEN NULL
+                WHEN _s.holder_label = 'initials'  OR _p.privacy_mode = 'initials'
+                  THEN regexp_replace(coalesce(_p.display_name,''), '(\S)\S*', '\1.', 'g')
                 ELSE _p.display_name END,
-    'privacy_mode', _p.privacy_mode,
+    'holder_label', CASE
+                WHEN _s.holder_label = 'anonymous' OR _p.privacy_mode = 'anonymous' THEN 'anonymous'
+                WHEN _s.holder_label = 'initials'  OR _p.privacy_mode = 'initials' THEN 'initials'
+                ELSE 'full_name' END,
     'jurisdiction', _p.jurisdiction_code,
     'passport_number', _n.passport_number,
     'designation', _n.designation,
@@ -694,18 +688,15 @@ BEGIN
          WHERE c.holder_user_id = _s.holder_user_id AND c.lifecycle_state = 'active'
       ) t), '[]'::jsonb));
 
-  IF coalesce(_with_image, false) AND _s.image_png IS NOT NULL THEN
-    _out := _out || jsonb_build_object('image_png_base64', encode(_s.image_png, 'base64'));
-  END IF;
   RETURN _out;
 END;
 $$;
-COMMENT ON FUNCTION public.sp_get_social_share(text, boolean) IS
+COMMENT ON FUNCTION public.sp_get_social_share(text) IS
   'The one anonymous read of a public social share. One ''unavailable'' payload '
   'for unknown, expired and revoked. Returns the holder''s label under their own '
   'privacy setting, number, designation and the pinned credentials'' CURRENT '
   'standing; never an issuer, an issue date, an authorisation scope, an '
   'employment, a verifier name, a token, a user id or an e-mail address.';
-REVOKE ALL ON FUNCTION public.sp_get_social_share(text, boolean) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.sp_get_social_share(text, boolean)
+REVOKE ALL ON FUNCTION public.sp_get_social_share(text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.sp_get_social_share(text)
   TO anon, authenticated, service_role;

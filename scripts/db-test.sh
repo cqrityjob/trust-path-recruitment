@@ -9873,13 +9873,7 @@ fi
 # --- Race 3: ONE share request key submitted twice at once -----------------
 SPNR_U3='5e000000-0000-4000-8000-000000000003'
 SPNR_KEY='5e00e000-0000-4000-8000-0000000000aa'
-SPNR_IMG="$(python3 - <<'PY'
-import base64,struct
-b=b'\x89PNG\r\n\x1a\n'+struct.pack('>I',13)+b'IHDR'+struct.pack('>II',1200,630)+b'\x08\x06\x00\x00\x00'+b'\xab'*300
-print(base64.b64encode(b).decode())
-PY
-)"
-SPNR_CALL="select 'S=' || (public.sp_create_social_share(ARRAY['5e00c000-0000-4000-8000-000000000001']::uuid[], 'sv', 30, '${SPNR_IMG}', '${SPNR_KEY}'::uuid)->>'status')"
+SPNR_CALL="select 'S=' || (public.sp_create_social_share(ARRAY['5e00c000-0000-4000-8000-000000000001']::uuid[], 'sv', 30, 'full_name', '${SPNR_KEY}'::uuid)->>'status')"
 rm -f "$SPNR_A" "$SPNR_B"; SPNR_A="$(mktemp)"; SPNR_B="$(mktemp)"
 (
   psql -tAq -v ON_ERROR_STOP=1 -d "$TEST_DB" >"$SPNR_A" 2>&1 <<SQL
@@ -9917,6 +9911,57 @@ elif [ "$SPNR_WAITED" -lt 2 ]; then
   echo "FAIL: the second share returned after ${SPNR_WAITED}s without waiting." >&2; SPNR_FAILED=1
 else
   echo "    ok  one share request key submitted twice at once: one share, B waited ${SPNR_WAITED}s and was told already_created"
+fi
+rm -f "$SPNR_A" "$SPNR_B"
+
+# --- Race 4: the cap of 25 holds under concurrency -------------------------
+# The holder already has 1 active share. Raise it to 24, then submit two
+# creates with DIFFERENT request keys at once: exactly one may succeed.
+psql -q -v ON_ERROR_STOP=1 -d "$TEST_DB" >/dev/null <<SQL
+INSERT INTO public.sp_social_shares (public_id, holder_user_id, locale, expires_at, holder_label, request_key, request_fingerprint)
+SELECT translate(encode(gen_random_bytes(18), 'base64'), '+/', '-_'), '${SPNR_U3}', 'sv', now() + interval '30 days',
+       'full_name', gen_random_uuid(), 'cap-fixture-' || g
+  FROM generate_series(1, 23) g;
+SQL
+SPNR_CAP_BEFORE="$(psql -tAq -d "$TEST_DB" -c "select count(*) from public.sp_social_shares where holder_user_id='${SPNR_U3}' and revoked_at is null and expires_at > now()")"
+SPNR_CAP_CALL() { echo "select 'S=' || (public.sp_create_social_share(ARRAY['5e00c000-0000-4000-8000-000000000001']::uuid[], 'sv', 30, 'full_name', '$1'::uuid)->>'status')"; }
+SPNR_A="$(mktemp)"; SPNR_B="$(mktemp)"
+(
+  psql -tAq -v ON_ERROR_STOP=1 -d "$TEST_DB" >"$SPNR_A" 2>&1 <<SQL
+BEGIN;
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub', '${SPNR_U3}', true);
+$(SPNR_CAP_CALL 5e00e000-0000-4000-8000-0000000000b1);
+SELECT pg_sleep(3);
+COMMIT;
+SQL
+  echo "RC=$?" >>"$SPNR_A"
+) &
+SPNR_PID=$!
+SPNR_HELD="$(spnr_held)"
+SPNR_T0="$(date +%s)"
+set +e
+psql -tAq -v ON_ERROR_STOP=1 -d "$TEST_DB" >"$SPNR_B" 2>&1 <<SQL
+BEGIN;
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub', '${SPNR_U3}', true);
+$(SPNR_CAP_CALL 5e00e000-0000-4000-8000-0000000000b2);
+COMMIT;
+SQL
+SPNR_B_RC=$?
+set -e
+SPNR_WAITED=$(( $(date +%s) - SPNR_T0 ))
+wait "$SPNR_PID" || true
+SPNR_CAP_AFTER="$(psql -tAq -d "$TEST_DB" -c "select count(*) from public.sp_social_shares where holder_user_id='${SPNR_U3}' and revoked_at is null and expires_at > now()")"
+if [ "$SPNR_HELD" -eq 0 ] || [ "$SPNR_CAP_BEFORE" != "24" ]; then
+  echo "FAIL: cap race setup is not as intended (held=${SPNR_HELD}, before=${SPNR_CAP_BEFORE})." >&2; SPNR_FAILED=1
+elif ! grep -q '^S=created' "$SPNR_A" || [ "$SPNR_B_RC" -eq 0 ] || ! grep -q 'SP_TOO_MANY_SOCIAL_SHARES' "$SPNR_B" || [ "$SPNR_CAP_AFTER" != "25" ]; then
+  echo "FAIL: two creates at 24 shares must give exactly one success and one refusal (after=${SPNR_CAP_AFTER})." >&2
+  cat "$SPNR_A" "$SPNR_B" >&2; SPNR_FAILED=1
+elif [ "$SPNR_WAITED" -lt 2 ]; then
+  echo "FAIL: the second create returned after ${SPNR_WAITED}s without waiting." >&2; SPNR_FAILED=1
+else
+  echo "    ok  two concurrent creates at 24 shares: exactly one succeeded, one was refused, total 25 (B waited ${SPNR_WAITED}s)"
 fi
 rm -f "$SPNR_A" "$SPNR_B"
 

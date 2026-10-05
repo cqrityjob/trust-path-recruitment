@@ -4,7 +4,7 @@
 -- then drops the public social share, the number and the founder designation.
 --
 -- REFUSES to run while it would destroy holder data: any Passport number (the
--- founder's #1 included) or any public social share still on record. Passport
+-- founder's #1 included), any retired number or any public social share still on record. Passport
 -- numbers are identities, and a share is something the holder published; a
 -- rollback that silently erased them would be a second, unrecorded decision.
 -- To go ahead deliberately, in the same session first:
@@ -16,6 +16,7 @@
 DO $guard$
 DECLARE
   _numbers integer;
+  _retired integer;
   _shares integer;
 BEGIN
   IF to_regclass('public.sp_passport_numbers') IS NULL THEN
@@ -23,17 +24,20 @@ BEGIN
     RETURN;
   END IF;
   SELECT count(*) INTO _numbers FROM public.sp_passport_numbers;
+  -- The retired-number history is what makes "a number is never reused" true.
+  -- If only it remains, dropping it would let a number be issued twice.
+  SELECT count(*) INTO _retired FROM public.sp_passport_numbers_retired;
   SELECT count(*) INTO _shares FROM public.sp_social_shares;
-  IF (_numbers > 0 OR _shares > 0)
+  IF (_numbers > 0 OR _retired > 0 OR _shares > 0)
      AND coalesce(current_setting('app.sp_rollback_confirm', true), '') <> 'drop-numbers-and-shares' THEN
     RAISE EXCEPTION
-      'SP_NUMBER_ROLLBACK_REFUSED: % Passport number(s) and % public social share(s) would be destroyed. Set app.sp_rollback_confirm = ''drop-numbers-and-shares'' to proceed deliberately.',
-      _numbers, _shares USING ERRCODE = 'restrict_violation';
+      'SP_NUMBER_ROLLBACK_REFUSED: % Passport number(s), % retired number(s) and % public social share(s) would be destroyed. Set app.sp_rollback_confirm = ''drop-numbers-and-shares'' to proceed deliberately.',
+      _numbers, _retired, _shares USING ERRCODE = 'restrict_violation';
   END IF;
 END
 $guard$;
 
-DROP FUNCTION IF EXISTS public.sp_get_social_share(text, boolean);
+DROP FUNCTION IF EXISTS public.sp_get_social_share(text);
 DROP FUNCTION IF EXISTS public.sp_list_my_social_shares();
 DROP FUNCTION IF EXISTS public.sp_revoke_social_share(text);
 DROP FUNCTION IF EXISTS public.sp_create_social_share(uuid[], text, integer, text, uuid);
