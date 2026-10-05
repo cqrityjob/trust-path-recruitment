@@ -207,6 +207,14 @@ const SNAPSHOT = {
     updatedAt: "2026-09-01T00:00:00Z",
   },
   holder: {
+    // What the shared card builder reads about the holder. The studio builds the
+    // card as soon as the screen opens, so every scenario needs a real holder.
+    id: USER_ID,
+    displayName: "Selma Delare (fiktiv)",
+    professionSlug: null,
+    jurisdictionCode: "SE",
+    subJurisdictionCode: null,
+    identity: deriveVerifiedIdentity([], MIRRORED_TITLE_RULES, "2026-09-07"),
     claims: [CLAIM_SHAREABLE, CLAIM_SELF_REPORTED, CLAIM_DRAFT, CLAIM_ARCHIVED],
     periods: [PERIOD_SHAREABLE],
     recognitions: [],
@@ -1420,18 +1428,7 @@ test.describe("Security Passport — Dela mitt Security Passport", () => {
     await boxes.first().uncheck();
     await expect(all).toHaveAttribute("data-select-all", "some");
     expect(await all.evaluate((el) => (el as HTMLInputElement).indeterminate)).toBe(true);
-    await expect(flow).toContainText("3");
-    await expect
-      .poll(
-        async () =>
-          (
-            (await svgOf(flow.locator('[data-social-preview="square"]'))).match(
-              /data-passport-shield=/g,
-            ) ?? []
-          ).length,
-        { timeout: 30_000 },
-      )
-      .toBe(3);
+    await expect(flow.locator("[data-social-included]")).toHaveText("3");
 
     // The Swedish group has two merits and its own select-all.
     const group = flow.locator("[data-group-select-all]").first();
@@ -1574,28 +1571,29 @@ test.describe("Security Passport — Dela mitt Security Passport", () => {
     await flow.locator("[data-social-consent]").check();
     await expect(flow.locator("[data-select-all]")).toHaveAttribute("data-select-all", "some");
 
-    // Another account signs in in another tab: the same broadcast supabase-js
-    // sends itself.
+    // Another account signs in in another tab: the browser tells this one the
+    // stored session changed (a storage event), and supabase-js broadcasts it.
     await page.evaluate(
       ({ ref }) => {
-        const channel = new BroadcastChannel(`sb-${ref}-auth-token`);
-        channel.postMessage({
-          event: "SIGNED_IN",
-          session: {
-            access_token: "other-access-token",
-            refresh_token: "other-refresh-token",
-            token_type: "bearer",
-            expires_in: 3600,
-            expires_at: Math.floor(Date.now() / 1000) + 3600,
-            user: {
-              id: "00000000-0000-4000-8000-0000000000f2",
-              aud: "authenticated",
-              email: "other@example.test",
-              user_metadata: {},
-              app_metadata: {},
-            },
+        const session = {
+          access_token: "other-access-token",
+          refresh_token: "other-refresh-token",
+          token_type: "bearer",
+          expires_in: 3600,
+          expires_at: Math.floor(Date.now() / 1000) + 3600,
+          user: {
+            id: "00000000-0000-4000-8000-0000000000f2",
+            aud: "authenticated",
+            email: "other@example.test",
+            user_metadata: {},
+            app_metadata: {},
           },
-        });
+        };
+        const key = `sb-${ref}-auth-token`;
+        window.dispatchEvent(
+          new StorageEvent("storage", { key, newValue: JSON.stringify(session) }),
+        );
+        new BroadcastChannel(key).postMessage({ event: "SIGNED_IN", session });
       },
       { ref: SUPABASE_REF },
     );

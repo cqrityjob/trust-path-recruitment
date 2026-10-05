@@ -536,7 +536,10 @@ export function SocialShareFlow({
               </button>
             </div>
             <p className="text-sm text-muted-foreground">
-              {pt("shr.included")}: <span className="tabular-nums">{selectedCount}</span>
+              {pt("shr.included")}:{" "}
+              <span data-social-included className="tabular-nums">
+                {selectedCount}
+              </span>
             </p>
             {changing ? (
               <div data-social-chooser className="mt-4 space-y-5">

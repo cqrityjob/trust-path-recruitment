@@ -253,9 +253,27 @@ function PassportShareRoute() {
       last.current = next;
       setUserId(next);
     });
+    // Another tab signing in as someone else changes the stored session before
+    // this tab's client has been told. The key is supabase-js's own.
+    const onStorage = (e: StorageEvent) => {
+      if (!e.key || !/^sb-.+-auth-token$/.test(e.key)) return;
+      let next: string | null = null;
+      try {
+        const parsed = e.newValue ? (JSON.parse(e.newValue) as { user?: { id?: unknown } }) : null;
+        next = typeof parsed?.user?.id === "string" ? parsed.user.id : null;
+      } catch {
+        return;
+      }
+      if (next === null) return; // sign-out is the authenticated layout's to handle
+      if (last.current !== null && next !== last.current) setSwitched(true);
+      last.current = next;
+      setUserId(next);
+    };
+    window.addEventListener("storage", onStorage);
     return () => {
       alive = false;
       sub.subscription.unsubscribe();
+      window.removeEventListener("storage", onStorage);
     };
   }, []);
 
