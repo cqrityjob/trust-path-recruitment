@@ -34,7 +34,8 @@ const MUTATIONS: readonly Mutation[] = [
   },
   {
     id: "CDO-NC-INVOKER-FALSE",
-    defect: "security_invoker is stated but set to false -- the linter would be satisfied, the caller would not be constrained",
+    defect:
+      "security_invoker is stated but set to false -- the linter would be satisfied, the caller would not be constrained",
     file: MIG,
     find: "WITH (security_invoker = true, security_barrier = true) AS",
     replace: "WITH (security_invoker = false, security_barrier = true) AS",
@@ -63,7 +64,8 @@ const MUTATIONS: readonly Mutation[] = [
   },
   {
     id: "CDO-NC-OPERATOR-PREDICATE-CONSTANT",
-    defect: "the operator gate is replaced by a constant true, so every authenticated caller passes it",
+    defect:
+      "the operator gate is replaced by a constant true, so every authenticated caller passes it",
     file: MIG,
     find: "  AND public.cd_is_internal_tester(auth.uid());",
     replace: "  AND true;",
@@ -98,7 +100,8 @@ const MUTATIONS: readonly Mutation[] = [
   // ---- The postflight ------------------------------------------------------
   {
     id: "CDO-NC-POSTFLIGHT-PROOF-GONE",
-    defect: "the migration stops raising its postflight proof, so a silent partial apply looks clean",
+    defect:
+      "the migration stops raising its postflight proof, so a silent partial apply looks clean",
     file: MIG,
     find: "RAISE NOTICE 'CD_OUTSTANDING_REVIEWS_OPERATOR_ONLY_PROOF ok';",
     replace: "RAISE NOTICE 'done';",
@@ -117,7 +120,8 @@ const MUTATIONS: readonly Mutation[] = [
   },
   {
     id: "CDO-NC-ANON-REVOKE-GONE",
-    defect: "anon is no longer revoked on the view, so an inherited default privilege could supply access",
+    defect:
+      "anon is no longer revoked on the view, so an inherited default privilege could supply access",
     file: MIG,
     find: "REVOKE ALL ON public.cd_outstanding_reviews FROM anon;",
     replace: "-- (revoke removed)",

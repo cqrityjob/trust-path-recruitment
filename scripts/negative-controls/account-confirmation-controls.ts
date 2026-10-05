@@ -44,7 +44,7 @@ const MUTATIONS: readonly Mutation[] = [
     file: FORM,
     find: "        setAwaitingConfirmation({\n          email: email.trim(),\n          returnTo,\n          forOrganisation,\n          canSignInHere: true,\n        });",
     replace:
-      "        setAwaitingConfirmation({\n          email: email.trim(),\n          returnTo: \"/\",\n          forOrganisation,\n          canSignInHere: true,\n        });",
+      '        setAwaitingConfirmation({\n          email: email.trim(),\n          returnTo: "/",\n          forOrganisation,\n          canSignInHere: true,\n        });',
     guard: GUARD,
     expect: "ACS-STATE",
   },
