@@ -13,8 +13,8 @@
   ],
   "source": "Supabase connector read-only SQL, explicit project wrygicdfxwjnrugduxnt",
   "projectRef": "wrygicdfxwjnrugduxnt",
-  "readAt": "2026-10-04T17:14:32.01458+00:00",
-  "readBy": "Owner-authorized history-only reconciliation after F09 direct apply. Exactly one canonical alias 20270215090000 with NULL statements; original hosted 20261004164027 body and all previous rows preserved. Read-only snapshot: 375 rows, version:name newline MD5 755d51cb6eb43f68f1e621478a1d0b81; previous 374 identities unchanged, MD5 3bfd11b0037b10a31029b89cd8bc5179. See docs/release/evidence/2026-10-04-application-passport-guard/reconciliation-verification.json.",
+  "readAt": "2026-10-05T07:27:28.143717+00:00",
+  "readBy": "Read-only SELECT through the Supabase connector after PR #430 merged (f1faa5e) and the official integration applied 20270217090000, following 20270216090000 (PR #429). 377 rows, version:name newline MD5 8dcb3bba55a422ab257ecc722b016f95; the first 375 rows are unchanged (755d51cb6eb43f68f1e621478a1d0b81). See docs/release/2026-10-05-passport-number-and-public-share-hosted-verification.md.",
   "versions": [
     {
       "version": "20260716153446",
@@ -1515,6 +1515,14 @@
     {
       "version": "20270215090000",
       "name": "application_passport_verified_content_guard"
+    },
+    {
+      "version": "20270216090000",
+      "name": "participant_report_api_boundary"
+    },
+    {
+      "version": "20270217090000",
+      "name": "sp_passport_number_and_social_share"
     }
   ]
 }
