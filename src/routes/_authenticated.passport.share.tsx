@@ -569,7 +569,8 @@ function PassportShareInner() {
       .then((payload) => {
         if (!alive) return;
         setSocialPreview(payload);
-        setSocialPreviewState("ready");
+        // An unavailable preview is a failed one: say so, never "loading".
+        setSocialPreviewState(payload.status === "active" ? "ready" : "failed");
       })
       .catch((err) => {
         console.error("[passport] share: image preview failed", err);

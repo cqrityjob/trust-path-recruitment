@@ -641,6 +641,7 @@ function passportOverrides() {
     listMyShares: ok([]),
     getMyPassportNumber: ok({ number: null, designation: null }),
     listMySocialShares: ok([]),
+    previewCredentialShare: ok({ status: "unavailable" }),
     listMyEvidence: ok([]),
     listClaimVersions: ok([]),
     listMyCredentialDrafts: ok([]),

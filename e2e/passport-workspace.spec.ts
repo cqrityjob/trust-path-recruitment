@@ -616,6 +616,8 @@ async function mount(
         return ok(route, { number: null, designation: null });
       case "listMySocialShares":
         return ok(route, []);
+      case "previewCredentialShare":
+        return ok(route, { status: "unavailable" });
 
       // /passport/credentials/new
       case "listMyCredentialDrafts":
