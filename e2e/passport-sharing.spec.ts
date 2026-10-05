@@ -416,6 +416,8 @@ let lastCreateBody = "";
 let reissueCalls = 0;
 let lastReissueBody = "";
 let socialCreateBodies: string[] = [];
+/** Every attempt to change the privacy setting. This page never makes one. */
+let privacyWrites: string[] = [];
 let socialRevoked: string[] = [];
 let socialShareRows: Array<Record<string, unknown>> = [];
 
@@ -468,6 +470,7 @@ async function mount(page: Page, urlPath: string, scenario: Scenario) {
   reissueCalls = 0;
   lastReissueBody = "";
   socialCreateBodies = [];
+  privacyWrites = [];
   socialRevoked = [];
   socialShareRows = [...(scenario.socialShares ?? [])];
   const lang = scenario.lang ?? "sv";
@@ -559,15 +562,30 @@ async function mount(page: Page, urlPath: string, scenario: Scenario) {
 
       case "previewCredentialShare":
         if (scenario.previewFails) return boom(route, "preview failed");
-        if (scenario.fourCredentials || scenario.elevenCredentials)
+        if (scenario.fourCredentials || scenario.elevenCredentials) {
+          // FOLLOWS THE SELECTION. The real RPC builds its payload from the
+          // claim ids it is sent, so a stub that always returned every
+          // credential would let a test pass while the screen showed merits
+          // the holder had unticked (the count on the page could change and
+          // the picture not). This one returns exactly the credentials whose
+          // ids were sent, in the order the payload lists them.
+          const sent = serverFnArgs(route.request().postData()).claimIds;
+          const ids = new Set(Array.isArray(sent) ? (sent as string[]) : []);
+          const full = (
+            scenario.elevenCredentials ? elevenCredentialPayload : fourCredentialPayload
+          )(scenario.lang === "en" ? "en" : "sv");
           return ok(route, {
-            ...(scenario.elevenCredentials ? elevenCredentialPayload : fourCredentialPayload)(
-              scenario.lang === "en" ? "en" : "sv",
+            ...full,
+            // The first four-credential entry keeps the shared payload's own
+            // key ("c1"), which stands for CLAIM_SHAREABLE.
+            verified_claims: full.verified_claims.filter((c) =>
+              ids.has(c.key === "c1" ? CLAIM_SHAREABLE.id : c.key),
             ),
             schema_version: 2,
             holder: null,
             privacy_mode: "full_name",
           });
+        }
         return ok(route, {
           ...recipientPayload(scenario.lang === "en" ? "en" : "sv"),
           schema_version: 2,
@@ -620,6 +638,10 @@ async function mount(page: Page, urlPath: string, scenario: Scenario) {
       }
 
       case "revokeShare":
+        return ok(route, { ok: true });
+
+      case "setPrivacyMode":
+        privacyWrites.push(route.request().postData() ?? "");
         return ok(route, { ok: true });
 
       // The public (social) share: the number, the list, create and withdraw.
@@ -1425,7 +1447,27 @@ test.describe("Security Passport — Dela mitt Security Passport", () => {
     for (const box of await boxes.all()) await expect(box).toBeChecked();
 
     // One merit off: the box is in between (indeterminate), the count says 3.
+    // And the PICTURE follows, not only the number: the preview image loses
+    // exactly one shield and the words of the merit that was unticked.
+    const preview = flow.locator('[data-social-preview="square"]');
+    const wordsOf = async () =>
+      new Set(
+        [...(await svgOf(preview)).matchAll(/<text\b[^>]*>([^<]*)<\/text>/g)].map(
+          (m) => m[1] ?? "",
+        ),
+      );
+    const before = await svgOf(preview);
+    const beforeWords = await wordsOf();
+    expect((before.match(/data-passport-shield=/g) ?? []).length).toBe(4);
     await boxes.first().uncheck();
+    await expect
+      .poll(async () => ((await svgOf(preview)).match(/data-passport-shield=/g) ?? []).length)
+      .toBe(3);
+    const afterWords = await wordsOf();
+    expect(
+      [...beforeWords].filter((w) => !afterWords.has(w)).length,
+      "the unticked merit's words are gone from the image",
+    ).toBeGreaterThan(0);
     await expect(all).toHaveAttribute("data-select-all", "some");
     expect(await all.evaluate((el) => (el as HTMLInputElement).indeterminate)).toBe(true);
     await expect(flow.locator("[data-social-included]")).toHaveText("3");
@@ -1607,7 +1649,7 @@ test.describe("Security Passport — Dela mitt Security Passport", () => {
     expect(socialCreateBodies).toEqual([]);
   });
 
-  test("33 · the name is hidden when the holder's privacy setting hides it, and the page says so", async ({
+  test("33 · a hidden name stops the share, says why, and leads to the setting without changing it", async ({
     page,
   }) => {
     await mount(page, "/passport/share", { fourCredentials: true, privacyMode: "initials" });
@@ -1615,14 +1657,40 @@ test.describe("Security Passport — Dela mitt Security Passport", () => {
     const flow = page.locator("[data-social-flow]");
     const preview = flow.locator('[data-social-preview="square"]');
     await expect(preview).toBeVisible({ timeout: 30_000 });
-    await expect(flow.locator("[data-social-name-hidden]")).toContainText(
-      "Ditt namn visas inte i den här delningen",
+    const notice = flow.locator("[data-social-name-hidden]");
+    await expect(notice).toContainText("Ditt integritetsval döljer ditt namn");
+    await expect(notice).toContainText("Inget delas förrän du själv har ändrat valet");
+    await expect(notice).toContainText("tidigare delningar");
+    await expect(flow.locator("[data-social-name-settings]")).toHaveAttribute(
+      "href",
+      "/passport/privacy",
     );
+    // Nothing public can be made from this screen while the name is hidden.
+    await expect(flow.locator("[data-social-share]")).toHaveCount(0);
+    expect(socialCreateBodies).toEqual([]);
+    // And nothing was changed on the holder's behalf.
+    expect(privacyWrites).toEqual([]);
     const words = [...(await svgOf(preview)).matchAll(/<text\b[^>]*>([^<]*)<\/text>/g)].map(
       (m) => m[1] ?? "",
     );
     expect(words.join(" ")).not.toContain("Selma");
-    expect(words.join(" ")).toMatch(/S\. D\./);
+  });
+
+  test("33b · the server refuses a named share that the privacy setting forbids, in plain words", async ({
+    page,
+  }) => {
+    await mount(page, "/passport/share", {
+      fourCredentials: true,
+      socialCreateCode: "name_not_approved",
+    });
+    await shareReady(page, "social");
+    const flow = page.locator("[data-social-flow]");
+    await expect(flow.locator('[data-social-preview="square"]')).toBeVisible({ timeout: 30_000 });
+    await flow.locator("[data-social-consent]").check();
+    await flow.locator('[data-social-channel="linkedin"]').first().click();
+    await expect(flow.locator("[data-social-error]")).toContainText("ingenting har delats");
+    expect(await navigated(page)).toEqual([]);
+    expect(privacyWrites).toEqual([]);
   });
 
   for (const lang of ["sv", "en"] as const) {

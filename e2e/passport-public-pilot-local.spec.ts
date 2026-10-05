@@ -50,6 +50,8 @@
 
 import { createHash, randomUUID } from "node:crypto";
 import { chooseCredential } from "./support/credential-picker";
+import { renderShareImage } from "../src/lib/security-passport/og-image/render";
+import { parsePublicSocialShare } from "../src/lib/security-passport/social-share-public";
 import { execFileSync } from "node:child_process";
 import { mkdirSync, readFileSync } from "node:fs";
 import path from "node:path";
@@ -1280,7 +1282,12 @@ test.describe("the public pilot, on a real backend", () => {
     expect(meta("og:title")).toContain(holderName());
     expect(meta("og:title")).toContain("Security Passport");
     expect(meta("og:description")).toContain("Öppna länken för aktuell status");
-    expect(meta("og:image")).toMatch(/og-security-passport\.png$/);
+    // The preview image is the holder's OWN card, drawn by the server: an
+    // active share points at /og/share/<id>, not at the generic image.
+    const ogImage = new URL(meta("og:image"));
+    expect(ogImage.pathname).toBe(`/og/share/${publicId}`);
+    expect(ogImage.search).toMatch(/^\?v=\d+$/);
+    expect(meta("og:image:alt")).toMatch(/^CQrityjob Security Passport #\d+$/);
     expect(meta("robots")).toBe("noindex, nofollow");
     for (const secret of [uid, "@local.test", "Fiktivt Security LLC", "/p#"])
       expect(html, `the raw page carries ${secret}`).not.toContain(secret);
@@ -1298,6 +1305,72 @@ test.describe("the public pilot, on a real backend", () => {
       await expect(stranger.page.locator("main")).toContainText(holderName());
       await expect(stranger.page.locator("main")).not.toContainText("Fiktivt Security LLC");
       await evidence(stranger.page, "sv-public-share");
+
+      // ── The personal preview image, fetched as a crawler does ──────────
+      const imagePath = `/og/share/${publicId}`;
+      const payloadNow = () =>
+        JSON.parse(sql(`select public.sp_get_social_share('${publicId}')::text`)) as unknown;
+      const drawnFromDatabase = () => {
+        const share = parsePublicSocialShare(payloadNow(), new Date().toISOString());
+        if (share.status !== "active") throw new Error("the share is not active in the database");
+        return Buffer.from(renderShareImage(share, new Date().toISOString().slice(0, 10))!);
+      };
+      const served = await request.get(`${BASE}${imagePath}?v=1`);
+      expect(served.status()).toBe(200);
+      expect(served.headers()["content-type"]).toBe("image/png");
+      expect(served.headers()["cache-control"]).toBe("no-store");
+      const bytes = await served.body();
+      expect([...bytes.subarray(0, 8)]).toEqual([137, 80, 78, 71, 13, 10, 26, 10]);
+      expect(bytes.readUInt32BE(16), "1200 wide").toBe(1200);
+      expect(bytes.readUInt32BE(20), "630 high").toBe(630);
+      expect(
+        bytes.equals(drawnFromDatabase()),
+        "what is served is exactly what the controlled model draws from the database payload",
+      ).toBe(true);
+      const generic = await request.get(`${BASE}/og-security-passport.png`);
+      expect(bytes.equals(await generic.body()), "it is not the generic image").toBe(false);
+      // Nothing the client sends changes it.
+      const tampered = await request.get(
+        `${BASE}${imagePath}?v=2&title=Evil&holder=Evil&merits=1&image=x`,
+      );
+      expect((await tampered.body()).equals(bytes), "the query selects nothing").toBe(true);
+      // Tightening the privacy setting changes the image at once; so does
+      // loosening it back. An older share never shows more than the setting.
+      try {
+        sql(
+          `update public.sp_passport_profiles set privacy_mode='anonymous' where holder_user_id='${uid}'`,
+        );
+        const tight = await (await request.get(`${BASE}${imagePath}`)).body();
+        expect(tight.equals(bytes), "a stricter privacy setting changes the image").toBe(false);
+        expect(tight.equals(drawnFromDatabase()), "and it is the stricter card").toBe(true);
+      } finally {
+        sql(
+          `update public.sp_passport_profiles set privacy_mode='full_name' where holder_user_id='${uid}'`,
+        );
+      }
+      expect(
+        (await (await request.get(`${BASE}${imagePath}`)).body()).equals(bytes),
+        "and back, once the holder says so",
+      ).toBe(true);
+      // An expired share stops serving its image; the same share is restored
+      // for the revocation step below.
+      const expiry = sql(
+        `select expires_at from public.sp_social_shares where public_id='${publicId}'`,
+      );
+      try {
+        sql(
+          `update public.sp_social_shares set expires_at = created_at + interval '1 millisecond' where public_id='${publicId}'`,
+        );
+        await new Promise((r) => setTimeout(r, 50));
+        const expired = await request.get(`${BASE}${imagePath}`);
+        expect(expired.status(), "an expired share has no image").toBe(404);
+        expect(expired.headers()["cache-control"]).toBe("no-store");
+      } finally {
+        sql(
+          `update public.sp_social_shares set expires_at='${expiry}' where public_id='${publicId}'`,
+        );
+      }
+      expect((await request.get(`${BASE}${imagePath}`)).status()).toBe(200);
 
       // Withdrawn by the holder: the page stops, and the preview goes generic.
       await expect(flow.locator(`[data-social-mine-row="${publicId}"]`)).toBeVisible({
@@ -1320,6 +1393,13 @@ test.describe("the public pilot, on a real backend", () => {
       const after = await (await request.get(`${BASE}/s/${publicId}`)).text();
       expect(after).not.toContain(holderName());
       expect(after).toContain("Security Passport — CQrityjob");
+      // The personal image stops with the page, and the page's own preview
+      // goes back to the generic image.
+      const goneImage = await request.get(`${BASE}/og/share/${publicId}`);
+      expect(goneImage.status(), "a revoked share has no image").toBe(404);
+      expect(goneImage.headers()["cache-control"]).toBe("no-store");
+      expect(after).not.toContain(`/og/share/${publicId}`);
+      expect(after).toMatch(/og-security-passport\.png/);
     } finally {
       await stranger.context.close();
     }
@@ -1327,6 +1407,8 @@ test.describe("the public pilot, on a real backend", () => {
     // A made-up id is the same page as a withdrawn one.
     const unknown = await request.get(`${BASE}/s/${"A".repeat(24)}`);
     expect(await unknown.text()).toContain("no longer available");
+    expect((await request.get(`${BASE}/og/share/${"A".repeat(24)}`)).status()).toBe(404);
+    expect((await request.get(`${BASE}/og/share/not-an-id`)).status()).toBe(404);
 
     // Many merits are one image, and nothing is dropped from the list as text.
     const large = await anotherPerson(browser, "en");

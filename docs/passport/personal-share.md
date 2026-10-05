@@ -56,16 +56,57 @@ lapsed says so.
 
 ## The preview image
 
-`og:image` is the branded CQrityjob Security Passport image, identical for every
-share. **No image is uploaded, stored or served from a client.** A client-supplied
-picture can say anything — a header, size and weight check cannot tell a Passport
-from a forgery — so the schema has no image column at all. A *personalised* image
-would have to be drawn on the server from the same controlled payload; that needs
-a rasteriser (for example `satori` + `@resvg/resvg-wasm`, a bundle and font
-decision on the Cloudflare target) and is **not part of this change**. Until it
-exists, the personal part of the preview is its title and description: the name,
-the number, the founder line and the approved credentials, with no claim about
-standing.
+`og:image` on `/s/<id>` is `/og/share/<id>`: **the holder's own card, drawn on the
+server** from the same controlled payload as the page (`sp_get_social_share`).
+It shows the Passport number, the name (as the holder's privacy setting allows
+*now*), the country and the approved credentials, each with a shield whose
+outline tells the evidence level — dashed for self-declared, solid for
+documented, doubled with a check for verified; gold belongs to verified alone —
+and the words for it. Up to six rows, then "+ n more on the page". The founder
+line is plain text under the name, never a shield and never gold.
+
+**No image is uploaded, stored or served from a client.** The route takes nothing
+from the request (no query, no body); there is no image column in the schema. An
+unselected merit, an issuer, a certificate number, a contact detail, an e-mail
+address or an internal id is not in the payload, so it cannot be in the image.
+
+* **Revocation and expiry stop it at CQrityjob.** Unknown, expired and revoked
+  ids answer 404, never cacheable (`no-store`); a failed read answers 503 so a
+  crawler retries. A platform that already fetched the image may keep its copy,
+  which the holder is told before sharing.
+* **A name the faces cannot draw** (a script outside Latin) would become boxes on
+  a public image, so the route redirects to the branded static image instead.
+* **The `?v=` on the address** is the approval time, so a platform that cached an
+  earlier card for the same share fetches the current one.
+
+### Why it is a small rasteriser and not satori + resvg-wasm
+
+Production is a Cloudflare Worker (`server: cloudflare` on `www.cqrityjob.com`).
+A Worker cannot compile WebAssembly from bytes at run time; the usual pair needs
+the bundler to hand the Worker precompiled wasm modules, which cannot be proved
+from a source checkout and would fail as a silent 500 on the one request a
+crawler makes. `src/lib/security-passport/og-image/raster.ts` is pure TypeScript:
+exact-coverage anti-aliasing, a PNG encoder, `@shuding/opentype.js` (outlines) and
+`fflate` (deflate), both locked and pure JavaScript. The fonts are the site's own
+OFL Manrope 500/700 and Sora 700, converted from woff2 to TrueType and embedded
+(`fonts.generated.ts`) because a Worker has no file system for assets and must not
+call itself. To regenerate: decode `public/fonts/{sora-700,manrope-500,manrope-700}.woff2`
+to TTF (for example with `wawoff2`) and write the three base64 strings.
+
+First request costs about 0.3 s of CPU in Node (parsing three fonts, then the
+fill and a level-4 deflate of 2.3 MB); the parsed fonts are kept for the life of
+the isolate. **Measure it on the real Worker** in the HTTPS test environment
+before publication.
+
+## A personal share is named
+
+There is no anonymity or initials choice in this flow. The create accepts only
+`full_name`, and **the server reads the holder's privacy setting first** (failing
+closed): if it hides the name, nothing is created and the answer is
+`name_not_approved`. The screen says why and links to `/passport/privacy`. It
+changes nothing on the holder's behalf — neither the setting nor any earlier
+share's approval. It also says that changing the setting applies to earlier
+shares that were approved with the name.
 
 ## Select all
 
@@ -101,6 +142,11 @@ was built.
 
 * `bun run passport-public-share:check` — parsing as an allow-list, the link
   preview, select-all, the error map and the shape of the page and server calls.
+* `bun run passport-og-image:check` — the preview image: a valid, deterministic
+  1200×630 PNG, an unselected merit cannot be drawn, planted private values do
+  not reach it, each shield level's own shape, gold only on verified, long lists
+  and names, the route's source contract and the server's named-share rule. 11
+  negative controls (`negative-controls:passport-og-image`).
 * `bun run passport-social-image:check` — the image for every format and
   language, including the number and the founder line, and the flow's source
   contracts (consent gate, popup, cancel, no effect creates a share).
@@ -109,7 +155,10 @@ was built.
   switch, eleven credentials, the empty Passport.
 * `e2e/passport-public-pilot-local.spec.ts` case S — the same against a real
   local database: the share row, the raw HTML a crawler reads, the page for a
-  stranger, withdrawal, and that no private link is created.
+  stranger, withdrawal, and that no private link is created. It also fetches
+  `/og/share/<id>` and requires the served bytes to equal what the controlled
+  model draws from the database payload, that the query selects nothing, that a
+  stricter privacy setting, expiry and revocation change or stop it.
 * **Not proven by any of this:** LinkedIn's Post Inspector, LinkedIn's real share
   box and a real phone's share sheet. They need an HTTPS test environment with a
   synthetic Passport and a person logged in; see the release note.
