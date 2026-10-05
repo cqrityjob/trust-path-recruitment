@@ -26,11 +26,22 @@ facts, never by name or e-mail address alone:
 | Work jurisdiction                                             | `SE`                |
 | Passport numbers assigned so far / #1 taken / #1 ever retired | 0 / no / no         |
 
-**Important:** a second completed profile with the **same display name** exists
-(role `admin`, a different account). It is *not* the founder. A statement that
-selected by name would have matched two accounts. The designation below takes the
-internal id of the `superadmin` account only, and the function itself refuses
-anything that is not a `superadmin` with a completed, declared Passport.
+**Two accounts, both the owner's, both kept.** A second completed profile with
+the **same display name** exists (role `admin`, a different account). The owner
+has confirmed that both accounts are theirs and that both are kept for admin
+redundancy and tests, with **no merge, no deletion and no move of merits** between
+them:
+
+* the account with the e-mail local part `sandleradam…` (role `superadmin`) is the
+  **founder account** and gets Passport #1;
+* the account with the e-mail local part `mostafa…` (role `admin`) stays a
+  **separate admin account**, takes no number from this plan, and is left out of
+  the statistics by the **existing staff rule** (`user_roles`), so **no extra
+  exclusion row is needed**.
+
+A statement that selected by name would have matched both. The designation below
+takes the internal id of the `superadmin` account only, and the function itself
+refuses anything that is not a `superadmin` with a completed, declared Passport.
 
 No merit, evidence, number or setting was copied between accounts, and none is in
 this plan.
@@ -71,11 +82,12 @@ That is why the identity check above is the gate.
 
 ## 3. Exclusions
 
-**None proposed.** Staff accounts (`user_roles`) are excluded from the count
-without being listed, so both existing completed profiles are excluded as staff
-today, and the founder is the one narrow exception the live counter makes
-(`sp_network_counts_holder`). If the owner knows of test or demo holders, they are
-added by hand to `sp_statistics_exclusions`; none is known to this work.
+**None needed.** Staff accounts (`user_roles`) are excluded from the count without
+being listed. The `admin` account is therefore left out of the statistics by the
+existing staff rule, and the founder account is the one narrow exception the live
+counter makes (`sp_network_counts_holder`). `sp_statistics_exclusions` stays empty.
+If test or demo holders that are not staff turn up later, they are added by hand;
+none is known to this work.
 
 ## 4. Statistics display
 
