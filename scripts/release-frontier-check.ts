@@ -429,14 +429,14 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // Evidence: docs/release/2026-10-04-catalogue-publication-hosted-verification.md.
 // F09 applied once as hosted 20261004164027; see 2026-10-04 guard verification.
 // Owner-authorized canonical alias verified; deploy-plan independently proves an empty plan.
-// #429 is schema-only and awaits explicit production approval. Remove this
-// entry only with hosted application/postflight evidence, never on merge alone.
-const expectedPending: string[] = [
-  "20270216090000_participant_report_api_boundary.sql",
-  // PR 1 of 2: number, founder designation, narrow count rule, public social
-  // share. Schema-only; remove with hosted application/postflight evidence.
-  "20270217090000_sp_passport_number_and_social_share.sql",
-];
+// 2026-10-05 07:27 UTC: 20270216090000 (participant_report_api_boundary, #429)
+// and 20270217090000 (sp_passport_number_and_social_share, #430 as f1faa5e) were
+// applied by the official integration and verified read-only: ledger 377 rows,
+// the first 375 unchanged; every function body equals the strict local replay;
+// grants, RLS and the closed boundary are as reviewed; nothing was written and
+// the statistics stay hidden. Nothing is pending.
+// Evidence: docs/release/2026-10-05-passport-number-and-public-share-hosted-verification.md.
+const expectedPending: string[] = [];
 
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
