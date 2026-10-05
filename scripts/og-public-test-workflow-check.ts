@@ -260,7 +260,7 @@ for (const [name, wf, url] of [
   if (name === "og-public-test.yml") {
     const deployAt = wf.indexOf('deploy --name "$APP_WORKER"');
     expect(
-      deployAt > checkAt,
+      checkAt > 0 && deployAt > checkAt,
       "og-public-test.yml: no isolation check between build and deploy would let a real-project build deploy",
     );
     expect(
