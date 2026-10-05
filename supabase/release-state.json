@@ -8,7 +8,10 @@
   "frontier": [
     {
       "file": "20270216090000_participant_report_api_boundary.sql",
-      "hostedState": "pending",
+      "hostedState": "applied",
+      "hostedVersion": "20270216090000",
+      "hostedName": "participant_report_api_boundary",
+      "evidenceSource": "Read-only verification 2026-10-05 07:27 UTC through the Supabase management connector on owner production wrygicdfxwjnrugduxnt, after PR #429 merged and the official integration applied 20270216090000 (hosted ledger 377 rows, version:name newline MD5 8dcb3bba55a422ab257ecc722b016f95, the first 375 unchanged at 755d51cb6eb43f68f1e621478a1d0b81). md5(pg_get_functiondef) of scp_participant_report(uuid) d8570974a6f3c51d41a94c1650b83551, scp_subject_progress(uuid) 266561fc1f320eeb2e0c1938d81ca20a and scp_development_recommendations(uuid) 9de0ff0089e91a1a428b3ad1ff872cef equal the same functions after a strict local full-history replay (they differ from the 2026-10-04 preflight values, as the migration intends); scp_participant_report_for_issuer(uuid) is unchanged (3d38aa3d7056718bd6ecd86c72e627df); cd_record_funnel_event(text,jsonb,uuid) keeps its body (1b57baa44ef5c8e33bab7aca981a518c) and is executable by service_role only (anon false, authenticated false); the three report functions are executable by authenticated and not by anon; cd_submit_test_feedback is unchanged and still executable by anon and authenticated. The scp_report_snapshots policies (own, employer) equal the local replay. No data was read from any report. Evidence: docs/release/2026-10-05-passport-number-and-public-share-hosted-verification.md.",
       "introduces": [],
       "rollback": "supabase/rollback/20270216090000_participant_report_api_boundary_rollback.sql",
       "verify": "Compare the three participant RPC definitions and candidate-only snapshot policy with the reviewed migration; confirm anon/authenticated cannot execute cd_record_funnel_event(text,jsonb,uuid), service_role still can, and test-feedback privileges are unchanged. See docs/release/2026-10-04-participant-report-api-boundary.md for preflight and postflight.",
@@ -16,7 +19,10 @@
     },
     {
       "file": "20270217090000_sp_passport_number_and_social_share.sql",
-      "hostedState": "pending",
+      "hostedState": "applied",
+      "hostedVersion": "20270217090000",
+      "hostedName": "sp_passport_number_and_social_share",
+      "evidenceSource": "Read-only verification 2026-10-05 07:27 UTC through the Supabase management connector on owner production wrygicdfxwjnrugduxnt, after PR #430 merged to main as f1faa5e (head 0c81edf, every CI job green) and the official integration applied 20270217090000. Hosted ledger 377 rows, version:name newline MD5 8dcb3bba55a422ab257ecc722b016f95; the first 375 rows are unchanged (755d51cb6eb43f68f1e621478a1d0b81). Objects: sp_passport_numbers, sp_passport_numbers_retired, sp_social_shares and sp_social_share_items exist with RLS enabled on sp_passport_numbers and sp_social_shares; sp_social_shares has no image column; the trigger sp_passport_number_on_complete_trg exists. Anon holds EXECUTE on exactly two sp_ functions, sp_get_social_share(text) and sp_network_stats(); anon cannot execute sp_create_social_share, sp_designate_founder or sp_assign_passport_number; authenticated cannot execute sp_designate_founder or sp_assign_passport_number; anon cannot SELECT sp_social_shares; authenticated cannot INSERT into sp_passport_numbers or sp_social_shares. md5 of prosrc: sp_network_stats 09b8d671485b5658983c04de1cc874ec, sp_get_social_share eba1089f6f6d2115884d9a02ed7e2c12 and sp_create_social_share 461da436c9ebb9572f1a99b6a0529bf8 equal the bodies after a strict local full-history replay of the merged file. Nothing was written: 0 Passport numbers, 0 retired numbers, 0 public shares; sp_network_stats() returns {\\\"display\\\":\\\"hidden\\\"} and the policy row is still hidden. No founder is designated and no exclusion was added. Evidence: docs/release/2026-10-05-passport-number-and-public-share-hosted-verification.md.",
       "introduces": [
         {
           "kind": "function",
