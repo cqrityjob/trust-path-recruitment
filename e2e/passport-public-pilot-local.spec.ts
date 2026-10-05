@@ -1231,6 +1231,34 @@ test.describe("the public pilot, on a real backend", () => {
     expect(shares(), "looking at it created nothing public").toBe(sharesBefore);
     await evidence(page, "sv-share-studio");
 
+    // The holder leaves ONE merit out. The preview loses exactly that merit,
+    // and -- below -- the share row, the public page and the personal image
+    // never carry it: an unselected merit is not public.
+    await flow.locator("[data-social-change]").click();
+    const options = flow.locator('[data-merit-option^="claim:"]');
+    expect(await options.count(), "more than one merit to choose from").toBeGreaterThan(1);
+    const leftOutKey = (await options.first().getAttribute("data-merit-option")) ?? "";
+    const leftOutId = leftOutKey.replace(/^claim:/, "");
+    const leftOutTitle = sql(`select title from public.sp_claims where id='${leftOutId}'`);
+    expect(leftOutTitle.length, "the left-out merit has a title to look for").toBeGreaterThan(0);
+    await options.first().locator("input").uncheck();
+    const selected = shields - 1;
+    await expect
+      .poll(
+        async () =>
+          (
+            decodeURIComponent(
+              ((await preview.getAttribute("src")) ?? "").replace(
+                /^data:image\/svg\+xml;charset=utf-8,/,
+                "",
+              ),
+            ).match(/data-passport-shield=/g) ?? []
+          ).length,
+        { timeout: 60_000 },
+      )
+      .toBe(selected);
+    await expect(flow.locator("[data-select-all]")).toHaveAttribute("data-select-all", "some");
+
     // Saving the image is the holder's own: no consent, nothing public.
     const [saved] = await downloadsDuring(page, 1, () =>
       flow.locator("[data-social-download]").click(),
@@ -1269,7 +1297,13 @@ test.describe("the public pilot, on a real backend", () => {
       sql(
         `select holder_label || '/' || locale || '/' || (select count(*) from public.sp_social_share_items i where i.share_id = s.id) from public.sp_social_shares s where public_id='${publicId}'`,
       ),
-    ).toBe(`full_name/sv/${shields}`);
+    ).toBe(`full_name/sv/${selected}`);
+    expect(
+      sql(
+        `select count(*) from public.sp_social_share_items i join public.sp_social_shares s on s.id = i.share_id where s.public_id='${publicId}' and i.claim_id='${leftOutId}'`,
+      ),
+      "the left-out merit is not pinned to the share",
+    ).toBe("0");
 
     // The public page, as a crawler reads it: raw HTML, no session, no script.
     const base = new URL(publicUrl);
@@ -1301,6 +1335,7 @@ test.describe("the public pilot, on a real backend", () => {
     expect(meta("robots")).toBe("noindex, nofollow");
     for (const secret of [uid, "@local.test", "Fiktivt Security LLC", "/p#"])
       expect(html, `the raw page carries ${secret}`).not.toContain(secret);
+    expect(html, "the left-out merit is not on the public page").not.toContain(leftOutTitle);
     expect(base.pathname).toBe(`/s/${publicId}`);
 
     // Opened by a stranger in the browser: the same Passport, from the database.
@@ -1362,6 +1397,36 @@ test.describe("the public pilot, on a real backend", () => {
         (await (await request.get(`${BASE}${imagePath}`)).body()).equals(bytes),
         "and back, once the holder says so",
       ).toBe(true);
+
+      // ── A merit changes AFTER the share was made and the image fetched ──
+      // The holder withdraws one pinned merit. The share is not re-made:
+      // the page and the NEXT image are read from the database as it is now,
+      // so the withdrawn merit drops off both. (A withdrawal is final by the
+      // trust-field trigger, so a merit case H does not depend on is chosen.)
+      const withdrawnId = sql(
+        `select i.claim_id from public.sp_social_share_items i join public.sp_social_shares s on s.id = i.share_id join public.sp_claims c on c.id = i.claim_id where s.public_id='${publicId}' and coalesce(c.credential_code,'') <> 'AE_DU_SIRA_CARD_GUARD' order by c.id limit 1`,
+      );
+      expect(withdrawnId, "a pinned merit to withdraw").not.toBe("");
+      const withdrawnTitle = sql(`select title from public.sp_claims where id='${withdrawnId}'`);
+      const beforeWithdrawal = await (await request.get(`${BASE}/s/${publicId}`)).text();
+      expect(beforeWithdrawal, "control: the merit is on the page first").toContain(withdrawnTitle);
+      sql(`update public.sp_claims set lifecycle_state='withdrawn' where id='${withdrawnId}'`);
+      const afterWithdrawal = await request.get(`${BASE}${imagePath}`);
+      expect(afterWithdrawal.status()).toBe(200);
+      const withdrawnBytes = await afterWithdrawal.body();
+      expect(withdrawnBytes.equals(bytes), "a withdrawn merit changes the next image").toBe(false);
+      expect(
+        withdrawnBytes.equals(drawnFromDatabase()),
+        "and the image is exactly what the database now says",
+      ).toBe(true);
+      const pageAfter = await (await request.get(`${BASE}/s/${publicId}`)).text();
+      expect(pageAfter, "the withdrawn merit is off the page").not.toContain(withdrawnTitle);
+      expect(
+        sql(
+          `select count(*) from public.sp_social_share_items i join public.sp_social_shares s on s.id = i.share_id where s.public_id='${publicId}'`,
+        ),
+        "the share itself was not changed; its answer was",
+      ).toBe(String(selected));
       // An expired share stops serving its image; the same share is restored
       // for the revocation step below.
       const expiry = sql(
