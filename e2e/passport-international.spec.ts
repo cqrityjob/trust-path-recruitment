@@ -97,6 +97,8 @@ async function mount(page: Page, path: string, lang: "sv" | "en" = "en", empty =
     getInternationalPassportMetadata: metadata,
     listMyVerificationRequests: { requests: [], decisions: [] },
     listMyShares: [],
+    getMyPassportNumber: { number: null, designation: null },
+    listMySocialShares: [],
     countMyAcademyWork: { total: 0, actionable: 0 },
     countMyReviewQueue: 0,
     listMyEmployerWorkspaces: [],
@@ -282,6 +284,7 @@ test("v2 consent travels to preview and creation, then the link can be revoked",
     }
     return route.fallback();
   });
+  await page.locator('[data-share-choice="link"]').click();
   await page.locator(`[data-merit-option="claim:${claim.id}"] input`).check();
   await page.getByLabel("Credential identifiers", { exact: true }).check();
   await page.getByRole("button", { name: /Preview.*recipient/ }).click();

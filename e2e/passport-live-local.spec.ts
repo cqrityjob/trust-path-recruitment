@@ -88,6 +88,7 @@ test("real owner adds and selectively shares a credential, recipient loses acces
   await expect(page.locator("main")).toContainText(title);
   const claimId = new URL(page.url()).pathname.split("/").pop()!;
   await page.goto(`${base}/passport/share`);
+  await page.locator('[data-share-choice="link"]').click();
   const selection = page.locator(`[data-merit-option="claim:${claimId}"]`);
   await selection.locator('input[type="checkbox"]').check();
   const unchecked = page.locator(`[data-merit-option="claim:${excluded.data}"]`);
@@ -210,6 +211,7 @@ test("real owner adds and selectively shares a credential, recipient loses acces
       .single();
     expect(shares.error).toBeNull();
     await page.goto(`${base}/passport/share`);
+    await page.locator('[data-share-choice="link"]').click();
     await page.locator(`[data-share-revoke="${shares.data!.id}"]`).click();
     await expect(page.locator(`[data-share-row="${shares.data!.id}"]`)).toHaveAttribute(
       "data-share-state",

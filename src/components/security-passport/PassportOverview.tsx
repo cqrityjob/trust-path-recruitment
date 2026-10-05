@@ -143,7 +143,7 @@ export function PassportOverview({
   // The holder's own view, so a self-declared title may appear — labelled.
   // `holder.identity` is whatever the caller derived; the marker below is
   // what stops a previewed title from reading as a checked one.
-  const profession = professionLine(holder.identity, lang, pt("identity.none"));
+  const profession = professionLine(holder.identity, lang, "");
 
   return (
     <div className={cn("mx-auto w-full max-w-3xl space-y-6", className)}>

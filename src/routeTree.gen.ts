@@ -59,6 +59,7 @@ import { Route as InviteTokenRouteImport } from './routes/invite.$token'
 import { Route as JobsIndexRouteImport } from './routes/jobs.index'
 import { Route as JobsSlugRouteImport } from './routes/jobs.$slug'
 import { Route as PTokenRouteImport } from './routes/p.$token'
+import { Route as SPublicIdRouteImport } from './routes/s.$publicId'
 import { Route as SecurityPassportIndexRouteImport } from './routes/security-passport.index'
 import { Route as SecurityPassportIndiaRouteImport } from './routes/security-passport.india'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
@@ -469,6 +470,11 @@ const JobsSlugRoute = JobsSlugRouteImport.update({
 const PTokenRoute = PTokenRouteImport.update({
   id: '/p/$token',
   path: '/p/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SPublicIdRoute = SPublicIdRouteImport.update({
+  id: '/s/$publicId',
+  path: '/s/$publicId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SecurityPassportIndexRoute = SecurityPassportIndexRouteImport.update({
@@ -1480,6 +1486,7 @@ export interface FileRoutesByFullPath {
   '/invite/$token': typeof InviteTokenRoute
   '/jobs/$slug': typeof JobsSlugRoute
   '/p/$token': typeof PTokenRoute
+  '/s/$publicId': typeof SPublicIdRoute
   '/security-passport/india': typeof SecurityPassportIndiaRoute
   '/career-center/': typeof CareerCenterIndexRoute
   '/jobs/': typeof JobsIndexRoute
@@ -1676,6 +1683,7 @@ export interface FileRoutesByTo {
   '/invite/$token': typeof InviteTokenRoute
   '/jobs/$slug': typeof JobsSlugRoute
   '/p/$token': typeof PTokenRoute
+  '/s/$publicId': typeof SPublicIdRoute
   '/security-passport/india': typeof SecurityPassportIndiaRoute
   '/career-center': typeof CareerCenterIndexRoute
   '/jobs': typeof JobsIndexRoute
@@ -1867,6 +1875,7 @@ export interface FileRoutesById {
   '/invite/$token': typeof InviteTokenRoute
   '/jobs/$slug': typeof JobsSlugRoute
   '/p/$token': typeof PTokenRoute
+  '/s/$publicId': typeof SPublicIdRoute
   '/security-passport/india': typeof SecurityPassportIndiaRoute
   '/career-center/': typeof CareerCenterIndexRoute
   '/jobs/': typeof JobsIndexRoute
@@ -2073,6 +2082,7 @@ export interface FileRouteTypes {
     | '/invite/$token'
     | '/jobs/$slug'
     | '/p/$token'
+    | '/s/$publicId'
     | '/security-passport/india'
     | '/career-center/'
     | '/jobs/'
@@ -2269,6 +2279,7 @@ export interface FileRouteTypes {
     | '/invite/$token'
     | '/jobs/$slug'
     | '/p/$token'
+    | '/s/$publicId'
     | '/security-passport/india'
     | '/career-center'
     | '/jobs'
@@ -2459,6 +2470,7 @@ export interface FileRouteTypes {
     | '/invite/$token'
     | '/jobs/$slug'
     | '/p/$token'
+    | '/s/$publicId'
     | '/security-passport/india'
     | '/career-center/'
     | '/jobs/'
@@ -2651,6 +2663,7 @@ export interface RootRouteChildren {
   EmployerRegisterRoute: typeof EmployerRegisterRoute
   InviteTokenRoute: typeof InviteTokenRoute
   PTokenRoute: typeof PTokenRoute
+  SPublicIdRoute: typeof SPublicIdRoute
   SecurityPassportIndiaRoute: typeof SecurityPassportIndiaRoute
   SecurityPassportIndexRoute: typeof SecurityPassportIndexRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -3007,6 +3020,13 @@ declare module '@tanstack/react-router' {
       path: '/p/$token'
       fullPath: '/p/$token'
       preLoaderRoute: typeof PTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/s/$publicId': {
+      id: '/s/$publicId'
+      path: '/s/$publicId'
+      fullPath: '/s/$publicId'
+      preLoaderRoute: typeof SPublicIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/security-passport/': {
@@ -4842,6 +4862,7 @@ const rootRouteChildren: RootRouteChildren = {
   EmployerRegisterRoute: EmployerRegisterRoute,
   InviteTokenRoute: InviteTokenRoute,
   PTokenRoute: PTokenRoute,
+  SPublicIdRoute: SPublicIdRoute,
   SecurityPassportIndiaRoute: SecurityPassportIndiaRoute,
   SecurityPassportIndexRoute: SecurityPassportIndexRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,

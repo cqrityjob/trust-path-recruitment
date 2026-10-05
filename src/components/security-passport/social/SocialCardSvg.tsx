@@ -817,12 +817,46 @@ function layout(p: SocialCardSvgProps, s: number, tier: Tier): Laid {
   // The profession line breaks at its own separator before it breaks at a
   // space, so a narrow column reads "Väktare" / "Sverige", never "· Sverige".
   const profSize = (landscape ? 24 : 28) * iu;
-  const profLines = landscape
-    ? p.strings.professionLine
-        .split(" · ")
-        .flatMap((segment) => wrap(segment, charsFor(headW, profSize), 2))
-        .slice(0, 4)
-    : wrap(p.strings.professionLine, charsFor(headW, profSize), 2);
+  // The Passport number and, for the one founder, the designation are their own
+  // lines, in their own tone: the designation is a product label, never to be
+  // read as a title the holder earned or a credential someone verified.
+  const idLines: { key: string; text: string; fill: string; weight: number }[] = [];
+  if (p.strings.numberLine) {
+    idLines.push({ key: "number", text: p.strings.numberLine, fill: RIM_BRIGHT, weight: 600 });
+  }
+  if (p.strings.designationLine) {
+    idLines.push({
+      key: "designation",
+      text: p.strings.designationLine,
+      fill: TRUST_PALETTE.ink,
+      weight: 600,
+    });
+  }
+  for (const line of idLines) {
+    y += profSize * 1.3;
+    nodes.push(
+      <Text
+        key={`id-${line.key}`}
+        x={pad}
+        y={y}
+        size={profSize}
+        weight={line.weight}
+        fill={line.fill}
+      >
+        {line.text}
+      </Text>,
+    );
+  }
+  // No title is no line at all: never a sentence about what the holder lacks.
+  const profText = p.strings.professionLine.trim();
+  const profLines = !profText
+    ? []
+    : landscape
+      ? profText
+          .split(" · ")
+          .flatMap((segment) => wrap(segment, charsFor(headW, profSize), 2))
+          .slice(0, 4)
+      : wrap(profText, charsFor(headW, profSize), 2);
   for (const [i, line] of profLines.entries()) {
     y += profSize * 1.3;
     nodes.push(

@@ -397,6 +397,7 @@ test("India: landing → confirmed account → setup → credential → review �
   // ── 8. Selective share, QR, recipient, revocation ────────────────────
   // A second credential that is NOT selected must not appear anywhere.
   await page.goto(`${BASE}/passport/share`);
+  await page.locator('[data-share-choice="link"]').click();
   await page.locator(`[data-merit-option="claim:${claimId}"] input[type="checkbox"]`).check();
   await page.locator('input[name="sel-expiry"][value="7"]').check();
   await page.locator("[data-share-cta]").click();

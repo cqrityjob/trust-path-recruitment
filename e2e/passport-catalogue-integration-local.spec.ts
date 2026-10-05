@@ -554,6 +554,7 @@ test("6 · only the selected credential is shared; a logged-out recipient sees o
 }) => {
   await signIn(page, HOLDER, "/passport/share");
   await expect(page.locator("[data-share-screen]")).toBeVisible({ timeout: 60_000 });
+  await page.locator('[data-share-choice="link"]').click();
   await page.locator(`[data-merit-option="claim:${claimId}"] input`).check();
   await page.locator("[data-share-cta]").click();
   await expect(page.locator("[data-share-created]")).toBeVisible({ timeout: 30_000 });
@@ -579,6 +580,7 @@ test("6 · only the selected credential is shared; a logged-out recipient sees o
   await shot(view, "17-recipient-view");
 
   await page.goto(`${BASE}/passport/share`);
+  await page.locator('[data-share-choice="link"]').click();
   await page.locator("[data-share-revoke]").first().click();
   const confirm = page.getByRole("button", { name: /Revoke|Återkalla/ }).last();
   if (await confirm.isVisible()) await confirm.click();

@@ -55,20 +55,40 @@ export function mayShowNetworkStats(
   return surface === "passport_page" ? true : stats.display === "public";
 }
 
+/** Null = the owner has not published (or the payload is unusable). A failed
+ *  READ is different and throws: the query then keeps the last good figures and
+ *  never turns a failure into a zero. */
 export async function fetchNetworkStats(): Promise<NetworkStats | null> {
   const { data, error } = await supabase.rpc("sp_network_stats");
-  if (error) return null;
+  if (error) throw new Error("Network statistics unavailable");
   return parseNetworkStats(data);
 }
 
-/** Cache: the figures need no second-by-second accuracy, so one request per
- *  ten minutes per visitor, shared by every surface on the page. */
+/** How the figures stay live: re-read about once a minute while the page is
+ *  visible (never in a background tab), on returning to the tab, and when the
+ *  app invalidates the key after something changed. They are counts of real
+ *  Passports, so they are re-derived by the database on every read; nothing is
+ *  cached longer than the interval. */
+export const NETWORK_STATS_REFETCH_MS = 60_000;
+
 export const NETWORK_STATS_QUERY = {
   queryKey: ["sp-network-stats"],
   queryFn: fetchNetworkStats,
-  staleTime: 10 * 60 * 1000,
+  staleTime: 30_000,
+  refetchInterval: NETWORK_STATS_REFETCH_MS,
+  refetchIntervalInBackground: false,
+  refetchOnWindowFocus: true,
+  refetchOnReconnect: true,
   retry: false,
 } as const;
+
+/** The time of day the figures were last read, in the reader's language. */
+export function formatUpdatedAt(epochMs: number, lang: "sv" | "en"): string {
+  if (!Number.isFinite(epochMs) || epochMs <= 0) return "";
+  return new Intl.DateTimeFormat(LOCALE[lang], { hour: "2-digit", minute: "2-digit" }).format(
+    new Date(epochMs),
+  );
+}
 
 const LOCALE = { sv: "sv-SE", en: "en-GB" } as const;
 

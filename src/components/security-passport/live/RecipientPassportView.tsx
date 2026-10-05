@@ -67,6 +67,12 @@ export interface RecipientPassportViewProps {
    *  what is shown; it only suppresses the marketing footer, which is the one
    *  block addressed to a stranger rather than about the holder. */
   readonly preview?: boolean;
+  /** The Passport number and, for the one founder, the separate designation.
+   *  Server-held; a product designation, never a credential. */
+  readonly identity?: {
+    readonly passportNumber: number | null;
+    readonly designation: "founder" | null;
+  };
 }
 
 export function RecipientPassportView(props: RecipientPassportViewProps) {
@@ -81,6 +87,7 @@ function RecipientPassportBody({
   presentation,
   verifyUrl,
   preview = false,
+  identity,
 }: RecipientPassportViewProps) {
   // Inside the provider, so this is the SHARE's language, not the reader's.
   const { pt, lang } = usePassportCopy();
@@ -98,6 +105,26 @@ function RecipientPassportBody({
         >
           {pt("rec.title")}
         </h1>
+        {identity && (identity.passportNumber !== null || identity.designation) ? (
+          <p
+            data-recipient-identity
+            className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground"
+          >
+            {identity.passportNumber !== null ? (
+              <span data-passport-number className="font-semibold tabular-nums text-foreground">
+                {pt("rec.passportNumber")} #{identity.passportNumber}
+              </span>
+            ) : null}
+            {identity.designation === "founder" ? (
+              <span
+                data-passport-designation="founder"
+                className="inline-flex items-center rounded-full border border-border px-2.5 py-0.5 text-xs font-medium text-foreground"
+              >
+                {pt("rec.designation.founder")}
+              </span>
+            ) : null}
+          </p>
+        ) : null}
 
         {/* Said before any content: this page — not a screenshot of it — is
             the current position. */}

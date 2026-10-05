@@ -674,49 +674,110 @@ for (const [name, credentials] of Object.entries(SCENARIOS)) {
   );
 }
 
-// ── 14: a link only on the holder's own press ────────────────────────────
+// ── 14: a public link only on the holder's own, confirmed press ──────────
 {
   const flow = readFileSync("src/components/security-passport/live/SocialShareFlow.tsx", "utf8");
   const route = readFileSync("src/routes/_authenticated.passport.share.tsx", "utf8");
   const uses = (text: string, needle: string) => text.split(needle).length - 1;
+  // ensureShare is defined once and called from exactly the two actions that
+  // need a public link; nothing creates one on load, on selection or on change.
   expect(
-    uses(flow, "link.onCreate") === 1 &&
-      /data-social-link-create\s+onClick=\{link\.onCreate\}/.test(flow),
-    "the social flow creates a link from one place: the holder's press on 'create a link'",
+    uses(flow, "ensureShare()") === 3 && /async function ensureShare\(\)/.test(flow),
+    "a public share is created from one function, called only by the channel press and 'copy link'",
   );
   expect(
-    uses(route, "onCreateSocialLink(") === 2 &&
-      /onCreate: \(\) => void onCreateSocialLink\(\)/.test(route),
-    "and the page wires that press, and nothing else, to the create",
+    /function gate\(\)[\s\S]*?if \(!consent\)[\s\S]*?return false;/.test(flow) &&
+      uses(flow, "if (!gate()) return;") === 2,
+    "and both go through the consent gate: nothing is public until the holder has said so",
   );
   expect(
-    /const \[includeLink, setIncludeLink\] = useState\(false\)/.test(route) &&
-      /const imageLink = includeLink && socialLinkUrl \? socialLinkUrl : null;/.test(route),
-    "no link is printed unless the holder created one and ticked it in",
+    !/useEffect\([^)]*\)\s*=>\s*\{[^}]*ensureShare/.test(flow),
+    "no effect creates a share: the default selection creates nothing",
   );
-  // The flow shows ONE frame and hands over ONE file: the set machinery is gone.
+  expect(
+    /const popup = isMail \? null : window\.open\("", "_blank"\);[\s\S]*?const link = await ensureShare\(\);/.test(
+      flow,
+    ) && /data-social-popup-blocked/.test(flow),
+    "the destination window is opened inside the click, before the await; a blocked one is shown as a link",
+  );
+  // One frame, one file: the set machinery is gone.
   expect(
     !/socialCardPages|data-social-set|data-social-page|PageFrame|files\[i\]|imageOf|setSummary/.test(
       flow,
     ) &&
       uses(flow, "<SocialFrame") === 1 &&
-      /shareFromDevice\(file\)/.test(flow) &&
-      /deliver\(plan, file\)/.test(flow),
-    "the flow previews one Passport, shares one file and downloads one file",
+      /shareFromDevice\(\)/.test(flow) &&
+      /downloadBlob\(prepared, prepared\.name\)/.test(flow),
+    "the flow previews one Passport, shares one file and saves one file",
   );
   expect(
-    /<PassportGroupList/.test(flow) && /<figcaption>/.test(flow),
-    "the preview is accompanied by the Passport in words: every group and credential",
+    /async function shareFromDevice\(\)[\s\S]*?AbortError"\) return;/.test(flow) &&
+      !/async function shareFromDevice\(\)[\s\S]{0,900}downloadBlob/.test(flow),
+    "cancelling the device share is a decision: it returns and downloads nothing",
   );
   expect(
-    /const file = svg && prepared && prepared\.svg === svg \? prepared\.file : null;/.test(flow),
+    /<PassportGroupList/.test(flow) && /data-social-export/.test(flow),
+    "the whole Passport is also given in words: every group and credential, nothing dropped",
+  );
+  expect(
+    /const prepared = svg && file && file\.svg === svg \? file\.file : null;/.test(flow),
     "the file handed over is the one made from the SVG on screen, and nothing else",
+  );
+  expect(
+    !/includeLink|socialLinkUrl|onCreateSocialLink|setSocialLink/.test(route) &&
+      /verifyUrl: null,/.test(route),
+    "the page no longer prints a private link into the image",
+  );
+  expect(
+    /holderLabel: "full_name"/.test(flow) &&
+      !/anonymous|initials/.test(
+        flow.slice(flow.indexOf("<SocialFrame"), flow.indexOf("</figure>")),
+      ),
+    "the personal flow offers no anonymity or initials choice",
   );
   const model = readFileSync("src/lib/security-passport/social.ts", "utf8");
   expect(
     !/socialCardPages|SOCIAL_CREDENTIALS_PER_IMAGE|SocialCardPage|\.slice\(0, 3\)/.test(model),
     "the model has no page, no per-image count and no cut",
   );
+}
+
+// ── 15: the number, the founder line and no "no title" sentence ──────────
+for (const lang of ["sv", "en"] as const) {
+  const base = card([SIRA, VU1, CPP, OV], null, lang);
+  for (const spec of SHARE_FORMATS) {
+    const plain = textOf(draw(base, spec.id, lang, null)).join(" ");
+    expect(
+      !/#\d/.test(plain) && !plain.includes(passportT("rec.designation.founder", lang)),
+      `${lang}/${spec.id}: no number and no founder line unless the server assigned them`,
+    );
+    expect(
+      !plain.includes(passportT("identity.none", lang)),
+      `${lang}/${spec.id}: a card without a title never says "no active professional title"`,
+    );
+    const founder = draw(
+      { ...base, passportNumber: 1, designation: "founder" },
+      spec.id,
+      lang,
+      null,
+    );
+    const words = textOf(founder).join(" ");
+    expect(
+      words.includes(`${passportT("rec.passportNumber", lang)} #1`) &&
+        words.includes(passportT("rec.designation.founder", lang)),
+      `${lang}/${spec.id}: the founder card says "Security Passport #1" and the designation on its own line`,
+    );
+    expect(
+      shieldsOf(founder).length === shieldsOf(draw(base, spec.id, lang, null)).length,
+      `${lang}/${spec.id}: the designation changes no credential and no verification`,
+    );
+    const ordinary = textOf(draw({ ...base, passportNumber: 7 }, spec.id, lang, null)).join(" ");
+    expect(
+      ordinary.includes(`${passportT("rec.passportNumber", lang)} #7`) &&
+        !ordinary.includes(passportT("rec.designation.founder", lang)),
+      `${lang}/${spec.id}: an ordinary holder has a number and no designation`,
+    );
+  }
 }
 
 // ── No link unless the model carries one ─────────────────────────────────

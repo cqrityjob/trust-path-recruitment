@@ -99,6 +99,8 @@ async function mount(
     getInternationalPassportMetadata: metadata,
     listMyVerificationRequests: { requests: [], decisions: [] },
     listMyShares: [],
+    getMyPassportNumber: { number: null, designation: null },
+    listMySocialShares: [],
     countMyAcademyWork: { total: 0, actionable: 0 },
     countMyReviewQueue: 0,
     listMyEmployerWorkspaces: [],

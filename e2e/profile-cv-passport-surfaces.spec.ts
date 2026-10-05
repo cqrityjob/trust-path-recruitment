@@ -639,6 +639,8 @@ function passportOverrides() {
     getInternationalPassportMetadata: ok(METADATA),
     listMyVerificationRequests: ok({ requests: [], decisions: [] }),
     listMyShares: ok([]),
+    getMyPassportNumber: ok({ number: null, designation: null }),
+    listMySocialShares: ok([]),
     listMyEvidence: ok([]),
     listClaimVersions: ok([]),
     listMyCredentialDrafts: ok([]),

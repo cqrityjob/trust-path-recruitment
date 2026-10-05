@@ -98,6 +98,11 @@ export interface SocialCardModel {
    *  a link for it and chose to show it. A fixture carries an opaque fixture
    *  address, never an id drawn from the holder's data. */
   readonly verifyUrl: string | null;
+  /** The server-held Passport number, or absent/null when none is assigned. */
+  readonly passportNumber?: number | null;
+  /** The founder designation, set only by the server for the one designated
+   *  account. Drawn on its own line; it is not a credential. */
+  readonly designation?: "founder" | null;
   /** True when the underlying share is no longer active — the card then
    *  leads with "check current status" rather than the milestone. */
   readonly staleWarning: boolean;

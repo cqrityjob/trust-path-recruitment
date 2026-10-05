@@ -296,6 +296,11 @@ jobs:
       - name: Security Passport Network statistics database test
         run: bun run passport-network-stats:db
 
+      # The personal, public share: how the application reads the public payload,
+      # the link preview a crawler gets, select-all and the shape of the page.
+      - name: Security Passport public share check
+        run: bun run passport-public-share:check
+
       # A Passport decision names the version its decider saw
       # (20270125090000): the reviewer workspace and the employer page send
       # the loaded submitted_at, never decide without it, and reload the entry

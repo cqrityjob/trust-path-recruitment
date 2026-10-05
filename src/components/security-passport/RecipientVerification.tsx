@@ -55,7 +55,7 @@ export function DisclosurePayloadView({
   // A recipient sees only what the holder's VERIFIED credentials support.
   // `buildDisclosurePayload` already stripped self-declared titles; this
   // renders the same derivation the holder saw, in the reader's language.
-  const profession = professionLine(payload.identity, lang, pt("identity.none"));
+  const profession = professionLine(payload.identity, lang, "");
   const jurisdiction = formatJurisdiction(payload.jurisdictionCode, lang);
 
   return (
