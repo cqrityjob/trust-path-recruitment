@@ -49,10 +49,65 @@ jobs:
       - name: Production build (default Cloudflare preset)
         run: bun run build
 
-      - name: What the build produced
+      - name: Start the stand-in database (loopback, synthetic people)
         run: |
-          set -x
-          ls -la
-          find dist .output -maxdepth 3 2>/dev/null | head -80 || true
-          find . -name 'wrangler.json*' -not -path './node_modules/*' | head
-          find . -name 'wrangler.json' -not -path './node_modules/*' -exec sh -c 'echo "== $1"; head -c 1500 "$1"' _ {} \; | head -60
+          set -euo pipefail
+          nohup bun run scripts/og-worker-stub.ts 54399 > /tmp/og-stub.log 2>&1 &
+          disown
+          for i in $(seq 1 30); do
+            if curl -sf -o /dev/null -X POST http://127.0.0.1:54399/__reset; then echo "stub up"; exit 0; fi
+            sleep 1
+          done
+          cat /tmp/og-stub.log; exit 1
+
+      - name: Serve the BUILT Worker bundle in workerd
+        run: |
+          set -euo pipefail
+          test -f .output/server/index.mjs && test -f .output/server/wrangler.json
+          echo "the bundle's own Worker configuration:"; cat .output/server/wrangler.json
+          cd .output/server
+          # The same variables the host gives the Worker. Nothing else is set:
+          # the real project is never contacted.
+          nohup npx --yes wrangler@4.147.0 dev --local --port 8787 \
+            --var SUPABASE_URL:http://127.0.0.1:54399 \
+            --var SUPABASE_PUBLISHABLE_KEY:sb_publishable_synthetic_key \
+            > /tmp/og-worker.log 2>&1 &
+          disown
+          for i in $(seq 1 120); do
+            if curl -s -o /dev/null http://127.0.0.1:8787/og-security-passport.png; then echo "worker up after ${i}s"; exit 0; fi
+            sleep 1
+          done
+          echo "the Worker did not come up"; tail -n 80 /tmp/og-worker.log; exit 1
+
+      - name: Preview image over http, in the Worker runtime
+        run: |
+          set -euo pipefail
+          bun run scripts/og-worker-evidence.ts http://127.0.0.1:8787 http://127.0.0.1:54399 | tee /tmp/og-http.txt
+          echo "workerd resident memory after the run (the whole runtime, not one isolate):"
+          ps -o rss=,comm= -C workerd || true
+
+      - name: Preview image over https, behind the host-like front
+        run: |
+          set -euo pipefail
+          openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj "/CN=127.0.0.1" \
+            -addext "subjectAltName=IP:127.0.0.1,DNS:localhost" \
+            -keyout /tmp/og-tls.key -out /tmp/og-tls.crt 2>/dev/null
+          # The front terminates TLS and injects the host's analytics tag into
+          # HTML, as the published site's host does.
+          TLS_FRONT_CERT=/tmp/og-tls.crt TLS_FRONT_KEY=/tmp/og-tls.key TLS_FRONT_HOST_ANALYTICS=1 \
+            nohup node scripts/local-tls-front.mjs 8788 8787 > /tmp/og-tls-front.log 2>&1 &
+          disown
+          for i in $(seq 1 30); do
+            if curl -skf -o /dev/null https://127.0.0.1:8788/og-security-passport.png; then break; fi
+            sleep 1
+          done
+          # The certificate is this job's own throwaway, on loopback.
+          NODE_TLS_REJECT_UNAUTHORIZED=0 \
+            bun run scripts/og-worker-evidence.ts https://127.0.0.1:8788 http://127.0.0.1:54399 | tee /tmp/og-https.txt
+
+      - name: Worker and stub logs
+        if: always()
+        run: |
+          tail -n 60 /tmp/og-worker.log || true
+          tail -n 20 /tmp/og-stub.log || true
+          tail -n 10 /tmp/og-tls-front.log || true

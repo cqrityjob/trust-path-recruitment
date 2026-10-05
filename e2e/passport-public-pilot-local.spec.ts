@@ -1287,7 +1287,17 @@ test.describe("the public pilot, on a real backend", () => {
     const ogImage = new URL(meta("og:image"));
     expect(ogImage.pathname).toBe(`/og/share/${publicId}`);
     expect(ogImage.search).toMatch(/^\?v=\d+$/);
-    expect(meta("og:image:alt")).toMatch(/^CQrityjob Security Passport #\d+$/);
+    const numberNow = sql(
+      `select coalesce((select passport_number::text from public.sp_passport_numbers where holder_user_id='${uid}'), '')`,
+    );
+    expect(
+      meta("og:image:alt"),
+      "the image's description carries the number the server holds, or none",
+    ).toBe(
+      numberNow === ""
+        ? "CQrityjob Security Passport"
+        : `CQrityjob Security Passport #${numberNow}`,
+    );
     expect(meta("robots")).toBe("noindex, nofollow");
     for (const secret of [uid, "@local.test", "Fiktivt Security LLC", "/p#"])
       expect(html, `the raw page carries ${secret}`).not.toContain(secret);
