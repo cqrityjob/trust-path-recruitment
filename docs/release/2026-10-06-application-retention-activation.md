@@ -134,6 +134,8 @@ leverantörsloggar följer sina egna dokumenterade rutiner, inte portalens rader
 - Lokal PostgreSQL 16: migrationsreplay och 43 obligatoriska livscykelassertioner på syntetiska data,
   inklusive två organisationer, ägare/medlem/kandidat, aktivt ärende, delad CV-fil, verkliga
   testtilldelningar, egna testdata/Passport, intervju-/testrapporter och cirkulärt rapportmanifest.
+  Två sessionsrace verifierar väntan/blockering av en anteckning under raderingsbekräftelsens commit
+  samt väntan/bevarande när en annan organisations ansökan samtidigt tar över samma CV-fil.
 - Worker: sex testfall med injicerad Storage och databas, filfel, saknad bucket, kvarvarande objekt,
   förlorad kvittens och återförsök. Tester ansluter aldrig till produktionsprojektet.
 - Browser: verklig livscykelkomponent, klienthook, router och CSS med syntetisk serverfunktionsseam;

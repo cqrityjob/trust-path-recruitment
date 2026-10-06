@@ -249,6 +249,7 @@ RETENTION_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/applica
 RETENTION_PASSED="$(echo "$RETENTION_OUT" | grep -c 'NOTICE:  ok  L')"
 [ "$RETENTION_PASSED" -ge 43 ] || { echo "$RETENTION_OUT"; echo 'FAIL: application retention assertion shortfall'; exit 1; }
 echo "    ok  $RETENTION_PASSED application retention assertions passed"
+TEST_DB="$TEST_DB" bash scripts/application-retention-race-check.sh
 # Preserve the original historical rollback proofs in their pre-feature state.
 # The guarded teardown is CI-only; operational rollback preserves all debt.
 psql_q -d "$TEST_DB" -f supabase/tests/application_retention_test_teardown.sql >/dev/null
