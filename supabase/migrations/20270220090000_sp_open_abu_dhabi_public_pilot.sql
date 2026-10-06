@@ -12,9 +12,9 @@
 -- sources and catalogue approvals. Do not mark the legal review complete to
 -- open the pilot." (owner, 2026-10-06)
 --
--- Merging this file IS the decision to open. It is prepared so that the owner
--- can take that decision on what was checked, which is stated here without
--- softening:
+-- Merging prepares the release; applying this migration opens the pilot.
+-- Production application requires the owner's separate explicit approval.
+-- What was checked is stated here without softening:
 --
 --   * The seven definitions (20260914092000) were authored from the Ministry
 --     of Interior's private-security framework and NOBODY IN THIS REPOSITORY
