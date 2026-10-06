@@ -436,7 +436,14 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // grants, RLS and the closed boundary are as reviewed; nothing was written and
 // the statistics stay hidden. Nothing is pending.
 // Evidence: docs/release/2026-10-05-passport-number-and-public-share-hosted-verification.md.
-const expectedPending: string[] = [];
+// PR 1 of the global-registration delivery: the United States as a stated
+// country and a wanted destination (20270218090000). Data only against
+// existing tables; opens no market. Schema-first: the application PR that
+// offers the value is held until this is applied and verified. Remove this
+// entry only with hosted application/postflight evidence, never on merge alone.
+const expectedPending: string[] = [
+  "20270218090000_sp_united_states_jurisdiction_and_destinations.sql",
+];
 
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
