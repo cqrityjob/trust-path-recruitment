@@ -69,3 +69,21 @@ specs run in CI only. The SQL side needs nothing from this PR.
 3. A holder with Swedish and Dubai credentials changes residence and work country: every credential
    keeps its own country and status; the recipient view of a share is unchanged.
 4. Share a selection, open it logged out, revoke it: unchanged behaviour (the sharing specs cover it).
+
+## Handoff verification, 2026-10-06
+
+#436 application is verified read-only in the shared production baseline. USA is still absent
+in production: this PR remains stacked on #437, not release-ready against main. The schema-first
+object guard cannot detect a newly allowed value, so the explicit applied-USA prerequisite remains.
+Retarget only after #437 is merged, applied and recorded with postflight evidence.
+
+CI on prior head `2958d63` found INDIA-NC-DESTINATION-DRIFT using the obsolete five-value anchor.
+The control now plants `NO` into the actual six-value list, preserving its exact expected diagnostic.
+The database CI job on that head passed; no unfinished Claude local run is counted as evidence.
+
+Two reused stateful profile browser tests pass (Swedish and English): US/Austin is saved and reread;
+Kenya, which has no local catalogue, is also selectable and saved, and the optional locality is cleared.
+Neither invokes a Passport/work-country/credential writer. These prove the UI contract, not hosted
+persistence; existing database RLS tests cover the ordinary-user boundary. Typecheck and destination
+mirror guard pass locally. USA licences and state catalogues remain absent; global residence/profile
+registration is independent from market-catalogue availability.
