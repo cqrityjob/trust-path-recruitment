@@ -244,6 +244,14 @@ echo "==> Running complete client catalogue and privilege audit"
 psql_q -d "$TEST_DB" -f supabase/tests/client_table_privilege_hardening_test.sql
 echo "==> Manual retention routines (docs/legal/retention-runbook-v1.md), run as written on synthetic data"
 psql_q -d "$TEST_DB" -f supabase/tests/retention_manual_routines_test.sql
+echo "==> Running application lifecycle and retention assertions"
+RETENTION_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/application_retention_lifecycle_test.sql 2>&1)" || { echo "$RETENTION_OUT"; exit 1; }
+RETENTION_PASSED="$(echo "$RETENTION_OUT" | grep -c 'NOTICE:  ok  L')"
+[ "$RETENTION_PASSED" -ge 43 ] || { echo "$RETENTION_OUT"; echo 'FAIL: application retention assertion shortfall'; exit 1; }
+echo "    ok  $RETENTION_PASSED application retention assertions passed"
+# Preserve the original historical rollback proofs in their pre-feature state.
+# The guarded teardown is CI-only; operational rollback preserves all debt.
+psql_q -d "$TEST_DB" -f supabase/tests/application_retention_test_teardown.sql >/dev/null
 
 # 20270208090000: account erasure removes the person's credential metadata and
 # document readings, which used to keep their Passport rows alive and make
