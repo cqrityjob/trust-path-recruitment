@@ -345,6 +345,7 @@ export function CredentialWallet({
           <div className="grid min-w-0 grid-cols-[4.25rem_minmax(0,1fr)] items-center gap-4 sm:grid-cols-[5.5rem_minmax(0,1fr)] sm:gap-5">
             <div
               aria-hidden="true"
+              data-passport-holder-initials
               className="flex h-[4.25rem] w-[4.25rem] items-center justify-center rounded-lg border border-primary-foreground/20 bg-primary-foreground/10 text-xl font-semibold shadow-[var(--shadow-md)] sm:h-[5.5rem] sm:w-[5.5rem] sm:text-2xl"
             >
               {identity?.displayName

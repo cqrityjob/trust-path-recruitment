@@ -1598,6 +1598,13 @@ jobs:
       - name: Passport recipient card
         run: bun run passport-recipient-card:check
 
+      # The holder's name on the Passport card, the profile header and the
+      # international overview is the PASSPORT name ("Namn som visas"), the
+      # account name only when that is missing or blank. Found live: the card
+      # showed the registration name with no way to change it.
+      - name: Passport holder name
+        run: bun run passport-holder-name:check
+
       - name: Passport skill contract
         run: bun run passport-skill-contract:check
 

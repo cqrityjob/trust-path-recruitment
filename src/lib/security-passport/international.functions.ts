@@ -6,6 +6,7 @@ import type {
   CredentialJurisdiction,
   CredentialVerificationEvent,
 } from "./international";
+import { readHolderDisplayName } from "./holder-display-name.server";
 import { NOT_OPEN_FOR_REGISTRATION, isAvailabilityRefusal } from "./market-access";
 import {
   PASSPORT_CATALOGUE_CONTRACT,
@@ -88,10 +89,11 @@ export interface InternationalPassportMetadata {
   jurisdictions: readonly CredentialJurisdiction[];
   issuers: readonly CredentialIssuer[];
   /**
-   * `profiles.display_name` -- the same canonical source as the Passport's own
-   * identity surface. Used for ONE thing: a consistency check against the name
-   * printed on an uploaded document. A match proves nothing about identity and
-   * a difference proves nothing about fraud.
+   * The holder's name as the Passport's own identity surface shows it: the
+   * Passport name ("Namn som visas"), the account name only as the reserve
+   * (holder-display-name.ts). Used for ONE thing: a consistency check against
+   * the name printed on an uploaded document. A match proves nothing about
+   * identity and a difference proves nothing about fraud.
    */
   holderDisplayName?: string | null;
 }
@@ -168,13 +170,9 @@ export const getInternationalPassportMetadata = createServerFn({ method: "GET" }
         .order("sort_order", { ascending: true }),
       db.from("sp_credential_details" as never).select("claim_id,definition_version"),
     ]);
-    // Tolerant on purpose: a missing profile row must not break the catalogue,
-    // it only means the name on a document is shown and not compared.
-    const profile = await db
-      .from("profiles")
-      .select("display_name")
-      .eq("id", context.userId)
-      .maybeSingle();
+    // Tolerant on purpose: a missing or unreadable name must not break the
+    // catalogue, it only means the name on a document is shown and not compared.
+    const holder = await readHolderDisplayName(db, context.userId);
     if (
       [
         details,
@@ -221,7 +219,7 @@ export const getInternationalPassportMetadata = createServerFn({ method: "GET" }
           ? [{ claimId, result: d.decision, decidedAt: d.decided_at, validUntil: d.valid_until }]
           : [];
       }),
-      holderDisplayName: profile.error ? null : profile.data?.display_name?.trim() || null,
+      holderDisplayName: holder.failed ? null : holder.name,
       details: details.data as unknown as CredentialDetails[],
       jurisdictions: jurisdictions.data as unknown as CredentialJurisdiction[],
       issuers: [
