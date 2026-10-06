@@ -1,0 +1,66 @@
+BEGIN
+UPDATE 14
+psql:supabase/tests/security_passport_open_abu_dhabi_test.sql:20: WARNING:  there is already a transaction in progress
+BEGIN
+SELECT 140
+GRANT
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+SELECT 1
+CREATE TABLE
+INSERT 0 7
+GRANT
+INSERT 0 4
+INSERT 0 3
+INSERT 0 1
+psql:supabase/tests/security_passport_open_abu_dhabi_test.sql:66: NOTICE:  ok 1.1 Abu Dhabi is a public pilot: not active, legal review pending
+ ok
+----
+
+(1 row)
+
+psql:supabase/tests/security_passport_open_abu_dhabi_test.sql:70: NOTICE:  ok 1.2 its seven definitions are public pilot -- none approved, none reviewed
+ ok
+----
+
+(1 row)
+
+psql:supabase/tests/security_passport_open_abu_dhabi_test.sql:74: NOTICE:  ok 1.3 the emirate is active; Dubai and Abu Dhabi are the two, the other five stay listed and inactive
+ ok
+----
+
+(1 row)
+
+psql:supabase/tests/security_passport_open_abu_dhabi_test.sql:79: NOTICE:  ok 1.4 the Ministry of Interior is regulator and issuer of each of the seven, and nothing else is claimed about them
+ ok
+----
+
+(1 row)
+
+psql:supabase/tests/security_passport_open_abu_dhabi_test.sql:82: NOTICE:  ok 1.5 no definition review is claimed and the Ministry source is still registered unread: opening is availability, not review
+ ok
+----
+
+(1 row)
+
+psql:supabase/tests/security_passport_open_abu_dhabi_test.sql:88: NOTICE:  ok 1.6 four public pilots and 51 definitions (44 + 7); the UK and Dubai exactly as before; Sweden the one active market
+ ok
+----
+
+(1 row)
+
+psql:supabase/tests/security_passport_open_abu_dhabi_test.sql:90: NOTICE:  ok 1.7 nobody in this suite holds a pilot grant
+ ok
+----
+
+(1 row)
+
+psql:supabase/tests/security_passport_open_abu_dhabi_test.sql:91: NOTICE:  ok 1.8 without a signed-in user the public pilot is closed
+ ok
+----
+
+(1 row)
+
+psql:supabase/tests/security_passport_open_abu_dhabi_test.sql:95: ERROR:  ASSERTION FAILED: 1.8 prior Ministry attribution is not represented as a completed source check
+CONTEXT:  PL/pgSQL function pg_temp_3.ok(boolean,text) line 2 at RAISE

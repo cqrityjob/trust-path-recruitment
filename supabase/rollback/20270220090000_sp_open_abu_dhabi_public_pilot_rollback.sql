@@ -76,6 +76,10 @@ END $$;
 DELETE FROM public.sp_credential_organisation_roles
  WHERE credential_code IN (SELECT code FROM _sp_az_opened);
 
+-- Remove our exception after deleting the fourteen unchecked attribution rows.
+ALTER TABLE public.sp_credential_organisation_roles DROP CONSTRAINT sp_az_unchecked_attribution_only;
+ALTER TABLE public.sp_credential_organisation_roles ALTER COLUMN checked_on SET NOT NULL;
+
 UPDATE public.sp_credential_types t SET pilot_state = 'closed'
   FROM _sp_az_opened o
  WHERE t.code = o.code AND t.market_pack_code = 'AE-AZ' AND t.pilot_state = 'public_pilot';

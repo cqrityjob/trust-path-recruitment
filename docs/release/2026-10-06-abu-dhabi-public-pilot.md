@@ -1,10 +1,9 @@
 # Abu Dhabi as a public pilot — what is prepared, and what the owner decides
 
-Status: **prepared, not applied.** Nothing in this note has been run against production. Merging the
-PR is the decision to open; nobody else takes it.
+Status: **prepared, not applied.** Nothing in this note has been run against production. No merge, application or publication has been authorised. The owner decides release separately.
 
-PR 3 of 3 in the global-registration delivery, independent of the other two (the United States
-schema and the application). Data only.
+PR 3 of 3 in the global-registration delivery, dependent on the United States schema being present on current main before merge readiness.
+Catalogue data plus a narrow source-check date constraint adjustment.
 
 ## 1 · What the owner asked, and what was found
 
@@ -29,7 +28,7 @@ change, postflight.
 | `sp_sub_jurisdictions.is_active` | `AE-AZ`: false → true |
 | `sp_market_packs.pilot_state` | `AE-AZ`: closed → public_pilot |
 | `sp_credential_types.pilot_state` | the 7 `AE_AZ_PSBD_LICENCE_*`: closed → public_pilot |
-| `sp_credential_organisation_roles` | + 14 rows: `regulator` and `issuer` for each of the 7, pointing at `AE_MOI_PSBD`. `source_url` is the authority's registered URL; `checked_on` is **2026-09-14, the date the pack migration attributed the authority** — it restates that attribution and records no page reading, because none has happened. No `verification_authority` row (unknown, left absent). |
+| `sp_credential_organisation_roles` | + 14 rows: `regulator` and `issuer` for each of the 7, pointing at `AE_MOI_PSBD`. `source_url` is the authority's registered URL; `checked_on` is **NULL**, because no source page has been checked. Earlier attribution is not a completed check. The column admits NULL only for these seven regulator/issuer roles; other credentials retain a mandatory date. No `verification_authority` row (unknown, left absent). |
 
 Unchanged and fingerprinted: `is_active` (false on the pack and all 7), `legal_review_state`
 (pending), every claim, professional title, pilot grant, regulatory source and authority, every
@@ -52,7 +51,7 @@ definitions to a signed-in holder (70 + 7); `sp_market_access(NULL, 'AE-AZ')` is
 
 ## 4 · Proof
 
-- New suite `supabase/tests/security_passport_open_abu_dhabi_test.sql` (31 assertions): the opened
+- New suite `supabase/tests/security_passport_open_abu_dhabi_test.sql` (34 assertions): the opened
   state, an ordinary account saving two licences, the rules (scope, emirate, issuer, expiry, direct
   insert, activation over pending review, signed-out session), sharing with the issuer line, review,
   and that nothing else moved.
@@ -85,8 +84,7 @@ run before the rollback of `20261221090000`.
 
 - `supabase/release-state.json`: frontier entry, `pending`, `introduces: []`.
 - `scripts/release-frontier-check.ts`: `expectedPending` lists the file.
-- Version `20270220090000` assumes the United States schema (`20270219090000`, after #436's `20270218090000`) merges first. If this
-  merges first, renumber it to the next slot after the current frontier, as `release-sequence.md` says.
+- Version `20270220090000` follows United States `20270219090000`. The USA branch is integrated for combined validation, but this PR is blocked for merge until USA is on current main and application is verified. No out-of-order release or renumbering is proposed.
 - After the integration applies it, verify read-only as the `verify` field says, then regenerate the
   coverage matrix.
 
@@ -98,3 +96,27 @@ run before the rollback of `20261221090000`.
   them; validity is read from the licence. Adding it needs the page read first.
 - The application copy that enumerates "the United Kingdom and Dubai" as the pilot markets is adjusted
   in the application PR to describe pilot markets without listing them.
+
+
+## Handoff source-attribution correction and release boundary
+
+The original date 2026-09-14 recorded attribution in a field meaning source checked: corrected to
+NULL. The prior date requirement stays enforced for every other credential. Rollback deletes
+only our fourteen rows and restores NOT NULL; no existing authority/source/review is changed.
+Issuer names remain the historical governed attribution, with a Swedish/English clarification
+on holder, picker, reviewer and recipient pages: the authority source has not been checked,
+legal review is pending, and the pilot gives no right to work. A holder's document verification
+remains a separate fact; the notice never changes a claim's trust. No definition-review row or
+verification-authority role is invented. This is prepared code, not completed source validation.
+
+Read-only production baseline: #436 applied; USA absent; Abu Dhabi closed, inactive/pending.
+USA branch integrated without rewriting history. Both migrations remain pending, ordered
+20270219090000 then 20270220090000; #439 is still blocked until current main contains USA.
+
+Focused local tests: reused USA suite and Abu Dhabi suite pass; rollback/reapply passes.
+New assertions distinguish NULL attribution from a false completed check and preserve mandatory
+dates for other credentials. Render checks cover all seven codes, both languages and four issuer
+surfaces, and leave other credentials unchanged. Current full CI must pass on final head separately.
+Claude's unknown local run is not counted. No merge, production activation or publication performed.
+
+Negative control: restoring the misleading date in a local transaction fails exactly assertion 1.8; disconnect rolls back the planted value.

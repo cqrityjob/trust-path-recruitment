@@ -90,6 +90,13 @@ SELECT pg_temp.ok(NOT EXISTS(SELECT 1 FROM public.sp_pilot_members WHERE user_id
  '1.7 nobody in this suite holds a pilot grant');
 SELECT pg_temp.ok(public.sp_market_access(NULL,'AE-AZ')='closed','1.8 without a signed-in user the public pilot is closed');
 
+SELECT pg_temp.ok((SELECT count(*)=14 FROM public.sp_credential_organisation_roles
+ WHERE credential_code IN (SELECT code FROM az_codes) AND checked_on IS NULL),
+ '1.8 prior Ministry attribution is not represented as a completed source check');
+SELECT pg_temp.refused($q$UPDATE public.sp_credential_organisation_roles SET checked_on=NULL
+ WHERE credential_code='INTL_ASIS_CPP'$q$, 'sp_az_unchecked_attribution_only',
+ '1.9 non-Abu-Dhabi source-check requirements remain intact');
+
 -- ── 2. A fresh ordinary account saves an Abu Dhabi licence ──────────────
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub','fe222000-0000-4000-8000-000000000001',true);

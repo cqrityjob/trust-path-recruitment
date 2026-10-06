@@ -2,7 +2,7 @@
 -- Security Passport -- open Abu Dhabi (AE-AZ) as a PUBLIC PILOT
 -- =============================================================================
 --
--- DATA ONLY: no object is created, replaced or dropped. It needs 20261220090000
+-- Catalogue availability plus a narrow nullable source-check date. It needs 20261220090000
 -- (the public_pilot state) and 20261221090000 (the UK and Dubai opened) and
 -- refuses to run without them. The application's generated types are unaffected.
 --
@@ -56,13 +56,9 @@
 --                                                be a worse product than a closed one.
 --                                                source_url is the authority's
 --                                                registered official URL and
---                                                checked_on is 2026-09-14, the date
---                                                the pack migration attributed the
---                                                authority to each definition. That
---                                                is what these rows restate. They do
---                                                NOT record a reading of the page:
---                                                none has happened, and the source
---                                                row says so.
+--                                                checked_on is NULL: prior
+--                                                attribution is not a source check.
+--                                                Existing checked rows are untouched.
 --   unchanged is_active (false on the pack and all 7), legal_review_state
 --             (pending on all of them), every claim, every professional-title
 --             rule, every pilot grant, the UK, Dubai, Sweden, India and the
@@ -188,9 +184,17 @@ UPDATE public.sp_credential_types t SET pilot_state = 'public_pilot'
 -- Restates the authority attribution of 20260914092000 (see the header). No
 -- verification_authority row: whether the Ministry answers a third party's
 -- standing check is not known here, and an unknown is left absent.
+-- Unknown source checks must be representable without inventing a date.
+-- Preserve the prior date requirement for every credential outside these seven.
+ALTER TABLE public.sp_credential_organisation_roles ALTER COLUMN checked_on DROP NOT NULL;
+ALTER TABLE public.sp_credential_organisation_roles ADD CONSTRAINT sp_az_unchecked_attribution_only
+ CHECK (checked_on IS NOT NULL OR (credential_code IN (
+ 'AE_AZ_PSBD_LICENCE_GUARD','AE_AZ_PSBD_LICENCE_CIT','AE_AZ_PSBD_LICENCE_BANKS',
+ 'AE_AZ_PSBD_LICENCE_EVENT','AE_AZ_PSBD_LICENCE_SUPERVISOR','AE_AZ_PSBD_LICENCE_MANAGER',
+ 'AE_AZ_PSBD_LICENCE_TRAINER') AND role IN ('regulator','issuer')));
 INSERT INTO public.sp_credential_organisation_roles
   (credential_code, role, authority_id, certification_issuer_id, document_specific, source_url, checked_on)
-SELECT o.code, r.role, a.id, NULL, false, a.official_url, DATE '2026-09-14'
+SELECT o.code, r.role, a.id, NULL, false, a.official_url, NULL
   FROM _sp_az_open o
  CROSS JOIN (VALUES ('regulator'), ('issuer')) r(role)
   JOIN public.sp_authorities a ON a.code = 'AE_MOI_PSBD'
@@ -229,7 +233,7 @@ BEGIN
        WHERE r.credential_code IN (SELECT code FROM _sp_az_open)
          AND r.role IN ('regulator', 'issuer')
          AND r.authority_id = (SELECT id FROM public.sp_authorities WHERE code = 'AE_MOI_PSBD')
-         AND NOT r.document_specific AND r.checked_on = DATE '2026-09-14') <> 14
+         AND NOT r.document_specific AND r.checked_on IS NULL) <> 14
   OR (SELECT count(*) FROM public.sp_credential_organisation_roles
        WHERE credential_code IN (SELECT code FROM _sp_az_open)) <> 14 THEN
     RAISE EXCEPTION 'SP_OPEN_ABU_DHABI_POSTFLIGHT: expected exactly 14 organisation roles (regulator + issuer x 7), all the Ministry';

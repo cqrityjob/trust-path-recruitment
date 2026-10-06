@@ -1,3 +1,4 @@
+import { AbuDhabiIssuerAttribution } from "./AbuDhabiIssuerAttribution";
 import { CredentialDateInput } from "./CredentialDateInput";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
@@ -729,6 +730,7 @@ export function InternationalCredentialForm({
         </p>
       )}
       {selectedIsPublicPilot && <PublicPilotStatus className="mt-3" />}
+      <AbuDhabiIssuerAttribution code={draft.definition_code} lang={lang} />
       {selectedRow?.official_url && (
         <a
           className="mt-2 inline-flex min-h-11 items-center text-sm text-accent underline"
