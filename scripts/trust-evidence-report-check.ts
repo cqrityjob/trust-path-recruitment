@@ -1028,13 +1028,39 @@ console.log("\nH. The future contracts name every locked field and no forbidden 
       );
     },
   );
-  const otherMentions = migrationMentions.filter((f) => !RELEASE_REGATES.includes(f));
+  // Retention may erase an application-owned manifest, but must never create
+  // another computation engine or expose its contents. Admit only the reviewed
+  // table-list entry and the two transaction-end FK definitions, not the file
+  // wholesale. Any additional manifest reference still fails H11.
+  const RETENTION_MIGRATION = "20270305090000_application_retention_lifecycle.sql";
+  const retentionReferences = [
+    "'scp_report_computation_manifests'",
+    `ALTER TABLE public.scp_report_computation_manifests DROP CONSTRAINT scp_manifest_participant_snapshot_fkey,
+ DROP CONSTRAINT scp_manifest_employer_snapshot_fkey;`,
+    `ALTER TABLE public.scp_report_computation_manifests ADD CONSTRAINT scp_manifest_participant_snapshot_fkey
+ FOREIGN KEY(participant_snapshot_id) REFERENCES public.scp_report_snapshots(id) DEFERRABLE INITIALLY DEFERRED,
+ ADD CONSTRAINT scp_manifest_employer_snapshot_fkey FOREIGN KEY(employer_snapshot_id)
+ REFERENCES public.scp_report_snapshots(id) DEFERRABLE INITIALLY DEFERRED;`,
+  ];
+  const retentionSource = migrations.includes(RETENTION_MIGRATION)
+    ? read(`supabase/migrations/${RETENTION_MIGRATION}`)
+    : null;
+  const retentionFaithful =
+    retentionSource === null ||
+    (retentionReferences.every((reference) => retentionSource.includes(reference)) &&
+      !retentionReferences
+        .reduce((source, reference) => source.replace(reference, ""), retentionSource)
+        .includes("scp_report_computation_manifests"));
+  const otherMentions = migrationMentions.filter(
+    (f) => !RELEASE_REGATES.includes(f) && f !== RETENTION_MIGRATION,
+  );
   check(
-    "H11 exactly two migrations name scp_report_computation_manifests: PR-R1 (creates it) and PR-R3A (reads counts from it); a release-function re-gate may repeat R1's INSERT verbatim and nothing else",
+    "H11 only PR-R1 creates the manifest and PR-R3A reads its counts; release re-gates repeat R1's INSERT, and retention only lists the table and defers its two snapshot FKs",
     otherMentions.length === 2 &&
       otherMentions.includes(R1_MIGRATION) &&
       otherMentions.includes(R3A_MIGRATION) &&
-      regatesFaithful,
+      regatesFaithful &&
+      retentionFaithful,
     migrationMentions.join(", "),
   );
   const r1 = read(`supabase/migrations/${R1_MIGRATION}`);
