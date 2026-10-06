@@ -15,5 +15,6 @@
   "release_parity": "pass: one pending migration",
   "release_frontier": "pass: one pending migration",
   "sql_security_guard": "pass",
-  "production_changes": false
+  "production_changes": false,
+  "limited_library_exception": "AD15-AD18 pass under final policy; AD9-AD12 assignment/tenancy regressions pass; RPC unchanged"
 }

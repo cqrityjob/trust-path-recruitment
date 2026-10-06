@@ -54,13 +54,29 @@ fast kolumnlista och enbart SELECT-grants för avsedda klientroller. Detta kan g
 security_definer_view-varningar; de ska bedömas mot just dessa projektioner, inte slentrianmässigt ignoreras.
 Den tidigare accepterade scoring-lineage-vyn ändras inte.
 
-## Konflikt redovisad före eventuell RPC-ändring
+## Uttryckligt begränsat biblioteksundantag, beslutat 2026-10-06
 
-`scp_employer_content_library` är en avsiktlig SECURITY DEFINER-läsare som listar även kommande
-opublicerade bedömningar och hämtar antal block samt tidsramar från deras formulär. Den RPC:n
-påverkas inte av bastabellernas RLS. Det tidigare biblioteksbeslutet tillät sådana metadata.
-En fråga har ställts till ägaren: ska dessa formulärmetadata också döljas, eller ska det äldre
-biblioteksbeslutet behållas? Ingen ändring av den berörda RPC:n görs före svaret.
+Ägaren har beslutat att behålla tidigare beteende i `scp_employer_content_library`:
+behöriga arbetsgivare får se generiska blockantal och tidsramar för kommande opublicerade
+tester. Detta är ett uttryckligt, begränsat undantag från regeln om utkastmetadata.
+RPC:n lämnas oförändrad. Aktivt organisationsmedlemskap, organisationsavgränsning och
+separat fixturbehörighet bevaras. Undantaget ger ingen ny rätt att starta eller tilldela utkast.
+
+Undantaget omfattar aldrig frågor, blockinstruktioner, svar/facit, interna anteckningar
+eller personliga aktörs-ID. RPC:ns fasta returkontrakt innehåller inga sådana fält.
+`item_id`/`parent_id` är katalogobjekt-ID och `owner_employer_id` är organisations-ID,
+inte användar-ID. Returnerade sammanfattningar är befintliga katalogändamål, inte blockinstruktioner.
+
+Ytterligare befintlig generisk metadata redovisades före någon utökning: frågeantal,
+kompetensnamn och krav på mänsklig granskning. Dessa finns redan i katalogens returkontrakt;
+ingen utökning eller ny behörighet införs i denna PR. Separata historiska closed-test-grants
+är en egen befintlig styrningsväg, inte en rättighet som biblioteksundantaget tillför.
+
+Riktad verifiering återanvänder författarfixturen: AD15 jämför utkastets blockantal/tidsramar
+med administratörens faktiska modell; AD16 låser hela tillåtna katalogfältlistan; AD17/AD18
+nekar kandidat/anon. AD9/AD11 nekar författat utkast i både bibliotekets tilldelningsbesked
+ och faktisk tilldelnings-RPC; AD10 bevarar tidigare tillåten version och AD12 nekar annan
+organisation. Befintliga försök är fortsatt pinnade (AD8). Alla passerar under den nya slutpolicyn.
 
 `scp_get_attempt_blocks` lämnar block för användarens eget försök, inte en öppen katalog;
 leverans/assignability har separata publiceringskontroller. `scp_bundle_version_assignability`
@@ -83,7 +99,7 @@ CI kör denna fokuserade slutpolicykontroll direkt efter strikt replay. Äldre r
 kör sedan uttryckligen med föregående katalogpolicy, liksom repoets befintliga historiska
 participant-report-fas. Deras 39-policyinventering ändras inte eller försvagas.
 
-1. Ägarens kvarstående biblioteksbeslut ska dokumenteras före slutleverans.
+1. Ägarens biblioteksbeslut ovan är dokumenterat; RPC:n bevaras oförändrad.
 2. PR med grön CI på slut-SHA granskas; ingen automatisk merge.
 3. Endast efter ägarens klartecken får migrationen appliceras via godkänd releaseväg.
 4. Kör den [riktade read-only efterkontrollen](postflight.sql), kontrollera relevant vanlig läsare,

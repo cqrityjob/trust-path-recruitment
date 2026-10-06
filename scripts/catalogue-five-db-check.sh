@@ -14,6 +14,9 @@ out="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f "$SUITE" 2>&1)" || { echo "$out"
 count="$(printf '%s\n' "$out" | command grep -c 'NOTICE:  ok  C5')"
 [ "$count" -ge 139 ] || { echo "FAIL: catalogue assertion shortfall ($count)"; exit 1; }
 echo "ok catalogue-five: $count access assertions"
+# Reuse authoring fixtures under the final policy, including the limited library exception.
+psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/assessment_draft_authoring_test.sql
+
 
 nc() {
   local label="$1" expected="$2" mutation="$3" output rc
