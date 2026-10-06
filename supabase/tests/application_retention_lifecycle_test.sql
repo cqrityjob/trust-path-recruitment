@@ -123,6 +123,14 @@ CREATE TEMP TABLE impact AS SELECT public.rec_preview_erasure((SELECT job FROM r
 SELECT pg_temp.ok((SELECT (payload->>'applications')::int=2 AND (payload->>'files')::int=2 AND (payload->>'sharedFiles')::int=1
  AND (payload->'counts'->>'assessment_assignments')::int=1 AND (payload->'counts'->>'scp_attempts')::int=1
  AND (payload->'counts'->>'recruitment_messages')::int=1 FROM impact),'L14 server impact includes exact scope and shared files');
+RESET ROLE;
+UPDATE public.job_applications SET cv_storage_path=NULL WHERE id='ea000000-3333-0000-0000-000000000009';
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.must_fail(format('SELECT public.rec_request_erasure(%L,NULL,%L)',(SELECT job FROM rj),(SELECT payload->>'fingerprint' FROM impact)),
+ 'RETENTION_PREVIEW_CHANGED','L44 confirmation also refuses changed shared-file scope');
+RESET ROLE;
+UPDATE public.job_applications SET cv_storage_path='legacy/shared.pdf' WHERE id='ea000000-3333-0000-0000-000000000009';
+SET LOCAL ROLE authenticated;
 SELECT pg_temp.must_fail(format('SELECT public.rec_request_erasure(%L,NULL,%L)',(SELECT job FROM rj),'00000000000000000000000000000000'),
  'RETENTION_PREVIEW_CHANGED','L15 stale confirmation refused');
 CREATE TEMP TABLE requested AS SELECT public.rec_request_erasure((SELECT job FROM rj),NULL,(SELECT payload->>'fingerprint' FROM impact)) id;

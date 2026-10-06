@@ -178,7 +178,7 @@ GRANT EXECUTE ON FUNCTION public.rec_retention_overview(uuid) TO authenticated;
 
 CREATE FUNCTION public.rec_preview_erasure(_job_id uuid,_application_id uuid DEFAULT NULL) RETURNS jsonb
 LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$
-DECLARE _ids uuid[]; _emp uuid; _plan jsonb; _counts jsonb:='{}'; _paths text[]; _t record; _pk text; _n bigint;
+DECLARE _ids uuid[]; _emp uuid; _plan jsonb; _counts jsonb:='{}'; _paths text[]; _shared_paths text[]; _t record; _pk text; _n bigint;
 BEGIN
  _ids:=public.rec_retention_scope(_job_id,_application_id);
  SELECT employer_id INTO _emp FROM public.jobs WHERE id=_job_id;
@@ -191,10 +191,11 @@ BEGIN
   _counts:=_counts||jsonb_build_object(_t.tab,_n);
  END LOOP;
  SELECT array_agg(DISTINCT cv_storage_path ORDER BY cv_storage_path) INTO _paths FROM public.job_applications WHERE id=ANY(_ids) AND cv_storage_path IS NOT NULL;
+ SELECT array_agg(DISTINCT cv_storage_path ORDER BY cv_storage_path) INTO _shared_paths
+  FROM public.job_applications WHERE NOT id=ANY(_ids) AND cv_storage_path=ANY(_paths);
  RETURN jsonb_build_object('applications',cardinality(_ids),'counts',coalesce(_counts,'{}'),
-  'files',coalesce(cardinality(_paths),0),'sharedFiles',(SELECT count(DISTINCT cv_storage_path) FROM public.job_applications
-     WHERE NOT id=ANY(_ids) AND cv_storage_path=ANY(_paths)),
-  'fingerprint',md5(_plan::text||_counts::text||coalesce(to_jsonb(_paths)::text,'')));
+  'files',coalesce(cardinality(_paths),0),'sharedFiles',coalesce(cardinality(_shared_paths),0),
+  'fingerprint',md5(_plan::text||_counts::text||coalesce(to_jsonb(_paths)::text,'')||coalesce(to_jsonb(_shared_paths)::text,'')));
 END $$;
 REVOKE ALL ON FUNCTION public.rec_preview_erasure(uuid,uuid) FROM PUBLIC,anon;
 GRANT EXECUTE ON FUNCTION public.rec_preview_erasure(uuid,uuid) TO authenticated;
