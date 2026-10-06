@@ -171,9 +171,7 @@ test("Sentinel actual shared assignment, practice, twenty responses, refresh, re
       }
       await expect(
         page.getByText(
-          sv
-            ? "Serverbekräftade svar sparas automatiskt."
-            : "Server-confirmed responses are saved automatically.",
+          sv ? "Dina svar sparas automatiskt." : "Your responses are saved automatically.",
         ),
       ).toBeVisible();
       if (i === 3) {

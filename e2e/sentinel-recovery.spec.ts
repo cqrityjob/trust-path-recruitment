@@ -204,9 +204,7 @@ for (const sv of [true, false]) {
     await page.getByRole("radio").first().press("Space");
     await expect(
       page.getByText(
-        sv
-          ? "Serverbekräftade svar sparas automatiskt."
-          : "Server-confirmed responses are saved automatically.",
+        sv ? "Dina svar sparas automatiskt." : "Your responses are saved automatically.",
       ),
     ).toBeVisible();
     const saved = await state();
@@ -351,9 +349,7 @@ for (const sv of [true, false]) {
     await page.getByRole("button", { name: sv ? "Spara igen" : "Save again", exact: true }).click();
     await expect(
       page.getByText(
-        sv
-          ? "Serverbekräftade svar sparas automatiskt."
-          : "Server-confirmed responses are saved automatically.",
+        sv ? "Dina svar sparas automatiskt." : "Your responses are saved automatically.",
       ),
     ).toBeVisible();
     expect(await beforeUnloadBlocked(page)).toBe(false);

@@ -539,7 +539,8 @@ export function SentinelRunner({ attemptId }: { attemptId: string }) {
                   {sv ? "Uppgift" : "Question"} {index + 1} / 20
                 </span>
                 <span>
-                  {Object.keys(session.answers).length} / 20 {sv ? "sparade svar" : "saved responses"}
+                  {Object.keys(session.answers).length} / 20{" "}
+                  {sv ? "sparade svar" : "saved responses"}
                 </span>
               </div>
               <progress

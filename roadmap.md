@@ -46,4 +46,7 @@
 - [ ] Verify remaining non-Sentinel reports in authenticated preview — suitable isolated test session unavailable.
 - [ ] Verify authenticated candidate/employer flows and TestBank in isolated stack — Docker and suitable isolated session unavailable.
 - [ ] Run recovery and full Sentinel browser regressions — disposable Docker stack unavailable.
-- [ ] Verify remote UI delivery commit — platform edit branch not currently advertised by origin.
+- [x] Previous layout delivery synced: main and working HEAD both 8c6876d7280c94d22b1b7e268ad14161b08033ab at task start.
+- [x] Simplify Sentinel autosave copy; distinguish current/answered/unanswered without relying on colour.
+- [ ] Review TestBank and Väktare/Säkerhetschef candidate/report presentation.
+- [ ] Verify final layout commit delivery and fresh checks; hand off isolated browser instructions.
