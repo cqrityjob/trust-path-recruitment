@@ -95,6 +95,11 @@ SET LOCAL request.jwt.claim.sub='ea000000-0000-0000-0000-000000000001';
 SELECT public.set_application_status('ea000000-3333-0000-0000-000000000002','reviewing',NULL);
 SELECT public.set_application_status('ea000000-3333-0000-0000-000000000002','interview',NULL);
 SELECT public.set_application_status('ea000000-3333-0000-0000-000000000002','hired',NULL);
+SET LOCAL request.jwt.claim.sub='ea000000-0000-0000-0000-0000000000ad';
+UPDATE public.jobs SET status='expired',expires_at=now()-interval '1 second' WHERE id=(SELECT job FROM rj);
+SET LOCAL request.jwt.claim.sub='ea000000-0000-0000-0000-000000000001';
+SELECT pg_temp.ok((public.rec_retention_overview((SELECT employer FROM rj))->'jobs'->0->>'missingDate')::boolean,
+ 'L45 expired advertisement without actual recruitment completion is flagged');
 UPDATE public.jobs SET status='archived' WHERE id=(SELECT job FROM rj);
 SELECT pg_temp.ok((public.rec_retention_overview((SELECT employer FROM rj))->'jobs'->0->>'purgeAt') IS NULL,
  'L9 advertisement archive does not invent a retention date');
