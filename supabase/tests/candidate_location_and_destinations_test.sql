@@ -64,7 +64,8 @@ RESET ROLE;
 -- ── 2. Shapes ───────────────────────────────────────────────────────────
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub','fd150000-0000-4000-8000-000000000001',true);
-SELECT pg_temp.refused($q$UPDATE public.candidate_job_preferences SET desired_destinations=ARRAY['US'] WHERE user_id=auth.uid()$q$,'check constraint','2.1 a destination outside the vocabulary is refused');
+-- 'NO' and not 'US': 20270219090000 added the United States to the vocabulary.
+SELECT pg_temp.refused($q$UPDATE public.candidate_job_preferences SET desired_destinations=ARRAY['NO'] WHERE user_id=auth.uid()$q$,'check constraint','2.1 a destination outside the vocabulary is refused');
 SELECT pg_temp.refused($q$UPDATE public.candidate_job_preferences SET desired_destinations=ARRAY['GB','GB'] WHERE user_id=auth.uid()$q$,'candidate_job_preferences_destinations_distinct','2.2 a duplicate destination is refused');
 SELECT pg_temp.refused($q$UPDATE public.candidate_job_preferences SET relocation_interest='visa_sponsored' WHERE user_id=auth.uid()$q$,'check constraint','2.3 relocation interest is a closed list with no immigration status in it');
 SELECT pg_temp.refused($q$UPDATE public.candidate_current_location SET country_code='India' WHERE user_id=auth.uid()$q$,'check constraint','2.4 a country is an ISO code');

@@ -436,11 +436,13 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // grants, RLS and the closed boundary are as reviewed; nothing was written and
 // the statistics stay hidden. Nothing is pending.
 // Evidence: docs/release/2026-10-05-passport-number-and-public-share-hosted-verification.md.
-// Abu Dhabi opened as a public pilot (20270220090000): data only, the owner's
-// decision taken by merging. Remove this entry only with hosted
-// application/postflight evidence, never on merge alone.
+// PR 1 of the global-registration delivery: the United States as a stated
+// country and a wanted destination (20270219090000). Data only against
+// existing tables; opens no market. Schema-first: the application PR that
+// offers the value is held until this is applied and verified. Remove this
+// entry only with hosted application/postflight evidence, never on merge alone.
 const expectedPending: string[] = [
-  "20270218090000_catalogue_internal_metadata_boundary.sql",
+  "20270219090000_sp_united_states_jurisdiction_and_destinations.sql",
   "20270220090000_sp_open_abu_dhabi_public_pilot.sql",
 ];
 
