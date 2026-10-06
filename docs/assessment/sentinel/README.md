@@ -19,6 +19,8 @@ Checklist before activating any real assignment:
 - [ ] Obtain the existing closed-test grant for the intended organisation; approve deployment/backup using the established release process.
 - [ ] Import the private content in the authorised environment, record approval timestamps and enable assignments only after the above decisions. Never commit the private import or gallery.
 
+Release is split into a schema PR and a complete app PR. The existing schema-first merge gate blocks dependent app code until authorised hosted application/verification is recorded. Local preview does not require production activation.
+
 New assignments are disabled by default. `preview_only` permits a complete rehearsal only for organisations already in `scp_fixture_access` and still requires the existing grant. No approvals or grants for real organisations are created by this migration. The public migration creates catalog metadata but requires the separate private import before questions can be assigned.
 
 ## Session, access and reporting

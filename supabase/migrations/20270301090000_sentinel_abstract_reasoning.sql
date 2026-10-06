@@ -203,11 +203,18 @@ BEGIN
  DELETE FROM public.sentinel_sessions WHERE assignment_id=OLD.id; RETURN OLD;
 END $$;
 CREATE TRIGGER sentinel_erase_assignment BEFORE DELETE ON public.assessment_assignments FOR EACH ROW EXECUTE FUNCTION public.sentinel_erase_assignment();
-DO $$ DECLARE f regprocedure; BEGIN
- FOR f IN SELECT oid::regprocedure FROM pg_proc WHERE pronamespace='public'::regnamespace AND proname LIKE 'sentinel_%' LOOP
-  EXECUTE format('REVOKE ALL ON FUNCTION %s FROM PUBLIC,anon,authenticated',f);
- END LOOP;
-END $$;
+-- Explicit revokes are also readable by the repository security audit.
+REVOKE ALL ON FUNCTION public.sentinel_assignment_guard() FROM PUBLIC,anon,authenticated;
+REVOKE ALL ON FUNCTION public.sentinel_allocate() FROM PUBLIC,anon,authenticated;
+REVOKE ALL ON FUNCTION public.sentinel_attempt_guard() FROM PUBLIC,anon,authenticated;
+REVOKE ALL ON FUNCTION public.sentinel_catalog(uuid) FROM PUBLIC,anon,authenticated;
+REVOKE ALL ON FUNCTION public.sentinel_finish_internal(uuid,boolean) FROM PUBLIC,anon,authenticated;
+REVOKE ALL ON FUNCTION public.sentinel_session(uuid,text,text,text,integer) FROM PUBLIC,anon,authenticated;
+REVOKE ALL ON FUNCTION public.sentinel_report(uuid,uuid) FROM PUBLIC,anon,authenticated;
+REVOKE ALL ON FUNCTION public.sentinel_employer_action(uuid,text,integer) FROM PUBLIC,anon,authenticated;
+REVOKE ALL ON FUNCTION public.sentinel_review() FROM PUBLIC,anon,authenticated;
+REVOKE ALL ON FUNCTION public.sentinel_practice(uuid) FROM PUBLIC,anon,authenticated;
+REVOKE ALL ON FUNCTION public.sentinel_erase_assignment() FROM PUBLIC,anon,authenticated;
 GRANT EXECUTE ON FUNCTION public.sentinel_catalog(uuid),public.sentinel_session(uuid,text,text,text,int),public.sentinel_report(uuid,uuid),public.sentinel_employer_action(uuid,text,int),public.sentinel_review(),public.sentinel_practice(uuid) TO authenticated;
 
 CREATE FUNCTION public.sentinel_status(_attempt_ids uuid[]) RETURNS jsonb
