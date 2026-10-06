@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useBlocker } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { Shield, Clock3, CheckCircle2, ArrowLeft, ShieldAlert } from "lucide-react";
+import { Shield, Clock3, CheckCircle2, ArrowLeft, ShieldAlert, Check, Circle } from "lucide-react";
 import { useT } from "@/i18n/context";
 import { sentinelSession, sentinelPractice } from "@/lib/sentinel/sentinel.functions";
 import { TITLE, type Question, type Session } from "@/lib/sentinel/types";
@@ -539,15 +539,24 @@ export function SentinelRunner({ attemptId }: { attemptId: string }) {
                   {sv ? "Uppgift" : "Question"} {index + 1} / 20
                 </span>
                 <span>
-                  {Object.keys(session.answers).length} {sv ? "sparade svar" : "saved responses"}
+                  {Object.keys(session.answers).length} / 20{" "}
+                  {sv ? "sparade svar" : "saved responses"}
                 </span>
               </div>
-              <progress
-                className="h-1.5 w-full accent-accent"
-                max={20}
-                value={Object.keys(session.answers).length}
+              <div
+                className="h-1.5 w-full overflow-hidden rounded-full bg-muted"
+                role="progressbar"
+                aria-valuemin={0}
+                aria-valuemax={20}
+                aria-valuenow={Object.keys(session.answers).length}
                 aria-label={sv ? "Sparade svar" : "Saved responses"}
-              />
+                aria-valuetext={`${Object.keys(session.answers).length} ${sv ? "av 20 svar sparade" : "of 20 responses saved"}`}
+              >
+                <div
+                  className="h-full bg-accent transition-[width] motion-reduce:transition-none"
+                  style={{ width: `${(Object.keys(session.answers).length / 20) * 100}%` }}
+                />
+              </div>
             </div>
             <Matrix question={item} sv={sv} />
             <Options
@@ -572,11 +581,24 @@ export function SentinelRunner({ attemptId }: { attemptId: string }) {
                     ? "Svar ej sparat"
                     : "Response not saved"
                 : sv
-                  ? "Serverbekräftade svar sparas automatiskt."
-                  : "Server-confirmed responses are saved automatically."}
+                  ? "Dina svar sparas automatiskt."
+                  : "Your responses are saved automatically."}
             </p>
+            <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-xs text-muted-foreground">
+              <span className="font-semibold underline decoration-2 underline-offset-4">
+                {sv ? "Aktuell uppgift" : "Current question"}
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <Check aria-hidden="true" className="h-3.5 w-3.5" />
+                {sv ? "Besvarad" : "Answered"}
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <Circle aria-hidden="true" className="h-3.5 w-3.5" />
+                {sv ? "Obesvarad" : "Unanswered"}
+              </span>
+            </div>
             <nav
-              className="my-5 grid grid-cols-5 gap-2 sm:grid-cols-10"
+              className="mb-5 mt-3 grid grid-cols-5 gap-2 sm:grid-cols-10"
               aria-label={sv ? "Hoppa till uppgift" : "Go to question"}
             >
               {session.questions.map((q, i) => (
@@ -584,13 +606,18 @@ export function SentinelRunner({ attemptId }: { attemptId: string }) {
                   key={q.id}
                   disabled={busy || !!pending}
                   variant="outline"
-                  className={`h-11 min-w-0 px-0 text-xs ${i === index ? "border-accent bg-accent/15 font-bold" : ""}`}
+                  className={`h-11 min-w-0 gap-1 px-0 text-xs ${i === index ? "border-2 border-accent bg-accent/15 font-bold underline decoration-2 underline-offset-4" : ""}`}
                   aria-current={i === index ? "step" : undefined}
+                  aria-description={`${i === index ? (sv ? "Aktuell uppgift. " : "Current question. ") : ""}${session.answers[q.id] ? (sv ? "Besvarad och sparad" : "Answered and saved") : sv ? "Obesvarad" : "Unanswered"}`}
                   aria-label={`${sv ? "Uppgift" : "Question"} ${i + 1}${session.answers[q.id] ? (sv ? ", besvarad" : ", answered") : ""}`}
                   onClick={() => setIndex(i)}
                 >
                   {i + 1}
-                  {session.answers[q.id] ? " ·" : ""}
+                  {session.answers[q.id] ? (
+                    <Check aria-hidden="true" className="size-3" />
+                  ) : (
+                    <Circle aria-hidden="true" className="size-3" />
+                  )}
                 </Button>
               ))}
             </nav>

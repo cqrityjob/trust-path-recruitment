@@ -415,17 +415,33 @@ export function TestBank({
                   : "Reasoning · Pilot content — not psychometrically validated · v1"}
               </p>
             )}
-            {a.slug === "abstract_reasoning_v1" ? (
-              <p className="mt-3 text-sm">20 {sv ? "uppgifter" : "questions"} · SV / EN</p>
-            ) : (
+            {a.slug !== "abstract_reasoning_v1" && (
               <p>
                 {sv ? a.targetRoleSv : a.targetRoleEn} · {a.languages.join(", ")} · v
                 {a.versionNumber} · {a.contentStatus} · {a.validationStatus}
               </p>
             )}
-            <p>
-              {a.minutesMin === a.minutesMax ? a.minutesMin : `${a.minutesMin}–${a.minutesMax}`} min
-            </p>
+            <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+              <div>
+                <dt className="text-xs text-muted-foreground">{sv ? "Tid" : "Time"}</dt>
+                <dd>
+                  {a.minutesMin === a.minutesMax ? a.minutesMin : `${a.minutesMin}–${a.minutesMax}`}{" "}
+                  min
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs text-muted-foreground">{sv ? "Språk" : "Languages"}</dt>
+                <dd>{a.languages.join(" / ").toUpperCase()}</dd>
+              </div>
+              {a.slug === "abstract_reasoning_v1" && (
+                <div>
+                  <dt className="text-xs text-muted-foreground">
+                    {sv ? "Uppgifter" : "Questions"}
+                  </dt>
+                  <dd>20</dd>
+                </div>
+              )}
+            </dl>
             {a.assignable ? (
               <SendTestEntry
                 employerId={employerId}

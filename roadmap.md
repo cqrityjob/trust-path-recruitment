@@ -46,4 +46,8 @@
 - [ ] Verify remaining non-Sentinel reports in authenticated preview — suitable isolated test session unavailable.
 - [ ] Verify authenticated candidate/employer flows and TestBank in isolated stack — Docker and suitable isolated session unavailable.
 - [ ] Run recovery and full Sentinel browser regressions — disposable Docker stack unavailable.
-- [ ] Verify remote UI delivery commit — platform edit branch not currently advertised by origin.
+- [x] Previous layout delivery synced: main and working HEAD both 8c6876d7280c94d22b1b7e268ad14161b08033ab at task start.
+- [x] Simplify Sentinel autosave copy; distinguish current/answered/unanswered without relying on colour.
+- [x] Review TestBank and shared Väktare/Säkerhetschef candidate/report presentation using synthetic components; populated authenticated role reports remain in the access-blocked gate.
+- [x] Fresh available guards and synthetic browser checks; isolated browser and CI instructions handed off.
+- [ ] Verify remote final UI commit delivery and full CI typechecks/production build — platform-local save; manual full checks delegated to platform, CI results unavailable here.
