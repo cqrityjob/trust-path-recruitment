@@ -208,7 +208,8 @@ export function SentinelRunner({ attemptId }: { attemptId: string }) {
   }
   const button =
     "min-h-11 h-auto whitespace-normal rounded-md bg-accent px-5 py-3 text-sm font-semibold text-accent-foreground hover:bg-accent/90";
-  const outline = "min-h-11 h-auto whitespace-normal rounded-md border border-border bg-background px-4 py-3 text-sm text-foreground hover:bg-muted";
+  const outline =
+    "min-h-11 h-auto whitespace-normal rounded-md border border-border bg-background px-4 py-3 text-sm text-foreground hover:bg-muted";
   if (!session)
     return (
       <AssessmentShell deliveryLanguage={lang}>
@@ -228,16 +229,26 @@ export function SentinelRunner({ attemptId }: { attemptId: string }) {
     return (
       <AssessmentShell deliveryLanguage={lang}>
         <AssessmentPanel>
-          <section aria-labelledby="sentinel-completion-heading" className="mx-auto max-w-2xl space-y-6 py-2 sm:py-4">
+          <section
+            aria-labelledby="sentinel-completion-heading"
+            className="mx-auto max-w-2xl space-y-6 py-2 sm:py-4"
+          >
             <div className="flex flex-col items-start gap-4">
               {session.status === "completed" ? (
-                <CheckCircle2 aria-hidden="true" className="h-12 w-12 rounded-full bg-accent/10 p-3 text-accent" />
+                <CheckCircle2
+                  aria-hidden="true"
+                  className="h-12 w-12 rounded-full bg-accent/10 p-3 text-accent"
+                />
+              ) : session.status === "timed_out" ? (
+                <Clock3
+                  aria-hidden="true"
+                  className="h-12 w-12 rounded-full bg-muted p-3 text-foreground"
+                />
               ) : (
-                session.status === "timed_out" ? (
-                <Clock3 aria-hidden="true" className="h-12 w-12 rounded-full bg-muted p-3 text-foreground" />
-              ) : (
-                <ShieldAlert aria-hidden="true" className="h-12 w-12 rounded-full bg-muted p-3 text-foreground" />
-              )
+                <ShieldAlert
+                  aria-hidden="true"
+                  className="h-12 w-12 rounded-full bg-muted p-3 text-foreground"
+                />
               )}
               <h1
                 id="sentinel-completion-heading"
@@ -283,13 +294,13 @@ export function SentinelRunner({ attemptId }: { attemptId: string }) {
               </p>
             )}
             <Button asChild className={`${button} w-full sm:w-auto`}>
-            <Link
-              to="/academy"
-              className={`${button} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2`}
-            >
-              <ArrowLeft aria-hidden="true" />
-              {sv ? "Till mina tester" : "Back to my assessments"}
-            </Link>
+              <Link
+                to="/academy"
+                className={`${button} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2`}
+              >
+                <ArrowLeft aria-hidden="true" />
+                {sv ? "Till mina tester" : "Back to my assessments"}
+              </Link>
             </Button>
           </section>
           <div className="mt-6">
@@ -331,7 +342,9 @@ export function SentinelRunner({ attemptId }: { attemptId: string }) {
               aria-label={sv ? "Tid kvar" : "Time remaining"}
             >
               <Clock3 aria-hidden="true" className="h-5 w-5 text-accent" />
-              <span className="text-xs font-medium text-muted-foreground">{sv ? "Tid kvar" : "Time remaining"}</span>
+              <span className="text-xs font-medium text-muted-foreground">
+                {sv ? "Tid kvar" : "Time remaining"}
+              </span>
               {Math.floor(remaining / 60)}:{String(remaining % 60).padStart(2, "0")}
             </div>
           )}
@@ -546,7 +559,10 @@ export function SentinelRunner({ attemptId }: { attemptId: string }) {
               disabled={busy}
               onSelect={(id) => void save({ questionId: item.id, optionId: id })}
             />
-            <p role="status" className="mt-4 min-h-11 rounded-md bg-muted/30 px-3 py-3 text-sm text-muted-foreground">
+            <p
+              role="status"
+              className="mt-4 min-h-11 rounded-md bg-muted/30 px-3 py-3 text-sm text-muted-foreground"
+            >
               {pending
                 ? busy
                   ? sv

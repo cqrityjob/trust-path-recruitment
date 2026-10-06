@@ -29,7 +29,9 @@ export function SentinelReportView({
         <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
           {sv ? "Separat testresultat" : "Separate assessment result"}
         </p>
-        <h1 className="mt-2 text-2xl font-semibold leading-tight sm:text-3xl">{TITLE[sv ? "sv" : "en"]}</h1>
+        <h1 className="mt-2 text-2xl font-semibold leading-tight sm:text-3xl">
+          {TITLE[sv ? "sv" : "en"]}
+        </h1>
         <p className="mt-2 text-sm text-muted-foreground">
           {sv
             ? "Pilotinnehåll – inte psykometriskt validerat · v1"
@@ -95,7 +97,9 @@ export function SentinelReportView({
             </div>
             <div>
               <dt className="text-muted-foreground">{sv ? "Datum" : "Date"}</dt>
-              <dd className="mt-1 break-words font-medium">{new Date(report.finishedAt).toLocaleString(sv ? "sv-SE" : "en-GB")}</dd>
+              <dd className="mt-1 break-words font-medium">
+                {new Date(report.finishedAt).toLocaleString(sv ? "sv-SE" : "en-GB")}
+              </dd>
             </div>
             <div>
               <dt className="text-muted-foreground">{sv ? "Tilldelad tid" : "Allocated time"}</dt>
