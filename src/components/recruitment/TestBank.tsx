@@ -292,94 +292,105 @@ export function TestBank({
       )}
       {q.isSuccess && (
         <>
-        <div className="mt-8">
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-            {sv ? "Yrkesbedömningar" : "Role assessments"}
-          </p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {sv
-              ? "Kunskap och omdöme i situationer från yrket."
-              : "Knowledge and judgement in situations from the role."}
-          </p>
-        </div>
-        <div className="mt-3 grid gap-4 lg:grid-cols-2">
-          {offers.map((o) => {
-            const a = o.assessment;
-            return (
-              <article key={o.level.group} className="flex flex-col rounded-xl border bg-card p-5">
-                <h2 className="text-lg font-semibold leading-snug">
-                  {a ? (sv ? a.nameSv : a.nameEn) : t(`sendTest.level.${o.level.group}`)}
-                </h2>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  {t(`sendTest.level.${o.level.group}.purpose`)}
-                </p>
-                <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                  <div className="col-span-2">
-                    <dt className="text-xs text-muted-foreground">{sv ? "Målgrupp" : "Audience"}</dt>
-                    <dd>{t(`sendTest.level.${o.level.group}.audience`)}</dd>
-                  </div>
+          <div className="mt-8">
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              {sv ? "Yrkesbedömningar" : "Role assessments"}
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {sv
+                ? "Kunskap och omdöme i situationer från yrket."
+                : "Knowledge and judgement in situations from the role."}
+            </p>
+          </div>
+          <div className="mt-3 grid gap-4 lg:grid-cols-2">
+            {offers.map((o) => {
+              const a = o.assessment;
+              return (
+                <article
+                  key={o.level.group}
+                  className="flex flex-col rounded-xl border bg-card p-5"
+                >
+                  <h2 className="text-lg font-semibold leading-snug">
+                    {a ? (sv ? a.nameSv : a.nameEn) : t(`sendTest.level.${o.level.group}`)}
+                  </h2>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    {t(`sendTest.level.${o.level.group}.purpose`)}
+                  </p>
+                  <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                    <div className="col-span-2">
+                      <dt className="text-xs text-muted-foreground">
+                        {sv ? "Målgrupp" : "Audience"}
+                      </dt>
+                      <dd>{t(`sendTest.level.${o.level.group}.audience`)}</dd>
+                    </div>
+                    {a && (
+                      <>
+                        <div>
+                          <dt className="text-xs text-muted-foreground">{sv ? "Tid" : "Time"}</dt>
+                          <dd>
+                            {a.minutesMin && a.minutesMax
+                              ? `${a.minutesMin}–${a.minutesMax} min`
+                              : "–"}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt className="text-xs text-muted-foreground">
+                            {sv ? "Språk" : "Languages"}
+                          </dt>
+                          <dd>
+                            {q.data
+                              .find((r) => r.itemId === a.itemId)
+                              ?.languages.join(", ")
+                              .toUpperCase()}
+                          </dd>
+                        </div>
+                      </>
+                    )}
+                  </dl>
                   {a && (
                     <>
-                      <div>
-                        <dt className="text-xs text-muted-foreground">{sv ? "Tid" : "Time"}</dt>
-                        <dd>{a.minutesMin && a.minutesMax ? `${a.minutesMin}–${a.minutesMax} min` : "–"}</dd>
-                      </div>
-                      <div>
-                        <dt className="text-xs text-muted-foreground">{sv ? "Språk" : "Languages"}</dt>
-                        <dd>
-                          {q.data
-                            .find((r) => r.itemId === a.itemId)
-                            ?.languages.join(", ")
-                            .toUpperCase()}
-                        </dd>
-                      </div>
+                      <p className="mt-3 text-xs text-muted-foreground">
+                        {a.validationStatus === "validated"
+                          ? sv
+                            ? "Validerat innehåll"
+                            : "Validated content"
+                          : sv
+                            ? "Pilotinnehåll – inte validerat"
+                            : "Pilot content — not validated"}{" "}
+                        · {a.contentStatus} · v
+                        {q.data.find((r) => r.itemId === a.itemId)?.versionNumber}
+                      </p>
                     </>
                   )}
-                </dl>
-                {a && (
-                  <>
-                    <p className="mt-3 text-xs text-muted-foreground">
-                      {a.validationStatus === "validated"
-                        ? sv
-                          ? "Validerat innehåll"
-                          : "Validated content"
-                        : sv
-                          ? "Pilotinnehåll – inte validerat"
-                          : "Pilot content — not validated"}{" "}
-                      · {a.contentStatus} · v
-                      {q.data.find((r) => r.itemId === a.itemId)?.versionNumber}
+                  {o.state === "sendable" ? (
+                    <SendTestEntry
+                      employerId={employerId}
+                      employerSlug={employerSlug}
+                      initialGroup={o.level.group}
+                    />
+                  ) : (
+                    <p className="mt-auto pt-3 text-sm text-muted-foreground">
+                      {t(
+                        o.draftAwaitingRelease
+                          ? "sendTest.level.strategic.pendingApproval"
+                          : "sendTest.level.notAssignable",
+                      )}
                     </p>
-                  </>
-                )}
-                {o.state === "sendable" ? (
-                  <SendTestEntry
-                    employerId={employerId}
-                    employerSlug={employerSlug}
-                    initialGroup={o.level.group}
-                  />
-                ) : (
-                  <p className="mt-auto pt-3 text-sm text-muted-foreground">
-                    {t(
-                      o.draftAwaitingRelease
-                        ? "sendTest.level.strategic.pendingApproval"
-                        : "sendTest.level.notAssignable",
-                    )}
-                  </p>
-                )}
-              </article>
-            );
-          })}
-        </div>
-        <div className="mt-10">
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-            {sv ? "Abstrakt problemlösning" : "Abstract reasoning"}
-          </p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {sv
-              ? "Mönster i figurer, utan koppling till ett visst yrke."
-              : "Patterns in figures, not tied to a specific role."}
-          </p>
-        </div>
+                  )}
+                </article>
+              );
+            })}
+          </div>
+          <div className="mt-10">
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              {sv ? "Abstrakt problemlösning" : "Abstract reasoning"}
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {sv
+                ? "Mönster i figurer, utan koppling till ett visst yrke."
+                : "Patterns in figures, not tied to a specific role."}
+            </p>
+          </div>
         </>
       )}
       {(q.data ?? [])
