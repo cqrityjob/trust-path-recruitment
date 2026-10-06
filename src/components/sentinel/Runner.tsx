@@ -543,13 +543,20 @@ export function SentinelRunner({ attemptId }: { attemptId: string }) {
                   {sv ? "sparade svar" : "saved responses"}
                 </span>
               </div>
-              <progress
-                className="h-1.5 w-full accent-accent"
-                max={20}
-                value={Object.keys(session.answers).length}
+              <div
+                className="h-1.5 w-full overflow-hidden rounded-full bg-muted"
+                role="progressbar"
+                aria-valuemin={0}
+                aria-valuemax={20}
+                aria-valuenow={Object.keys(session.answers).length}
                 aria-label={sv ? "Sparade svar" : "Saved responses"}
                 aria-valuetext={`${Object.keys(session.answers).length} ${sv ? "av 20 svar sparade" : "of 20 responses saved"}`}
-              />
+              >
+                <div
+                  className="h-full bg-accent transition-[width] motion-reduce:transition-none"
+                  style={{ width: `${(Object.keys(session.answers).length / 20) * 100}%` }}
+                />
+              </div>
             </div>
             <Matrix question={item} sv={sv} />
             <Options

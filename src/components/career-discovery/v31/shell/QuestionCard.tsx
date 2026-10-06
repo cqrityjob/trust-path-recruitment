@@ -66,7 +66,8 @@ export function AssessmentProgressBar({
         aria-valuemin={0}
         aria-valuemax={total}
         aria-valuenow={answered}
-        aria-valuetext={label}
+        aria-label={t("cd.public.progress")}
+        aria-valuetext={`${answered} ${t("cd.public.of")} ${total}`}
       >
         <div
           className="h-full rounded-full bg-accent transition-[width] duration-300 ease-out motion-reduce:transition-none"
