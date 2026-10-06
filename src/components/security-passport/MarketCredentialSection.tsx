@@ -94,6 +94,11 @@ export interface MarketCredentialSectionProps {
   /** Offered only in the "no work country" state, where naming the market is
    *  the action that unblocks everything below it. */
   readonly onSetWorkCountry?: () => void;
+  /** Offered in the "unsupported" state: a country with no local catalogue
+   *  still has the international certifications, which are open from any
+   *  country and authorise no work anywhere. The route decides where that
+   *  catalogue lives; this section only says that it is there. */
+  readonly onBrowseInternational?: () => void;
 }
 
 export function MarketCredentialSection({
@@ -106,6 +111,7 @@ export function MarketCredentialSection({
   children,
   onSelect,
   onSetWorkCountry,
+  onBrowseInternational,
 }: MarketCredentialSectionProps) {
   const { pt, lang } = usePassportCopy();
   const marketName = formatWorkLocation(jurisdictionCode, subJurisdictionCode, lang);
@@ -275,6 +281,34 @@ export function MarketCredentialSection({
           <p className="mt-2 max-w-[70ch] text-sm leading-relaxed text-muted-foreground">
             {pt("cred.market.keepsExisting")}
           </p>
+
+          {/* No local catalogue is not no Passport. The basic profile, the
+              general record and the catalogues that are open to everyone --
+              the international certifications -- stay usable, and the
+              sentence says which, so the absence is a fact and not a wall. */}
+          {state === "unsupported" ? (
+            <>
+              <p
+                className="mt-2 max-w-[70ch] text-sm leading-relaxed text-muted-foreground"
+                data-testid="market-unsupported-stays-open"
+              >
+                {pt("market.unsupported.staysOpen")}
+              </p>
+              <p className="mt-2 max-w-[70ch] text-sm leading-relaxed text-muted-foreground">
+                {pt("cred.market.stillPossible")}
+              </p>
+              {onBrowseInternational ? (
+                <button
+                  type="button"
+                  onClick={onBrowseInternational}
+                  data-testid="market-unsupported-open-international"
+                  className="mt-3 inline-flex h-11 items-center rounded-md border border-input px-4 text-sm font-medium text-foreground transition-colors hover:bg-accent/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                >
+                  {pt("market.unsupported.openInternational")}
+                </button>
+              ) : null}
+            </>
+          ) : null}
 
           {state === "no_work_country" && onSetWorkCountry ? (
             <button

@@ -863,6 +863,9 @@ function PassportInformationRoute() {
           onSetWorkCountry={() => {
             document.getElementById("sp-work-country")?.focus();
           }}
+          // A country with no local catalogue: the international catalogue is
+          // the same picker, opened with no country filter.
+          onBrowseInternational={() => void navigate({ to: "/passport/credentials/new" })}
         >
           {hereClaims.length > 0 ? (
             <ul className="space-y-2">

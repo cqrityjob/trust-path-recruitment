@@ -1,0 +1,49 @@
+{
+  "projectRef": "wrygicdfxwjnrugduxnt",
+  "mergedCommit": "5627b3bfc006fd5c6f9b5b89df0a8bf98a997204",
+  "read_at": "2026-10-06T08:15:07.020284+00:00",
+  "abu_dhabi": {
+    "is_active": false,
+    "pilot_state": "closed",
+    "legal_review_state": "pending"
+  },
+  "migration": {
+    "name": "sp_united_states_jurisdiction_and_destinations",
+    "version": "20270219090000",
+    "statements_md5": "206e1bec53c9c13b7eca283289613b76"
+  },
+  "ledger_md5": "dc79e59bffeafd4e6c82b356befce662",
+  "jurisdiction": {
+    "code": "US",
+    "name_en": "United States",
+    "name_sv": "USA",
+    "is_active": true
+  },
+  "ledger_count": 379,
+  "destination_checks": [
+    {
+      "name": "candidate_job_preferences_desired_destinations_check",
+      "definition": "CHECK (((desired_destinations <@ ARRAY['IN'::text, 'AE-DU'::text, 'AE'::text, 'GB'::text, 'SE'::text, 'US'::text]) AND (cardinality(desired_destinations) <= 6) AND (array_position(desired_destinations, NULL::text) IS NULL)))"
+    },
+    {
+      "name": "candidate_job_preferences_destinations_distinct",
+      "definition": "CHECK (candidate_destinations_distinct(desired_destinations))"
+    }
+  ],
+  "us_regulatory_rows": {
+    "packs": 0,
+    "authorities": 0,
+    "definitions": 0,
+    "subjurisdictions": 0
+  },
+  "us_access_anonymous": "closed",
+  "credential_jurisdiction": {
+    "code": "US",
+    "is_active": true,
+    "country_code": "US",
+    "subdivision_code": null,
+    "jurisdiction_type": "national"
+  },
+  "us_access_synthetic_subject": "closed",
+  "limits": "No production write, no personal rows inspected. No pre-application private-row fingerprint was captured in this handoff; do not claim such a comparison. Not evidence of Lovable publication."
+}

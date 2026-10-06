@@ -39,6 +39,8 @@ import {
   type ProfileBasicsPatch,
 } from "@/components/security-passport/ProfileBasicsCard";
 import { WorkCountryCard } from "@/components/security-passport/WorkCountryCard";
+import { ResidenceCountryCard } from "./ResidenceCountryCard";
+import { readCurrentLocation, saveCurrentLocation } from "@/lib/india-entry/setup.functions";
 import {
   getMyPassport,
   savePassportBasics,
@@ -78,6 +80,16 @@ export function ProfileBasicsSection({ className = "" }: { className?: string })
   const loadEntries = useServerFn(listMyEntries);
   const saveBasics = useServerFn(savePassportBasics);
   const saveCountry = useServerFn(setWorkCountry);
+  // Residence: its own row (candidate_current_location), its own writer, read
+  // by nothing in the Passport. Settled on its own clock, like the current
+  // role: a failure here must leave the basics card usable.
+  const loadResidence = useServerFn(readCurrentLocation);
+  const saveResidence = useServerFn(saveCurrentLocation);
+  const [residence, setResidence] = useState<{
+    countryCode: string;
+    locality: string | null;
+  } | null>(null);
+  const [residenceRead, setResidenceRead] = useState<"loading" | "ready" | "failed">("loading");
 
   const [basics, setBasics] = useState<Basics | null>(null);
   const [country, setCountry] = useState<Country | null>(null);
@@ -137,7 +149,13 @@ export function ProfileBasicsSection({ className = "" }: { className?: string })
     void listCurrentProfessionOptions()
       .then(setProfessions)
       .catch(() => {});
-  }, [refresh, loadEntries]);
+    void loadResidence({ data: undefined })
+      .then((row) => {
+        setResidence(row);
+        setResidenceRead("ready");
+      })
+      .catch(() => setResidenceRead("failed"));
+  }, [refresh, loadEntries, loadResidence]);
 
   // ── A FAILED READ SAYS SO ───────────────────────────────────────────
   //
@@ -256,6 +274,38 @@ export function ProfileBasicsSection({ className = "" }: { className?: string })
           // content: its editor is on the CV page, not further down this one.
           onEditCurrentRole={() => void navigate({ to: "/my-career/cv", hash: "cv-employment" })}
         />
+      </div>
+
+      {/* Where the holder LIVES: any country, before where they work, because
+          it is the one question every holder can answer whatever the Passport
+          has rules for. Drawn once its own read has settled; a failed read is
+          said, never shown as "not stated". */}
+      <div id="profile-residence" className="mt-6 scroll-mt-24" data-profile-residence>
+        {residenceRead === "failed" ? (
+          <p role="alert" className="text-sm text-destructive" data-profile-residence-state="failed">
+            {pt("common.error")}
+          </p>
+        ) : residenceRead === "loading" ? (
+          <p role="status" className="text-sm text-muted-foreground" data-profile-residence-state="loading">
+            {pt("common.loading")}
+          </p>
+        ) : (
+          <ResidenceCountryCard
+            key={`${residence?.countryCode ?? ""}|${residence?.locality ?? ""}`}
+            lang={lang as "sv" | "en"}
+            countryCode={residence?.countryCode ?? null}
+            locality={residence?.locality ?? null}
+            onSave={async (value) => {
+              setNotice(null);
+              setError(null);
+              await saveResidence({ data: value });
+              // Read back before the card reports success.
+              const row = await loadResidence({ data: undefined });
+              setResidence(row);
+              setNotice(pt("basics.savedNotice"));
+            }}
+          />
+        )}
       </div>
 
       <div id="profile-work-country" className="mt-6 scroll-mt-24" data-profile-work-country>

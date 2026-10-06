@@ -13,8 +13,8 @@
   ],
   "source": "Supabase connector read-only SQL, explicit project wrygicdfxwjnrugduxnt",
   "projectRef": "wrygicdfxwjnrugduxnt",
-  "readAt": "2026-10-06T07:39:18.233460+00:00",
-  "readBy": "Read-only Supabase connector after #436 merged as f4778fe. 378 rows, version:name newline MD5 fb6c52b4aba81b2aaf4ea5e9657ce433. Five policies and three view definitions/grants verified. See docs/release/2026-10-06-pr437-439-production-baseline.json.",
+  "readAt": "2026-10-06T08:15:07.020284+00:00",
+  "readBy": "Read-only Supabase connector after #437 merged as 5627b3b. 379 rows, version:name MD5 dc79e59bffeafd4e6c82b356befce662. US jurisdiction/national credential jurisdiction and six-value destination CHECK verified; no US market or regulated definitions. See docs/release/2026-10-06-united-states-hosted-verification.json.",
   "versions": [
     {
       "version": "20260716153446",
@@ -1527,6 +1527,10 @@
     {
       "version": "20270218090000",
       "name": "catalogue_internal_metadata_boundary"
+    },
+    {
+      "version": "20270219090000",
+      "name": "sp_united_states_jurisdiction_and_destinations"
     }
   ]
 }
