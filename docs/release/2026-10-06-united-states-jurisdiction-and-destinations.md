@@ -78,3 +78,17 @@ would refuse anyway). After adoption the path is a forward fix.
   on the Profile, and the "no local catalogue" guidance — PR 2, after this is applied.
 - Any state catalogue, authority or source for the United States — a proposal only.
 - Abu Dhabi — its own data PR, its own owner decision.
+
+## Handoff verification, 2026-10-06
+
+Current main is `f4778fe` (#436 merge). #436 schema application is independently verified
+read-only; evidence is `2026-10-06-pr437-439-production-baseline.json`. Release-state and
+hosted-ledger now record it as applied, with USA alone pending. Lovable has synced main;
+the exact published commit is not established. USA is absent in production.
+
+The existing database CI job on #437 head `f8fa526` passed:
+https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37428714564/job/112154721357
+This is evidence on that commit, not a claim that Claude's unfinished local run passed.
+Final commit CI must pass separately after this bookkeeping update. #438 stays stacked until
+USA is merged, applied and verified. #439 must include main containing USA before merge readiness.
+No merge, application or publication has been performed in the handoff.

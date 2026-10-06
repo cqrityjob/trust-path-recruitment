@@ -16,7 +16,10 @@
     },
     {
       "file": "20270218090000_catalogue_internal_metadata_boundary.sql",
-      "hostedState": "pending",
+      "hostedState": "applied",
+      "hostedVersion": "20270218090000",
+      "hostedName": "catalogue_internal_metadata_boundary",
+      "evidenceSource": "Read-only production verification 2026-10-06 07:39 UTC on wrygicdfxwjnrugduxnt: hosted ledger 378 rows (version:name MD5 fb6c52b4aba81b2aaf4ea5e9657ce433), migration statements MD5 5a05258c416416cf76939126bbebb713; five SELECT policies, three view definitions/options and public projection grants match #436. No production write or user-row read. Evidence: docs/release/2026-10-06-pr437-439-production-baseline.json. This records schema application, not a new production role/session acceptance test or publication SHA.",
       "introduces": [
         {
           "kind": "view",
@@ -33,7 +36,7 @@
       ],
       "rollback": "supabase/rollback/20270218090000_catalogue_internal_metadata_boundary_rollback.sql",
       "verify": "docs/security/2026-10-06/catalogue-five-access-boundaries.md; compare the five policies, projection definitions/grants, row fingerprints and the unchanged 34 catalogue policies. Run the scoped read-only postflight after approved application.",
-      "note": "Owner access decision 2026-10-06. Schema-only PR; not applied. No history or data rewrite. Published projections omit internal metadata; draft forms/blocks remain author-only. No app calls a pending object."
+      "note": "Owner access decision 2026-10-06. Schema-only PR; production schema application verified read-only. No history or data rewrite. Published projections omit internal metadata; draft forms/blocks remain author-only. No app calls a pending object."
     },
     {
       "file": "20270216090000_participant_report_api_boundary.sql",
