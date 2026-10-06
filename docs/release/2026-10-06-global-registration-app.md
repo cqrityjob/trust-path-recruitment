@@ -87,3 +87,6 @@ Neither invokes a Passport/work-country/credential writer. These prove the UI co
 persistence; existing database RLS tests cover the ordinary-user boundary. Typecheck and destination
 mirror guard pass locally. USA licences and state catalogues remain absent; global residence/profile
 registration is independent from market-catalogue availability.
+
+Final focused local result: all 15 india-entry negative controls detected their planted defect,
+including INDIA-NC-DESTINATION-DRIFT on the six-value vocabulary; files restored byte-for-byte.

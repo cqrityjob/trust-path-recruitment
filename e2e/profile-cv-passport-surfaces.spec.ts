@@ -345,19 +345,26 @@ test.describe("My Career names the three surfaces", () => {
 
 test.describe("Profile", () => {
   for (const lang of ["sv", "en"] as const) {
-    test(`global residence is saved and reread separately from work country and credentials (${lang})`, async ({ page }) => {
+    test(`global residence is saved and reread separately from work country and credentials (${lang})`, async ({
+      page,
+    }) => {
       const { state, overrides } = backend();
       let residence: { countryCode: string; locality: string | null } | null = null;
       const writes: Record<string, unknown>[] = [];
       await mount(page, "hub_active", {
-        lang, path: "/my-career/profile", ready: "[data-profile-basics]",
+        lang,
+        path: "/my-career/profile",
+        ready: "[data-profile-basics]",
         overrides: {
           ...overrides,
           readCurrentLocation: (route: Route) => reply(route, residence),
           saveCurrentLocation: (route: Route) => {
             const data = dataOf(route);
             writes.push(data);
-            residence = { countryCode: String(data.countryCode), locality: String(data.locality ?? "") || null };
+            residence = {
+              countryCode: String(data.countryCode),
+              locality: String(data.locality ?? "") || null,
+            };
             return reply(route, { savedAt: "2026-10-06T08:00:00Z" });
           },
         },
