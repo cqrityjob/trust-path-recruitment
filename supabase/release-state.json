@@ -7,6 +7,82 @@
   "$comment": "RELEASE PARITY STATE. Enforced by scripts/release-parity-check.ts, which runs in CI and before a release. This file records, for every canonical migration at the release frontier, whether it is believed applied on the hosted database, and which database objects it introduces. The guard fails when application code on this branch references an object whose migration is not applied -- the exact class of failure that stopped employers saving jobs during UAT. It NEVER connects to a database, holds no credentials and applies no migration; it compares this repository against itself. Edit it deliberately: every entry is an owner-level statement about production.", 
   "frontier": [
     {
+      "file": "20270305090000_application_retention_lifecycle.sql",
+      "hostedState": "pending",
+      "note": "Development only. No production schema application or destructive production activation is authorised by this delivery. Schema and application PRs are separate; automation is off by default.",
+      "verify": "Compare installed function hashes, exact row capability grants, archive columns and disabled activation flag to disposable replay; follow docs/release/2026-10-06-application-retention-activation.md.",
+      "introduces": [
+        {
+          "kind": "function",
+          "object": "rec_retention_overview"
+        },
+        {
+          "kind": "function",
+          "object": "rec_archive_material"
+        },
+        {
+          "kind": "function",
+          "object": "rec_set_retention"
+        },
+        {
+          "kind": "function",
+          "object": "rec_preview_erasure"
+        },
+        {
+          "kind": "function",
+          "object": "rec_request_erasure"
+        },
+        {
+          "kind": "function",
+          "object": "rec_retry_erasure"
+        },
+        {
+          "kind": "function",
+          "object": "rec_claim_erasure"
+        },
+        {
+          "kind": "function",
+          "object": "rec_erase_rows"
+        },
+        {
+          "kind": "function",
+          "object": "rec_settle_erasure"
+        },
+        {
+          "kind": "function",
+          "object": "rec_enqueue_due_retention"
+        },
+        {
+          "kind": "function",
+          "object": "rec_erasure_file_exists"
+        },
+        {
+          "kind": "table",
+          "object": "recruitment_erasure_jobs"
+        },
+        {
+          "kind": "column",
+          "object": "employer_archived_at",
+          "table": "job_applications"
+        },
+        {
+          "kind": "column",
+          "object": "archived_at",
+          "table": "recruitment_settings"
+        },
+        {
+          "kind": "column",
+          "object": "recruitment_erasure_job_id",
+          "table": "storage_erasure_queue"
+        },
+        {
+          "kind": "column",
+          "object": "recruitment_retention_months",
+          "table": "employers"
+        }
+      ]
+    },
+    {
       "note": "Schema installed by official integration after #440 merge. User authorised #441 production release. Private content/configuration release is separate; scientific validation is not claimed.",
       "hostedState": "applied",
       "evidenceSource": "Read-only verification after #440 merge: installed schema, function bodies and private privilege boundary verified. See docs/release/2026-10-06-sentinel-hosted-verification.json.",
