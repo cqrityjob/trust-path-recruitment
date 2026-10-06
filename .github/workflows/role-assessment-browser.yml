@@ -1,0 +1,42 @@
+name: Role assessment and TestBank regression
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/components/career-discovery/v31/shell/QuestionCard.tsx'
+      - 'src/components/academy/**'
+      - 'src/components/recruitment/**'
+      - 'src/routes/_authenticated.academy.*'
+      - 'src/lib/security-competency/**'
+      - 'e2e/role-assessment-journey.spec.ts'
+      - 'e2e/test-bank-dispatch.spec.ts'
+      - 'scripts/fixtures/role-assessment-journey-fixture.sql'
+      - 'scripts/role-assessment-browser-check.sh'
+      - 'scripts/local-stack/**'
+      - 'tsconfig.assessment-e2e.json'
+      - 'supabase/migrations/**'
+      - '.github/workflows/role-assessment-browser.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: role-assessment-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  regression:
+    name: Assigned officer/manager reports and TestBank (isolated desktop/mobile)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+      - run: bun install --frozen-lockfile
+      - run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - run: bunx playwright install --with-deps chromium
+      - run: bunx tsc --noEmit -p tsconfig.assessment-e2e.json
+      - name: Assigned synthetic journeys and report access
+        run: bash scripts/role-assessment-browser-check.sh
