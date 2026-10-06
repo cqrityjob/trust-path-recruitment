@@ -37,3 +37,11 @@
 - No generated type changes
 - No auth, redirect, RLS, permission, catalogue, assessment, Interview Intelligence, BESKT or BCP logic changes
 - No merge, deploy or publish
+
+## Test layout after #442
+
+- [x] Confirm #442 ancestry and unchanged Supabase binding.
+- [x] Improve Sentinel runner, completion and result presentation only; preserve safeguards.
+- [ ] Verify authenticated candidate/employer flows and TestBank in isolated stack — Docker and suitable isolated session unavailable.
+- [ ] Run recovery and full Sentinel browser regressions — disposable Docker stack unavailable.
+- [ ] Verify remote UI delivery commit — platform edit branch not currently advertised by origin.

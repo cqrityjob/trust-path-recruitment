@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useBlocker } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { Shield, Clock3, CheckCircle2 } from "lucide-react";
+import { Shield, Clock3, CheckCircle2, ArrowLeft, ShieldAlert } from "lucide-react";
 import { useT } from "@/i18n/context";
 import { sentinelSession, sentinelPractice } from "@/lib/sentinel/sentinel.functions";
 import { TITLE, type Question, type Session } from "@/lib/sentinel/types";
@@ -12,6 +12,7 @@ import {
 import { Matrix, Options } from "./Figure";
 import { SentinelReportView } from "./Report";
 import { acceptsSnapshot, isClosed } from "./session-state";
+import { Button } from "@/components/ui/button";
 type Practice = { question: Question; key: string; explanation: { sv: string; en: string } };
 export function SentinelRunner({ attemptId }: { attemptId: string }) {
   const { lang } = useT();
@@ -206,8 +207,8 @@ export function SentinelRunner({ attemptId }: { attemptId: string }) {
     }
   }
   const button =
-    "inline-flex min-h-11 items-center justify-center rounded-lg bg-accent px-5 text-sm font-semibold text-accent-foreground disabled:opacity-50";
-  const outline = "min-h-11 rounded-lg border px-4 text-sm disabled:opacity-50";
+    "min-h-11 h-auto whitespace-normal rounded-md bg-accent px-5 py-3 text-sm font-semibold text-accent-foreground hover:bg-accent/90";
+  const outline = "min-h-11 h-auto whitespace-normal rounded-md border border-border bg-background px-4 py-3 text-sm text-foreground hover:bg-muted";
   if (!session)
     return (
       <AssessmentShell deliveryLanguage={lang}>
@@ -216,9 +217,9 @@ export function SentinelRunner({ attemptId }: { attemptId: string }) {
             {error || (sv ? "Hämtar test…" : "Loading assessment…")}
           </p>
           {error && (
-            <button className={outline} onClick={() => void refresh()}>
+            <Button className={outline} onClick={() => void refresh()}>
               {sv ? "Försök igen" : "Retry"}
-            </button>
+            </Button>
           )}
         </AssessmentPanel>
       </AssessmentShell>
@@ -227,18 +228,22 @@ export function SentinelRunner({ attemptId }: { attemptId: string }) {
     return (
       <AssessmentShell deliveryLanguage={lang}>
         <AssessmentPanel>
-          <section aria-labelledby="sentinel-completion-heading" className="space-y-4">
-            <div className="flex items-start gap-3">
+          <section aria-labelledby="sentinel-completion-heading" className="mx-auto max-w-2xl space-y-6 py-2 sm:py-4">
+            <div className="flex flex-col items-start gap-4">
               {session.status === "completed" ? (
-                <CheckCircle2 aria-hidden="true" className="mt-1 h-5 w-5 shrink-0" />
+                <CheckCircle2 aria-hidden="true" className="h-12 w-12 rounded-full bg-accent/10 p-3 text-accent" />
               ) : (
-                <Clock3 aria-hidden="true" className="mt-1 h-5 w-5 shrink-0" />
+                session.status === "timed_out" ? (
+                <Clock3 aria-hidden="true" className="h-12 w-12 rounded-full bg-muted p-3 text-foreground" />
+              ) : (
+                <ShieldAlert aria-hidden="true" className="h-12 w-12 rounded-full bg-muted p-3 text-foreground" />
+              )
               )}
               <h1
                 id="sentinel-completion-heading"
                 ref={completionHeading}
                 tabIndex={-1}
-                className="text-2xl font-semibold focus:outline-none"
+                className="text-2xl font-semibold leading-tight text-foreground focus:outline-none sm:text-3xl"
               >
                 {session.status === "completed"
                   ? sv
@@ -253,7 +258,7 @@ export function SentinelRunner({ attemptId }: { attemptId: string }) {
                       : "This assessment has been stopped."}
               </h1>
             </div>
-            <p className="text-sm leading-relaxed">
+            <p className="max-w-prose text-base leading-relaxed">
               {session.status === "completed"
                 ? discardedResponse
                   ? sv
@@ -277,12 +282,15 @@ export function SentinelRunner({ attemptId }: { attemptId: string }) {
                   : "The unsaved response has not been submitted."}
               </p>
             )}
+            <Button asChild className={`${button} w-full sm:w-auto`}>
             <Link
               to="/academy"
               className={`${button} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2`}
             >
+              <ArrowLeft aria-hidden="true" />
               {sv ? "Till mina tester" : "Back to my assessments"}
             </Link>
+            </Button>
           </section>
           <div className="mt-6">
             {session.report ? (
@@ -303,13 +311,13 @@ export function SentinelRunner({ attemptId }: { attemptId: string }) {
   return (
     <AssessmentShell deliveryLanguage={lang}>
       <AssessmentPanel>
-        <header className="mb-7 flex items-start justify-between gap-3">
-          <div>
+        <header className="mb-7 flex flex-col items-start justify-between gap-4 border-b border-border pb-6 sm:flex-row">
+          <div className="min-w-0">
             <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
               <Shield className="h-4 w-4" />
               CQrityjob · {sv ? "Visuell logik" : "Visual logic"}
             </p>
-            <h1 className="mt-2 text-2xl font-semibold">{TITLE[sv ? "sv" : "en"]}</h1>
+            <h1 className="mt-2 text-2xl font-semibold leading-tight">{TITLE[sv ? "sv" : "en"]}</h1>
             <p className="mt-2 text-sm text-muted-foreground">
               {sv
                 ? "Pilotinnehåll – inte psykometriskt validerat · v1"
@@ -318,11 +326,12 @@ export function SentinelRunner({ attemptId }: { attemptId: string }) {
           </div>
           {session.status === "running" && (
             <div
-              className="shrink-0 rounded-lg border p-3 text-sm tabular-nums"
+              className="flex shrink-0 items-center gap-3 rounded-md border border-border bg-muted/30 px-4 py-3 font-semibold tabular-nums"
               role="timer"
               aria-label={sv ? "Tid kvar" : "Time remaining"}
             >
-              <Clock3 className="mb-1 h-4 w-4" />
+              <Clock3 aria-hidden="true" className="h-5 w-5 text-accent" />
+              <span className="text-xs font-medium text-muted-foreground">{sv ? "Tid kvar" : "Time remaining"}</span>
               {Math.floor(remaining / 60)}:{String(remaining % 60).padStart(2, "0")}
             </div>
           )}
@@ -331,12 +340,12 @@ export function SentinelRunner({ attemptId }: { attemptId: string }) {
           <div role="alert" className="mb-4 rounded-lg border p-3 text-sm">
             {error}
             {pending && (
-              <button disabled={busy} className="ml-3 underline" onClick={() => void save(pending)}>
+              <Button disabled={busy} className="ml-3 underline" onClick={() => void save(pending)}>
                 {sv ? "Spara igen" : "Save again"}
-              </button>
+              </Button>
             )}
             {failedAction && (
-              <button
+              <Button
                 disabled={busy}
                 className="ml-3 underline"
                 onClick={() => void act(failedAction)}
@@ -348,12 +357,12 @@ export function SentinelRunner({ attemptId }: { attemptId: string }) {
                   : sv
                     ? "Försök starta igen"
                     : "Retry starting"}
-              </button>
+              </Button>
             )}
             {!pending && !failedAction && (
-              <button disabled={busy} className="ml-3 underline" onClick={() => void refresh()}>
+              <Button disabled={busy} className="ml-3 underline" onClick={() => void refresh()}>
                 {sv ? "Försök igen" : "Retry"}
-              </button>
+              </Button>
             )}
           </div>
         )}
@@ -371,13 +380,13 @@ export function SentinelRunner({ attemptId }: { attemptId: string }) {
                   ? "Övningarna kunde inte hämtas. Försök igen."
                   : "Practice could not be loaded. Please try again."}
             </p>
-            <button
+            <Button
               disabled={practiceStatus === "loading"}
               className={`${outline} mt-3`}
               onClick={() => void loadPractice()}
             >
               {sv ? "Hämta övningarna igen" : "Retry loading practice"}
-            </button>
+            </Button>
           </div>
         )}
         {session.status === "ready" && phase === "info" && (
@@ -390,7 +399,7 @@ export function SentinelRunner({ attemptId }: { attemptId: string }) {
                 ? "I varje uppgift saknas en figur i en matris. Studera de åtta synliga rutorna och välj ett av sex alternativ. Mönster kan handla om form, antal, placering, vridning, spegling eller fyllning. Ibland gäller flera regler samtidigt."
                 : "Each task has a missing figure in a matrix. Study the eight visible cells and choose one of six options. Patterns may involve shape, quantity, position, rotation, reflection or fill. Sometimes several rules apply together."}
             </p>
-            <div className="grid grid-cols-3 gap-3 rounded-xl bg-muted/30 p-4 text-center">
+            <div className="grid grid-cols-3 gap-3 border-y border-border py-5 text-center">
               <div className="font-semibold">
                 20<p className="font-normal">{sv ? "uppgifter" : "questions"}</p>
               </div>
@@ -426,7 +435,7 @@ export function SentinelRunner({ attemptId }: { attemptId: string }) {
               {sv ? "Integritet och behandling av uppgifter" : "Privacy and data processing"}
             </Link>
             <div>
-              <button
+              <Button
                 disabled={!practice.length || busy}
                 className={button}
                 onClick={() => {
@@ -435,7 +444,7 @@ export function SentinelRunner({ attemptId }: { attemptId: string }) {
                 }}
               >
                 {sv ? "Gå till övningarna" : "Go to practice"}
-              </button>
+              </Button>
             </div>
           </div>
         )}
@@ -470,7 +479,7 @@ export function SentinelRunner({ attemptId }: { attemptId: string }) {
                 <p className="mt-2">{exercise.explanation[sv ? "sv" : "en"]}</p>
               </div>
             )}
-            <button
+            <Button
               className={`${button} mt-5`}
               disabled={!panswer}
               onClick={() => {
@@ -493,7 +502,7 @@ export function SentinelRunner({ attemptId }: { attemptId: string }) {
                 : sv
                   ? "Visa förklaring"
                   : "Show explanation"}
-            </button>
+            </Button>
           </>
         )}
         {session.status === "ready" && phase === "start" && (
@@ -504,15 +513,15 @@ export function SentinelRunner({ attemptId }: { attemptId: string }) {
                 ? `Du har ${session.durationSeconds / 60} minuter för 20 uppgifter. Tiden fortsätter även om du lämnar sidan. Skicka in när du är klar eller låt servern avsluta vid tidsgränsen.`
                 : `You have ${session.durationSeconds / 60} minutes for 20 questions. Time continues if you leave this page. Submit when you are ready, or the server will finalise at the deadline.`}
             </p>
-            <button disabled={busy} className={button} onClick={() => void act("start")}>
+            <Button disabled={busy} className={button} onClick={() => void act("start")}>
               {busy ? (sv ? "Startar…" : "Starting…") : sv ? "Starta test" : "Start assessment"}
-            </button>
+            </Button>
           </div>
         )}
         {session.status === "running" && item && (
           <>
             <div className="mb-5">
-              <div className="mb-2 flex justify-between text-sm">
+              <div className="mb-2 flex flex-wrap justify-between gap-2 text-sm">
                 <span>
                   {sv ? "Uppgift" : "Question"} {index + 1} / 20
                 </span>
@@ -537,7 +546,7 @@ export function SentinelRunner({ attemptId }: { attemptId: string }) {
               disabled={busy}
               onSelect={(id) => void save({ questionId: item.id, optionId: id })}
             />
-            <p role="status" className="mt-3 min-h-5 text-xs text-muted-foreground">
+            <p role="status" className="mt-4 min-h-11 rounded-md bg-muted/30 px-3 py-3 text-sm text-muted-foreground">
               {pending
                 ? busy
                   ? sv
@@ -551,70 +560,71 @@ export function SentinelRunner({ attemptId }: { attemptId: string }) {
                   : "Server-confirmed responses are saved automatically."}
             </p>
             <nav
-              className="my-5 flex flex-wrap gap-1.5"
+              className="my-5 grid grid-cols-5 gap-2 sm:grid-cols-10"
               aria-label={sv ? "Hoppa till uppgift" : "Go to question"}
             >
               {session.questions.map((q, i) => (
-                <button
+                <Button
                   key={q.id}
                   disabled={busy || !!pending}
-                  className={`h-9 min-w-9 rounded border text-xs ${i === index ? "border-accent bg-accent/15 font-bold" : ""}`}
+                  variant="outline"
+                  className={`h-11 min-w-0 px-0 text-xs ${i === index ? "border-accent bg-accent/15 font-bold" : ""}`}
                   aria-current={i === index ? "step" : undefined}
                   aria-label={`${sv ? "Uppgift" : "Question"} ${i + 1}${session.answers[q.id] ? (sv ? ", besvarad" : ", answered") : ""}`}
                   onClick={() => setIndex(i)}
                 >
                   {i + 1}
                   {session.answers[q.id] ? " ·" : ""}
-                </button>
+                </Button>
               ))}
             </nav>
-            <div className="flex flex-wrap justify-between gap-3">
-              <button
+            <div className="flex flex-wrap justify-between gap-3 border-t border-border pt-5">
+              <Button
                 className={outline}
                 disabled={index === 0 || busy || !!pending}
                 onClick={() => setIndex(index - 1)}
               >
                 {sv ? "Föregående" : "Previous"}
-              </button>
+              </Button>
               {index < 19 ? (
-                <button
+                <Button
                   className={button}
                   disabled={busy || !!pending}
                   onClick={() => setIndex(index + 1)}
                 >
                   {sv ? "Nästa" : "Next"}
-                </button>
+                </Button>
               ) : (
-                <button
+                <Button
                   className={button}
                   disabled={busy || !!pending}
                   onClick={() => setConfirm(true)}
                 >
                   {sv ? "Granska och skicka in" : "Review and submit"}
-                </button>
+                </Button>
               )}
             </div>
             {confirm && (
               <div
-                className="mt-5 space-y-3 rounded-xl border p-4"
+                className="mt-5 flex flex-wrap gap-3 rounded-md border border-border bg-muted/30 p-4 sm:p-5"
                 role="region"
                 aria-label={sv ? "Bekräfta inlämning" : "Confirm submission"}
               >
-                <p>
+                <p className="w-full text-sm leading-relaxed">
                   {sv
                     ? `${20 - Object.keys(session.answers).length} obesvarade uppgifter. När du skickar in avslutas testet.`
                     : `${20 - Object.keys(session.answers).length} unanswered questions. Submitting closes the attempt.`}
                 </p>
-                <button
+                <Button
                   className={button}
                   disabled={busy || !!pending}
                   onClick={() => void act("finish")}
                 >
                   {sv ? "Skicka in test" : "Submit assessment"}
-                </button>
-                <button className={`${outline} ml-2`} onClick={() => setConfirm(false)}>
+                </Button>
+                <Button className={outline} onClick={() => setConfirm(false)}>
                   {sv ? "Fortsätt testet" : "Continue assessment"}
-                </button>
+                </Button>
               </div>
             )}
           </>
