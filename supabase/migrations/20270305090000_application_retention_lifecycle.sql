@@ -226,7 +226,7 @@ GRANT EXECUTE ON FUNCTION public.rec_request_erasure(uuid,uuid,text) TO authenti
 
 -- The old, unscheduled 12-month/updated_at sweep must never be used again.
 CREATE OR REPLACE FUNCTION public.sweep_application_retention() RETURNS TABLE(application_id uuid,cv_storage_path text)
-LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'RETENTION_LEGACY_SWEEP_DISABLED'; END $$;
+LANGUAGE plpgsql SET search_path=public,pg_temp AS $$ BEGIN RAISE EXCEPTION 'RETENTION_LEGACY_SWEEP_DISABLED'; END $$;
 REVOKE ALL ON FUNCTION public.sweep_application_retention() FROM PUBLIC,anon,authenticated,service_role;
 
 -- Prevent reopening/status changes/late child writes while erasure is owed.
