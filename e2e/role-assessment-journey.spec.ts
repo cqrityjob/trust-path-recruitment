@@ -270,8 +270,8 @@ for (const [idx, role, lang] of [
         /Min bedömningsrapport|My assessment report/,
         { timeout: 60000 },
       );
-      await candidate.locator('a[href="/academy"]').first().focus();
-      await candidate.locator('a[href="/academy"]').first().press("Enter");
+      await candidate.locator('main a[href="/academy"]').first().focus();
+      await candidate.locator('main a[href="/academy"]').first().press("Enter");
       await expect(candidate).toHaveURL(new RegExp("/academy$"));
       await owner.goto(`${BASE}/employer/${ORG}/assessments/results/${attempt}?application=${app}`);
       await expect(owner.getByRole("heading", { level: 1 })).toBeVisible({ timeout: 60000 });

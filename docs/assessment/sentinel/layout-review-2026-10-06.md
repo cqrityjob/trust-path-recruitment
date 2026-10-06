@@ -110,4 +110,4 @@ Local stack: PostgreSQL 16; pinned PostgREST 14.15; real JWT, Postgres policies/
 
 ### Final GitHub status and remaining runs
 
-Separate correction PR: pending creation. Mobile role journeys, TestBank, test→interview and canonical employer final-report matrix, final-commit build/typechecks and CI are in progress. No green status is inferred from pending or earlier runs.
+Separate correction PR: [#443](https://github.com/cqrityjob/trust-path-recruitment/pull/443), open draft; source/test commit `bdb2f6a0c2c60a42c0f6643069b0837ed8cc8c04`. Mobile role journeys, TestBank, test→interview and canonical employer final-report matrix, final-commit build/typechecks and CI are in progress. No green status is inferred from pending or earlier runs.
