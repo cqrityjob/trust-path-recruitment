@@ -263,6 +263,9 @@ BEGIN
    IF _job IS NULL THEN SELECT job_id INTO _job FROM public.bcp_assignments WHERE id=_assignment; END IF;
   END IF;
  END IF;
+ -- Serialize child writes with confirmation and row erasure, including
+ -- requests whose debt is not yet visible because its transaction is open.
+ PERFORM 1 FROM public.jobs WHERE id=_job FOR UPDATE;
  IF EXISTS(SELECT 1 FROM public.recruitment_erasure_jobs WHERE job_id=_job AND completed_at IS NULL)
  THEN RAISE EXCEPTION 'RETENTION_ERASURE_PENDING'; END IF;
  IF TG_TABLE_NAME='recruitment_settings' AND to_jsonb(NEW)->>'completion_state'='open'
