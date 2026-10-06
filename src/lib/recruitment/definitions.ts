@@ -124,6 +124,7 @@ export const PHASE_FILTERS = [
   "published",
   "closed",
   "completed",
+  "archived",
   "all",
 ] as const;
 export type PhaseFilter = (typeof PHASE_FILTERS)[number];
@@ -134,6 +135,8 @@ export function matchesPhaseFilter(
   unresolved: number,
 ): boolean {
   switch (filter) {
+    case "archived":
+      return false; // Archive state is supplied separately by each row.
     case "all":
       return true;
     case "active":
@@ -151,7 +154,7 @@ export function matchesPhaseFilter(
 // a candidate and back, and so the candidate view can rebuild the SAME ordered
 // list to offer previous and next.
 
-export const STAGE_FILTERS = ["new", "review", "interview", "open", "decided", "all"] as const;
+export const STAGE_FILTERS = ["new", "review", "interview", "open", "decided", "all", "archived"] as const;
 export type StageFilter = (typeof STAGE_FILTERS)[number];
 
 export const CANDIDATE_SORTS = ["applied", "name", "stage", "activity"] as const;

@@ -1,0 +1,1447 @@
+{
+  "verifiedAt": "2026-10-06 21:26:51.60513+00",
+  "projectRef": "wrygicdfxwjnrugduxnt",
+  "source": "Supabase management connector, read-only SQL/catalogue and Edge Function inventory after official GitHub integration",
+  "authorization": "Owner requested ordered merges #443 → #444 → #445. Schema installation is separate from Lovable publication. No destructive production activation or erasure is authorised.",
+  "schema": {
+    "pullRequest": "https://github.com/cqrityjob/trust-path-recruitment/pull/444",
+    "headSha": "2b3c6bd5be092259ce6d38f405f34b97f3824e1e",
+    "mergeCommit": "cfecf778744b879a46eeb4ce96793397c2e26fb1",
+    "ci": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37530551741",
+    "workflows": [
+      {
+        "id": 37530551790,
+        "name": "E4 employer final report — routed browser evidence",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 37530551751,
+        "name": "Job ad back navigation — routed browser evidence",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 37530551655,
+        "name": "Recruitment workspace — routed browser evidence",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 37530551775,
+        "name": "Career Center persistence — routed browser evidence",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 37530551650,
+        "name": "Role assessment and TestBank regression",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 37530551746,
+        "name": "Passport public pilot — real-backend evidence",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 37530551725,
+        "name": "Security Work browser evidence",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 37530551741,
+        "name": "CI",
+        "status": "completed",
+        "conclusion": "success"
+      }
+    ]
+  },
+  "localReference": {
+    "postgres": "16",
+    "database": "isolated retention_merge_verify",
+    "migrationReplay": "Fresh full canonical history replay with 45 lifecycle assertions passed; no real data",
+    "twoSessionRaces": "Passed by the exact-head migration CI: late note commit is blocked and concurrently shared CV ownership is preserved."
+  },
+  "ledger": {
+    "rowCount": 382,
+    "previousRowCount": 381,
+    "previousIdentitiesPreserved": true,
+    "identityMd5": "4dd6f872bf2a98935c7e6c00dde1e42c",
+    "appended": [
+      {
+        "name": "application_retention_lifecycle",
+        "version": "20270305090000"
+      }
+    ],
+    "migrationStatementsMd5": "f7d907e482209c358fdd2f072cb6bb1b"
+  },
+  "functions": {
+    "count": 19,
+    "bodiesSecurityConfigAndAclMatch": true,
+    "aclSerialization": "to_jsonb(proacl) prevents the connector's raw aclitem[] text serialization from creating a false mismatch",
+    "rows": [
+      {
+        "schema": "public",
+        "name": "rec_archive_material",
+        "args": "_job_id uuid, _application_id uuid, _archive boolean",
+        "body_md5": "6c507d492d0d463d7bd56cbf6264e6b0",
+        "definer": true,
+        "config": [
+          "search_path=public, pg_temp"
+        ],
+        "acl": [
+          "postgres=X/postgres",
+          "authenticated=X/postgres"
+        ]
+      },
+      {
+        "schema": "public",
+        "name": "rec_candidate_view",
+        "args": "_job_id uuid, _stage text, _owner text, _q text, _answers jsonb, _sort text, _dir text, _page integer, _size integer, _around uuid",
+        "body_md5": "617197874c3cc2351f3e07d011a9a5af",
+        "definer": true,
+        "config": [
+          "search_path=public, pg_temp"
+        ],
+        "acl": [
+          "postgres=X/postgres",
+          "authenticated=X/postgres"
+        ]
+      },
+      {
+        "schema": "public",
+        "name": "rec_claim_erasure",
+        "args": "",
+        "body_md5": "7a7a1c6862115ea7396f0f656532ae45",
+        "definer": true,
+        "config": [
+          "search_path=public, pg_temp"
+        ],
+        "acl": [
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ]
+      },
+      {
+        "schema": "public",
+        "name": "rec_enqueue_due_retention",
+        "args": "_limit integer",
+        "body_md5": "493990cef74236a54a9520a863c7581b",
+        "definer": true,
+        "config": [
+          "search_path=public, pg_temp",
+          "TimeZone=UTC"
+        ],
+        "acl": [
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ]
+      },
+      {
+        "schema": "public",
+        "name": "rec_erase_rows",
+        "args": "_id uuid, _token uuid",
+        "body_md5": "2be1485389a8d52b6c4c4c7c9b752e71",
+        "definer": true,
+        "config": [
+          "search_path=public, pg_temp",
+          "TimeZone=UTC"
+        ],
+        "acl": [
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ]
+      },
+      {
+        "schema": "public",
+        "name": "rec_erasure_file_exists",
+        "args": "_bucket text, _path text",
+        "body_md5": "f835adc72591c2c8b8d11b1120418728",
+        "definer": true,
+        "config": [
+          "search_path=public, pg_temp"
+        ],
+        "acl": [
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ]
+      },
+      {
+        "schema": "public",
+        "name": "rec_preview_erasure",
+        "args": "_job_id uuid, _application_id uuid",
+        "body_md5": "1d0a36a1f42804d7e2986a6199901da1",
+        "definer": true,
+        "config": [
+          "search_path=public, pg_temp"
+        ],
+        "acl": [
+          "postgres=X/postgres",
+          "authenticated=X/postgres"
+        ]
+      },
+      {
+        "schema": "public",
+        "name": "rec_request_erasure",
+        "args": "_job_id uuid, _application_id uuid, _fingerprint text",
+        "body_md5": "41df0052af227b016e5b9bdc70321aa4",
+        "definer": true,
+        "config": [
+          "search_path=public, pg_temp"
+        ],
+        "acl": [
+          "postgres=X/postgres",
+          "authenticated=X/postgres"
+        ]
+      },
+      {
+        "schema": "public",
+        "name": "rec_retention_overview",
+        "args": "_employer_id uuid",
+        "body_md5": "f6a9110d1be5119a6b11bb052e324868",
+        "definer": true,
+        "config": [
+          "search_path=public, pg_temp",
+          "TimeZone=UTC"
+        ],
+        "acl": [
+          "postgres=X/postgres",
+          "authenticated=X/postgres"
+        ]
+      },
+      {
+        "schema": "public",
+        "name": "rec_retention_scope",
+        "args": "_job_id uuid, _application_id uuid",
+        "body_md5": "6157afb12f54ef2ae5c58eaafac1841a",
+        "definer": true,
+        "config": [
+          "search_path=public, pg_temp"
+        ],
+        "acl": [
+          "postgres=X/postgres"
+        ]
+      },
+      {
+        "schema": "public",
+        "name": "rec_retry_erasure",
+        "args": "_id uuid",
+        "body_md5": "50d9fb78af8402212779ea22608779a0",
+        "definer": true,
+        "config": [
+          "search_path=public, pg_temp"
+        ],
+        "acl": [
+          "postgres=X/postgres",
+          "authenticated=X/postgres"
+        ]
+      },
+      {
+        "schema": "public",
+        "name": "rec_set_retention",
+        "args": "_employer_id uuid, _months integer",
+        "body_md5": "c3085eb4ee1c50a4a27acb6d052f59bd",
+        "definer": true,
+        "config": [
+          "search_path=public, pg_temp"
+        ],
+        "acl": [
+          "postgres=X/postgres",
+          "authenticated=X/postgres"
+        ]
+      },
+      {
+        "schema": "public",
+        "name": "rec_settle_erasure",
+        "args": "_id uuid, _token uuid, _error text",
+        "body_md5": "aa9734d585f41d3977d12bc47b6c8ef0",
+        "definer": true,
+        "config": [
+          "search_path=public, pg_temp"
+        ],
+        "acl": [
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ]
+      },
+      {
+        "schema": "public",
+        "name": "sweep_application_retention",
+        "args": "",
+        "body_md5": "ded2aed803129165c53ed8bdca9fa36d",
+        "definer": false,
+        "config": [
+          "search_path=public, pg_temp"
+        ],
+        "acl": [
+          "postgres=X/postgres"
+        ]
+      },
+      {
+        "schema": "recruitment_erasure",
+        "name": "allowed_tables",
+        "args": "",
+        "body_md5": "324332831b9adf78e771f4075660bff8",
+        "definer": false,
+        "config": null,
+        "acl": null
+      },
+      {
+        "schema": "recruitment_erasure",
+        "name": "guard_pending",
+        "args": "",
+        "body_md5": "d3ae7623cb6af5fca0072c7e60172b75",
+        "definer": true,
+        "config": [
+          "search_path=public, pg_temp"
+        ],
+        "acl": null
+      },
+      {
+        "schema": "recruitment_erasure",
+        "name": "guard_period",
+        "args": "",
+        "body_md5": "480fabb8d6a7ef0824e846818574379f",
+        "definer": true,
+        "config": [
+          "search_path=public, pg_temp"
+        ],
+        "acl": null
+      },
+      {
+        "schema": "recruitment_erasure",
+        "name": "plan",
+        "args": "_ids uuid[], _employer uuid",
+        "body_md5": "518a62ca259d68f68dd34f1330af8a2b",
+        "definer": true,
+        "config": [
+          "search_path=public, pg_temp"
+        ],
+        "acl": [
+          "postgres=X/postgres"
+        ]
+      },
+      {
+        "schema": "recruitment_erasure",
+        "name": "releases",
+        "args": "_table oid, _row jsonb",
+        "body_md5": "5de6eae248c5139f893436a825e0aa81",
+        "definer": true,
+        "config": [
+          "search_path=public, pg_temp"
+        ],
+        "acl": [
+          "postgres=X/postgres"
+        ]
+      }
+    ]
+  },
+  "catalogue": {
+    "matchesLocalReferenceExceptDocumentedMaintain": true,
+    "postgres": "17.6",
+    "versionDifference": "PostgreSQL 17 GRANT ALL includes MAINTAIN (ACL m). The local PostgreSQL 16 reference has arwdDxt; hosted has arwdDxtm only for postgres and for service_role on public.recruitment_erasure_jobs. No anon/authenticated MAINTAIN and no service_role access to private tables/schema. All other catalogue entries and tested privilege booleans match.",
+    "sources": [
+      "https://www.postgresql.org/docs/17/sql-grant.html",
+      "https://www.postgresql.org/docs/17/release-17.html"
+    ],
+    "maintainPrivileges": [
+      {
+        "role": "anon",
+        "table": "recruitment_erasure_jobs",
+        "schema": "public",
+        "maintain": false
+      },
+      {
+        "role": "authenticated",
+        "table": "recruitment_erasure_jobs",
+        "schema": "public",
+        "maintain": false
+      },
+      {
+        "role": "service_role",
+        "table": "recruitment_erasure_jobs",
+        "schema": "public",
+        "maintain": true
+      },
+      {
+        "role": "anon",
+        "table": "activation",
+        "schema": "recruitment_erasure",
+        "maintain": false
+      },
+      {
+        "role": "authenticated",
+        "table": "activation",
+        "schema": "recruitment_erasure",
+        "maintain": false
+      },
+      {
+        "role": "service_role",
+        "table": "activation",
+        "schema": "recruitment_erasure",
+        "maintain": false
+      },
+      {
+        "role": "anon",
+        "table": "row_capability",
+        "schema": "recruitment_erasure",
+        "maintain": false
+      },
+      {
+        "role": "authenticated",
+        "table": "row_capability",
+        "schema": "recruitment_erasure",
+        "maintain": false
+      },
+      {
+        "role": "service_role",
+        "table": "row_capability",
+        "schema": "recruitment_erasure",
+        "maintain": false
+      }
+    ],
+    "rows": {
+      "tables": [
+        {
+          "acl": [
+            "postgres=arwdDxtm/postgres",
+            "service_role=arwdDxtm/postgres"
+          ],
+          "rls": true,
+          "name": "recruitment_erasure_jobs",
+          "schema": "public"
+        },
+        {
+          "acl": [
+            "postgres=arwdDxtm/postgres"
+          ],
+          "rls": false,
+          "name": "activation",
+          "schema": "recruitment_erasure"
+        },
+        {
+          "acl": [
+            "postgres=arwdDxtm/postgres"
+          ],
+          "rls": false,
+          "name": "row_capability",
+          "schema": "recruitment_erasure"
+        }
+      ],
+      "columns": [
+        {
+          "acl": null,
+          "type": "integer",
+          "table": "employers",
+          "column": "recruitment_retention_months",
+          "default": "24",
+          "notNull": true
+        },
+        {
+          "acl": [
+            "authenticated=r/postgres"
+          ],
+          "type": "timestamp with time zone",
+          "table": "job_applications",
+          "column": "employer_archived_at",
+          "default": null,
+          "notNull": false
+        },
+        {
+          "acl": null,
+          "type": "timestamp with time zone",
+          "table": "recruitment_settings",
+          "column": "archived_at",
+          "default": null,
+          "notNull": false
+        },
+        {
+          "acl": null,
+          "type": "uuid",
+          "table": "storage_erasure_queue",
+          "column": "recruitment_erasure_job_id",
+          "default": null,
+          "notNull": false
+        }
+      ],
+      "policies": [
+        {
+          "cmd": "SELECT",
+          "qual": "rec_is_member(employer_id)",
+          "roles": [
+            "authenticated"
+          ],
+          "tablename": "recruitment_erasure_jobs",
+          "permissive": "PERMISSIVE",
+          "policyname": "recruitment_erasure_jobs_read",
+          "schemaname": "public",
+          "with_check": null
+        }
+      ],
+      "triggers": [
+        {
+          "name": "retention_pending_guard",
+          "table": "assessment_assignments",
+          "enabled": "O",
+          "definition": "CREATE TRIGGER retention_pending_guard BEFORE INSERT OR UPDATE ON public.assessment_assignments FOR EACH ROW EXECUTE FUNCTION recruitment_erasure.guard_pending()"
+        },
+        {
+          "name": "retention_pending_guard",
+          "table": "bcp_assignments",
+          "enabled": "O",
+          "definition": "CREATE TRIGGER retention_pending_guard BEFORE INSERT OR UPDATE ON public.bcp_assignments FOR EACH ROW EXECUTE FUNCTION recruitment_erasure.guard_pending()"
+        },
+        {
+          "name": "retention_pending_guard",
+          "table": "bcp_candidate_supplements",
+          "enabled": "O",
+          "definition": "CREATE TRIGGER retention_pending_guard BEFORE INSERT OR UPDATE ON public.bcp_candidate_supplements FOR EACH ROW EXECUTE FUNCTION recruitment_erasure.guard_pending()"
+        },
+        {
+          "name": "retention_pending_guard",
+          "table": "bcp_case_links",
+          "enabled": "O",
+          "definition": "CREATE TRIGGER retention_pending_guard BEFORE INSERT OR UPDATE ON public.bcp_case_links FOR EACH ROW EXECUTE FUNCTION recruitment_erasure.guard_pending()"
+        },
+        {
+          "name": "retention_pending_guard",
+          "table": "bcp_conduct_actions",
+          "enabled": "O",
+          "definition": "CREATE TRIGGER retention_pending_guard BEFORE INSERT OR UPDATE ON public.bcp_conduct_actions FOR EACH ROW EXECUTE FUNCTION recruitment_erasure.guard_pending()"
+        },
+        {
+          "name": "retention_pending_guard",
+          "table": "bcp_conduct_entries",
+          "enabled": "O",
+          "definition": "CREATE TRIGGER retention_pending_guard BEFORE INSERT OR UPDATE ON public.bcp_conduct_entries FOR EACH ROW EXECUTE FUNCTION recruitment_erasure.guard_pending()"
+        },
+        {
+          "name": "retention_pending_guard",
+          "table": "bcp_conduct_panel_resolutions",
+          "enabled": "O",
+          "definition": "CREATE TRIGGER retention_pending_guard BEFORE INSERT OR UPDATE ON public.bcp_conduct_panel_resolutions FOR EACH ROW EXECUTE FUNCTION recruitment_erasure.guard_pending()"
+        },
+        {
+          "name": "retention_pending_guard",
+          "table": "bcp_conduct_panels",
+          "enabled": "O",
+          "definition": "CREATE TRIGGER retention_pending_guard BEFORE INSERT OR UPDATE ON public.bcp_conduct_panels FOR EACH ROW EXECUTE FUNCTION recruitment_erasure.guard_pending()"
+        },
+        {
+          "name": "retention_pending_guard",
+          "table": "bcp_conduct_positions",
+          "enabled": "O",
+          "definition": "CREATE TRIGGER retention_pending_guard BEFORE INSERT OR UPDATE ON public.bcp_conduct_positions FOR EACH ROW EXECUTE FUNCTION recruitment_erasure.guard_pending()"
+        },
+        {
+          "name": "retention_pending_guard",
+          "table": "bcp_conduct_reports",
+          "enabled": "O",
+          "definition": "CREATE TRIGGER retention_pending_guard BEFORE INSERT OR UPDATE ON public.bcp_conduct_reports FOR EACH ROW EXECUTE FUNCTION recruitment_erasure.guard_pending()"
+        },
+        {
+          "name": "retention_pending_guard",
+          "table": "bcp_conduct_sessions",
+          "enabled": "O",
+          "definition": "CREATE TRIGGER retention_pending_guard BEFORE INSERT OR UPDATE ON public.bcp_conduct_sessions FOR EACH ROW EXECUTE FUNCTION recruitment_erasure.guard_pending()"
+        },
+        {
+          "name": "retention_pending_guard",
+          "table": "bcp_conduct_stances",
+          "enabled": "O",
+          "definition": "CREATE TRIGGER retention_pending_guard BEFORE INSERT OR UPDATE ON public.bcp_conduct_stances FOR EACH ROW EXECUTE FUNCTION recruitment_erasure.guard_pending()"
+        },
+        {
+          "name": "retention_pending_guard",
+          "table": "bcp_conduct_verifications",
+          "enabled": "O",
+          "definition": "CREATE TRIGGER retention_pending_guard BEFORE INSERT OR UPDATE ON public.bcp_conduct_verifications FOR EACH ROW EXECUTE FUNCTION recruitment_erasure.guard_pending()"
+        },
+        {
+          "name": "retention_pending_guard",
+          "table": "bcp_events",
+          "enabled": "O",
+          "definition": "CREATE TRIGGER retention_pending_guard BEFORE INSERT OR UPDATE ON public.bcp_events FOR EACH ROW EXECUTE FUNCTION recruitment_erasure.guard_pending()"
+        },
+        {
+          "name": "retention_pending_guard",
+          "table": "bcp_invitations",
+          "enabled": "O",
+          "definition": "CREATE TRIGGER retention_pending_guard BEFORE INSERT OR UPDATE ON public.bcp_invitations FOR EACH ROW EXECUTE FUNCTION recruitment_erasure.guard_pending()"
+        },
+        {
+          "name": "retention_pending_guard",
+          "table": "bcp_notice_acknowledgements",
+          "enabled": "O",
+          "definition": "CREATE TRIGGER retention_pending_guard BEFORE INSERT OR UPDATE ON public.bcp_notice_acknowledgements FOR EACH ROW EXECUTE FUNCTION recruitment_erasure.guard_pending()"
+        },
+        {
+          "name": "retention_pending_guard",
+          "table": "bcp_responses",
+          "enabled": "O",
+          "definition": "CREATE TRIGGER retention_pending_guard BEFORE INSERT OR UPDATE ON public.bcp_responses FOR EACH ROW EXECUTE FUNCTION recruitment_erasure.guard_pending()"
+        },
+        {
+          "name": "retention_period_guard",
+          "table": "employers",
+          "enabled": "O",
+          "definition": "CREATE TRIGGER retention_period_guard BEFORE UPDATE ON public.employers FOR EACH ROW EXECUTE FUNCTION recruitment_erasure.guard_period()"
+        },
+        {
+          "name": "retention_pending_guard",
+          "table": "job_application_answers",
+          "enabled": "O",
+          "definition": "CREATE TRIGGER retention_pending_guard BEFORE INSERT OR UPDATE ON public.job_application_answers FOR EACH ROW EXECUTE FUNCTION recruitment_erasure.guard_pending()"
+        },
+        {
+          "name": "retention_pending_guard",
+          "table": "job_application_status_events",
+          "enabled": "O",
+          "definition": "CREATE TRIGGER retention_pending_guard BEFORE INSERT OR UPDATE ON public.job_application_status_events FOR EACH ROW EXECUTE FUNCTION recruitment_erasure.guard_pending()"
+        },
+        {
+          "name": "retention_pending_guard",
+          "table": "job_applications",
+          "enabled": "O",
+          "definition": "CREATE TRIGGER retention_pending_guard BEFORE INSERT OR UPDATE ON public.job_applications FOR EACH ROW EXECUTE FUNCTION recruitment_erasure.guard_pending()"
+        },
+        {
+          "name": "retention_pending_guard",
+          "table": "jobs",
+          "enabled": "O",
+          "definition": "CREATE TRIGGER retention_pending_guard BEFORE UPDATE ON public.jobs FOR EACH ROW EXECUTE FUNCTION recruitment_erasure.guard_pending()"
+        },
+        {
+          "name": "retention_pending_guard",
+          "table": "recruitment_application_meta",
+          "enabled": "O",
+          "definition": "CREATE TRIGGER retention_pending_guard BEFORE INSERT OR UPDATE ON public.recruitment_application_meta FOR EACH ROW EXECUTE FUNCTION recruitment_erasure.guard_pending()"
+        },
+        {
+          "name": "retention_pending_guard",
+          "table": "recruitment_comments",
+          "enabled": "O",
+          "definition": "CREATE TRIGGER retention_pending_guard BEFORE INSERT OR UPDATE ON public.recruitment_comments FOR EACH ROW EXECUTE FUNCTION recruitment_erasure.guard_pending()"
+        },
+        {
+          "name": "retention_pending_guard",
+          "table": "recruitment_employer_notices",
+          "enabled": "O",
+          "definition": "CREATE TRIGGER retention_pending_guard BEFORE INSERT OR UPDATE ON public.recruitment_employer_notices FOR EACH ROW EXECUTE FUNCTION recruitment_erasure.guard_pending()"
+        },
+        {
+          "name": "retention_pending_guard",
+          "table": "recruitment_interview_bookings",
+          "enabled": "O",
+          "definition": "CREATE TRIGGER retention_pending_guard BEFORE INSERT OR UPDATE ON public.recruitment_interview_bookings FOR EACH ROW EXECUTE FUNCTION recruitment_erasure.guard_pending()"
+        },
+        {
+          "name": "retention_pending_guard",
+          "table": "recruitment_messages",
+          "enabled": "O",
+          "definition": "CREATE TRIGGER retention_pending_guard BEFORE INSERT OR UPDATE ON public.recruitment_messages FOR EACH ROW EXECUTE FUNCTION recruitment_erasure.guard_pending()"
+        },
+        {
+          "name": "retention_pending_guard",
+          "table": "recruitment_settings",
+          "enabled": "O",
+          "definition": "CREATE TRIGGER retention_pending_guard BEFORE UPDATE ON public.recruitment_settings FOR EACH ROW EXECUTE FUNCTION recruitment_erasure.guard_pending()"
+        },
+        {
+          "name": "retention_pending_guard",
+          "table": "scp_assessment_invitations",
+          "enabled": "O",
+          "definition": "CREATE TRIGGER retention_pending_guard BEFORE INSERT OR UPDATE ON public.scp_assessment_invitations FOR EACH ROW EXECUTE FUNCTION recruitment_erasure.guard_pending()"
+        },
+        {
+          "name": "retention_pending_guard",
+          "table": "scp_attempts",
+          "enabled": "O",
+          "definition": "CREATE TRIGGER retention_pending_guard BEFORE INSERT OR UPDATE ON public.scp_attempts FOR EACH ROW EXECUTE FUNCTION recruitment_erasure.guard_pending()"
+        },
+        {
+          "name": "retention_pending_guard",
+          "table": "scp_candidate_responses",
+          "enabled": "O",
+          "definition": "CREATE TRIGGER retention_pending_guard BEFORE INSERT OR UPDATE ON public.scp_candidate_responses FOR EACH ROW EXECUTE FUNCTION recruitment_erasure.guard_pending()"
+        },
+        {
+          "name": "retention_pending_guard",
+          "table": "scp_employer_report_decisions",
+          "enabled": "O",
+          "definition": "CREATE TRIGGER retention_pending_guard BEFORE INSERT OR UPDATE ON public.scp_employer_report_decisions FOR EACH ROW EXECUTE FUNCTION recruitment_erasure.guard_pending()"
+        },
+        {
+          "name": "retention_pending_guard",
+          "table": "scp_integrity_flags",
+          "enabled": "O",
+          "definition": "CREATE TRIGGER retention_pending_guard BEFORE INSERT OR UPDATE ON public.scp_integrity_flags FOR EACH ROW EXECUTE FUNCTION recruitment_erasure.guard_pending()"
+        },
+        {
+          "name": "retention_pending_guard",
+          "table": "scp_interview_ai_runs",
+          "enabled": "O",
+          "definition": "CREATE TRIGGER retention_pending_guard BEFORE INSERT OR UPDATE ON public.scp_interview_ai_runs FOR EACH ROW EXECUTE FUNCTION recruitment_erasure.guard_pending()"
+        },
+        {
+          "name": "retention_pending_guard",
+          "table": "scp_interview_assessments",
+          "enabled": "O",
+          "definition": "CREATE TRIGGER retention_pending_guard BEFORE INSERT OR UPDATE ON public.scp_interview_assessments FOR EACH ROW EXECUTE FUNCTION recruitment_erasure.guard_pending()"
+        },
+        {
+          "name": "retention_pending_guard",
+          "table": "scp_interview_candidate_corrections",
+          "enabled": "O",
+          "definition": "CREATE TRIGGER retention_pending_guard BEFORE INSERT OR UPDATE ON public.scp_interview_candidate_corrections FOR EACH ROW EXECUTE FUNCTION recruitment_erasure.guard_pending()"
+        },
+        {
+          "name": "retention_pending_guard",
+          "table": "scp_interview_candidate_facts",
+          "enabled": "O",
+          "definition": "CREATE TRIGGER retention_pending_guard BEFORE INSERT OR UPDATE ON public.scp_interview_candidate_facts FOR EACH ROW EXECUTE FUNCTION recruitment_erasure.guard_pending()"
+        },
+        {
+          "name": "retention_pending_guard",
+          "table": "scp_interview_case_events",
+          "enabled": "O",
+          "definition": "CREATE TRIGGER retention_pending_guard BEFORE INSERT OR UPDATE ON public.scp_interview_case_events FOR EACH ROW EXECUTE FUNCTION recruitment_erasure.guard_pending()"
+        },
+        {
+          "name": "retention_pending_guard",
+          "table": "scp_interview_case_sources",
+          "enabled": "O",
+          "definition": "CREATE TRIGGER retention_pending_guard BEFORE INSERT OR UPDATE ON public.scp_interview_case_sources FOR EACH ROW EXECUTE FUNCTION recruitment_erasure.guard_pending()"
+        },
+        {
+          "name": "retention_pending_guard",
+          "table": "scp_interview_cases",
+          "enabled": "O",
+          "definition": "CREATE TRIGGER retention_pending_guard BEFORE INSERT OR UPDATE ON public.scp_interview_cases FOR EACH ROW EXECUTE FUNCTION recruitment_erasure.guard_pending()"
+        },
+        {
+          "name": "retention_pending_guard",
+          "table": "scp_interview_evidence",
+          "enabled": "O",
+          "definition": "CREATE TRIGGER retention_pending_guard BEFORE INSERT OR UPDATE ON public.scp_interview_evidence FOR EACH ROW EXECUTE FUNCTION recruitment_erasure.guard_pending()"
+        },
+        {
+          "name": "retention_pending_guard",
+          "table": "scp_interview_evidence_proposals",
+          "enabled": "O",
+          "definition": "CREATE TRIGGER retention_pending_guard BEFORE INSERT OR UPDATE ON public.scp_interview_evidence_proposals FOR EACH ROW EXECUTE FUNCTION recruitment_erasure.guard_pending()"
+        },
+        {
+          "name": "retention_pending_guard",
+          "table": "scp_interview_findings",
+          "enabled": "O",
+          "definition": "CREATE TRIGGER retention_pending_guard BEFORE INSERT OR UPDATE ON public.scp_interview_findings FOR EACH ROW EXECUTE FUNCTION recruitment_erasure.guard_pending()"
+        },
+        {
+          "name": "retention_pending_guard",
+          "table": "scp_interview_notes",
+          "enabled": "O",
+          "definition": "CREATE TRIGGER retention_pending_guard BEFORE INSERT OR UPDATE ON public.scp_interview_notes FOR EACH ROW EXECUTE FUNCTION recruitment_erasure.guard_pending()"
+        },
+        {
+          "name": "retention_pending_guard",
+          "table": "scp_interview_panels",
+          "enabled": "O",
+          "definition": "CREATE TRIGGER retention_pending_guard BEFORE INSERT OR UPDATE ON public.scp_interview_panels FOR EACH ROW EXECUTE FUNCTION recruitment_erasure.guard_pending()"
+        },
+        {
+          "name": "retention_pending_guard",
+          "table": "scp_interview_prep_plans",
+          "enabled": "O",
+          "definition": "CREATE TRIGGER retention_pending_guard BEFORE INSERT OR UPDATE ON public.scp_interview_prep_plans FOR EACH ROW EXECUTE FUNCTION recruitment_erasure.guard_pending()"
+        },
+        {
+          "name": "retention_pending_guard",
+          "table": "scp_interview_probe_usages",
+          "enabled": "O",
+          "definition": "CREATE TRIGGER retention_pending_guard BEFORE INSERT OR UPDATE ON public.scp_interview_probe_usages FOR EACH ROW EXECUTE FUNCTION recruitment_erasure.guard_pending()"
+        },
+        {
+          "name": "retention_pending_guard",
+          "table": "scp_interview_reports",
+          "enabled": "O",
+          "definition": "CREATE TRIGGER retention_pending_guard BEFORE INSERT OR UPDATE ON public.scp_interview_reports FOR EACH ROW EXECUTE FUNCTION recruitment_erasure.guard_pending()"
+        },
+        {
+          "name": "retention_pending_guard",
+          "table": "scp_interview_role_requirements",
+          "enabled": "O",
+          "definition": "CREATE TRIGGER retention_pending_guard BEFORE INSERT OR UPDATE ON public.scp_interview_role_requirements FOR EACH ROW EXECUTE FUNCTION recruitment_erasure.guard_pending()"
+        },
+        {
+          "name": "retention_pending_guard",
+          "table": "scp_interview_session_notes",
+          "enabled": "O",
+          "definition": "CREATE TRIGGER retention_pending_guard BEFORE INSERT OR UPDATE ON public.scp_interview_session_notes FOR EACH ROW EXECUTE FUNCTION recruitment_erasure.guard_pending()"
+        },
+        {
+          "name": "retention_pending_guard",
+          "table": "scp_interview_session_questions",
+          "enabled": "O",
+          "definition": "CREATE TRIGGER retention_pending_guard BEFORE INSERT OR UPDATE ON public.scp_interview_session_questions FOR EACH ROW EXECUTE FUNCTION recruitment_erasure.guard_pending()"
+        },
+        {
+          "name": "retention_pending_guard",
+          "table": "scp_interview_sessions",
+          "enabled": "O",
+          "definition": "CREATE TRIGGER retention_pending_guard BEFORE INSERT OR UPDATE ON public.scp_interview_sessions FOR EACH ROW EXECUTE FUNCTION recruitment_erasure.guard_pending()"
+        },
+        {
+          "name": "retention_pending_guard",
+          "table": "scp_interview_starts",
+          "enabled": "O",
+          "definition": "CREATE TRIGGER retention_pending_guard BEFORE INSERT OR UPDATE ON public.scp_interview_starts FOR EACH ROW EXECUTE FUNCTION recruitment_erasure.guard_pending()"
+        },
+        {
+          "name": "retention_pending_guard",
+          "table": "scp_item_exposure",
+          "enabled": "O",
+          "definition": "CREATE TRIGGER retention_pending_guard BEFORE INSERT OR UPDATE ON public.scp_item_exposure FOR EACH ROW EXECUTE FUNCTION recruitment_erasure.guard_pending()"
+        },
+        {
+          "name": "retention_pending_guard",
+          "table": "scp_report_computation_manifests",
+          "enabled": "O",
+          "definition": "CREATE TRIGGER retention_pending_guard BEFORE INSERT OR UPDATE ON public.scp_report_computation_manifests FOR EACH ROW EXECUTE FUNCTION recruitment_erasure.guard_pending()"
+        },
+        {
+          "name": "retention_pending_guard",
+          "table": "scp_report_snapshots",
+          "enabled": "O",
+          "definition": "CREATE TRIGGER retention_pending_guard BEFORE INSERT OR UPDATE ON public.scp_report_snapshots FOR EACH ROW EXECUTE FUNCTION recruitment_erasure.guard_pending()"
+        },
+        {
+          "name": "retention_pending_guard",
+          "table": "sentinel_sessions",
+          "enabled": "O",
+          "definition": "CREATE TRIGGER retention_pending_guard BEFORE INSERT OR UPDATE ON public.sentinel_sessions FOR EACH ROW EXECUTE FUNCTION recruitment_erasure.guard_pending()"
+        },
+        {
+          "name": "retention_pending_guard",
+          "table": "sp_disclosures",
+          "enabled": "O",
+          "definition": "CREATE TRIGGER retention_pending_guard BEFORE INSERT OR UPDATE ON public.sp_disclosures FOR EACH ROW EXECUTE FUNCTION recruitment_erasure.guard_pending()"
+        }
+      ],
+      "constraints": [
+        {
+          "name": "bcp_invitations_assignment_id_fkey",
+          "table": "bcp_invitations",
+          "definition": "FOREIGN KEY (assignment_id) REFERENCES bcp_assignments(id) DEFERRABLE INITIALLY DEFERRED"
+        },
+        {
+          "name": "employers_recruitment_retention_months_check",
+          "table": "employers",
+          "definition": "CHECK ((recruitment_retention_months = ANY (ARRAY[6, 24])))"
+        },
+        {
+          "name": "scp_manifest_employer_snapshot_fkey",
+          "table": "scp_report_computation_manifests",
+          "definition": "FOREIGN KEY (employer_snapshot_id) REFERENCES scp_report_snapshots(id) DEFERRABLE INITIALLY DEFERRED"
+        },
+        {
+          "name": "storage_erasure_queue_recruitment_erasure_job_id_fkey",
+          "table": "storage_erasure_queue",
+          "definition": "FOREIGN KEY (recruitment_erasure_job_id) REFERENCES recruitment_erasure_jobs(id)"
+        }
+      ],
+      "privateSchemaAcl": [
+        "postgres=UC/postgres"
+      ],
+      "functionPrivileges": [
+        {
+          "role": "anon",
+          "schema": "public",
+          "execute": false,
+          "function": "rec_archive_material"
+        },
+        {
+          "role": "authenticated",
+          "schema": "public",
+          "execute": true,
+          "function": "rec_archive_material"
+        },
+        {
+          "role": "service_role",
+          "schema": "public",
+          "execute": false,
+          "function": "rec_archive_material"
+        },
+        {
+          "role": "anon",
+          "schema": "public",
+          "execute": false,
+          "function": "rec_claim_erasure"
+        },
+        {
+          "role": "authenticated",
+          "schema": "public",
+          "execute": false,
+          "function": "rec_claim_erasure"
+        },
+        {
+          "role": "service_role",
+          "schema": "public",
+          "execute": true,
+          "function": "rec_claim_erasure"
+        },
+        {
+          "role": "anon",
+          "schema": "public",
+          "execute": false,
+          "function": "rec_enqueue_due_retention"
+        },
+        {
+          "role": "authenticated",
+          "schema": "public",
+          "execute": false,
+          "function": "rec_enqueue_due_retention"
+        },
+        {
+          "role": "service_role",
+          "schema": "public",
+          "execute": true,
+          "function": "rec_enqueue_due_retention"
+        },
+        {
+          "role": "anon",
+          "schema": "public",
+          "execute": false,
+          "function": "rec_erasure_file_exists"
+        },
+        {
+          "role": "authenticated",
+          "schema": "public",
+          "execute": false,
+          "function": "rec_erasure_file_exists"
+        },
+        {
+          "role": "service_role",
+          "schema": "public",
+          "execute": true,
+          "function": "rec_erasure_file_exists"
+        },
+        {
+          "role": "anon",
+          "schema": "public",
+          "execute": false,
+          "function": "rec_preview_erasure"
+        },
+        {
+          "role": "authenticated",
+          "schema": "public",
+          "execute": true,
+          "function": "rec_preview_erasure"
+        },
+        {
+          "role": "service_role",
+          "schema": "public",
+          "execute": false,
+          "function": "rec_preview_erasure"
+        },
+        {
+          "role": "anon",
+          "schema": "public",
+          "execute": false,
+          "function": "rec_request_erasure"
+        },
+        {
+          "role": "authenticated",
+          "schema": "public",
+          "execute": true,
+          "function": "rec_request_erasure"
+        },
+        {
+          "role": "service_role",
+          "schema": "public",
+          "execute": false,
+          "function": "rec_request_erasure"
+        },
+        {
+          "role": "anon",
+          "schema": "public",
+          "execute": false,
+          "function": "rec_retention_overview"
+        },
+        {
+          "role": "authenticated",
+          "schema": "public",
+          "execute": true,
+          "function": "rec_retention_overview"
+        },
+        {
+          "role": "service_role",
+          "schema": "public",
+          "execute": false,
+          "function": "rec_retention_overview"
+        },
+        {
+          "role": "anon",
+          "schema": "public",
+          "execute": false,
+          "function": "rec_retention_scope"
+        },
+        {
+          "role": "authenticated",
+          "schema": "public",
+          "execute": false,
+          "function": "rec_retention_scope"
+        },
+        {
+          "role": "service_role",
+          "schema": "public",
+          "execute": false,
+          "function": "rec_retention_scope"
+        },
+        {
+          "role": "anon",
+          "schema": "public",
+          "execute": false,
+          "function": "rec_retry_erasure"
+        },
+        {
+          "role": "authenticated",
+          "schema": "public",
+          "execute": true,
+          "function": "rec_retry_erasure"
+        },
+        {
+          "role": "service_role",
+          "schema": "public",
+          "execute": false,
+          "function": "rec_retry_erasure"
+        },
+        {
+          "role": "anon",
+          "schema": "public",
+          "execute": false,
+          "function": "rec_set_retention"
+        },
+        {
+          "role": "authenticated",
+          "schema": "public",
+          "execute": true,
+          "function": "rec_set_retention"
+        },
+        {
+          "role": "service_role",
+          "schema": "public",
+          "execute": false,
+          "function": "rec_set_retention"
+        },
+        {
+          "role": "anon",
+          "schema": "public",
+          "execute": false,
+          "function": "rec_settle_erasure"
+        },
+        {
+          "role": "authenticated",
+          "schema": "public",
+          "execute": false,
+          "function": "rec_settle_erasure"
+        },
+        {
+          "role": "service_role",
+          "schema": "public",
+          "execute": true,
+          "function": "rec_settle_erasure"
+        },
+        {
+          "role": "anon",
+          "schema": "public",
+          "execute": false,
+          "function": "sweep_application_retention"
+        },
+        {
+          "role": "authenticated",
+          "schema": "public",
+          "execute": false,
+          "function": "sweep_application_retention"
+        },
+        {
+          "role": "service_role",
+          "schema": "public",
+          "execute": false,
+          "function": "sweep_application_retention"
+        },
+        {
+          "role": "anon",
+          "schema": "recruitment_erasure",
+          "execute": true,
+          "function": "allowed_tables"
+        },
+        {
+          "role": "authenticated",
+          "schema": "recruitment_erasure",
+          "execute": true,
+          "function": "allowed_tables"
+        },
+        {
+          "role": "service_role",
+          "schema": "recruitment_erasure",
+          "execute": true,
+          "function": "allowed_tables"
+        },
+        {
+          "role": "anon",
+          "schema": "recruitment_erasure",
+          "execute": true,
+          "function": "guard_pending"
+        },
+        {
+          "role": "authenticated",
+          "schema": "recruitment_erasure",
+          "execute": true,
+          "function": "guard_pending"
+        },
+        {
+          "role": "service_role",
+          "schema": "recruitment_erasure",
+          "execute": true,
+          "function": "guard_pending"
+        },
+        {
+          "role": "anon",
+          "schema": "recruitment_erasure",
+          "execute": true,
+          "function": "guard_period"
+        },
+        {
+          "role": "authenticated",
+          "schema": "recruitment_erasure",
+          "execute": true,
+          "function": "guard_period"
+        },
+        {
+          "role": "service_role",
+          "schema": "recruitment_erasure",
+          "execute": true,
+          "function": "guard_period"
+        },
+        {
+          "role": "anon",
+          "schema": "recruitment_erasure",
+          "execute": false,
+          "function": "plan"
+        },
+        {
+          "role": "authenticated",
+          "schema": "recruitment_erasure",
+          "execute": false,
+          "function": "plan"
+        },
+        {
+          "role": "service_role",
+          "schema": "recruitment_erasure",
+          "execute": false,
+          "function": "plan"
+        },
+        {
+          "role": "anon",
+          "schema": "recruitment_erasure",
+          "execute": false,
+          "function": "releases"
+        },
+        {
+          "role": "authenticated",
+          "schema": "recruitment_erasure",
+          "execute": false,
+          "function": "releases"
+        },
+        {
+          "role": "service_role",
+          "schema": "recruitment_erasure",
+          "execute": false,
+          "function": "releases"
+        }
+      ],
+      "privateTablePrivileges": [
+        {
+          "role": "anon",
+          "table": "activation",
+          "delete": false,
+          "insert": false,
+          "select": false,
+          "update": false
+        },
+        {
+          "role": "authenticated",
+          "table": "activation",
+          "delete": false,
+          "insert": false,
+          "select": false,
+          "update": false
+        },
+        {
+          "role": "service_role",
+          "table": "activation",
+          "delete": false,
+          "insert": false,
+          "select": false,
+          "update": false
+        },
+        {
+          "role": "anon",
+          "table": "row_capability",
+          "delete": false,
+          "insert": false,
+          "select": false,
+          "update": false
+        },
+        {
+          "role": "authenticated",
+          "table": "row_capability",
+          "delete": false,
+          "insert": false,
+          "select": false,
+          "update": false
+        },
+        {
+          "role": "service_role",
+          "table": "row_capability",
+          "delete": false,
+          "insert": false,
+          "select": false,
+          "update": false
+        }
+      ],
+      "privateSchemaPrivileges": [
+        {
+          "role": "anon",
+          "usage": false,
+          "create": false
+        },
+        {
+          "role": "authenticated",
+          "usage": false,
+          "create": false
+        },
+        {
+          "role": "service_role",
+          "usage": false,
+          "create": false
+        }
+      ]
+    }
+  },
+  "preservedImmutabilityGuards": {
+    "count": 7,
+    "originalBodyHashesMatchPreMerge": true,
+    "installedBodiesSecurityConfigAndAclMatchLocalReference": true,
+    "preMerge": [
+      {
+        "schema": "public",
+        "name": "bcp_guard_answer",
+        "args": "",
+        "body_md5": "ea832d04b0054dfea9af93c6949d92ee",
+        "definer": true,
+        "config": [
+          "search_path=public"
+        ]
+      },
+      {
+        "schema": "public",
+        "name": "bcp_guard_assignment",
+        "args": "",
+        "body_md5": "da94ed49587ef2179dcda468d291d080",
+        "definer": true,
+        "config": [
+          "search_path=public"
+        ]
+      },
+      {
+        "schema": "public",
+        "name": "bcp_guard_conduct_report",
+        "args": "",
+        "body_md5": "de787fba0153b6dfc7d6585cc7686925",
+        "definer": true,
+        "config": [
+          "search_path=public"
+        ]
+      },
+      {
+        "schema": "public",
+        "name": "scp_guard_manifest_immutable",
+        "args": "",
+        "body_md5": "a732eec487da7bc46706b2b610c3cefc",
+        "definer": false,
+        "config": [
+          "search_path=public, pg_temp"
+        ]
+      },
+      {
+        "schema": "public",
+        "name": "scp_guard_snapshot_immutable",
+        "args": "",
+        "body_md5": "ed2a8182795ee29cbffb25bc43eac8fa",
+        "definer": false,
+        "config": [
+          "search_path=public, pg_temp"
+        ]
+      },
+      {
+        "schema": "public",
+        "name": "sentinel_erase_assignment",
+        "args": "",
+        "body_md5": "ab99eb7e8747a57d4b9d741e381e695d",
+        "definer": true,
+        "config": [
+          "search_path=public, pg_temp"
+        ]
+      },
+      {
+        "schema": "public",
+        "name": "sp_passport_session_write_guard",
+        "args": "",
+        "body_md5": "0a12b1a539b7fd29e826e43e85337281",
+        "definer": true,
+        "config": [
+          "search_path=\"\""
+        ]
+      }
+    ],
+    "installed": [
+      {
+        "proname": "bcp_guard_answer",
+        "installed_md5": "427d714352bfc4eeadae66849119d153",
+        "original_md5": "ea832d04b0054dfea9af93c6949d92ee",
+        "definer": true,
+        "config": [
+          "search_path=public"
+        ],
+        "acl": [
+          "postgres=X/postgres"
+        ]
+      },
+      {
+        "proname": "bcp_guard_assignment",
+        "installed_md5": "fd876ad9082eb4c971e414422ecea625",
+        "original_md5": "da94ed49587ef2179dcda468d291d080",
+        "definer": true,
+        "config": [
+          "search_path=public"
+        ],
+        "acl": [
+          "postgres=X/postgres"
+        ]
+      },
+      {
+        "proname": "bcp_guard_conduct_report",
+        "installed_md5": "b0c5ed15ccc8e423333be26d36417756",
+        "original_md5": "de787fba0153b6dfc7d6585cc7686925",
+        "definer": true,
+        "config": [
+          "search_path=public"
+        ],
+        "acl": [
+          "postgres=X/postgres"
+        ]
+      },
+      {
+        "proname": "scp_guard_manifest_immutable",
+        "installed_md5": "d1349df5753615cf9e5771114270dfe9",
+        "original_md5": "a732eec487da7bc46706b2b610c3cefc",
+        "definer": false,
+        "config": [
+          "search_path=public, pg_temp"
+        ],
+        "acl": [
+          "postgres=X/postgres"
+        ]
+      },
+      {
+        "proname": "scp_guard_snapshot_immutable",
+        "installed_md5": "3d130e8db6cf09da95fc7cb85c2a25ac",
+        "original_md5": "ed2a8182795ee29cbffb25bc43eac8fa",
+        "definer": false,
+        "config": [
+          "search_path=public, pg_temp"
+        ],
+        "acl": [
+          "postgres=X/postgres"
+        ]
+      },
+      {
+        "proname": "sentinel_erase_assignment",
+        "installed_md5": "a718ef2379ae5d26903f7b33760ffa8d",
+        "original_md5": "ab99eb7e8747a57d4b9d741e381e695d",
+        "definer": true,
+        "config": [
+          "search_path=public, pg_temp"
+        ],
+        "acl": [
+          "postgres=X/postgres"
+        ]
+      },
+      {
+        "proname": "sp_passport_session_write_guard",
+        "installed_md5": "21b2779c4e999aa4e4d3f6fe734da8b2",
+        "original_md5": "0a12b1a539b7fd29e826e43e85337281",
+        "definer": true,
+        "config": [
+          "search_path=\"\""
+        ],
+        "acl": [
+          "postgres=X/postgres"
+        ]
+      }
+    ]
+  },
+  "disabledState": {
+    "jobs": 0,
+    "cvFiles": 10,
+    "ownRuns": 14,
+    "accounts": 23,
+    "linkedFiles": 0,
+    "applications": 16,
+    "cronRelation": null,
+    "passportClaims": 49,
+    "rowCapabilities": 0,
+    "retentionPeriods": {
+      "24": 11
+    },
+    "activationEnabled": false,
+    "archivedApplications": 0,
+    "archivedRecruitments": 0
+  },
+  "preMergeAggregates": {
+    "database_name": "postgres",
+    "erasure_jobs": null,
+    "erasure_schema": null,
+    "accounts": 23,
+    "applications": 16,
+    "passport_claims": 49,
+    "own_runs": 14,
+    "application_cv_objects": 10
+  },
+  "edgeFunctionInventory": [
+    {
+      "name": "passport-share",
+      "status": "ACTIVE",
+      "version": 10
+    },
+    {
+      "name": "transactional-email",
+      "status": "ACTIVE",
+      "version": 11
+    }
+  ],
+  "workerDeployed": false,
+  "cronInstalled": false,
+  "erasureRpcInvoked": false,
+  "storageDeletionInvoked": false,
+  "limitations": [
+    "Only metadata/catalogue and aggregate counters were read; unchanged counters are not a per-row content fingerprint.",
+    "No hosted signed-in UI acceptance or synthetic real-Storage deletion was performed. Real synthetic Storage failure/retry verification in a separate approved test project remains an activation prerequisite.",
+    "Worker, scheduler and automatic queue activation remain separate owner decisions. The retention plan mechanism stays pending."
+  ]
+}

@@ -440,10 +440,10 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // Evidence: docs/release/2026-10-06-united-states-hosted-verification.json.
 // Official integration applied Abu Dhabi and Sentinel; read-only verification
 // 2026-10-06: 381 identities. See sentinel-hosted-verification.json.
-// Application retention is schema-only in #444 and pending until the official
-// integration installs it. Remove this expectation in #445 only after read-only
-// hosted verification is recorded; the schema-first gate still blocks its UI.
-const expectedPending: string[] = ["20270305090000_application_retention_lifecycle.sql"];
+// Application retention (#444) was installed by the official integration and
+// verified read-only on 2026-10-06. #445 records the hosted evidence and removes
+// the pending expectation; worker, cron and erasure activation remain off.
+const expectedPending: string[] = [];
 
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",

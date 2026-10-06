@@ -1,7 +1,12 @@
 # Ansökningslivscykel: separat schema, applikation och aktivering
 
-Status: utveckling på separat branch från `origin/main` (`0aeca50`). Ingen befintlig
-produktionsuppgift har raderats och ingen produktionsmigration eller serverarbetare har aktiverats.
+Status 2026-10-06: ägaren har godkänt mergeordningen #443 → #444 → #445.
+#443 och schema-PR #444 är mergade. Den officiella Supabase-integrationen installerade
+`20270305090000` på `wrygicdfxwjnrugduxnt`; schemat verifierades skrivskyddat 21:26 UTC.
+Bevis: [hosted-verifiering](2026-10-06-application-retention-hosted-verification.json) och
+[läsfrågor](2026-10-06-application-retention-hosted-verification.sql).
+Ingen befintlig produktionsuppgift har raderats. Worker, scheduler och automatisk gallring är avstängda;
+aktivering enligt steg 5–9 nedan kräver fortfarande separat test och ägarbeslut.
 Lovables befintliga rekryterings- och ansökningslayout behålls; en gemensam livscykelsektion läggs till.
 
 ## Kartläggning och återanvändning
@@ -70,6 +75,11 @@ Storage-remove räcker inte: bucket och Storage-katalog kontrolleras. Förlorad 
    rätt backend enligt `supabase/deployment-targets.json`. Bekräfta att
    `recruitment_erasure.activation.enabled=false`. Dokumentera bevis och ändra först då
    `supabase/release-state.json` från `pending` till `applied`.
+   **Utfört efter #444**: 19 funktioner, 58 skyddstriggers, arkivkolumner, privata behörigheter,
+   RLS och sju bevarade låsta rapportskydd verifierade. Föregående 381 migrationsidentiteter är
+   oförändrade; gallringsmigrationen är rad 382. Flaggan är false, gallringsjobben är noll och inga
+   filköposter är kopplade till gallringsjobb.
+   PostgreSQL 17:s extra MAINTAIN-rätt vid GRANT ALL är dokumenterad i beviset; klienterna saknar den.
 4. **Applikations-PR**: slå ihop först när schema-first-spärren är grön. Den tillför portalen, språk,
    integritetstext, isolerade filarbetare och browsertester. Den återanvänder Lovables testlayout.
 5. Driftsätt Edge Function `recruitment-retention` separat i godkänd testmiljö, med `verify_jwt=false`

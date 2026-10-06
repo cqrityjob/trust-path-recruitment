@@ -33,6 +33,8 @@
     "my-career-experience:check": "bun run scripts/my-career-experience-check.tsx",
     "my-career-premium-overview:check": "bun run scripts/my-career-premium-overview-check.tsx",
     "passport-share-transport:check": "bun run scripts/passport-share-transport-check.ts",
+    "application-retention:worker-check": "bun test scripts/application-retention-worker.test.ts",
+    "application-retention:browser-check": "node scripts/retention-browser-check.mjs",
     "receipts:sweep": "bun run scripts/receipts-sweep.ts",
     "negative-controls:p0a": "bun run scripts/negative-controls/p0a-controls.ts",
     "negative-controls:share-gateway-schema": "bun run scripts/negative-controls/share-gateway-schema-controls.ts",

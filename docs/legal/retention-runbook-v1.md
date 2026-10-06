@@ -107,17 +107,29 @@ infördes för lanseringen).
 
 ## R7. Rekryteringsmaterial hos arbetsgivare: standardtid och begäran om kortare tid
 
-**Standardtiden är beslutad** (ägaren 2026-10-04): 24 månader efter att rekryteringen avslutades, enligt
-arbetsgivarens fastställda instruktioner. Arbetsgivaren kan begära en kortare tid. Därefter raderas eller
-anonymiseras materialet.
+Standard: **24 månader efter att rekryteringen avslutades**, enligt arbetsgivarens fastställda
+instruktioner. Arbetsgivaren kan välja **sex månader**. Valet gäller organisationens rekryteringar,
+även redan avslutade. Sex månader räknas som kalendermånader från `recruitment_settings.completed_at`.
+Arkivering, återställning av arkivering, sidvisning och anteckningar ändrar inte datumet. En stängd annons
+utan dokumenterat rekryteringsavslut har inget beräknat gallringsdatum och flaggas för hantering.
 
-Det finns **ännu ingen rutin som tillämpar standardtiden**, så raden `recruitment` är `pending`. Inget är
-gammalt nog före 2028-08 (äldsta ansökan är från 2026-08-17). Före dess måste en rutin finnas som kan avgöra
-varje rekryterings avslutsdatum; kan det inte avgöras för ett fall raderas inget i det fallet. Tills dess:
-kommer en begäran från en arbetsgivare om radering eller kortare tid, hantera den som en ordinarie begäran
-enligt personuppgiftsbiträdesavtalet, i den ordning avtalet anger, och skriv den i R9-registret och i
-loggen. Den äldre funktionen `sweep_application_retention()` (12 månader, raderar i stället för att
-anonymisera) får inte köras eller schemaläggas.
+Utvecklad serverrutin och syntetiska verifieringar finns i
+[aktiveringsplanen](../release/2026-10-06-application-retention-activation.md). Schema, applikation,
+serverarbetare och produktionsaktivering hanteras separat. Rutinen är **ännu inte aktiverad och
+verifierad i produktion**, så raden `recruitment` förblir `pending`. Inga befintliga produktionsuppgifter
+raderas i utvecklingsuppdraget. Det tidigare antagandet ”inget förfallet före 2028-08” gäller inte längre
+alla organisationer när sex månader väljs; använd alltid verkligt avslutsdatum och aktuellt val.
+
+Efter separat aktivering kör servern även utan inloggning. Mostafa granskar misslyckade jobb och kvarvarande
+filer dagligen tills de är lösta, och månadsvis rutinens drift. Redovisa antal köade jobb, fysiskt raderade
+ansökningar, borttagna filer, kvarstående filfel och blockerade delade beroenden i
+`docs/legal/retention-execution-log.md`. En dold rad eller köad radering är inte ett genomfört jobb.
+En radering är slutförd först när materialraderna är borta och alla berörda, exklusiva Storage-objekt har
+verifierats borttagna. Delade CV-filer behålls med sina andra ansökningar. Okända eller delade
+materialberoenden stoppar jobbet för hantering; de tas aldrig bort runt sina skydd.
+
+Den äldre funktionen `sweep_application_retention()` får inte köras eller schemaläggas. Före aktivering
+hanteras en begäran om radering enligt biträdesavtalet, dokumenteras i R9-registret och i loggen.
 
 ## R8. Leverantörernas inställningar (kvartalsvis)
 

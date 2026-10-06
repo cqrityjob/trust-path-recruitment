@@ -310,7 +310,7 @@ export function CandidateTable(props: Props) {
   const questionLabel = (q: { promptSv: string | null; promptEn: string | null }) =>
     (lang === "en" ? q.promptEn || q.promptSv : q.promptSv || q.promptEn) ?? "";
   const stageCount = (s: (typeof STAGE_FILTERS)[number]) => {
-    if (!page) return "";
+    if (!page || s === "archived") return "";
     const c = page.counts;
     const n =
       s === "all"

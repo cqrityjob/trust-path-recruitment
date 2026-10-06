@@ -7,3 +7,6 @@ verify_jwt = false
 # The function authenticates its caller itself (service-role key only), so
 # both the legacy JWT and the newer secret-key format are accepted.
 verify_jwt = false
+
+[functions.recruitment-retention]
+verify_jwt = false

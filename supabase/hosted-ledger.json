@@ -13,8 +13,8 @@
   ],
   "source": "Supabase connector read-only SQL, explicit project wrygicdfxwjnrugduxnt",
   "projectRef": "wrygicdfxwjnrugduxnt",
-  "readAt": "2026-10-06T16:12:55.489645+00:00",
-  "readBy": "Read-only verification after #440 merge: previous identities unchanged; two official integration identities appended. See docs/release/2026-10-06-sentinel-hosted-verification.json.",
+  "readAt": "2026-10-06 21:26:51.60513+00",
+  "readBy": "Read-only verification after #444 merge and official integration: prior 381 identities unchanged, retention migration appended. See docs/release/2026-10-06-application-retention-hosted-verification.json.",
   "versions": [
     {
       "version": "20260716153446",
@@ -1539,6 +1539,10 @@
     {
       "name": "sentinel_abstract_reasoning",
       "version": "20270301090000"
+    },
+    {
+      "name": "application_retention_lifecycle",
+      "version": "20270305090000"
     }
   ]
 }
