@@ -207,7 +207,7 @@ BEGIN
   -- =====================================================================
   PERFORM pg_temp.ok(pg_temp.visible_as(_public, 'is_active') = _prod_total,
     format('2.1 the public holder reads every production type (%s)', _prod_total));
-  -- Since 20270219090000 Abu Dhabi's seven are a PUBLIC pilot, readable by
+  -- Since 20270220090000 Abu Dhabi's seven are a PUBLIC pilot, readable by
   -- every signed-in holder by design; the Route A fixture above pins only the
   -- three internal-pilot markets. So: no inactive type outside a public pilot.
   PERFORM pg_temp.ok(pg_temp.visible_as(_public, $q$NOT is_active AND pilot_state <> 'public_pilot'$q$) = 0
@@ -274,7 +274,7 @@ BEGIN
     RAISE NOTICE 'ok  4.2 GB-NI pack absent (20260914090000 unapplied); NI read skipped';
   END IF;
   PERFORM pg_temp.ok(pg_temp.visible_as(_gb_user, $q$market_pack_code = 'AE-AZ'$q$) = 7,
-    '4.3 the GB member reads the 7 Abu Dhabi rows every signed-in holder reads (public pilot, 20270219090000), not through the grant');
+    '4.3 the GB member reads the 7 Abu Dhabi rows every signed-in holder reads (public pilot, 20270220090000), not through the grant');
 
   -- Cross-jurisdiction is still refused from the strongest position.
   _r := pg_temp.try_claim_as(_gb_user, 'VU1', 'Väktarutbildning 1', 'GB', NULL, 'training');

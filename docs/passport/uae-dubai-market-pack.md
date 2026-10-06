@@ -15,7 +15,7 @@ Security Cadre Card is **not a UAE licence**.
 
 Every row is pinned to `AE-DU`. All seven emirates are listed in
 `sp_sub_jurisdictions`; two are active: Dubai, and Abu Dhabi since its public
-pilot (`20270219090000`, its own pack under the Ministry of Interior, never
+pilot (`20270220090000`, its own pack under the Ministry of Interior, never
 SIRA).
 
 | Emirate        | Code    | Supported |

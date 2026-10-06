@@ -348,7 +348,7 @@ BEGIN
     RAISE NOTICE 'ok  6.2 Fujairah is refused, and never answered with Dubai';
   END;
 
-  -- 20270219090000 opened Abu Dhabi as a public pilot, like Dubai. This block
+  -- 20270220090000 opened Abu Dhabi as a public pilot, like Dubai. This block
   -- runs with NO signed-in user, so both are refused on the same rule: a
   -- public pilot is admitted to a signed-in holder only. Its own suite proves
   -- the acceptance; this one proves it is still never answered with Dubai.
@@ -365,7 +365,7 @@ BEGIN
     IF _txt NOT LIKE 'SP_APPROVED_DEFINITION_REQUIRED%' THEN
       RAISE EXCEPTION 'ASSERTION FAILED: 6.3 wrong error: %', _txt;
     END IF;
-    RAISE NOTICE 'ok  6.3 Abu Dhabi (a public pilot since 20270219090000) is refused without a signed-in holder, as Dubai is, never as Dubai';
+    RAISE NOTICE 'ok  6.3 Abu Dhabi (a public pilot since 20270220090000) is refused without a signed-in holder, as Dubai is, never as Dubai';
   END;
 
   -- =====================================================================
@@ -480,7 +480,7 @@ BEGIN
     RAISE EXCEPTION 'ASSERTION FAILED: 7.7 an Abu Dhabi licence was filed against Dubai';
   EXCEPTION WHEN check_violation THEN
     GET STACKED DIAGNOSTICS _txt = MESSAGE_TEXT;
-    -- Since 20270219090000 the definition IS in the approved catalogue, so the
+    -- Since 20270220090000 the definition IS in the approved catalogue, so the
     -- closed-catalogue guard refuses the wrong emirate by name (governed
     -- metadata), exactly as 7.6 refuses the mirror case. Either refusal keeps
     -- the territory; neither is an acceptance.

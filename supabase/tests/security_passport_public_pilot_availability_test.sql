@@ -68,7 +68,7 @@ SELECT pg_temp.ok((SELECT count(*)=3 FROM public.sp_market_packs
    AND (SELECT count(*)=44 FROM public.sp_credential_types
          WHERE pilot_state='public_pilot' AND market_pack_code IN ('GB','GB-NI','AE-DU'))
    AND (SELECT count(*)=51 FROM public.sp_credential_types WHERE pilot_state='public_pilot'),
- '1.1 what 20261221090000 opened is public_pilot (the UK, Northern Ireland, Dubai, 44 definitions) plus Abu Dhabi''s 7 since 20270219090000: four packs, 51 definitions');
+ '1.1 what 20261221090000 opened is public_pilot (the UK, Northern Ireland, Dubai, 44 definitions) plus Abu Dhabi''s 7 since 20270220090000: four packs, 51 definitions');
 SELECT pg_temp.ok((SELECT bool_and(NOT is_active AND legal_review_state='pending')
      FROM public.sp_market_packs WHERE code IN ('GB','GB-NI','AE-DU'))
    AND (SELECT NOT is_active AND pilot_state='public_pilot' AND legal_review_state='pending' FROM public.sp_market_packs WHERE code='AE-AZ'),
@@ -100,7 +100,7 @@ SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub','fe220000-0000-4000-8000-000000000001',true);
 SELECT pg_temp.ok(public.sp_market_access(auth.uid(),'GB')='public_pilot' AND public.sp_market_access(auth.uid(),'AE-DU')='public_pilot'
    AND public.sp_market_access(auth.uid(),'AE-AZ')='public_pilot' AND public.sp_market_access(auth.uid(),'SE')='production',
- '2.3 the canonical market decision reports public_pilot for an ordinary holder, Abu Dhabi included (20270219090000; the Route A fixture pins only the three)');
+ '2.3 the canonical market decision reports public_pilot for an ordinary holder, Abu Dhabi included (20270220090000; the Route A fixture pins only the three)');
 SELECT pg_temp.ok((SELECT count(*)>0 FROM public.sp_approved_credential_catalogue WHERE country='GB' AND region IS NULL)
    AND (SELECT count(*)>0 FROM public.sp_approved_credential_catalogue WHERE region='AE-DU')
    AND (SELECT count(*)=7 FROM public.sp_approved_credential_catalogue WHERE region='AE-AZ'),

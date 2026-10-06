@@ -1,0 +1,3049 @@
+{
+  "checked_at": "2026-10-06",
+  "production_project": "wrygicdfxwjnrugduxnt",
+  "github_main": "a35131496bc0acfeeb70872a18717265982ef40d",
+  "lovable_synced_commit": "a35131496bc0acfeeb70872a18717265982ef40d",
+  "published_commit": "not independently verified",
+  "scan_timestamp": "UI: Last scan 18 minutes ago; exact timestamp unavailable; basic scan of earlier project version; deep scan failed",
+  "ledger": {
+    "count": 377,
+    "last": "20270217090000",
+    "md5": "8dcb3bba55a422ab257ecc722b016f95"
+  },
+  "metadata": [
+    {
+      "relname": "assessment_versions",
+      "relrowsecurity": true,
+      "relkind": "r",
+      "reloptions": null,
+      "anon_read": true,
+      "auth_read": true,
+      "anon_insert": false,
+      "anon_update": false,
+      "anon_delete": false,
+      "auth_insert": false,
+      "auth_update": false,
+      "auth_delete": false,
+      "columns": [
+        {
+          "acl": null,
+          "name": "id",
+          "type": "uuid"
+        },
+        {
+          "acl": null,
+          "name": "assessment_id",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "model_version",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "disclaimer_version",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "published_at",
+          "type": "timestamp with time zone"
+        },
+        {
+          "acl": null,
+          "name": "retired_at",
+          "type": "timestamp with time zone"
+        },
+        {
+          "acl": null,
+          "name": "notes",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "retired_reason",
+          "type": "text"
+        }
+      ],
+      "policies": [
+        {
+          "cmd": "ALL",
+          "name": "assessment_versions_admin_write",
+          "qual": "(has_role(auth.uid(), 'assessment_editor'::app_role) OR has_role(auth.uid(), 'admin'::app_role) OR has_role(auth.uid(), 'superadmin'::app_role))",
+          "check": "(has_role(auth.uid(), 'assessment_editor'::app_role) OR has_role(auth.uid(), 'admin'::app_role) OR has_role(auth.uid(), 'superadmin'::app_role))",
+          "roles": ["authenticated"]
+        },
+        {
+          "cmd": "SELECT",
+          "name": "assessment_versions_public_read",
+          "qual": "true",
+          "check": null,
+          "roles": ["anon", "authenticated"]
+        }
+      ]
+    },
+    {
+      "relname": "assessments",
+      "relrowsecurity": true,
+      "relkind": "r",
+      "reloptions": null,
+      "anon_read": true,
+      "auth_read": true,
+      "anon_insert": false,
+      "anon_update": false,
+      "anon_delete": false,
+      "auth_insert": false,
+      "auth_update": false,
+      "auth_delete": false,
+      "columns": [
+        {
+          "acl": null,
+          "name": "id",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "name_sv",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "name_en",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "kind",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "created_at",
+          "type": "timestamp with time zone"
+        },
+        {
+          "acl": null,
+          "name": "employer_visible",
+          "type": "boolean"
+        },
+        {
+          "acl": null,
+          "name": "role_category",
+          "type": "text"
+        }
+      ],
+      "policies": [
+        {
+          "cmd": "ALL",
+          "name": "assessments_admin_write",
+          "qual": "(has_role(auth.uid(), 'assessment_editor'::app_role) OR has_role(auth.uid(), 'admin'::app_role) OR has_role(auth.uid(), 'superadmin'::app_role))",
+          "check": "(has_role(auth.uid(), 'assessment_editor'::app_role) OR has_role(auth.uid(), 'admin'::app_role) OR has_role(auth.uid(), 'superadmin'::app_role))",
+          "roles": ["authenticated"]
+        },
+        {
+          "cmd": "SELECT",
+          "name": "assessments_public_read",
+          "qual": "true",
+          "check": null,
+          "roles": ["anon", "authenticated"]
+        }
+      ]
+    },
+    {
+      "relname": "graph_versions",
+      "relrowsecurity": true,
+      "relkind": "r",
+      "reloptions": null,
+      "anon_read": true,
+      "auth_read": true,
+      "anon_insert": false,
+      "anon_update": false,
+      "anon_delete": false,
+      "auth_insert": false,
+      "auth_update": false,
+      "auth_delete": false,
+      "columns": [
+        {
+          "acl": null,
+          "name": "id",
+          "type": "uuid"
+        },
+        {
+          "acl": null,
+          "name": "version",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "notes",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "created_by",
+          "type": "uuid"
+        },
+        {
+          "acl": null,
+          "name": "created_at",
+          "type": "timestamp with time zone"
+        },
+        {
+          "acl": null,
+          "name": "published_at",
+          "type": "timestamp with time zone"
+        },
+        {
+          "acl": null,
+          "name": "is_active",
+          "type": "boolean"
+        }
+      ],
+      "policies": [
+        {
+          "cmd": "ALL",
+          "name": "graph_versions admin write",
+          "qual": "has_role(auth.uid(), 'admin'::app_role)",
+          "check": "has_role(auth.uid(), 'admin'::app_role)",
+          "roles": ["authenticated"]
+        },
+        {
+          "cmd": "SELECT",
+          "name": "graph_versions read all",
+          "qual": "true",
+          "check": null,
+          "roles": ["anon", "authenticated"]
+        }
+      ]
+    },
+    {
+      "relname": "scp_assessment_families",
+      "relrowsecurity": true,
+      "relkind": "r",
+      "reloptions": null,
+      "anon_read": false,
+      "auth_read": true,
+      "anon_insert": false,
+      "anon_update": false,
+      "anon_delete": false,
+      "auth_insert": false,
+      "auth_update": false,
+      "auth_delete": false,
+      "columns": [
+        {
+          "acl": null,
+          "name": "id",
+          "type": "uuid"
+        },
+        {
+          "acl": null,
+          "name": "slug",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "name_sv",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "name_en",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "product_type",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "description_sv",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "description_en",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "created_at",
+          "type": "timestamp with time zone"
+        },
+        {
+          "acl": null,
+          "name": "updated_at",
+          "type": "timestamp with time zone"
+        }
+      ],
+      "policies": [
+        {
+          "cmd": "ALL",
+          "name": "scp_assessment_families_author_write",
+          "qual": "scp_can_author(auth.uid())",
+          "check": "scp_can_author(auth.uid())",
+          "roles": ["authenticated"]
+        },
+        {
+          "cmd": "SELECT",
+          "name": "scp_assessment_families_read",
+          "qual": "true",
+          "check": null,
+          "roles": ["authenticated"]
+        }
+      ]
+    },
+    {
+      "relname": "scp_behaviour_competency_map",
+      "relrowsecurity": true,
+      "relkind": "r",
+      "reloptions": null,
+      "anon_read": false,
+      "auth_read": true,
+      "anon_insert": false,
+      "anon_update": false,
+      "anon_delete": false,
+      "auth_insert": false,
+      "auth_update": false,
+      "auth_delete": false,
+      "columns": [
+        {
+          "acl": null,
+          "name": "id",
+          "type": "uuid"
+        },
+        {
+          "acl": null,
+          "name": "behaviour_version_id",
+          "type": "uuid"
+        },
+        {
+          "acl": null,
+          "name": "competency_version_id",
+          "type": "uuid"
+        },
+        {
+          "acl": null,
+          "name": "weight",
+          "type": "numeric(4,3)"
+        },
+        {
+          "acl": null,
+          "name": "is_primary",
+          "type": "boolean"
+        },
+        {
+          "acl": null,
+          "name": "created_at",
+          "type": "timestamp with time zone"
+        }
+      ],
+      "policies": [
+        {
+          "cmd": "ALL",
+          "name": "scp_behaviour_competency_map_author_write",
+          "qual": "scp_can_author(auth.uid())",
+          "check": "scp_can_author(auth.uid())",
+          "roles": ["authenticated"]
+        },
+        {
+          "cmd": "SELECT",
+          "name": "scp_behaviour_competency_map_read",
+          "qual": "true",
+          "check": null,
+          "roles": ["authenticated"]
+        }
+      ]
+    },
+    {
+      "relname": "scp_bundle_versions",
+      "relrowsecurity": true,
+      "relkind": "r",
+      "reloptions": null,
+      "anon_read": false,
+      "auth_read": true,
+      "anon_insert": false,
+      "anon_update": false,
+      "anon_delete": false,
+      "auth_insert": false,
+      "auth_update": false,
+      "auth_delete": false,
+      "columns": [
+        {
+          "acl": null,
+          "name": "id",
+          "type": "uuid"
+        },
+        {
+          "acl": null,
+          "name": "bundle_id",
+          "type": "uuid"
+        },
+        {
+          "acl": null,
+          "name": "version_number",
+          "type": "integer"
+        },
+        {
+          "acl": null,
+          "name": "content_status",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "validation_status",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "core_assessment_version_id",
+          "type": "uuid"
+        },
+        {
+          "acl": null,
+          "name": "module_assessment_version_id",
+          "type": "uuid"
+        },
+        {
+          "acl": null,
+          "name": "core_form_id",
+          "type": "uuid"
+        },
+        {
+          "acl": null,
+          "name": "module_form_id",
+          "type": "uuid"
+        },
+        {
+          "acl": null,
+          "name": "role_weight_profile_id",
+          "type": "uuid"
+        },
+        {
+          "acl": null,
+          "name": "report_version",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "disclaimer_version",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "content_hash",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "approved_by",
+          "type": "uuid"
+        },
+        {
+          "acl": null,
+          "name": "approved_at",
+          "type": "timestamp with time zone"
+        },
+        {
+          "acl": null,
+          "name": "published_by",
+          "type": "uuid"
+        },
+        {
+          "acl": null,
+          "name": "published_at",
+          "type": "timestamp with time zone"
+        },
+        {
+          "acl": null,
+          "name": "retired_at",
+          "type": "timestamp with time zone"
+        },
+        {
+          "acl": null,
+          "name": "retired_reason",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "created_at",
+          "type": "timestamp with time zone"
+        },
+        {
+          "acl": null,
+          "name": "updated_at",
+          "type": "timestamp with time zone"
+        },
+        {
+          "acl": null,
+          "name": "scoring_version_id",
+          "type": "uuid"
+        }
+      ],
+      "policies": [
+        {
+          "cmd": "ALL",
+          "name": "scp_bundle_versions_author_write",
+          "qual": "scp_can_author(auth.uid())",
+          "check": "scp_can_author(auth.uid())",
+          "roles": ["authenticated"]
+        },
+        {
+          "cmd": "SELECT",
+          "name": "scp_bundle_versions_read",
+          "qual": "true",
+          "check": null,
+          "roles": ["authenticated"]
+        }
+      ]
+    },
+    {
+      "relname": "scp_bundles",
+      "relrowsecurity": true,
+      "relkind": "r",
+      "reloptions": null,
+      "anon_read": false,
+      "auth_read": true,
+      "anon_insert": false,
+      "anon_update": false,
+      "anon_delete": false,
+      "auth_insert": false,
+      "auth_update": false,
+      "auth_delete": false,
+      "columns": [
+        {
+          "acl": null,
+          "name": "id",
+          "type": "uuid"
+        },
+        {
+          "acl": null,
+          "name": "slug",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "profession_id",
+          "type": "uuid"
+        },
+        {
+          "acl": null,
+          "name": "name_sv",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "name_en",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "created_at",
+          "type": "timestamp with time zone"
+        }
+      ],
+      "policies": [
+        {
+          "cmd": "ALL",
+          "name": "scp_bundles_author_write",
+          "qual": "scp_can_author(auth.uid())",
+          "check": "scp_can_author(auth.uid())",
+          "roles": ["authenticated"]
+        },
+        {
+          "cmd": "SELECT",
+          "name": "scp_bundles_read",
+          "qual": "true",
+          "check": null,
+          "roles": ["authenticated"]
+        }
+      ]
+    },
+    {
+      "relname": "scp_competencies",
+      "relrowsecurity": true,
+      "relkind": "r",
+      "reloptions": null,
+      "anon_read": false,
+      "auth_read": true,
+      "anon_insert": false,
+      "anon_update": false,
+      "anon_delete": false,
+      "auth_insert": false,
+      "auth_update": false,
+      "auth_delete": false,
+      "columns": [
+        {
+          "acl": null,
+          "name": "id",
+          "type": "uuid"
+        },
+        {
+          "acl": null,
+          "name": "code",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "display_order",
+          "type": "integer"
+        },
+        {
+          "acl": null,
+          "name": "created_at",
+          "type": "timestamp with time zone"
+        }
+      ],
+      "policies": [
+        {
+          "cmd": "ALL",
+          "name": "scp_competencies_author_write",
+          "qual": "scp_can_author(auth.uid())",
+          "check": "scp_can_author(auth.uid())",
+          "roles": ["authenticated"]
+        },
+        {
+          "cmd": "SELECT",
+          "name": "scp_competencies_read",
+          "qual": "true",
+          "check": null,
+          "roles": ["authenticated"]
+        }
+      ]
+    },
+    {
+      "relname": "scp_competency_facets",
+      "relrowsecurity": true,
+      "relkind": "r",
+      "reloptions": null,
+      "anon_read": false,
+      "auth_read": true,
+      "anon_insert": false,
+      "anon_update": false,
+      "anon_delete": false,
+      "auth_insert": false,
+      "auth_update": false,
+      "auth_delete": false,
+      "columns": [
+        {
+          "acl": null,
+          "name": "id",
+          "type": "uuid"
+        },
+        {
+          "acl": null,
+          "name": "competency_id",
+          "type": "uuid"
+        },
+        {
+          "acl": null,
+          "name": "slug",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "name_sv",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "name_en",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "definition_sv",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "definition_en",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "display_order",
+          "type": "integer"
+        },
+        {
+          "acl": null,
+          "name": "created_at",
+          "type": "timestamp with time zone"
+        }
+      ],
+      "policies": [
+        {
+          "cmd": "ALL",
+          "name": "scp_competency_facets_author_write",
+          "qual": "scp_can_author(auth.uid())",
+          "check": "scp_can_author(auth.uid())",
+          "roles": ["authenticated"]
+        },
+        {
+          "cmd": "SELECT",
+          "name": "scp_competency_facets_read",
+          "qual": "true",
+          "check": null,
+          "roles": ["authenticated"]
+        }
+      ]
+    },
+    {
+      "relname": "scp_competency_versions",
+      "relrowsecurity": true,
+      "relkind": "r",
+      "reloptions": null,
+      "anon_read": false,
+      "auth_read": true,
+      "anon_insert": false,
+      "anon_update": false,
+      "anon_delete": false,
+      "auth_insert": false,
+      "auth_update": false,
+      "auth_delete": false,
+      "columns": [
+        {
+          "acl": null,
+          "name": "id",
+          "type": "uuid"
+        },
+        {
+          "acl": null,
+          "name": "competency_id",
+          "type": "uuid"
+        },
+        {
+          "acl": null,
+          "name": "version_number",
+          "type": "integer"
+        },
+        {
+          "acl": null,
+          "name": "content_status",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "name_sv",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "name_en",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "definition_sv",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "definition_en",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "strong_indicators_sv",
+          "type": "text[]"
+        },
+        {
+          "acl": null,
+          "name": "risk_indicators_sv",
+          "type": "text[]"
+        },
+        {
+          "acl": null,
+          "name": "development_indicators_sv",
+          "type": "text[]"
+        },
+        {
+          "acl": null,
+          "name": "does_not_measure_sv",
+          "type": "text[]"
+        },
+        {
+          "acl": null,
+          "name": "interpretation_rule_sv",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "interpretation_rule_en",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "published_at",
+          "type": "timestamp with time zone"
+        },
+        {
+          "acl": null,
+          "name": "retired_at",
+          "type": "timestamp with time zone"
+        },
+        {
+          "acl": null,
+          "name": "created_at",
+          "type": "timestamp with time zone"
+        },
+        {
+          "acl": null,
+          "name": "updated_at",
+          "type": "timestamp with time zone"
+        }
+      ],
+      "policies": [
+        {
+          "cmd": "ALL",
+          "name": "scp_competency_versions_author_write",
+          "qual": "scp_can_author(auth.uid())",
+          "check": "scp_can_author(auth.uid())",
+          "roles": ["authenticated"]
+        },
+        {
+          "cmd": "SELECT",
+          "name": "scp_competency_versions_read",
+          "qual": "true",
+          "check": null,
+          "roles": ["authenticated"]
+        }
+      ]
+    },
+    {
+      "relname": "scp_contract_versions",
+      "relrowsecurity": true,
+      "relkind": "r",
+      "reloptions": null,
+      "anon_read": false,
+      "auth_read": true,
+      "anon_insert": false,
+      "anon_update": false,
+      "anon_delete": false,
+      "auth_insert": false,
+      "auth_update": false,
+      "auth_delete": false,
+      "columns": [
+        {
+          "acl": null,
+          "name": "id",
+          "type": "uuid"
+        },
+        {
+          "acl": null,
+          "name": "contract_version",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "read_model",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "status",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "intended_consumer",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "scope_note",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "deprecated_at",
+          "type": "timestamp with time zone"
+        },
+        {
+          "acl": null,
+          "name": "created_at",
+          "type": "timestamp with time zone"
+        }
+      ],
+      "policies": [
+        {
+          "cmd": "ALL",
+          "name": "scp_contract_versions_author_write",
+          "qual": "scp_can_author(auth.uid())",
+          "check": "scp_can_author(auth.uid())",
+          "roles": ["authenticated"]
+        },
+        {
+          "cmd": "SELECT",
+          "name": "scp_contract_versions_read",
+          "qual": "true",
+          "check": null,
+          "roles": ["authenticated"]
+        }
+      ]
+    },
+    {
+      "relname": "scp_evidence_source_types",
+      "relrowsecurity": true,
+      "relkind": "r",
+      "reloptions": null,
+      "anon_read": false,
+      "auth_read": true,
+      "anon_insert": false,
+      "anon_update": false,
+      "anon_delete": false,
+      "auth_insert": false,
+      "auth_update": false,
+      "auth_delete": false,
+      "columns": [
+        {
+          "acl": null,
+          "name": "code",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "name_sv",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "name_en",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "has_active_writer",
+          "type": "boolean"
+        },
+        {
+          "acl": null,
+          "name": "created_at",
+          "type": "timestamp with time zone"
+        },
+        {
+          "acl": null,
+          "name": "counts_toward_maturity",
+          "type": "boolean"
+        }
+      ],
+      "policies": [
+        {
+          "cmd": "ALL",
+          "name": "scp_evidence_source_types_author_write",
+          "qual": "scp_can_author(auth.uid())",
+          "check": "scp_can_author(auth.uid())",
+          "roles": ["authenticated"]
+        },
+        {
+          "cmd": "SELECT",
+          "name": "scp_evidence_source_types_read",
+          "qual": "true",
+          "check": null,
+          "roles": ["authenticated"]
+        }
+      ]
+    },
+    {
+      "relname": "scp_followup_prompts",
+      "relrowsecurity": true,
+      "relkind": "r",
+      "reloptions": null,
+      "anon_read": false,
+      "auth_read": true,
+      "anon_insert": false,
+      "anon_update": false,
+      "anon_delete": false,
+      "auth_insert": false,
+      "auth_update": false,
+      "auth_delete": false,
+      "columns": [
+        {
+          "acl": null,
+          "name": "id",
+          "type": "uuid"
+        },
+        {
+          "acl": null,
+          "name": "competency_id",
+          "type": "uuid"
+        },
+        {
+          "acl": null,
+          "name": "audience",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "version_number",
+          "type": "integer"
+        },
+        {
+          "acl": null,
+          "name": "content_status",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "prompt_sv",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "prompt_en",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "created_at",
+          "type": "timestamp with time zone"
+        }
+      ],
+      "policies": [
+        {
+          "cmd": "ALL",
+          "name": "scp_followup_prompts_author_write",
+          "qual": "scp_can_author(auth.uid())",
+          "check": "scp_can_author(auth.uid())",
+          "roles": ["authenticated"]
+        },
+        {
+          "cmd": "SELECT",
+          "name": "scp_followup_prompts_read",
+          "qual": "true",
+          "check": null,
+          "roles": ["authenticated"]
+        }
+      ]
+    },
+    {
+      "relname": "scp_form_blocks",
+      "relrowsecurity": true,
+      "relkind": "r",
+      "reloptions": null,
+      "anon_read": false,
+      "auth_read": true,
+      "anon_insert": false,
+      "anon_update": false,
+      "anon_delete": false,
+      "auth_insert": false,
+      "auth_update": false,
+      "auth_delete": false,
+      "columns": [
+        {
+          "acl": null,
+          "name": "id",
+          "type": "uuid"
+        },
+        {
+          "acl": null,
+          "name": "form_id",
+          "type": "uuid"
+        },
+        {
+          "acl": null,
+          "name": "block_key",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "display_order",
+          "type": "integer"
+        },
+        {
+          "acl": null,
+          "name": "name_sv",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "name_en",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "intro_sv",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "intro_en",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "asks",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "created_at",
+          "type": "timestamp with time zone"
+        }
+      ],
+      "policies": [
+        {
+          "cmd": "SELECT",
+          "name": "scp_form_blocks_read",
+          "qual": "true",
+          "check": null,
+          "roles": ["authenticated"]
+        }
+      ]
+    },
+    {
+      "relname": "scp_forms",
+      "relrowsecurity": true,
+      "relkind": "r",
+      "reloptions": null,
+      "anon_read": false,
+      "auth_read": true,
+      "anon_insert": false,
+      "anon_update": false,
+      "anon_delete": false,
+      "auth_insert": false,
+      "auth_update": false,
+      "auth_delete": false,
+      "columns": [
+        {
+          "acl": null,
+          "name": "id",
+          "type": "uuid"
+        },
+        {
+          "acl": null,
+          "name": "assessment_version_id",
+          "type": "uuid"
+        },
+        {
+          "acl": null,
+          "name": "slug",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "name_sv",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "name_en",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "target_minutes_min",
+          "type": "integer"
+        },
+        {
+          "acl": null,
+          "name": "target_minutes_max",
+          "type": "integer"
+        },
+        {
+          "acl": null,
+          "name": "randomise_within_block",
+          "type": "boolean"
+        },
+        {
+          "acl": null,
+          "name": "content_hash",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "created_at",
+          "type": "timestamp with time zone"
+        },
+        {
+          "acl": null,
+          "name": "updated_at",
+          "type": "timestamp with time zone"
+        }
+      ],
+      "policies": [
+        {
+          "cmd": "ALL",
+          "name": "scp_forms_author_write",
+          "qual": "scp_can_author(auth.uid())",
+          "check": "scp_can_author(auth.uid())",
+          "roles": ["authenticated"]
+        },
+        {
+          "cmd": "SELECT",
+          "name": "scp_forms_read",
+          "qual": "true",
+          "check": null,
+          "roles": ["authenticated"]
+        }
+      ]
+    },
+    {
+      "relname": "scp_jurisdictions",
+      "relrowsecurity": true,
+      "relkind": "r",
+      "reloptions": null,
+      "anon_read": false,
+      "auth_read": true,
+      "anon_insert": false,
+      "anon_update": false,
+      "anon_delete": false,
+      "auth_insert": false,
+      "auth_update": false,
+      "auth_delete": false,
+      "columns": [
+        {
+          "acl": null,
+          "name": "id",
+          "type": "uuid"
+        },
+        {
+          "acl": null,
+          "name": "code",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "name_sv",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "name_en",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "is_active",
+          "type": "boolean"
+        },
+        {
+          "acl": null,
+          "name": "created_at",
+          "type": "timestamp with time zone"
+        }
+      ],
+      "policies": [
+        {
+          "cmd": "ALL",
+          "name": "scp_jurisdictions_author_write",
+          "qual": "scp_can_author(auth.uid())",
+          "check": "scp_can_author(auth.uid())",
+          "roles": ["authenticated"]
+        },
+        {
+          "cmd": "SELECT",
+          "name": "scp_jurisdictions_read",
+          "qual": "true",
+          "check": null,
+          "roles": ["authenticated"]
+        }
+      ]
+    },
+    {
+      "relname": "scp_maturity_thresholds",
+      "relrowsecurity": true,
+      "relkind": "r",
+      "reloptions": null,
+      "anon_read": false,
+      "auth_read": true,
+      "anon_insert": false,
+      "anon_update": false,
+      "anon_delete": false,
+      "auth_insert": false,
+      "auth_update": false,
+      "auth_delete": false,
+      "columns": [
+        {
+          "acl": null,
+          "name": "id",
+          "type": "uuid"
+        },
+        {
+          "acl": null,
+          "name": "threshold_version",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "level",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "min_mean_contribution",
+          "type": "numeric(4,3)"
+        },
+        {
+          "acl": null,
+          "name": "min_observations",
+          "type": "integer"
+        },
+        {
+          "acl": null,
+          "name": "min_contexts",
+          "type": "integer"
+        },
+        {
+          "acl": null,
+          "name": "min_source_types",
+          "type": "integer"
+        },
+        {
+          "acl": null,
+          "name": "max_age_days",
+          "type": "integer"
+        },
+        {
+          "acl": null,
+          "name": "is_active",
+          "type": "boolean"
+        },
+        {
+          "acl": null,
+          "name": "created_at",
+          "type": "timestamp with time zone"
+        }
+      ],
+      "policies": [
+        {
+          "cmd": "ALL",
+          "name": "scp_maturity_thresholds_author_write",
+          "qual": "scp_can_author(auth.uid())",
+          "check": "scp_can_author(auth.uid())",
+          "roles": ["authenticated"]
+        },
+        {
+          "cmd": "SELECT",
+          "name": "scp_maturity_thresholds_read",
+          "qual": "true",
+          "check": null,
+          "roles": ["authenticated"]
+        }
+      ]
+    },
+    {
+      "relname": "scp_observable_behaviours",
+      "relrowsecurity": true,
+      "relkind": "r",
+      "reloptions": null,
+      "anon_read": false,
+      "auth_read": true,
+      "anon_insert": false,
+      "anon_update": false,
+      "anon_delete": false,
+      "auth_insert": false,
+      "auth_update": false,
+      "auth_delete": false,
+      "columns": [
+        {
+          "acl": null,
+          "name": "id",
+          "type": "uuid"
+        },
+        {
+          "acl": null,
+          "name": "slug",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "created_at",
+          "type": "timestamp with time zone"
+        }
+      ],
+      "policies": [
+        {
+          "cmd": "ALL",
+          "name": "scp_observable_behaviours_author_write",
+          "qual": "scp_can_author(auth.uid())",
+          "check": "scp_can_author(auth.uid())",
+          "roles": ["authenticated"]
+        },
+        {
+          "cmd": "SELECT",
+          "name": "scp_observable_behaviours_read",
+          "qual": "true",
+          "check": null,
+          "roles": ["authenticated"]
+        }
+      ]
+    },
+    {
+      "relname": "scp_processing_purposes",
+      "relrowsecurity": true,
+      "relkind": "r",
+      "reloptions": null,
+      "anon_read": false,
+      "auth_read": true,
+      "anon_insert": false,
+      "anon_update": false,
+      "anon_delete": false,
+      "auth_insert": false,
+      "auth_update": false,
+      "auth_delete": false,
+      "columns": [
+        {
+          "acl": null,
+          "name": "code",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "name_sv",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "name_en",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "is_active",
+          "type": "boolean"
+        },
+        {
+          "acl": null,
+          "name": "created_at",
+          "type": "timestamp with time zone"
+        }
+      ],
+      "policies": [
+        {
+          "cmd": "ALL",
+          "name": "scp_processing_purposes_author_write",
+          "qual": "scp_can_author(auth.uid())",
+          "check": "scp_can_author(auth.uid())",
+          "roles": ["authenticated"]
+        },
+        {
+          "cmd": "SELECT",
+          "name": "scp_processing_purposes_read",
+          "qual": "true",
+          "check": null,
+          "roles": ["authenticated"]
+        }
+      ]
+    },
+    {
+      "relname": "scp_professions",
+      "relrowsecurity": true,
+      "relkind": "r",
+      "reloptions": null,
+      "anon_read": false,
+      "auth_read": true,
+      "anon_insert": false,
+      "anon_update": false,
+      "anon_delete": false,
+      "auth_insert": false,
+      "auth_update": false,
+      "auth_delete": false,
+      "columns": [
+        {
+          "acl": null,
+          "name": "id",
+          "type": "uuid"
+        },
+        {
+          "acl": null,
+          "name": "slug",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "name_sv",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "name_en",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "market",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "legally_regulated",
+          "type": "boolean"
+        },
+        {
+          "acl": null,
+          "name": "regulator_note_sv",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "description_sv",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "description_en",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "created_at",
+          "type": "timestamp with time zone"
+        },
+        {
+          "acl": null,
+          "name": "updated_at",
+          "type": "timestamp with time zone"
+        }
+      ],
+      "policies": [
+        {
+          "cmd": "ALL",
+          "name": "scp_professions_author_write",
+          "qual": "scp_can_author(auth.uid())",
+          "check": "scp_can_author(auth.uid())",
+          "roles": ["authenticated"]
+        },
+        {
+          "cmd": "SELECT",
+          "name": "scp_professions_read",
+          "qual": "true",
+          "check": null,
+          "roles": ["authenticated"]
+        }
+      ]
+    },
+    {
+      "relname": "scp_purpose_versions",
+      "relrowsecurity": true,
+      "relkind": "r",
+      "reloptions": null,
+      "anon_read": false,
+      "auth_read": true,
+      "anon_insert": false,
+      "anon_update": false,
+      "anon_delete": false,
+      "auth_insert": false,
+      "auth_update": false,
+      "auth_delete": false,
+      "columns": [
+        {
+          "acl": null,
+          "name": "id",
+          "type": "uuid"
+        },
+        {
+          "acl": null,
+          "name": "purpose_code",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "version_number",
+          "type": "integer"
+        },
+        {
+          "acl": null,
+          "name": "privacy_notice_version",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "lawful_basis_reference",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "jurisdiction_id",
+          "type": "uuid"
+        },
+        {
+          "acl": null,
+          "name": "published_at",
+          "type": "timestamp with time zone"
+        },
+        {
+          "acl": null,
+          "name": "retired_at",
+          "type": "timestamp with time zone"
+        },
+        {
+          "acl": null,
+          "name": "created_at",
+          "type": "timestamp with time zone"
+        }
+      ],
+      "policies": [
+        {
+          "cmd": "ALL",
+          "name": "scp_purpose_versions_author_write",
+          "qual": "scp_can_author(auth.uid())",
+          "check": "scp_can_author(auth.uid())",
+          "roles": ["authenticated"]
+        },
+        {
+          "cmd": "SELECT",
+          "name": "scp_purpose_versions_read",
+          "qual": "true",
+          "check": null,
+          "roles": ["authenticated"]
+        }
+      ]
+    },
+    {
+      "relname": "scp_recruitment_content_links",
+      "relrowsecurity": true,
+      "relkind": "r",
+      "reloptions": null,
+      "anon_read": false,
+      "auth_read": true,
+      "anon_insert": false,
+      "anon_update": false,
+      "anon_delete": false,
+      "auth_insert": false,
+      "auth_update": false,
+      "auth_delete": false,
+      "columns": [
+        {
+          "acl": null,
+          "name": "id",
+          "type": "uuid"
+        },
+        {
+          "acl": null,
+          "name": "role_profile",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "environment",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "interview_pack_id",
+          "type": "uuid"
+        },
+        {
+          "acl": null,
+          "name": "assessment_definition_id",
+          "type": "uuid"
+        },
+        {
+          "acl": null,
+          "name": "created_at",
+          "type": "timestamp with time zone"
+        }
+      ],
+      "policies": [
+        {
+          "cmd": "SELECT",
+          "name": "scp_recruitment_content_links_read",
+          "qual": "true",
+          "check": null,
+          "roles": ["authenticated"]
+        }
+      ]
+    },
+    {
+      "relname": "scp_recruitment_role_profiles",
+      "relrowsecurity": true,
+      "relkind": "r",
+      "reloptions": null,
+      "anon_read": false,
+      "auth_read": true,
+      "anon_insert": false,
+      "anon_update": false,
+      "anon_delete": false,
+      "auth_insert": false,
+      "auth_update": false,
+      "auth_delete": false,
+      "columns": [
+        {
+          "acl": null,
+          "name": "role_profile",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "role_group",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "role_id",
+          "type": "uuid"
+        },
+        {
+          "acl": null,
+          "name": "created_at",
+          "type": "timestamp with time zone"
+        }
+      ],
+      "policies": [
+        {
+          "cmd": "SELECT",
+          "name": "scp_recruitment_role_profiles_read",
+          "qual": "true",
+          "check": null,
+          "roles": ["authenticated"]
+        }
+      ]
+    },
+    {
+      "relname": "scp_report_versions",
+      "relrowsecurity": true,
+      "relkind": "r",
+      "reloptions": null,
+      "anon_read": false,
+      "auth_read": true,
+      "anon_insert": false,
+      "anon_update": false,
+      "anon_delete": false,
+      "auth_insert": false,
+      "auth_update": false,
+      "auth_delete": false,
+      "columns": [
+        {
+          "acl": null,
+          "name": "id",
+          "type": "uuid"
+        },
+        {
+          "acl": null,
+          "name": "report_key",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "version_number",
+          "type": "integer"
+        },
+        {
+          "acl": null,
+          "name": "content_status",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "audience",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "threshold_version",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "limitations_sv",
+          "type": "text[]"
+        },
+        {
+          "acl": null,
+          "name": "limitations_en",
+          "type": "text[]"
+        },
+        {
+          "acl": null,
+          "name": "published_at",
+          "type": "timestamp with time zone"
+        },
+        {
+          "acl": null,
+          "name": "retired_at",
+          "type": "timestamp with time zone"
+        },
+        {
+          "acl": null,
+          "name": "created_at",
+          "type": "timestamp with time zone"
+        },
+        {
+          "acl": null,
+          "name": "governance_mode",
+          "type": "scp_governance_mode"
+        }
+      ],
+      "policies": [
+        {
+          "cmd": "ALL",
+          "name": "scp_report_versions_author_write",
+          "qual": "scp_can_author(auth.uid())",
+          "check": "scp_can_author(auth.uid())",
+          "roles": ["authenticated"]
+        },
+        {
+          "cmd": "SELECT",
+          "name": "scp_report_versions_read",
+          "qual": "true",
+          "check": null,
+          "roles": ["authenticated"]
+        }
+      ]
+    },
+    {
+      "relname": "scp_role_competency_map",
+      "relrowsecurity": true,
+      "relkind": "r",
+      "reloptions": null,
+      "anon_read": false,
+      "auth_read": true,
+      "anon_insert": false,
+      "anon_update": false,
+      "anon_delete": false,
+      "auth_insert": false,
+      "auth_update": false,
+      "auth_delete": false,
+      "columns": [
+        {
+          "acl": null,
+          "name": "id",
+          "type": "uuid"
+        },
+        {
+          "acl": null,
+          "name": "role_version_id",
+          "type": "uuid"
+        },
+        {
+          "acl": null,
+          "name": "competency_version_id",
+          "type": "uuid"
+        },
+        {
+          "acl": null,
+          "name": "criticality",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "created_at",
+          "type": "timestamp with time zone"
+        }
+      ],
+      "policies": [
+        {
+          "cmd": "ALL",
+          "name": "scp_role_competency_map_author_write",
+          "qual": "scp_can_author(auth.uid())",
+          "check": "scp_can_author(auth.uid())",
+          "roles": ["authenticated"]
+        },
+        {
+          "cmd": "SELECT",
+          "name": "scp_role_competency_map_read",
+          "qual": "true",
+          "check": null,
+          "roles": ["authenticated"]
+        }
+      ]
+    },
+    {
+      "relname": "scp_role_weight_profiles",
+      "relrowsecurity": true,
+      "relkind": "r",
+      "reloptions": null,
+      "anon_read": false,
+      "auth_read": true,
+      "anon_insert": false,
+      "anon_update": false,
+      "anon_delete": false,
+      "auth_insert": false,
+      "auth_update": false,
+      "auth_delete": false,
+      "columns": [
+        {
+          "acl": null,
+          "name": "id",
+          "type": "uuid"
+        },
+        {
+          "acl": null,
+          "name": "profession_id",
+          "type": "uuid"
+        },
+        {
+          "acl": null,
+          "name": "version_number",
+          "type": "integer"
+        },
+        {
+          "acl": null,
+          "name": "content_status",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "validation_status",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "notes",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "content_hash",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "published_at",
+          "type": "timestamp with time zone"
+        },
+        {
+          "acl": null,
+          "name": "retired_at",
+          "type": "timestamp with time zone"
+        },
+        {
+          "acl": null,
+          "name": "created_at",
+          "type": "timestamp with time zone"
+        },
+        {
+          "acl": null,
+          "name": "updated_at",
+          "type": "timestamp with time zone"
+        }
+      ],
+      "policies": [
+        {
+          "cmd": "ALL",
+          "name": "scp_role_weight_profiles_author_write",
+          "qual": "scp_can_author(auth.uid())",
+          "check": "scp_can_author(auth.uid())",
+          "roles": ["authenticated"]
+        },
+        {
+          "cmd": "SELECT",
+          "name": "scp_role_weight_profiles_read",
+          "qual": "true",
+          "check": null,
+          "roles": ["authenticated"]
+        }
+      ]
+    },
+    {
+      "relname": "scp_roles",
+      "relrowsecurity": true,
+      "relkind": "r",
+      "reloptions": null,
+      "anon_read": false,
+      "auth_read": true,
+      "anon_insert": false,
+      "anon_update": false,
+      "anon_delete": false,
+      "auth_insert": false,
+      "auth_update": false,
+      "auth_delete": false,
+      "columns": [
+        {
+          "acl": null,
+          "name": "id",
+          "type": "uuid"
+        },
+        {
+          "acl": null,
+          "name": "slug",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "profession_id",
+          "type": "uuid"
+        },
+        {
+          "acl": null,
+          "name": "created_at",
+          "type": "timestamp with time zone"
+        }
+      ],
+      "policies": [
+        {
+          "cmd": "ALL",
+          "name": "scp_roles_author_write",
+          "qual": "scp_can_author(auth.uid())",
+          "check": "scp_can_author(auth.uid())",
+          "roles": ["authenticated"]
+        },
+        {
+          "cmd": "SELECT",
+          "name": "scp_roles_read",
+          "qual": "true",
+          "check": null,
+          "roles": ["authenticated"]
+        }
+      ]
+    },
+    {
+      "relname": "scp_scenarios",
+      "relrowsecurity": true,
+      "relkind": "r",
+      "reloptions": null,
+      "anon_read": false,
+      "auth_read": true,
+      "anon_insert": false,
+      "anon_update": false,
+      "anon_delete": false,
+      "auth_insert": false,
+      "auth_update": false,
+      "auth_delete": false,
+      "columns": [
+        {
+          "acl": null,
+          "name": "id",
+          "type": "uuid"
+        },
+        {
+          "acl": null,
+          "name": "slug",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "created_at",
+          "type": "timestamp with time zone"
+        }
+      ],
+      "policies": [
+        {
+          "cmd": "ALL",
+          "name": "scp_scenarios_author_write",
+          "qual": "scp_can_author(auth.uid())",
+          "check": "scp_can_author(auth.uid())",
+          "roles": ["authenticated"]
+        },
+        {
+          "cmd": "SELECT",
+          "name": "scp_scenarios_read",
+          "qual": "true",
+          "check": null,
+          "roles": ["authenticated"]
+        }
+      ]
+    },
+    {
+      "relname": "sp_certification_definitions",
+      "relrowsecurity": true,
+      "relkind": "r",
+      "reloptions": null,
+      "anon_read": false,
+      "auth_read": true,
+      "anon_insert": false,
+      "anon_update": false,
+      "anon_delete": false,
+      "auth_insert": false,
+      "auth_update": false,
+      "auth_delete": false,
+      "columns": [
+        {
+          "acl": null,
+          "name": "credential_code",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "issuer_id",
+          "type": "uuid"
+        },
+        {
+          "acl": null,
+          "name": "canonical_name_en",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "abbreviation",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "programme_url",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "maintenance_policy_url",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "maintenance_policy_type",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "maintenance_cycle_months",
+          "type": "integer"
+        },
+        {
+          "acl": null,
+          "name": "maintenance_summary_en",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "maintenance_policy_version",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "maintenance_policy_effective_from",
+          "type": "date"
+        },
+        {
+          "acl": null,
+          "name": "public_verification_url",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "source_reviewed_on",
+          "type": "date"
+        },
+        {
+          "acl": null,
+          "name": "effective_from",
+          "type": "date"
+        },
+        {
+          "acl": null,
+          "name": "retired_on",
+          "type": "date"
+        },
+        {
+          "acl": null,
+          "name": "replaced_by_code",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "created_at",
+          "type": "timestamp with time zone"
+        },
+        {
+          "acl": null,
+          "name": "updated_at",
+          "type": "timestamp with time zone"
+        }
+      ],
+      "policies": [
+        {
+          "cmd": "SELECT",
+          "name": "sp_certification_definitions_read",
+          "qual": "true",
+          "check": null,
+          "roles": ["authenticated"]
+        }
+      ]
+    },
+    {
+      "relname": "sp_certification_issuer_aliases",
+      "relrowsecurity": true,
+      "relkind": "r",
+      "reloptions": null,
+      "anon_read": false,
+      "auth_read": true,
+      "anon_insert": false,
+      "anon_update": false,
+      "anon_delete": false,
+      "auth_insert": false,
+      "auth_update": false,
+      "auth_delete": false,
+      "columns": [
+        {
+          "acl": null,
+          "name": "issuer_id",
+          "type": "uuid"
+        },
+        {
+          "acl": null,
+          "name": "alias",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "alias_kind",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "created_at",
+          "type": "timestamp with time zone"
+        }
+      ],
+      "policies": [
+        {
+          "cmd": "SELECT",
+          "name": "sp_certification_issuer_aliases_read",
+          "qual": "true",
+          "check": null,
+          "roles": ["authenticated"]
+        }
+      ]
+    },
+    {
+      "relname": "sp_certification_issuers",
+      "relrowsecurity": true,
+      "relkind": "r",
+      "reloptions": null,
+      "anon_read": false,
+      "auth_read": true,
+      "anon_insert": false,
+      "anon_update": false,
+      "anon_delete": false,
+      "auth_insert": false,
+      "auth_update": false,
+      "auth_delete": false,
+      "columns": [
+        {
+          "acl": null,
+          "name": "id",
+          "type": "uuid"
+        },
+        {
+          "acl": null,
+          "name": "issuer_code",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "display_name",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "legal_name",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "official_url",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "verification_mode",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "public_verification_url",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "absence_is_inconclusive",
+          "type": "boolean"
+        },
+        {
+          "acl": null,
+          "name": "source_reviewed_on",
+          "type": "date"
+        },
+        {
+          "acl": null,
+          "name": "effective_from",
+          "type": "date"
+        },
+        {
+          "acl": null,
+          "name": "effective_to",
+          "type": "date"
+        },
+        {
+          "acl": null,
+          "name": "is_active",
+          "type": "boolean"
+        },
+        {
+          "acl": null,
+          "name": "predecessor_issuer_id",
+          "type": "uuid"
+        },
+        {
+          "acl": null,
+          "name": "successor_issuer_id",
+          "type": "uuid"
+        },
+        {
+          "acl": null,
+          "name": "created_at",
+          "type": "timestamp with time zone"
+        },
+        {
+          "acl": null,
+          "name": "updated_at",
+          "type": "timestamp with time zone"
+        }
+      ],
+      "policies": [
+        {
+          "cmd": "SELECT",
+          "name": "sp_certification_issuers_read",
+          "qual": "true",
+          "check": null,
+          "roles": ["authenticated"]
+        }
+      ]
+    },
+    {
+      "relname": "sp_credential_classes",
+      "relrowsecurity": true,
+      "relkind": "r",
+      "reloptions": null,
+      "anon_read": false,
+      "auth_read": true,
+      "anon_insert": false,
+      "anon_update": false,
+      "anon_delete": false,
+      "auth_insert": false,
+      "auth_update": false,
+      "auth_delete": false,
+      "columns": [
+        {
+          "acl": null,
+          "name": "code",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "name_sv",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "name_en",
+          "type": "text"
+        }
+      ],
+      "policies": [
+        {
+          "cmd": "SELECT",
+          "name": "credential_classes_read",
+          "qual": "true",
+          "check": null,
+          "roles": ["authenticated"]
+        }
+      ]
+    },
+    {
+      "relname": "sp_credential_definition_reviews",
+      "relrowsecurity": true,
+      "relkind": "r",
+      "reloptions": null,
+      "anon_read": false,
+      "auth_read": true,
+      "anon_insert": false,
+      "anon_update": false,
+      "anon_delete": false,
+      "auth_insert": false,
+      "auth_update": false,
+      "auth_delete": false,
+      "columns": [
+        {
+          "acl": null,
+          "name": "credential_code",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "professional_domain",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "source_url",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "checked_on",
+          "type": "date"
+        },
+        {
+          "acl": null,
+          "name": "validity_sv",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "validity_en",
+          "type": "text"
+        }
+      ],
+      "policies": [
+        {
+          "cmd": "SELECT",
+          "name": "sp_definition_reviews_read",
+          "qual": "true",
+          "check": null,
+          "roles": ["authenticated"]
+        }
+      ]
+    },
+    {
+      "relname": "sp_credential_definition_versions",
+      "relrowsecurity": true,
+      "relkind": "r",
+      "reloptions": null,
+      "anon_read": false,
+      "auth_read": true,
+      "anon_insert": false,
+      "anon_update": false,
+      "anon_delete": false,
+      "auth_insert": false,
+      "auth_update": false,
+      "auth_delete": false,
+      "columns": [
+        {
+          "acl": null,
+          "name": "credential_code",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "version_key",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "official_title",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "qualification_code",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "qualification_version",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "register_code",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "framework_level",
+          "type": "numeric(3,1)"
+        },
+        {
+          "acl": null,
+          "name": "awarding_body",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "catalogue_status",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "sort_order",
+          "type": "integer"
+        },
+        {
+          "acl": null,
+          "name": "source_url",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "checked_on",
+          "type": "date"
+        },
+        {
+          "acl": null,
+          "name": "note_en",
+          "type": "text"
+        }
+      ],
+      "policies": [
+        {
+          "cmd": "SELECT",
+          "name": "sp_credential_definition_versions_read",
+          "qual": "true",
+          "check": null,
+          "roles": ["authenticated", "service_role"]
+        }
+      ]
+    },
+    {
+      "relname": "sp_credential_organisation_roles",
+      "relrowsecurity": true,
+      "relkind": "r",
+      "reloptions": null,
+      "anon_read": false,
+      "auth_read": true,
+      "anon_insert": false,
+      "anon_update": false,
+      "anon_delete": false,
+      "auth_insert": false,
+      "auth_update": false,
+      "auth_delete": false,
+      "columns": [
+        {
+          "acl": null,
+          "name": "credential_code",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "role",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "authority_id",
+          "type": "uuid"
+        },
+        {
+          "acl": null,
+          "name": "certification_issuer_id",
+          "type": "uuid"
+        },
+        {
+          "acl": null,
+          "name": "document_specific",
+          "type": "boolean"
+        },
+        {
+          "acl": null,
+          "name": "source_url",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "checked_on",
+          "type": "date"
+        }
+      ],
+      "policies": [
+        {
+          "cmd": "SELECT",
+          "name": "sp_organisation_roles_read",
+          "qual": "true",
+          "check": null,
+          "roles": ["authenticated"]
+        }
+      ]
+    },
+    {
+      "relname": "sp_credential_scopes",
+      "relrowsecurity": true,
+      "relkind": "r",
+      "reloptions": null,
+      "anon_read": false,
+      "auth_read": true,
+      "anon_insert": false,
+      "anon_update": false,
+      "anon_delete": false,
+      "auth_insert": false,
+      "auth_update": false,
+      "auth_delete": false,
+      "columns": [
+        {
+          "acl": null,
+          "name": "code",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "is_territorial",
+          "type": "boolean"
+        },
+        {
+          "acl": null,
+          "name": "name_sv",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "name_en",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "meaning_en",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "is_active",
+          "type": "boolean"
+        },
+        {
+          "acl": null,
+          "name": "sort_order",
+          "type": "integer"
+        },
+        {
+          "acl": null,
+          "name": "created_at",
+          "type": "timestamp with time zone"
+        }
+      ],
+      "policies": [
+        {
+          "cmd": "SELECT",
+          "name": "sp_credential_scopes_read",
+          "qual": "true",
+          "check": null,
+          "roles": ["authenticated"]
+        }
+      ]
+    },
+    {
+      "relname": "sp_recognition_policies",
+      "relrowsecurity": true,
+      "relkind": "r",
+      "reloptions": null,
+      "anon_read": false,
+      "auth_read": true,
+      "anon_insert": false,
+      "anon_update": false,
+      "anon_delete": false,
+      "auth_insert": false,
+      "auth_update": false,
+      "auth_delete": false,
+      "columns": [
+        {
+          "acl": null,
+          "name": "version",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "threshold_years",
+          "type": "integer[]"
+        },
+        {
+          "acl": null,
+          "name": "basis",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "is_active",
+          "type": "boolean"
+        },
+        {
+          "acl": null,
+          "name": "created_at",
+          "type": "timestamp with time zone"
+        }
+      ],
+      "policies": [
+        {
+          "cmd": "SELECT",
+          "name": "sp_recognition_policies_read",
+          "qual": "true",
+          "check": null,
+          "roles": ["authenticated"]
+        }
+      ]
+    },
+    {
+      "relname": "sp_skill_types",
+      "relrowsecurity": true,
+      "relkind": "r",
+      "reloptions": null,
+      "anon_read": false,
+      "auth_read": true,
+      "anon_insert": false,
+      "anon_update": false,
+      "anon_delete": false,
+      "auth_insert": false,
+      "auth_update": false,
+      "auth_delete": false,
+      "columns": [
+        {
+          "acl": null,
+          "name": "code",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "claim_type",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "name_sv",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "name_en",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "level_scale",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "allowed_levels",
+          "type": "text[]"
+        },
+        {
+          "acl": null,
+          "name": "requires_jurisdiction",
+          "type": "boolean"
+        },
+        {
+          "acl": null,
+          "name": "requires_valid_until",
+          "type": "boolean"
+        },
+        {
+          "acl": null,
+          "name": "is_active",
+          "type": "boolean"
+        },
+        {
+          "acl": null,
+          "name": "sort_order",
+          "type": "integer"
+        },
+        {
+          "acl": null,
+          "name": "created_at",
+          "type": "timestamp with time zone"
+        }
+      ],
+      "policies": [
+        {
+          "cmd": "SELECT",
+          "name": "sp_skill_types_read",
+          "qual": "true",
+          "check": null,
+          "roles": ["authenticated"]
+        }
+      ]
+    },
+    {
+      "relname": "sp_sub_jurisdictions",
+      "relrowsecurity": true,
+      "relkind": "r",
+      "reloptions": null,
+      "anon_read": false,
+      "auth_read": true,
+      "anon_insert": false,
+      "anon_update": false,
+      "anon_delete": false,
+      "auth_insert": false,
+      "auth_update": false,
+      "auth_delete": false,
+      "columns": [
+        {
+          "acl": null,
+          "name": "code",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "jurisdiction_code",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "name_sv",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "name_en",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "name_ar",
+          "type": "text"
+        },
+        {
+          "acl": null,
+          "name": "is_active",
+          "type": "boolean"
+        },
+        {
+          "acl": null,
+          "name": "created_at",
+          "type": "timestamp with time zone"
+        }
+      ],
+      "policies": [
+        {
+          "cmd": "SELECT",
+          "name": "sp_sub_jurisdictions_read",
+          "qual": "true",
+          "check": null,
+          "roles": ["authenticated"]
+        }
+      ]
+    }
+  ],
+  "counts": [
+    {
+      "table_name": "assessment_versions",
+      "rows": 7,
+      "populated_sensitive_candidates": {
+        "notes": 7,
+        "retired_reason": 1
+      },
+      "statuses": null
+    },
+    {
+      "table_name": "assessments",
+      "rows": 5,
+      "populated_sensitive_candidates": {},
+      "statuses": null
+    },
+    {
+      "table_name": "graph_versions",
+      "rows": 1,
+      "populated_sensitive_candidates": {
+        "notes": 1,
+        "created_by": 0
+      },
+      "statuses": null
+    },
+    {
+      "table_name": "scp_assessment_families",
+      "rows": 4,
+      "populated_sensitive_candidates": {},
+      "statuses": null
+    },
+    {
+      "table_name": "scp_behaviour_competency_map",
+      "rows": 24,
+      "populated_sensitive_candidates": {},
+      "statuses": null
+    },
+    {
+      "table_name": "scp_bundle_versions",
+      "rows": 0,
+      "populated_sensitive_candidates": {
+        "approved_by": 0,
+        "published_by": 0,
+        "retired_reason": 0
+      },
+      "statuses": null
+    },
+    {
+      "table_name": "scp_bundles",
+      "rows": 0,
+      "populated_sensitive_candidates": {},
+      "statuses": null
+    },
+    {
+      "table_name": "scp_competencies",
+      "rows": 12,
+      "populated_sensitive_candidates": {},
+      "statuses": null
+    },
+    {
+      "table_name": "scp_competency_facets",
+      "rows": 96,
+      "populated_sensitive_candidates": {},
+      "statuses": null
+    },
+    {
+      "table_name": "scp_competency_versions",
+      "rows": 24,
+      "populated_sensitive_candidates": {},
+      "statuses": ["published"]
+    },
+    {
+      "table_name": "scp_contract_versions",
+      "rows": 8,
+      "populated_sensitive_candidates": {
+        "scope_note": 8
+      },
+      "statuses": ["available", "reserved"]
+    },
+    {
+      "table_name": "scp_evidence_source_types",
+      "rows": 8,
+      "populated_sensitive_candidates": {},
+      "statuses": null
+    },
+    {
+      "table_name": "scp_followup_prompts",
+      "rows": 48,
+      "populated_sensitive_candidates": {},
+      "statuses": ["published"]
+    },
+    {
+      "table_name": "scp_form_blocks",
+      "rows": 15,
+      "populated_sensitive_candidates": {},
+      "statuses": null
+    },
+    {
+      "table_name": "scp_forms",
+      "rows": 35,
+      "populated_sensitive_candidates": {},
+      "statuses": null
+    },
+    {
+      "table_name": "scp_jurisdictions",
+      "rows": 1,
+      "populated_sensitive_candidates": {},
+      "statuses": null
+    },
+    {
+      "table_name": "scp_maturity_thresholds",
+      "rows": 4,
+      "populated_sensitive_candidates": {},
+      "statuses": null
+    },
+    {
+      "table_name": "scp_observable_behaviours",
+      "rows": 14,
+      "populated_sensitive_candidates": {},
+      "statuses": null
+    },
+    {
+      "table_name": "scp_processing_purposes",
+      "rows": 6,
+      "populated_sensitive_candidates": {},
+      "statuses": null
+    },
+    {
+      "table_name": "scp_professions",
+      "rows": 4,
+      "populated_sensitive_candidates": {
+        "regulator_note_sv": 4
+      },
+      "statuses": null
+    },
+    {
+      "table_name": "scp_purpose_versions",
+      "rows": 6,
+      "populated_sensitive_candidates": {},
+      "statuses": null
+    },
+    {
+      "table_name": "scp_recruitment_content_links",
+      "rows": 2,
+      "populated_sensitive_candidates": {},
+      "statuses": null
+    },
+    {
+      "table_name": "scp_recruitment_role_profiles",
+      "rows": 2,
+      "populated_sensitive_candidates": {},
+      "statuses": null
+    },
+    {
+      "table_name": "scp_report_versions",
+      "rows": 4,
+      "populated_sensitive_candidates": {},
+      "statuses": ["published"]
+    },
+    {
+      "table_name": "scp_role_competency_map",
+      "rows": 18,
+      "populated_sensitive_candidates": {},
+      "statuses": null
+    },
+    {
+      "table_name": "scp_role_weight_profiles",
+      "rows": 0,
+      "populated_sensitive_candidates": {
+        "notes": 0
+      },
+      "statuses": null
+    },
+    {
+      "table_name": "scp_roles",
+      "rows": 2,
+      "populated_sensitive_candidates": {},
+      "statuses": null
+    },
+    {
+      "table_name": "scp_scenarios",
+      "rows": 0,
+      "populated_sensitive_candidates": {},
+      "statuses": null
+    },
+    {
+      "table_name": "sp_certification_definitions",
+      "rows": 154,
+      "populated_sensitive_candidates": {},
+      "statuses": null
+    },
+    {
+      "table_name": "sp_certification_issuer_aliases",
+      "rows": 19,
+      "populated_sensitive_candidates": {},
+      "statuses": null
+    },
+    {
+      "table_name": "sp_certification_issuers",
+      "rows": 36,
+      "populated_sensitive_candidates": {},
+      "statuses": null
+    },
+    {
+      "table_name": "sp_credential_classes",
+      "rows": 12,
+      "populated_sensitive_candidates": {},
+      "statuses": null
+    },
+    {
+      "table_name": "sp_credential_definition_reviews",
+      "rows": 210,
+      "populated_sensitive_candidates": {},
+      "statuses": null
+    },
+    {
+      "table_name": "sp_credential_definition_versions",
+      "rows": 10,
+      "populated_sensitive_candidates": {
+        "note_en": 10
+      },
+      "statuses": ["current", "superseded"]
+    },
+    {
+      "table_name": "sp_credential_organisation_roles",
+      "rows": 221,
+      "populated_sensitive_candidates": {},
+      "statuses": null
+    },
+    {
+      "table_name": "sp_credential_scopes",
+      "rows": 3,
+      "populated_sensitive_candidates": {},
+      "statuses": null
+    },
+    {
+      "table_name": "sp_recognition_policies",
+      "rows": 1,
+      "populated_sensitive_candidates": {},
+      "statuses": null
+    },
+    {
+      "table_name": "sp_skill_types",
+      "rows": 24,
+      "populated_sensitive_candidates": {},
+      "statuses": null
+    },
+    {
+      "table_name": "sp_sub_jurisdictions",
+      "rows": 8,
+      "populated_sensitive_candidates": {},
+      "statuses": null
+    }
+  ]
+}

@@ -21,7 +21,7 @@ schema and the application). Data only.
 
 ## 2 · What the migration does
 
-`supabase/migrations/20270219090000_sp_open_abu_dhabi_public_pilot.sql` — one transaction, preflight,
+`supabase/migrations/20270220090000_sp_open_abu_dhabi_public_pilot.sql` — one transaction, preflight,
 change, postflight.
 
 | Change | Rows |
@@ -74,7 +74,7 @@ definitions to a signed-in holder (70 + 7); `sp_market_access(NULL, 'AE-AZ')` is
 
 ## 5 · Rollback
 
-`supabase/rollback/20270219090000_sp_open_abu_dhabi_public_pilot_rollback.sql` returns the pack and
+`supabase/rollback/20270220090000_sp_open_abu_dhabi_public_pilot_rollback.sql` returns the pack and
 the seven to `closed`, the emirate to inactive, and removes the fourteen roles. It touches no claim and
 no grant. It **refuses while any Abu Dhabi claim exists**, because removing the issuer roles would take
 the issuer line off every recipient view of those claims; the operator may opt in with
@@ -85,7 +85,7 @@ run before the rollback of `20261221090000`.
 
 - `supabase/release-state.json`: frontier entry, `pending`, `introduces: []`.
 - `scripts/release-frontier-check.ts`: `expectedPending` lists the file.
-- Version `20270219090000` assumes the United States schema (`20270218090000`) merges first. If this
+- Version `20270220090000` assumes the United States schema (`20270219090000`, after #436's `20270218090000`) merges first. If this
   merges first, renumber it to the next slot after the current frontier, as `release-sequence.md` says.
 - After the integration applies it, verify read-only as the `verify` field says, then regenerate the
   coverage matrix.

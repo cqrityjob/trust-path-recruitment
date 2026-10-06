@@ -114,7 +114,7 @@ SELECT count(*) AS research_n FROM public.sp_approved_credential_catalogue WHERE
 SELECT pg_temp.ok(:se_n=8 AND :intl_n-:research_n=14 AND :research_n IN (0,140)
    AND (SELECT count(*)=51 FROM public.sp_approved_credential_catalogue WHERE country IN ('GB','AE'))
    AND (SELECT count(*)=7 FROM public.sp_approved_credential_catalogue WHERE region='AE-AZ'),
- '2.3 Sweden (8) and the 14 reviewed international certifications are unchanged (the 140 researched ones are all offered or none); GB and Dubai are their 44 public-pilot definitions and Abu Dhabi its 7 (20270219090000)');
+ '2.3 Sweden (8) and the 14 reviewed international certifications are unchanged (the 140 researched ones are all offered or none); GB and Dubai are their 44 public-pilot definitions and Abu Dhabi its 7 (20270220090000)');
 
 -- GUARDED RELEASE. Over PostgREST's listing path, an application that does not
 -- send the catalogue contract (one deployed before this release) is offered no

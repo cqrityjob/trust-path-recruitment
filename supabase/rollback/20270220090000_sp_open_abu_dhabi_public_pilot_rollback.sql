@@ -1,5 +1,5 @@
 -- =============================================================================
--- ROLLBACK for 20270219090000_sp_open_abu_dhabi_public_pilot.sql
+-- ROLLBACK for 20270220090000_sp_open_abu_dhabi_public_pilot.sql
 -- =============================================================================
 --
 -- Returns Abu Dhabi (AE-AZ) and its seven definitions from public_pilot to

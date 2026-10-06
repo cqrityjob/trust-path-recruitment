@@ -1,4 +1,4 @@
--- Abu Dhabi opened as a PUBLIC PILOT (20270219090000).
+-- Abu Dhabi opened as a PUBLIC PILOT (20270220090000).
 --
 --   1. The opened state: the AE-AZ pack and its seven definitions are
 --      public_pilot, inactive, review pending; the emirate is active; the

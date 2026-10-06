@@ -1,0 +1,276 @@
+SET
+BEGIN
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+GRANT
+INSERT 0 8
+INSERT 0 2
+INSERT 0 2
+INSERT 0 2
+INSERT 0 2
+CREATE TABLE
+INSERT 0 5
+CREATE TABLE
+INSERT 0 3
+GRANT
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+INSERT 0 1
+INSERT 0 2
+INSERT 0 1
+INSERT 0 2
+INSERT 0 2
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+INSERT 0 1
+INSERT 0 1
+SELECT 1
+GRANT
+psql:supabase/tests/catalogue_read_hardening_test.sql:165: NOTICE:  ok  CH0.1 fixtures hold drafts, published rows, unapproved and approved professions, and guide rows
+ ok 
+----
+ 
+(1 row)
+
+psql:supabase/tests/catalogue_read_hardening_test.sql:168: NOTICE:  GROUP CH1 — drafts are author-only
+DO
+psql:supabase/tests/catalogue_read_hardening_test.sql:198: NOTICE:  ok  CH1.1 candidate A reads exactly the published behaviour versions
+psql:supabase/tests/catalogue_read_hardening_test.sql:198: NOTICE:  ok  CH1.2 candidate A reads no draft behaviour version
+psql:supabase/tests/catalogue_read_hardening_test.sql:198: NOTICE:  ok  CH1.3 candidate A cannot fetch a draft behaviour version by id
+psql:supabase/tests/catalogue_read_hardening_test.sql:198: NOTICE:  ok  CH1.4 candidate A reads exactly the published role versions
+psql:supabase/tests/catalogue_read_hardening_test.sql:198: NOTICE:  ok  CH1.5 candidate A cannot fetch a draft role version by id
+psql:supabase/tests/catalogue_read_hardening_test.sql:198: NOTICE:  ok  CH1.1 candidate B reads exactly the published behaviour versions
+psql:supabase/tests/catalogue_read_hardening_test.sql:198: NOTICE:  ok  CH1.2 candidate B reads no draft behaviour version
+psql:supabase/tests/catalogue_read_hardening_test.sql:198: NOTICE:  ok  CH1.3 candidate B cannot fetch a draft behaviour version by id
+psql:supabase/tests/catalogue_read_hardening_test.sql:198: NOTICE:  ok  CH1.4 candidate B reads exactly the published role versions
+psql:supabase/tests/catalogue_read_hardening_test.sql:198: NOTICE:  ok  CH1.5 candidate B cannot fetch a draft role version by id
+psql:supabase/tests/catalogue_read_hardening_test.sql:198: NOTICE:  ok  CH1.1 employer A member reads exactly the published behaviour versions
+psql:supabase/tests/catalogue_read_hardening_test.sql:198: NOTICE:  ok  CH1.2 employer A member reads no draft behaviour version
+psql:supabase/tests/catalogue_read_hardening_test.sql:198: NOTICE:  ok  CH1.3 employer A member cannot fetch a draft behaviour version by id
+psql:supabase/tests/catalogue_read_hardening_test.sql:198: NOTICE:  ok  CH1.4 employer A member reads exactly the published role versions
+psql:supabase/tests/catalogue_read_hardening_test.sql:198: NOTICE:  ok  CH1.5 employer A member cannot fetch a draft role version by id
+psql:supabase/tests/catalogue_read_hardening_test.sql:198: NOTICE:  ok  CH1.1 employer B owner reads exactly the published behaviour versions
+psql:supabase/tests/catalogue_read_hardening_test.sql:198: NOTICE:  ok  CH1.2 employer B owner reads no draft behaviour version
+psql:supabase/tests/catalogue_read_hardening_test.sql:198: NOTICE:  ok  CH1.3 employer B owner cannot fetch a draft behaviour version by id
+psql:supabase/tests/catalogue_read_hardening_test.sql:198: NOTICE:  ok  CH1.4 employer B owner reads exactly the published role versions
+psql:supabase/tests/catalogue_read_hardening_test.sql:198: NOTICE:  ok  CH1.5 employer B owner cannot fetch a draft role version by id
+psql:supabase/tests/catalogue_read_hardening_test.sql:198: NOTICE:  ok  CH1.1 assessment_editor (not a content author) reads exactly the published behaviour versions
+psql:supabase/tests/catalogue_read_hardening_test.sql:198: NOTICE:  ok  CH1.2 assessment_editor (not a content author) reads no draft behaviour version
+psql:supabase/tests/catalogue_read_hardening_test.sql:198: NOTICE:  ok  CH1.3 assessment_editor (not a content author) cannot fetch a draft behaviour version by id
+psql:supabase/tests/catalogue_read_hardening_test.sql:198: NOTICE:  ok  CH1.4 assessment_editor (not a content author) reads exactly the published role versions
+psql:supabase/tests/catalogue_read_hardening_test.sql:198: NOTICE:  ok  CH1.5 assessment_editor (not a content author) cannot fetch a draft role version by id
+psql:supabase/tests/catalogue_read_hardening_test.sql:198: NOTICE:  ok  CH1.6 content editor reads every behaviour version, drafts included
+psql:supabase/tests/catalogue_read_hardening_test.sql:198: NOTICE:  ok  CH1.7 content editor reads every role version (the role-pack authoring screens)
+psql:supabase/tests/catalogue_read_hardening_test.sql:198: NOTICE:  ok  CH1.6 content reviewer reads every behaviour version, drafts included
+psql:supabase/tests/catalogue_read_hardening_test.sql:198: NOTICE:  ok  CH1.7 content reviewer reads every role version (the role-pack authoring screens)
+psql:supabase/tests/catalogue_read_hardening_test.sql:198: NOTICE:  ok  CH1.6 platform admin reads every behaviour version, drafts included
+psql:supabase/tests/catalogue_read_hardening_test.sql:198: NOTICE:  ok  CH1.7 platform admin reads every role version (the role-pack authoring screens)
+psql:supabase/tests/catalogue_read_hardening_test.sql:198: NOTICE:  ok  CH1.8 anon is refused by grant on both
+DO
+psql:supabase/tests/catalogue_read_hardening_test.sql:201: NOTICE:  GROUP CH2 — unapproved professions are admin-only
+DO
+psql:supabase/tests/catalogue_read_hardening_test.sql:225: NOTICE:  ok  CH2.1 candidate A reads exactly the professions approved for ranking
+psql:supabase/tests/catalogue_read_hardening_test.sql:225: NOTICE:  ok  CH2.2 candidate A cannot fetch an unapproved profession by id
+psql:supabase/tests/catalogue_read_hardening_test.sql:225: NOTICE:  ok  CH2.3 candidate A still reads an approved profession by id (the career journey path)
+psql:supabase/tests/catalogue_read_hardening_test.sql:225: NOTICE:  ok  CH2.1 candidate B reads exactly the professions approved for ranking
+psql:supabase/tests/catalogue_read_hardening_test.sql:225: NOTICE:  ok  CH2.2 candidate B cannot fetch an unapproved profession by id
+psql:supabase/tests/catalogue_read_hardening_test.sql:225: NOTICE:  ok  CH2.3 candidate B still reads an approved profession by id (the career journey path)
+psql:supabase/tests/catalogue_read_hardening_test.sql:225: NOTICE:  ok  CH2.1 employer A member reads exactly the professions approved for ranking
+psql:supabase/tests/catalogue_read_hardening_test.sql:225: NOTICE:  ok  CH2.2 employer A member cannot fetch an unapproved profession by id
+psql:supabase/tests/catalogue_read_hardening_test.sql:225: NOTICE:  ok  CH2.3 employer A member still reads an approved profession by id (the career journey path)
+psql:supabase/tests/catalogue_read_hardening_test.sql:225: NOTICE:  ok  CH2.1 employer B owner reads exactly the professions approved for ranking
+psql:supabase/tests/catalogue_read_hardening_test.sql:225: NOTICE:  ok  CH2.2 employer B owner cannot fetch an unapproved profession by id
+psql:supabase/tests/catalogue_read_hardening_test.sql:225: NOTICE:  ok  CH2.3 employer B owner still reads an approved profession by id (the career journey path)
+psql:supabase/tests/catalogue_read_hardening_test.sql:225: NOTICE:  ok  CH2.1 assessment_editor (not a content author) reads exactly the professions approved for ranking
+psql:supabase/tests/catalogue_read_hardening_test.sql:225: NOTICE:  ok  CH2.2 assessment_editor (not a content author) cannot fetch an unapproved profession by id
+psql:supabase/tests/catalogue_read_hardening_test.sql:225: NOTICE:  ok  CH2.3 assessment_editor (not a content author) still reads an approved profession by id (the career journey path)
+psql:supabase/tests/catalogue_read_hardening_test.sql:225: NOTICE:  ok  CH2.1 content editor reads exactly the professions approved for ranking
+psql:supabase/tests/catalogue_read_hardening_test.sql:225: NOTICE:  ok  CH2.2 content editor cannot fetch an unapproved profession by id
+psql:supabase/tests/catalogue_read_hardening_test.sql:225: NOTICE:  ok  CH2.3 content editor still reads an approved profession by id (the career journey path)
+psql:supabase/tests/catalogue_read_hardening_test.sql:225: NOTICE:  ok  CH2.1 content reviewer reads exactly the professions approved for ranking
+psql:supabase/tests/catalogue_read_hardening_test.sql:225: NOTICE:  ok  CH2.2 content reviewer cannot fetch an unapproved profession by id
+psql:supabase/tests/catalogue_read_hardening_test.sql:225: NOTICE:  ok  CH2.3 content reviewer still reads an approved profession by id (the career journey path)
+psql:supabase/tests/catalogue_read_hardening_test.sql:225: NOTICE:  ok  CH2.4 a platform admin reads every profession (the owner preview)
+psql:supabase/tests/catalogue_read_hardening_test.sql:225: NOTICE:  ok  CH2.5 anon is refused by grant
+psql:supabase/tests/catalogue_read_hardening_test.sql:225: NOTICE:  ok  CH2.6 the service-role catalogue read is untouched by the policy
+DO
+psql:supabase/tests/catalogue_read_hardening_test.sql:228: NOTICE:  GROUP CH3 — the interviewer guide is not a candidate read
+DO
+psql:supabase/tests/catalogue_read_hardening_test.sql:258: NOTICE:  ok  CH3.1 candidate A reads no interviewer guide row
+psql:supabase/tests/catalogue_read_hardening_test.sql:258: NOTICE:  ok  CH3.2 candidate A reads no listen_for guidance
+psql:supabase/tests/catalogue_read_hardening_test.sql:258: NOTICE:  ok  CH3.1 candidate B reads no interviewer guide row
+psql:supabase/tests/catalogue_read_hardening_test.sql:258: NOTICE:  ok  CH3.2 candidate B reads no listen_for guidance
+psql:supabase/tests/catalogue_read_hardening_test.sql:258: NOTICE:  ok  CH3.1 employer A member reads no interviewer guide row
+psql:supabase/tests/catalogue_read_hardening_test.sql:258: NOTICE:  ok  CH3.2 employer A member reads no listen_for guidance
+psql:supabase/tests/catalogue_read_hardening_test.sql:258: NOTICE:  ok  CH3.1 employer B owner reads no interviewer guide row
+psql:supabase/tests/catalogue_read_hardening_test.sql:258: NOTICE:  ok  CH3.2 employer B owner reads no listen_for guidance
+psql:supabase/tests/catalogue_read_hardening_test.sql:258: NOTICE:  ok  CH3.1 assessment_editor (not a content author) reads no interviewer guide row
+psql:supabase/tests/catalogue_read_hardening_test.sql:258: NOTICE:  ok  CH3.2 assessment_editor (not a content author) reads no listen_for guidance
+psql:supabase/tests/catalogue_read_hardening_test.sql:258: NOTICE:  ok  CH3.3 content editor reads the whole guide
+psql:supabase/tests/catalogue_read_hardening_test.sql:258: NOTICE:  ok  CH3.3 content reviewer reads the whole guide
+psql:supabase/tests/catalogue_read_hardening_test.sql:258: NOTICE:  ok  CH3.3 platform admin reads the whole guide
+psql:supabase/tests/catalogue_read_hardening_test.sql:258: NOTICE:  ok  CH3.4 anon is refused by grant
+psql:supabase/tests/catalogue_read_hardening_test.sql:258: NOTICE:  ok  CH3.5 scp_release_attempt_report still reads the guide as its owner (employer brief path intact)
+psql:supabase/tests/catalogue_read_hardening_test.sql:258: NOTICE:  ok  CH3.6 and it still places listen_for in the employer brief
+DO
+psql:supabase/tests/catalogue_read_hardening_test.sql:261: NOTICE:  GROUP CH4 — no client write privilege on three catalogues
+DO
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.1 no client role holds INSERT, UPDATE or DELETE on scp_followup_prompts
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.2 authenticated keeps SELECT on scp_followup_prompts (rows are the policy's decision)
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.4 UPDATE on scp_followup_prompts by candidate A is refused by grant (42501)
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.5 DELETE on scp_followup_prompts by candidate A is refused by grant (42501)
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.6 INSERT on scp_followup_prompts by candidate A is refused by grant (42501)
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.4 UPDATE on scp_followup_prompts by candidate B is refused by grant (42501)
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.5 DELETE on scp_followup_prompts by candidate B is refused by grant (42501)
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.6 INSERT on scp_followup_prompts by candidate B is refused by grant (42501)
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.4 UPDATE on scp_followup_prompts by employer A member is refused by grant (42501)
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.5 DELETE on scp_followup_prompts by employer A member is refused by grant (42501)
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.6 INSERT on scp_followup_prompts by employer A member is refused by grant (42501)
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.4 UPDATE on scp_followup_prompts by employer B owner is refused by grant (42501)
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.5 DELETE on scp_followup_prompts by employer B owner is refused by grant (42501)
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.6 INSERT on scp_followup_prompts by employer B owner is refused by grant (42501)
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.4 UPDATE on scp_followup_prompts by assessment_editor (not a content author) is refused by grant (42501)
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.5 DELETE on scp_followup_prompts by assessment_editor (not a content author) is refused by grant (42501)
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.6 INSERT on scp_followup_prompts by assessment_editor (not a content author) is refused by grant (42501)
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.4 UPDATE on scp_followup_prompts by content editor is refused by grant (42501)
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.5 DELETE on scp_followup_prompts by content editor is refused by grant (42501)
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.6 INSERT on scp_followup_prompts by content editor is refused by grant (42501)
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.4 UPDATE on scp_followup_prompts by content reviewer is refused by grant (42501)
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.5 DELETE on scp_followup_prompts by content reviewer is refused by grant (42501)
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.6 INSERT on scp_followup_prompts by content reviewer is refused by grant (42501)
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.4 UPDATE on scp_followup_prompts by platform admin is refused by grant (42501)
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.5 DELETE on scp_followup_prompts by platform admin is refused by grant (42501)
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.6 INSERT on scp_followup_prompts by platform admin is refused by grant (42501)
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.1 no client role holds INSERT, UPDATE or DELETE on scp_form_blocks
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.2 authenticated keeps SELECT on scp_form_blocks (rows are the policy's decision)
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.4 UPDATE on scp_form_blocks by candidate A is refused by grant (42501)
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.5 DELETE on scp_form_blocks by candidate A is refused by grant (42501)
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.6 INSERT on scp_form_blocks by candidate A is refused by grant (42501)
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.4 UPDATE on scp_form_blocks by candidate B is refused by grant (42501)
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.5 DELETE on scp_form_blocks by candidate B is refused by grant (42501)
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.6 INSERT on scp_form_blocks by candidate B is refused by grant (42501)
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.4 UPDATE on scp_form_blocks by employer A member is refused by grant (42501)
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.5 DELETE on scp_form_blocks by employer A member is refused by grant (42501)
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.6 INSERT on scp_form_blocks by employer A member is refused by grant (42501)
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.4 UPDATE on scp_form_blocks by employer B owner is refused by grant (42501)
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.5 DELETE on scp_form_blocks by employer B owner is refused by grant (42501)
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.6 INSERT on scp_form_blocks by employer B owner is refused by grant (42501)
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.4 UPDATE on scp_form_blocks by assessment_editor (not a content author) is refused by grant (42501)
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.5 DELETE on scp_form_blocks by assessment_editor (not a content author) is refused by grant (42501)
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.6 INSERT on scp_form_blocks by assessment_editor (not a content author) is refused by grant (42501)
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.4 UPDATE on scp_form_blocks by content editor is refused by grant (42501)
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.5 DELETE on scp_form_blocks by content editor is refused by grant (42501)
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.6 INSERT on scp_form_blocks by content editor is refused by grant (42501)
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.4 UPDATE on scp_form_blocks by content reviewer is refused by grant (42501)
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.5 DELETE on scp_form_blocks by content reviewer is refused by grant (42501)
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.6 INSERT on scp_form_blocks by content reviewer is refused by grant (42501)
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.4 UPDATE on scp_form_blocks by platform admin is refused by grant (42501)
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.5 DELETE on scp_form_blocks by platform admin is refused by grant (42501)
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.6 INSERT on scp_form_blocks by platform admin is refused by grant (42501)
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.1 no client role holds INSERT, UPDATE or DELETE on scp_interview_guide_prompts
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.2 authenticated keeps SELECT on scp_interview_guide_prompts (rows are the policy's decision)
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.4 UPDATE on scp_interview_guide_prompts by candidate A is refused by grant (42501)
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.5 DELETE on scp_interview_guide_prompts by candidate A is refused by grant (42501)
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.6 INSERT on scp_interview_guide_prompts by candidate A is refused by grant (42501)
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.4 UPDATE on scp_interview_guide_prompts by candidate B is refused by grant (42501)
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.5 DELETE on scp_interview_guide_prompts by candidate B is refused by grant (42501)
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.6 INSERT on scp_interview_guide_prompts by candidate B is refused by grant (42501)
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.4 UPDATE on scp_interview_guide_prompts by employer A member is refused by grant (42501)
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.5 DELETE on scp_interview_guide_prompts by employer A member is refused by grant (42501)
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.6 INSERT on scp_interview_guide_prompts by employer A member is refused by grant (42501)
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.4 UPDATE on scp_interview_guide_prompts by employer B owner is refused by grant (42501)
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.5 DELETE on scp_interview_guide_prompts by employer B owner is refused by grant (42501)
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.6 INSERT on scp_interview_guide_prompts by employer B owner is refused by grant (42501)
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.4 UPDATE on scp_interview_guide_prompts by assessment_editor (not a content author) is refused by grant (42501)
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.5 DELETE on scp_interview_guide_prompts by assessment_editor (not a content author) is refused by grant (42501)
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.6 INSERT on scp_interview_guide_prompts by assessment_editor (not a content author) is refused by grant (42501)
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.4 UPDATE on scp_interview_guide_prompts by content editor is refused by grant (42501)
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.5 DELETE on scp_interview_guide_prompts by content editor is refused by grant (42501)
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.6 INSERT on scp_interview_guide_prompts by content editor is refused by grant (42501)
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.4 UPDATE on scp_interview_guide_prompts by content reviewer is refused by grant (42501)
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.5 DELETE on scp_interview_guide_prompts by content reviewer is refused by grant (42501)
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.6 INSERT on scp_interview_guide_prompts by content reviewer is refused by grant (42501)
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.4 UPDATE on scp_interview_guide_prompts by platform admin is refused by grant (42501)
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.5 DELETE on scp_interview_guide_prompts by platform admin is refused by grant (42501)
+psql:supabase/tests/catalogue_read_hardening_test.sql:284: NOTICE:  ok  CH4.6 INSERT on scp_interview_guide_prompts by platform admin is refused by grant (42501)
+DO
+psql:supabase/tests/catalogue_read_hardening_test.sql:287: NOTICE:  GROUP CH5 — nothing else moved
+DO
+psql:supabase/tests/catalogue_read_hardening_test.sql:292: NOTICE:  ok  CH5.1 exactly 39 USING (true) catalogue reads remain (45 minus four catalogue reads and the raw scenario/configuration banks)
+ ok 
+----
+ 
+(1 row)
+
+psql:supabase/tests/catalogue_read_hardening_test.sql:298: NOTICE:  ok  CH5.2 the author-write policies are unchanged
+ ok 
+----
+ 
+(1 row)
+
+psql:supabase/tests/catalogue_read_hardening_test.sql:303: NOTICE:  ok  CH5.3 no policy was added or removed on the six touched tables
+ ok 
+----
+ 
+(1 row)
+
+psql:supabase/tests/catalogue_read_hardening_test.sql:309: NOTICE:  ok  CH5.4 RLS stays enabled on all six
+ ok 
+----
+ 
+(1 row)
+
+psql:supabase/tests/catalogue_read_hardening_test.sql:312: NOTICE:  GROUP CH6 — negative controls: the planted pre-hardening state is observed
+DO
+SAVEPOINT
+ALTER POLICY
+ALTER POLICY
+psql:supabase/tests/catalogue_read_hardening_test.sql:321: NOTICE:  ok  CH6.1 with USING (true) planted back, the CH1 probe sees the candidate read a draft
+ ok 
+----
+ 
+(1 row)
+
+ROLLBACK
+SAVEPOINT
+ALTER POLICY
+psql:supabase/tests/catalogue_read_hardening_test.sql:328: NOTICE:  ok  CH6.2 with USING (true) planted back, the CH2 probe sees the candidate read an unapproved profession
+ ok 
+----
+ 
+(1 row)
+
+ROLLBACK
+SAVEPOINT
+ALTER POLICY
+psql:supabase/tests/catalogue_read_hardening_test.sql:335: NOTICE:  ok  CH6.3 with USING (true) planted back, the CH3 probe sees the candidate read listen_for
+ ok 
+----
+ 
+(1 row)
+
+ROLLBACK
+SAVEPOINT
+ALTER POLICY
+psql:supabase/tests/catalogue_read_hardening_test.sql:347: NOTICE:  ok  CH6.4 a predicate without the admin branch is observed to hide unapproved professions from the admin
+ ok 
+----
+ 
+(1 row)
+
+ROLLBACK
+SAVEPOINT
+GRANT
+psql:supabase/tests/catalogue_read_hardening_test.sql:354: NOTICE:  ok  CH6.5 with the stray grant planted back, the CH4 probe no longer sees a grant refusal
+ ok 
+----
+ 
+(1 row)
+
+ROLLBACK
+psql:supabase/tests/catalogue_read_hardening_test.sql:357: NOTICE:  catalogue_read_hardening_test: ALL ASSERTIONS PASSED
+DO
+ROLLBACK

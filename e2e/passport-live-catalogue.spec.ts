@@ -329,7 +329,7 @@ test("6 · admin: the catalogue page says WHY each researched definition is or i
     // 14 international + 8 Swedish + the 140 definitions the certification research
     // publication approved (20270214090000) are selectable by everyone; all 44 GB, NI and
     // Dubai definitions by their own market's pilot members; Abu Dhabi's 7 by every
-    // signed-in holder as a public pilot (20270219090000).
+    // signed-in holder as a public pilot (20270220090000).
     await expect(root.locator('[data-count="selectable"]')).toHaveText("162");
     await expect(root.locator('[data-count="selectable_pilot_members"]')).toHaveText("44");
     await expect(root.locator('[data-count="selectable_public_pilot"]')).toHaveText("7");

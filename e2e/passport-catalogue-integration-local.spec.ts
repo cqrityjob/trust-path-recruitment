@@ -143,7 +143,7 @@ let offered = 0;
 let activeInternational = 0;
 /** A definition the holder must never reach: the researched OSCP before publication; after it, whatever
  *  definition is still neither active nor in a pilot -- none, once Abu Dhabi is a public pilot
- *  (20270219090000), in which case test 8 skips its unapproved-definition half. */
+ *  (20270220090000), in which case test 8 skips its unapproved-definition half. */
 let UNAPPROVED: string | null = "INTL_OFFSEC_OSCP";
 const EVIDENCE_PDF = {
   name: "journey-certificate.pdf",
@@ -157,7 +157,7 @@ test.beforeAll(() => {
   );
   published = activeInternational > 14;
   // 14 international + 8 Swedish + 4 Indian + 44 public-pilot UK/Dubai definitions + Abu Dhabi's 7
-  // (public pilot, 20270219090000) = 77, plus the 140 researched definitions once the publication
+  // (public pilot, 20270220090000) = 77, plus the 140 researched definitions once the publication
   // has been applied.
   offered = published ? 217 : 77;
   UNAPPROVED = published

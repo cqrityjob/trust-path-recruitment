@@ -7,12 +7,33 @@
   "$comment": "RELEASE PARITY STATE. Enforced by scripts/release-parity-check.ts, which runs in CI and before a release. This file records, for every canonical migration at the release frontier, whether it is believed applied on the hosted database, and which database objects it introduces. The guard fails when application code on this branch references an object whose migration is not applied -- the exact class of failure that stopped employers saving jobs during UAT. It NEVER connects to a database, holds no credentials and applies no migration; it compares this repository against itself. Edit it deliberately: every entry is an owner-level statement about production.", 
   "frontier": [
     {
-      "file": "20270219090000_sp_open_abu_dhabi_public_pilot.sql",
+      "file": "20270220090000_sp_open_abu_dhabi_public_pilot.sql",
       "hostedState": "pending",
       "introduces": [],
-      "rollback": "supabase/rollback/20270219090000_sp_open_abu_dhabi_public_pilot_rollback.sql",
+      "rollback": "supabase/rollback/20270220090000_sp_open_abu_dhabi_public_pilot_rollback.sql",
       "verify": "SELECT code,pilot_state,is_active,legal_review_state FROM public.sp_market_packs WHERE code='AE-AZ'; -- public_pilot, false, pending. SELECT count(*) FROM public.sp_credential_types WHERE market_pack_code='AE-AZ' AND pilot_state='public_pilot' AND NOT is_active AND legal_review_state='pending'; -- 7. SELECT is_active FROM public.sp_sub_jurisdictions WHERE code='AE-AZ'; -- true. SELECT count(*) FROM public.sp_credential_organisation_roles r JOIN public.sp_authorities a ON a.id=r.authority_id WHERE r.credential_code LIKE 'AE\\_AZ\\_%' AND a.code='AE_MOI_PSBD' AND r.role IN ('regulator','issuer'); -- 14. SELECT count(*) FROM public.sp_market_packs WHERE pilot_state='public_pilot'; -- 4. SELECT count(*) FROM public.sp_credential_types WHERE pilot_state='public_pilot'; -- 51. SELECT checked_on, review_state FROM public.sp_regulatory_sources WHERE source_key='ae_moi_private_security'; -- NULL, review_needed (unchanged). Compare the md5 of sp_claims, sp_professional_titles, sp_pilot_members, sp_regulatory_sources and sp_authorities with the values read before the apply: all unchanged.",
       "note": "Abu Dhabi (AE-AZ) opened as a PUBLIC PILOT: every signed-in holder may register its seven Ministry of Interior licence definitions with no grant; is_active and legal_review_state stay false/pending on the pack and every definition, no claim, title or grant moves. Data only against existing tables (one sub-jurisdiction activated, one pack and seven definitions moved to public_pilot, fourteen regulator/issuer organisation roles added so shared Abu Dhabi credentials carry an issuer). Merging this IS the owner's decision to open; the definitions' source page has never been pinned or read (their own migration says so), the registered Ministry source stays review_needed, and no definition-review row is claimed. Rollback refuses while Abu Dhabi claims exist unless the operator opts in, and never deletes a claim."
+    },
+    {
+      "file": "20270218090000_catalogue_internal_metadata_boundary.sql",
+      "hostedState": "pending",
+      "introduces": [
+        {
+          "kind": "view",
+          "object": "graph_versions_published"
+        },
+        {
+          "kind": "view",
+          "object": "scp_bundle_versions_published"
+        },
+        {
+          "kind": "view",
+          "object": "scp_role_weight_profiles_published"
+        }
+      ],
+      "rollback": "supabase/rollback/20270218090000_catalogue_internal_metadata_boundary_rollback.sql",
+      "verify": "docs/security/2026-10-06/catalogue-five-access-boundaries.md; compare the five policies, projection definitions/grants, row fingerprints and the unchanged 34 catalogue policies. Run the scoped read-only postflight after approved application.",
+      "note": "Owner access decision 2026-10-06. Schema-only PR; not applied. No history or data rewrite. Published projections omit internal metadata; draft forms/blocks remain author-only. No app calls a pending object."
     },
     {
       "file": "20270216090000_participant_report_api_boundary.sql",

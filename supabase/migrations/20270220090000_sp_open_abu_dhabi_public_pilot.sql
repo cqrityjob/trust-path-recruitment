@@ -73,7 +73,7 @@
 --
 -- One transaction: the change and its proof commit together or not at all.
 --
--- Rollback: supabase/rollback/20270219090000_sp_open_abu_dhabi_public_pilot_rollback.sql
+-- Rollback: supabase/rollback/20270220090000_sp_open_abu_dhabi_public_pilot_rollback.sql
 -- =============================================================================
 
 BEGIN;

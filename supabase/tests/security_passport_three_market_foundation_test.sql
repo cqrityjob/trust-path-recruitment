@@ -51,7 +51,7 @@ BEGIN
   IF (SELECT count(*) FROM public.sp_sub_jurisdictions WHERE jurisdiction_code = 'AE') <> 7 THEN
     RAISE EXCEPTION 'ASSERTION FAILED: 1.3 expected all seven emirates to be listed';
   END IF;
-  -- Dubai (20260907090000) and Abu Dhabi (20270219090000, a public pilot).
+  -- Dubai (20260907090000) and Abu Dhabi (20270220090000, a public pilot).
   IF (SELECT count(*) FROM public.sp_sub_jurisdictions
        WHERE jurisdiction_code = 'AE' AND is_active) <> 2
   OR (SELECT bool_and(is_active) FROM public.sp_sub_jurisdictions WHERE code IN ('AE-DU', 'AE-AZ')) IS DISTINCT FROM true THEN
@@ -270,7 +270,7 @@ BEGIN
   -- approved" — a different true sentence, and the one the UI should render.
   -- It must NOT become an acceptance, and it must NOT answer with Dubai's
   -- catalogue.
-  -- 20270219090000 opened it as a PUBLIC PILOT, exactly like Dubai (5.3): a
+  -- 20270220090000 opened it as a PUBLIC PILOT, exactly like Dubai (5.3): a
   -- signed-in holder may register its licence (its own suite proves that),
   -- and this block, which runs with NO signed-in user, is refused for the
   -- same reason Dubai is -- the catalogue admits a public pilot to a signed-in
@@ -289,7 +289,7 @@ BEGIN
     IF _txt NOT LIKE 'SP_APPROVED_DEFINITION_REQUIRED%' THEN
       RAISE EXCEPTION 'ASSERTION FAILED: 5.2b wrong error for Abu Dhabi: %', _txt;
     END IF;
-    RAISE NOTICE 'ok  5.2b Abu Dhabi, a public pilot since 20270219090000, is refused without a signed-in holder exactly as Dubai is, never as Dubai';
+    RAISE NOTICE 'ok  5.2b Abu Dhabi, a public pilot since 20270220090000, is refused without a signed-in holder exactly as Dubai is, never as Dubai';
   END;
 
   -- Dubai is registered but its pack is unreviewed, so it too is refused —

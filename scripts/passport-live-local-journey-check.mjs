@@ -886,7 +886,7 @@ async function main() {
   // which every holder reaches with no membership: the Swedish holder saves them.)
   // Fresh holders, so nothing saved above interferes. Every GB, GB-NI and Dubai
   // definition is approved LOCALLY for this run (restored at exit); the market
-  // packs stay internal_pilot; Abu Dhabi is a public pilot (20270219090000).
+  // packs stay internal_pilot; Abu Dhabi is a public pilot (20270220090000).
   const seAll = await user("complete-se");
   const gbAll = await user("complete-gb");
   const niAll = await user("complete-ni");
@@ -922,7 +922,7 @@ async function main() {
   await check(
     "Completeness · every in-scope definition saves through the real RPC and reloads (77)",
     async () => {
-      // 70 as before, plus Abu Dhabi's 7 (a public pilot since 20270219090000,
+      // 70 as before, plus Abu Dhabi's 7 (a public pilot since 20270220090000,
       // reached by the Dubai holder with no grant, as by every signed-in holder).
       ok(expectedCodes.length === 77, "expected set is " + expectedCodes.length);
       const plans = [

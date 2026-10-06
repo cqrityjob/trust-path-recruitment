@@ -125,7 +125,7 @@ BEGIN
   IF EXISTS (SELECT 1 FROM public.sp_market_packs WHERE code = 'AE-AZ') THEN
     PERFORM pg_temp.ok(
       (SELECT pilot_state <> 'internal_pilot' FROM public.sp_market_packs WHERE code = 'AE-AZ'),
-      '1.5 Abu Dhabi is present and NOT an internal pilot (a public pilot since 20270219090000, with no grants)');
+      '1.5 Abu Dhabi is present and NOT an internal pilot (a public pilot since 20270220090000, with no grants)');
   ELSE
     RAISE NOTICE 'ok  1.5 Abu Dhabi is not present at all (its migration is unapplied)';
   END IF;

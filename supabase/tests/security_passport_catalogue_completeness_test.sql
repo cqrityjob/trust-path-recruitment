@@ -14,7 +14,7 @@
 --                                        everyone, no market pack — 20261214090000)
 --   13 Great Britain + 1 Northern Ireland   (public pilot)
 --   30 Dubai                            (public pilot)
---    7 Abu Dhabi                        (public pilot since 20270219090000; NOT pinned
+--    7 Abu Dhabi                        (public pilot since 20270220090000; NOT pinned
 --                                        here: it carries no definition-review row, and
 --                                        its own suite proves it)
 --
@@ -115,7 +115,7 @@ SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub','fc260000-0000-4000-8000-000000000001',true);
 SELECT pg_temp.ok((SELECT count(*)=70 FROM public.sp_approved_credential_catalogue WHERE code NOT IN (SELECT code FROM research_added) AND region IS DISTINCT FROM 'AE-AZ')
  AND (SELECT count(*)=7 FROM public.sp_approved_credential_catalogue WHERE region='AE-AZ'),
- 'today a Swedish holder, with no grant, is offered the 70 pinned here: all 14 international, all 8 Swedish (VU1, VU2 and SV included), the 4 Indian qualifications and the 44 UK and Dubai public-pilot definitions -- and, counted apart, Abu Dhabi''s 7 (public pilot since 20270219090000)');
+ 'today a Swedish holder, with no grant, is offered the 70 pinned here: all 14 international, all 8 Swedish (VU1, VU2 and SV included), the 4 Indian qualifications and the 44 UK and Dubai public-pilot definitions -- and, counted apart, Abu Dhabi''s 7 (public pilot since 20270220090000)');
 SELECT pg_temp.ok((SELECT count(*)=3 FROM public.sp_approved_credential_catalogue WHERE code IN ('VU1','VU2','SV')),
  'VU1, VU2 and SV are no longer withheld');
 -- The researched definitions are offered exactly when they are active: every active one, no inactive one.
@@ -161,7 +161,7 @@ SELECT pg_temp.ok((SELECT count(*)=70 FROM public.sp_approved_credential_catalog
 SELECT set_config('request.path','',true);
 SELECT set_config('request.headers','',true);
 RESET ROLE;
--- Abu Dhabi is a public pilot (20270219090000): offered as its own seven, approved by nobody.
+-- Abu Dhabi is a public pilot (20270220090000): offered as its own seven, approved by nobody.
 
 -- ── every definition: visible, saved, read back ─────────────────────────
 DO $$
@@ -261,7 +261,7 @@ SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub','fc260000-0000-4000-8000-000000000004',true);
 SELECT pg_temp.ok((SELECT count(*)=7 FROM public.sp_approved_credential_catalogue WHERE region='AE-AZ')
  AND (SELECT count(*)=0 FROM public.sp_credential_types WHERE market_pack_code='AE-AZ' AND is_active),
- 'Abu Dhabi is offered to a Dubai holder as its own seven, none of them approved: a public pilot since 20270219090000, proved in full by its own suite');
+ 'Abu Dhabi is offered to a Dubai holder as its own seven, none of them approved: a public pilot since 20270220090000, proved in full by its own suite');
 SELECT pg_temp.refused($q$SELECT public.sp_save_international_credential('{"definition_code":"AE_AZ_PSBD_LICENCE_GUARD","market_country":"AE","market_region":"AE-AZ","identifier":"","issued_on":"2024-05-01","valid_until":"2027-05-01","no_expiry":false}')$q$,
  'SP_CREDENTIAL_REQUIRES_SCOPE','an Abu Dhabi licence without the company it is tied to cannot be saved');
 

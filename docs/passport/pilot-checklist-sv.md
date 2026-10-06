@@ -21,7 +21,7 @@ OV, SV, personalgodkännande) och alla 14 internationella certifieringar.
 beslutat Route A: det redan registrerade pilotgodkännandet per definition gäller för uttryckligt
 beviljade pilotmedlemmar. Inget mer godkännande behövs. Definitionerna är fortsatt **inte**
 godkända för allmänheten, och ingen marknad aktiveras. Nordirland är en egen marknad (`GB-NI`)
-med egen åtkomst. Abu Dhabi (7 definitioner) är sedan 20270219090000 en öppen pilot för alla inloggade, utan pilotåtkomst.
+med egen åtkomst. Abu Dhabi (7 definitioner) är sedan 20270220090000 en öppen pilot för alla inloggade, utan pilotåtkomst.
 
 Utan pilotåtkomst ser en användare en **tom** brittisk eller dubaisk katalog, med en förklaring.
 Det är avsett. Exakta releasesteg: [pilot-approval-decisions.md](pilot-approval-decisions.md).

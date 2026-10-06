@@ -518,7 +518,7 @@ BEGIN
   PERFORM pg_temp.ok(_r = 'OK',
     '5.3 a holder with no stated work country records a CISSP (got ' || _r || ')');
 
-  -- A holder in a market that is only a PUBLIC PILOT (Abu Dhabi, 20270219090000):
+  -- A holder in a market that is only a PUBLIC PILOT (Abu Dhabi, 20270220090000):
   -- authored, unreviewed, open for registration and approved for nobody. Their
   -- regulated licence saves as self-declared; the market gate never runs for
   -- their CISA, because the claim names no jurisdiction for it to gate.
