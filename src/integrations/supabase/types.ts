@@ -8430,6 +8430,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "scp_bundle_versions_role_weight_profile_fkey"
+            columns: ["role_weight_profile_id"]
+            isOneToOne: false
+            referencedRelation: "scp_role_weight_profiles_published"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "scp_bundle_versions_scoring_version_id_fkey"
             columns: ["scoring_version_id"]
             isOneToOne: false
@@ -14394,6 +14401,13 @@ export type Database = {
             referencedRelation: "scp_role_weight_profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "scp_role_weight_profile_weights_role_weight_profile_id_fkey"
+            columns: ["role_weight_profile_id"]
+            isOneToOne: false
+            referencedRelation: "scp_role_weight_profiles_published"
+            referencedColumns: ["id"]
+          },
         ]
       }
       scp_role_weight_profiles: {
@@ -15291,6 +15305,146 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "cig_professions"
             referencedColumns: ["slug"]
+          },
+        ]
+      }
+      sentinel_forms: {
+        Row: {
+          assessment_version_id: string
+          assignments_enabled: boolean
+          bank: Json
+          duration_seconds: number
+          form_id: string
+          items: Json
+          owner_approved_at: string | null
+          practice: Json
+          preview_only: boolean
+          privacy_approved_at: string | null
+          version: string
+        }
+        Insert: {
+          assessment_version_id: string
+          assignments_enabled?: boolean
+          bank: Json
+          duration_seconds: number
+          form_id: string
+          items: Json
+          owner_approved_at?: string | null
+          practice: Json
+          preview_only?: boolean
+          privacy_approved_at?: string | null
+          version: string
+        }
+        Update: {
+          assessment_version_id?: string
+          assignments_enabled?: boolean
+          bank?: Json
+          duration_seconds?: number
+          form_id?: string
+          items?: Json
+          owner_approved_at?: string | null
+          practice?: Json
+          preview_only?: boolean
+          privacy_approved_at?: string | null
+          version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sentinel_forms_assessment_version_id_fkey"
+            columns: ["assessment_version_id"]
+            isOneToOne: true
+            referencedRelation: "scp_assessment_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sentinel_forms_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "scp_forms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sentinel_sessions: {
+        Row: {
+          accommodation: boolean
+          answers: Json
+          assignment_id: string
+          attempt_id: string
+          deadline: string | null
+          duration_seconds: number
+          finished_at: string | null
+          items: Json
+          recipient_user_id: string
+          report: Json | null
+          report_visible: boolean
+          revision: number
+          started_at: string | null
+          status: string
+          version: string
+        }
+        Insert: {
+          accommodation?: boolean
+          answers?: Json
+          assignment_id: string
+          attempt_id: string
+          deadline?: string | null
+          duration_seconds: number
+          finished_at?: string | null
+          items: Json
+          recipient_user_id: string
+          report?: Json | null
+          report_visible?: boolean
+          revision?: number
+          started_at?: string | null
+          status?: string
+          version: string
+        }
+        Update: {
+          accommodation?: boolean
+          answers?: Json
+          assignment_id?: string
+          attempt_id?: string
+          deadline?: string | null
+          duration_seconds?: number
+          finished_at?: string | null
+          items?: Json
+          recipient_user_id?: string
+          report?: Json | null
+          report_visible?: boolean
+          revision?: number
+          started_at?: string | null
+          status?: string
+          version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sentinel_sessions_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assessment_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sentinel_sessions_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "scp_rm_employer_assignments"
+            referencedColumns: ["assignment_id"]
+          },
+          {
+            foreignKeyName: "sentinel_sessions_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: true
+            referencedRelation: "scp_attempts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sentinel_sessions_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: true
+            referencedRelation: "scp_rm_employer_assignments"
+            referencedColumns: ["attempt_id"]
           },
         ]
       }
@@ -16486,7 +16640,7 @@ export type Database = {
         Row: {
           authority_id: string | null
           certification_issuer_id: string | null
-          checked_on: string
+          checked_on: string | null
           credential_code: string
           document_specific: boolean
           role: string
@@ -16495,7 +16649,7 @@ export type Database = {
         Insert: {
           authority_id?: string | null
           certification_issuer_id?: string | null
-          checked_on: string
+          checked_on?: string | null
           credential_code: string
           document_specific?: boolean
           role: string
@@ -16504,7 +16658,7 @@ export type Database = {
         Update: {
           authority_id?: string | null
           certification_issuer_id?: string | null
-          checked_on?: string
+          checked_on?: string | null
           credential_code?: string
           document_specific?: boolean
           role?: string
@@ -17327,27 +17481,6 @@ export type Database = {
         }
         Relationships: []
       }
-      sp_passport_numbers: {
-        Row: {
-          assigned_at: string
-          designation: string | null
-          holder_user_id: string
-          passport_number: number
-        }
-        Insert: {
-          assigned_at?: string
-          designation?: string | null
-          holder_user_id: string
-          passport_number: number
-        }
-        Update: {
-          assigned_at?: string
-          designation?: string | null
-          holder_user_id?: string
-          passport_number?: number
-        }
-        Relationships: []
-      }
       sp_passport_events: {
         Row: {
           actor_user_id: string | null
@@ -17378,6 +17511,42 @@ export type Database = {
           occurred_at?: string
           subject_id?: string | null
           subject_type?: string | null
+        }
+        Relationships: []
+      }
+      sp_passport_numbers: {
+        Row: {
+          assigned_at: string
+          designation: string | null
+          holder_user_id: string
+          passport_number: number
+        }
+        Insert: {
+          assigned_at?: string
+          designation?: string | null
+          holder_user_id: string
+          passport_number: number
+        }
+        Update: {
+          assigned_at?: string
+          designation?: string | null
+          holder_user_id?: string
+          passport_number?: number
+        }
+        Relationships: []
+      }
+      sp_passport_numbers_retired: {
+        Row: {
+          passport_number: number
+          retired_at: string
+        }
+        Insert: {
+          passport_number: number
+          retired_at?: string
+        }
+        Update: {
+          passport_number?: number
+          retired_at?: string
         }
         Relationships: []
       }
@@ -17937,6 +18106,75 @@ export type Database = {
           requires_jurisdiction?: boolean
           requires_valid_until?: boolean
           sort_order?: number
+        }
+        Relationships: []
+      }
+      sp_social_share_items: {
+        Row: {
+          claim_id: string
+          share_id: string
+        }
+        Insert: {
+          claim_id: string
+          share_id: string
+        }
+        Update: {
+          claim_id?: string
+          share_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sp_social_share_items_claim_id_fkey"
+            columns: ["claim_id"]
+            isOneToOne: false
+            referencedRelation: "sp_claims"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sp_social_share_items_share_id_fkey"
+            columns: ["share_id"]
+            isOneToOne: false
+            referencedRelation: "sp_social_shares"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sp_social_shares: {
+        Row: {
+          created_at: string
+          expires_at: string
+          holder_label: string
+          holder_user_id: string
+          id: string
+          locale: string
+          public_id: string
+          request_fingerprint: string
+          request_key: string
+          revoked_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          expires_at: string
+          holder_label: string
+          holder_user_id: string
+          id?: string
+          locale: string
+          public_id: string
+          request_fingerprint: string
+          request_key: string
+          revoked_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          holder_label?: string
+          holder_user_id?: string
+          id?: string
+          locale?: string
+          public_id?: string
+          request_fingerprint?: string
+          request_key?: string
+          revoked_at?: string | null
         }
         Relationships: []
       }
@@ -20998,6 +21236,160 @@ export type Database = {
           },
         ]
       }
+      graph_versions_published: {
+        Row: {
+          created_at: string | null
+          id: string | null
+          is_active: boolean | null
+          published_at: string | null
+          version: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          published_at?: string | null
+          version?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          published_at?: string | null
+          version?: string | null
+        }
+        Relationships: []
+      }
+      scp_bundle_versions_published: {
+        Row: {
+          approved_at: string | null
+          bundle_id: string | null
+          content_hash: string | null
+          content_status: string | null
+          core_assessment_version_id: string | null
+          core_form_id: string | null
+          created_at: string | null
+          disclaimer_version: string | null
+          id: string | null
+          module_assessment_version_id: string | null
+          module_form_id: string | null
+          published_at: string | null
+          report_version: string | null
+          retired_at: string | null
+          role_weight_profile_id: string | null
+          scoring_version_id: string | null
+          updated_at: string | null
+          validation_status: string | null
+          version_number: number | null
+        }
+        Insert: {
+          approved_at?: string | null
+          bundle_id?: string | null
+          content_hash?: string | null
+          content_status?: string | null
+          core_assessment_version_id?: string | null
+          core_form_id?: string | null
+          created_at?: string | null
+          disclaimer_version?: string | null
+          id?: string | null
+          module_assessment_version_id?: string | null
+          module_form_id?: string | null
+          published_at?: string | null
+          report_version?: string | null
+          retired_at?: string | null
+          role_weight_profile_id?: string | null
+          scoring_version_id?: string | null
+          updated_at?: string | null
+          validation_status?: string | null
+          version_number?: number | null
+        }
+        Update: {
+          approved_at?: string | null
+          bundle_id?: string | null
+          content_hash?: string | null
+          content_status?: string | null
+          core_assessment_version_id?: string | null
+          core_form_id?: string | null
+          created_at?: string | null
+          disclaimer_version?: string | null
+          id?: string | null
+          module_assessment_version_id?: string | null
+          module_form_id?: string | null
+          published_at?: string | null
+          report_version?: string | null
+          retired_at?: string | null
+          role_weight_profile_id?: string | null
+          scoring_version_id?: string | null
+          updated_at?: string | null
+          validation_status?: string | null
+          version_number?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_bundle_versions_bundle_id_fkey"
+            columns: ["bundle_id"]
+            isOneToOne: false
+            referencedRelation: "scp_bundles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_bundle_versions_core_assessment_version_id_fkey"
+            columns: ["core_assessment_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_assessment_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_bundle_versions_core_form_id_fkey"
+            columns: ["core_form_id"]
+            isOneToOne: false
+            referencedRelation: "scp_forms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_bundle_versions_module_assessment_version_id_fkey"
+            columns: ["module_assessment_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_assessment_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_bundle_versions_module_form_id_fkey"
+            columns: ["module_form_id"]
+            isOneToOne: false
+            referencedRelation: "scp_forms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_bundle_versions_role_weight_profile_fkey"
+            columns: ["role_weight_profile_id"]
+            isOneToOne: false
+            referencedRelation: "scp_role_weight_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_bundle_versions_role_weight_profile_fkey"
+            columns: ["role_weight_profile_id"]
+            isOneToOne: false
+            referencedRelation: "scp_role_weight_profiles_published"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_bundle_versions_scoring_version_id_fkey"
+            columns: ["scoring_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_scoring_version_lineage"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_bundle_versions_scoring_version_id_fkey"
+            columns: ["scoring_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_scoring_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       scp_interview_process_quality: {
         Row: {
           assessments_recorded: number | null
@@ -21231,6 +21623,53 @@ export type Database = {
             columns: ["item_version_id"]
             isOneToOne: false
             referencedRelation: "scp_item_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_role_weight_profiles_published: {
+        Row: {
+          content_hash: string | null
+          content_status: string | null
+          created_at: string | null
+          id: string | null
+          profession_id: string | null
+          published_at: string | null
+          retired_at: string | null
+          updated_at: string | null
+          validation_status: string | null
+          version_number: number | null
+        }
+        Insert: {
+          content_hash?: string | null
+          content_status?: string | null
+          created_at?: string | null
+          id?: string | null
+          profession_id?: string | null
+          published_at?: string | null
+          retired_at?: string | null
+          updated_at?: string | null
+          validation_status?: string | null
+          version_number?: number | null
+        }
+        Update: {
+          content_hash?: string | null
+          content_status?: string | null
+          created_at?: string | null
+          id?: string | null
+          profession_id?: string | null
+          published_at?: string | null
+          retired_at?: string | null
+          updated_at?: string | null
+          validation_status?: string | null
+          version_number?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_role_weight_profiles_profession_id_fkey"
+            columns: ["profession_id"]
+            isOneToOne: false
+            referencedRelation: "scp_professions"
             referencedColumns: ["id"]
           },
         ]
@@ -24728,6 +25167,36 @@ export type Database = {
           stored_sha256: string
         }[]
       }
+      sentinel_catalog: { Args: { _employer_id: string }; Returns: Json }
+      sentinel_employer_action: {
+        Args: {
+          _action: string
+          _attempt_id: string
+          _duration_seconds?: number
+        }
+        Returns: undefined
+      }
+      sentinel_finish_internal: {
+        Args: { _attempt_id: string; _timeout: boolean }
+        Returns: undefined
+      }
+      sentinel_practice: { Args: { _attempt_id: string }; Returns: Json }
+      sentinel_report: {
+        Args: { _attempt_id: string; _employer_id?: string }
+        Returns: Json
+      }
+      sentinel_review: { Args: never; Returns: Json }
+      sentinel_session: {
+        Args: {
+          _action?: string
+          _attempt_id: string
+          _option_id?: string
+          _question_id?: string
+          _revision?: number
+        }
+        Returns: Json
+      }
+      sentinel_status: { Args: { _attempt_ids: string[] }; Returns: Json }
       set_application_status: {
         Args: { _application_id: string; _new_status: string; _note?: string }
         Returns: {
@@ -24779,6 +25248,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      sp_assign_passport_number: { Args: { _holder: string }; Returns: number }
       sp_attach_evidence: {
         Args: {
           _claim_id: string
@@ -24862,16 +25332,6 @@ export type Database = {
         }
         Returns: string
       }
-      sp_create_social_share: {
-        Args: {
-          _claim_ids: string[]
-          _expires_days: number
-          _holder_label: string
-          _locale: string
-          _request_key: string
-        }
-        Returns: Json
-      }
       sp_create_selected_disclosure: {
         Args: {
           _claim_ids: string[]
@@ -24880,6 +25340,16 @@ export type Database = {
           _locale: string
           _purpose: string
           _recipient_hint: string
+          _request_key: string
+        }
+        Returns: Json
+      }
+      sp_create_social_share: {
+        Args: {
+          _claim_ids: string[]
+          _expires_days: number
+          _holder_label: string
+          _locale: string
           _request_key: string
         }
         Returns: Json
@@ -24896,6 +25366,7 @@ export type Database = {
         }
         Returns: Json
       }
+      sp_designate_founder: { Args: { _holder: string }; Returns: number }
       sp_disclosure_payload: { Args: { _disclosure_id: string }; Returns: Json }
       sp_disclosure_payload_v1: {
         Args: { _disclosure_id: string }
@@ -24921,9 +25392,9 @@ export type Database = {
         }
         Returns: string
       }
-      sp_get_social_share: { Args: { _public_id: string }; Returns: Json }
       sp_get_disclosure: { Args: { _token: string }; Returns: Json }
       sp_get_disclosure_session: { Args: { _session: string }; Returns: Json }
+      sp_get_social_share: { Args: { _public_id: string }; Returns: Json }
       sp_grant_pilot_member: {
         Args: { _market_pack_code: string; _note?: string; _user_id: string }
         Returns: undefined
@@ -24984,7 +25455,6 @@ export type Database = {
         Returns: boolean
       }
       sp_is_verifier: { Args: { _user_id: string }; Returns: boolean }
-      sp_list_my_social_shares: { Args: never; Returns: Json }
       sp_list_my_catalogue_requests: {
         Args: never
         Returns: {
@@ -24998,6 +25468,7 @@ export type Database = {
           status: string
         }[]
       }
+      sp_list_my_social_shares: { Args: never; Returns: Json }
       sp_market_access: {
         Args: { _market_pack_code: string; _user_id: string }
         Returns: string
@@ -25019,8 +25490,8 @@ export type Database = {
         }[]
       }
       sp_my_passport_number: { Args: never; Returns: Json }
+      sp_network_counts_holder: { Args: { _holder: string }; Returns: boolean }
       sp_network_stats: { Args: never; Returns: Json }
-      sp_revoke_social_share: { Args: { _public_id: string }; Returns: Json }
       sp_passport_complete_first_merit: {
         Args: {
           _country: string
@@ -25104,6 +25575,7 @@ export type Database = {
         Args: { _market_pack_code: string; _user_id: string }
         Returns: undefined
       }
+      sp_revoke_social_share: { Args: { _public_id: string }; Returns: Json }
       sp_save_international_credential: {
         Args: { _input: Json }
         Returns: string

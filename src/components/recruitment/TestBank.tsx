@@ -291,57 +291,107 @@ export function TestBank({
         </p>
       )}
       {q.isSuccess && (
-        <div className="my-5 grid gap-4 lg:grid-cols-2">
-          {offers.map((o) => {
-            const a = o.assessment;
-            return (
-              <article key={o.level.group} className="rounded-xl border bg-card p-5">
-                <h2 className="text-xl font-semibold">
-                  {a ? (sv ? a.nameSv : a.nameEn) : t(`sendTest.level.${o.level.group}`)}
-                </h2>
-                <p className="mt-2 text-sm">{t(`sendTest.level.${o.level.group}.audience`)}</p>
-                <p className="mt-2">{t(`sendTest.level.${o.level.group}.purpose`)}</p>
-                {a && (
-                  <>
-                    <p className="mt-3 text-sm">
-                      {a.minutesMin && a.minutesMax ? `${a.minutesMin}–${a.minutesMax} min · ` : ""}
-                      {q.data
-                        .find((r) => r.itemId === a.itemId)
-                        ?.languages.join(", ")
-                        .toUpperCase()}
-                    </p>
-                    <p className="mt-2 text-sm">
-                      {a.validationStatus === "validated"
-                        ? sv
-                          ? "Validerat innehåll"
-                          : "Validated content"
-                        : sv
-                          ? "Pilotinnehåll – inte validerat"
-                          : "Pilot content — not validated"}{" "}
-                      · {a.contentStatus} · v
-                      {q.data.find((r) => r.itemId === a.itemId)?.versionNumber}
-                    </p>
-                  </>
-                )}
-                {o.state === "sendable" ? (
-                  <SendTestEntry
-                    employerId={employerId}
-                    employerSlug={employerSlug}
-                    initialGroup={o.level.group}
-                  />
-                ) : (
-                  <p className="mt-3 text-sm">
-                    {t(
-                      o.draftAwaitingRelease
-                        ? "sendTest.level.strategic.pendingApproval"
-                        : "sendTest.level.notAssignable",
-                    )}
+        <>
+          <div className="mt-8">
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              {sv ? "Yrkesbedömningar" : "Role assessments"}
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {sv
+                ? "Kunskap och omdöme i situationer från yrket."
+                : "Knowledge and judgement in situations from the role."}
+            </p>
+          </div>
+          <div className="mt-3 grid gap-4 lg:grid-cols-2">
+            {offers.map((o) => {
+              const a = o.assessment;
+              return (
+                <article
+                  key={o.level.group}
+                  className="flex flex-col rounded-xl border bg-card p-5"
+                >
+                  <h2 className="text-lg font-semibold leading-snug">
+                    {a ? (sv ? a.nameSv : a.nameEn) : t(`sendTest.level.${o.level.group}`)}
+                  </h2>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    {t(`sendTest.level.${o.level.group}.purpose`)}
                   </p>
-                )}
-              </article>
-            );
-          })}
-        </div>
+                  <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                    <div className="col-span-2">
+                      <dt className="text-xs text-muted-foreground">
+                        {sv ? "Målgrupp" : "Audience"}
+                      </dt>
+                      <dd>{t(`sendTest.level.${o.level.group}.audience`)}</dd>
+                    </div>
+                    {a && (
+                      <>
+                        <div>
+                          <dt className="text-xs text-muted-foreground">{sv ? "Tid" : "Time"}</dt>
+                          <dd>
+                            {a.minutesMin && a.minutesMax
+                              ? `${a.minutesMin}–${a.minutesMax} min`
+                              : "–"}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt className="text-xs text-muted-foreground">
+                            {sv ? "Språk" : "Languages"}
+                          </dt>
+                          <dd>
+                            {q.data
+                              .find((r) => r.itemId === a.itemId)
+                              ?.languages.join(", ")
+                              .toUpperCase()}
+                          </dd>
+                        </div>
+                      </>
+                    )}
+                  </dl>
+                  {a && (
+                    <>
+                      <p className="mt-3 text-xs text-muted-foreground">
+                        {a.validationStatus === "validated"
+                          ? sv
+                            ? "Validerat innehåll"
+                            : "Validated content"
+                          : sv
+                            ? "Pilotinnehåll – inte validerat"
+                            : "Pilot content — not validated"}{" "}
+                        · {a.contentStatus} · v
+                        {q.data.find((r) => r.itemId === a.itemId)?.versionNumber}
+                      </p>
+                    </>
+                  )}
+                  {o.state === "sendable" ? (
+                    <SendTestEntry
+                      employerId={employerId}
+                      employerSlug={employerSlug}
+                      initialGroup={o.level.group}
+                    />
+                  ) : (
+                    <p className="mt-auto pt-3 text-sm text-muted-foreground">
+                      {t(
+                        o.draftAwaitingRelease
+                          ? "sendTest.level.strategic.pendingApproval"
+                          : "sendTest.level.notAssignable",
+                      )}
+                    </p>
+                  )}
+                </article>
+              );
+            })}
+          </div>
+          <div className="mt-10">
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              {sv ? "Abstrakt problemlösning" : "Abstract reasoning"}
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {sv
+                ? "Mönster i figurer, utan koppling till ett visst yrke."
+                : "Patterns in figures, not tied to a specific role."}
+            </p>
+          </div>
+        </>
       )}
       {(q.data ?? [])
         .filter(
@@ -354,10 +404,10 @@ export function TestBank({
           <article
             key={a.itemId}
             data-testid={a.slug === "abstract_reasoning_v1" ? "sentinel-test-card" : undefined}
-            className="my-4 rounded-xl border bg-card p-5"
+            className="my-3 rounded-xl border border-l-4 border-l-accent bg-card p-5"
           >
-            <h2 className="text-xl font-semibold">{sv ? a.nameSv : a.nameEn}</h2>
-            <p>{sv ? a.summarySv : a.summaryEn}</p>
+            <h2 className="text-lg font-semibold leading-snug">{sv ? a.nameSv : a.nameEn}</h2>
+            <p className="mt-2 text-sm text-muted-foreground">{sv ? a.summarySv : a.summaryEn}</p>
             {a.slug === "abstract_reasoning_v1" && (
               <p className="mt-2 text-sm text-muted-foreground">
                 {sv
