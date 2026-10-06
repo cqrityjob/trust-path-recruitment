@@ -1,0 +1,166 @@
+SET
+BEGIN
+CREATE FUNCTION
+CREATE FUNCTION
+INSERT 0 1
+INSERT 0 1
+INSERT 0 1
+CREATE FUNCTION
+SELECT 1
+ALTER TABLE
+ALTER TABLE
+UPDATE 1
+ALTER TABLE
+GRANT
+SELECT 50
+psql:supabase/tests/scp_delivery_answer_key_test.sql:90: NOTICE:  ok  DK.0 the real recruitment form carries its 22 scenario items
+ ok 
+----
+ 
+(1 row)
+
+DO
+psql:supabase/tests/scp_delivery_answer_key_test.sql:104: NOTICE:  GROUP DK0 — reproduction: the pre-fix payload hands over the answer key
+DO
+SAVEPOINT
+CREATE FUNCTION
+COMMENT
+REVOKE
+GRANT
+DROP FUNCTION
+psql:supabase/rollback/20261229090000_scp_delivery_answer_key_leak_rollback.sql:109: NOTICE:  SCP_DELIVERY_KEY_ROLLBACK ok: scp_get_attempt_items restored to 20260905053344 (option_key is served again -- the leak is back)
+DO
+SELECT 50
+psql:supabase/tests/scp_delivery_answer_key_test.sql:113: NOTICE:  ok  DK0.1 PRE-FIX: every served option carries its option_key
+ ok 
+----
+ 
+(1 row)
+
+psql:supabase/tests/scp_delivery_answer_key_test.sql:119: NOTICE:  ok  DK0.2 PRE-FIX: "choose the option keyed a" is the full-credit answer on 22 of 22 scenario items
+ ok 
+----
+ 
+(1 row)
+
+psql:supabase/tests/scp_delivery_answer_key_test.sql:124: NOTICE:  ok  DK0.3 PRE-FIX: ...even though the shuffle moved the top option off the first slot -- the key gives it away
+ ok 
+----
+ 
+(1 row)
+
+psql:supabase/tests/scp_delivery_answer_key_test.sql:129: NOTICE:  ok  DK0.4 PRE-FIX: a seedless attempt is served key-first: the first option is the answer on 22 of 22
+ ok 
+----
+ 
+(1 row)
+
+ROLLBACK
+psql:supabase/tests/scp_delivery_answer_key_test.sql:133: NOTICE:  GROUP DK1 — the served option is {option_id, label}
+DO
+SELECT 50
+SELECT 50
+psql:supabase/tests/scp_delivery_answer_key_test.sql:140: NOTICE:  ok  DK1.1 the attempt is still served all 50 items, in Swedish and in English
+ ok 
+----
+ 
+(1 row)
+
+psql:supabase/tests/scp_delivery_answer_key_test.sql:144: NOTICE:  ok  DK1.2 every served option, in both languages, has exactly the keys option_id and label
+ ok 
+----
+ 
+(1 row)
+
+psql:supabase/tests/scp_delivery_answer_key_test.sql:147: NOTICE:  ok  DK1.3 no served option text mentions a key, score, preference, rationale or feedback
+ ok 
+----
+ 
+(1 row)
+
+psql:supabase/tests/scp_delivery_answer_key_test.sql:152: NOTICE:  ok  DK1.4 every scenario item still serves every one of its options
+ ok 
+----
+ 
+(1 row)
+
+psql:supabase/tests/scp_delivery_answer_key_test.sql:163: NOTICE:  ok  DK1.5 the candidate cannot read scp_item_options to map an id back to its key (rows=0)
+DO
+psql:supabase/tests/scp_delivery_answer_key_test.sql:166: NOTICE:  GROUP DK2 — the per-attempt order is unchanged
+DO
+psql:supabase/tests/scp_delivery_answer_key_test.sql:172: NOTICE:  ok  DK2.1 the same attempt is served the same order on re-read
+ ok 
+----
+ 
+(1 row)
+
+psql:supabase/tests/scp_delivery_answer_key_test.sql:178: NOTICE:  ok  DK2.2 a seeded attempt still differs from the authored order
+ ok 
+----
+ 
+(1 row)
+
+psql:supabase/tests/scp_delivery_answer_key_test.sql:183: NOTICE:  ok  DK2.3 ordered self-report scales keep their authored order
+ ok 
+----
+ 
+(1 row)
+
+psql:supabase/tests/scp_delivery_answer_key_test.sql:186: NOTICE:  GROUP DK3 — unanswered seedless attempts leave the key-first order
+DO
+SELECT 50
+psql:supabase/tests/scp_delivery_answer_key_test.sql:191: NOTICE:  ok  DK3.1 the helper seeds at least the unanswered seedless attempt
+ ok 
+----
+ 
+(1 row)
+
+psql:supabase/tests/scp_delivery_answer_key_test.sql:194: NOTICE:  ok  DK3.2 the unanswered seedless attempt now has a seed
+ ok 
+----
+ 
+(1 row)
+
+psql:supabase/tests/scp_delivery_answer_key_test.sql:197: NOTICE:  ok  DK3.3 the seedless attempt that already has an answer keeps NO seed (never reordered mid-run, AC14)
+ ok 
+----
+ 
+(1 row)
+
+psql:supabase/tests/scp_delivery_answer_key_test.sql:202: NOTICE:  ok  DK3.4 ...and is served exactly the order it was served before
+ ok 
+----
+ 
+(1 row)
+
+psql:supabase/tests/scp_delivery_answer_key_test.sql:207: NOTICE:  ok  DK3.5 the newly seeded attempt is no longer served key-first
+ ok 
+----
+ 
+(1 row)
+
+psql:supabase/tests/scp_delivery_answer_key_test.sql:211: NOTICE:  ok  DK3.6 the seed immutability guard is enabled again after the helper ran
+ ok 
+----
+ 
+(1 row)
+
+psql:supabase/tests/scp_delivery_answer_key_test.sql:221: NOTICE:  ok  DK3.7 outside the helper a seed still cannot be changed (refused)
+DO
+psql:supabase/tests/scp_delivery_answer_key_test.sql:224: NOTICE:  GROUP DK4 — grants
+DO
+psql:supabase/tests/scp_delivery_answer_key_test.sql:229: NOTICE:  ok  DK4.1 the seeding helper is owner-only
+ ok 
+----
+ 
+(1 row)
+
+psql:supabase/tests/scp_delivery_answer_key_test.sql:233: NOTICE:  ok  DK4.2 delivery stays authenticated-only
+ ok 
+----
+ 
+(1 row)
+
+psql:supabase/tests/scp_delivery_answer_key_test.sql:235: NOTICE:  scp_delivery_answer_key_test: ALL ASSERTIONS PASSED
+DO
+ROLLBACK

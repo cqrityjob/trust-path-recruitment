@@ -1,0 +1,148 @@
+BEGIN
+CREATE FUNCTION
+CREATE FUNCTION
+SELECT 1
+INSERT 0 4
+INSERT 0 2
+INSERT 0 2
+INSERT 0 1
+INSERT 0 1
+GRANT
+SET
+SET
+INSERT 0 1
+RESET
+RESET
+INSERT 0 1
+SELECT 1
+INSERT 0 2
+GRANT
+GRANT
+SELECT 1
+GRANT
+SET
+SET
+SELECT 1
+psql:supabase/tests/assessment_draft_authoring_test.sql:15: NOTICE:  ok  AD1 employer owner cannot author content
+ must_fail
+-----------
+
+(1 row)
+
+SET
+SELECT 1
+SELECT 1
+psql:supabase/tests/assessment_draft_authoring_test.sql:23: NOTICE:  ok  AD2 author cannot release through direct table API
+ must_fail
+-----------
+
+(1 row)
+
+psql:supabase/tests/assessment_draft_authoring_test.sql:25: NOTICE:  ok  AD3 foreign item IDs cannot enter a snapshot
+ must_fail
+-----------
+
+(1 row)
+
+RESET
+RESET
+psql:supabase/tests/assessment_draft_authoring_test.sql:28: NOTICE:  ok  AD4 draft has no inherited release or approval
+ ok
+----
+
+(1 row)
+
+psql:supabase/tests/assessment_draft_authoring_test.sql:30: NOTICE:  ok  AD5 new definition inherits no designation/display-name override
+ ok
+----
+
+(1 row)
+
+psql:supabase/tests/assessment_draft_authoring_test.sql:31: NOTICE:  ok  AD6 selected questions copied
+ ok
+----
+
+(1 row)
+
+psql:supabase/tests/assessment_draft_authoring_test.sql:34: NOTICE:  ok  AD14 original question order survives unordered selection input
+ ok
+----
+
+(1 row)
+
+psql:supabase/tests/assessment_draft_authoring_test.sql:35: NOTICE:  ok  AD7 participant sections copied
+ ok
+----
+
+(1 row)
+
+psql:supabase/tests/assessment_draft_authoring_test.sql:37: NOTICE:  ok  AD8 existing assignment and attempt retain original version
+ ok
+----
+
+(1 row)
+
+SELECT 1
+GRANT
+GRANT
+SET
+SET
+psql:supabase/tests/assessment_draft_authoring_test.sql:49: NOTICE:  ok  AD9 library refuses authored draft despite definition designation
+ ok
+----
+
+(1 row)
+
+psql:supabase/tests/assessment_draft_authoring_test.sql:50: NOTICE:  ok  AD10 existing permitted version remains usable
+ ok
+----
+
+(1 row)
+
+psql:supabase/tests/assessment_draft_authoring_test.sql:55: NOTICE:  ok  AD15 authorised employer retains exact draft block/time aggregates
+ ok
+----
+
+(1 row)
+
+psql:supabase/tests/assessment_draft_authoring_test.sql:64: NOTICE:  ok  AD16 fixed catalogue contract excludes questions instructions answers notes and actor IDs
+ ok
+----
+
+(1 row)
+
+psql:supabase/tests/assessment_draft_authoring_test.sql:67: NOTICE:  ok  AD11 direct assignment RPC cannot bypass draft hold
+ must_fail
+-----------
+
+(1 row)
+
+SET
+psql:supabase/tests/assessment_draft_authoring_test.sql:69: NOTICE:  ok  AD12 foreign organisation cannot read library
+ ok
+----
+
+(1 row)
+
+SET
+psql:supabase/tests/assessment_draft_authoring_test.sql:72: NOTICE:  ok  AD17 ordinary candidate cannot read employer library
+ ok
+----
+
+(1 row)
+
+RESET
+RESET
+psql:supabase/tests/assessment_draft_authoring_test.sql:74: NOTICE:  ok  AD13 anonymous cannot author
+ ok
+----
+
+(1 row)
+
+psql:supabase/tests/assessment_draft_authoring_test.sql:76: NOTICE:  ok  AD18 anonymous cannot execute employer library
+ ok
+----
+
+(1 row)
+
+ROLLBACK

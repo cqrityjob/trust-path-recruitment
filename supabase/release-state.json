@@ -7,12 +7,33 @@
   "$comment": "RELEASE PARITY STATE. Enforced by scripts/release-parity-check.ts, which runs in CI and before a release. This file records, for every canonical migration at the release frontier, whether it is believed applied on the hosted database, and which database objects it introduces. The guard fails when application code on this branch references an object whose migration is not applied -- the exact class of failure that stopped employers saving jobs during UAT. It NEVER connects to a database, holds no credentials and applies no migration; it compares this repository against itself. Edit it deliberately: every entry is an owner-level statement about production.", 
   "frontier": [
     {
-      "file": "20270218090000_sp_united_states_jurisdiction_and_destinations.sql",
+      "file": "20270219090000_sp_united_states_jurisdiction_and_destinations.sql",
       "hostedState": "pending",
       "introduces": [],
-      "rollback": "supabase/rollback/20270218090000_sp_united_states_jurisdiction_and_destinations_rollback.sql",
+      "rollback": "supabase/rollback/20270219090000_sp_united_states_jurisdiction_and_destinations_rollback.sql",
       "verify": "SELECT code,is_active,name_sv,name_en FROM public.sp_jurisdictions WHERE code='US'; -- one active row, USA / United States. SELECT code,jurisdiction_type,country_code FROM public.sp_credential_jurisdictions WHERE code='US'; -- national, US. SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conname='candidate_job_preferences_desired_destinations_check'; -- lists 'US' and cardinality <= 6. SELECT count(*) FROM public.sp_market_packs WHERE jurisdiction_code='US'; -- 0. SELECT count(*) FROM public.sp_credential_types WHERE jurisdiction_code='US'; -- 0. SELECT public.sp_market_access(NULL,'US'); -- closed. Compare the md5 of sp_market_packs, sp_credential_types (code, is_active, pilot_state, legal_review_state), sp_claims and sp_authorities with the values read before the apply: all unchanged.",
       "note": "The United States as a country a holder may STATE (sp_jurisdictions, sp_credential_jurisdictions) and a destination a holder may WANT (the candidate_job_preferences vocabulary grows from five values to six). Data only against existing tables: introduces no object, so the application PR that offers the new value depends on this being APPLIED rather than on a new object -- schema-first-release cannot see that dependency, which is why the application PR is held until this entry reads applied. Opens nothing: no market pack, no definition, no authority, no state. sp_market_access(_, 'US') answers closed and the approved catalogue is byte-for-byte unchanged, proved by the migration's own postflight. State catalogues are a proposal (docs/passport/united-states-market-entry.md), not data."
+    },
+    {
+      "file": "20270218090000_catalogue_internal_metadata_boundary.sql",
+      "hostedState": "pending",
+      "introduces": [
+        {
+          "kind": "view",
+          "object": "graph_versions_published"
+        },
+        {
+          "kind": "view",
+          "object": "scp_bundle_versions_published"
+        },
+        {
+          "kind": "view",
+          "object": "scp_role_weight_profiles_published"
+        }
+      ],
+      "rollback": "supabase/rollback/20270218090000_catalogue_internal_metadata_boundary_rollback.sql",
+      "verify": "docs/security/2026-10-06/catalogue-five-access-boundaries.md; compare the five policies, projection definitions/grants, row fingerprints and the unchanged 34 catalogue policies. Run the scoped read-only postflight after approved application.",
+      "note": "Owner access decision 2026-10-06. Schema-only PR; not applied. No history or data rewrite. Published projections omit internal metadata; draft forms/blocks remain author-only. No app calls a pending object."
     },
     {
       "file": "20270216090000_participant_report_api_boundary.sql",

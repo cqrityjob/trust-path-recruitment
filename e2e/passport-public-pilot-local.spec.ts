@@ -521,7 +521,7 @@ test.describe("the public pilot, on a real backend", () => {
       /^Storbritannien \(\d+\)$/,
       /^Förenade Arabemiraten \(\d+\)$/,
       /^Indien \(\d+\)$/,
-      // The United States (20270218090000): a country a holder may state, with
+      // The United States (20270219090000): a country a holder may state, with
       // no catalogue yet -- offered with its zero, so a US-based holder is told
       // the absence rather than finding the country missing.
       /^USA \(0\)$/,
