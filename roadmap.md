@@ -48,5 +48,6 @@
 - [ ] Run recovery and full Sentinel browser regressions — disposable Docker stack unavailable.
 - [x] Previous layout delivery synced: main and working HEAD both 8c6876d7280c94d22b1b7e268ad14161b08033ab at task start.
 - [x] Simplify Sentinel autosave copy; distinguish current/answered/unanswered without relying on colour.
-- [ ] Review TestBank and Väktare/Säkerhetschef candidate/report presentation.
-- [ ] Verify final layout commit delivery and fresh checks; hand off isolated browser instructions.
+- [x] Review TestBank and shared Väktare/Säkerhetschef candidate/report presentation using synthetic components; populated authenticated role reports remain in the access-blocked gate.
+- [x] Fresh available guards and synthetic browser checks; isolated browser and CI instructions handed off.
+- [ ] Verify remote final UI commit delivery and full CI typechecks/production build — platform-local save; manual full checks delegated to platform, CI results unavailable here.
