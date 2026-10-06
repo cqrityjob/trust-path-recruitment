@@ -440,7 +440,9 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // Evidence: docs/release/2026-10-06-united-states-hosted-verification.json.
 // Only the owner-approved Abu Dhabi pilot migration remains pending. Remove
 // its entry only with hosted application/postflight evidence, never on merge alone.
+// Sentinel is known pending; remove only after authorised hosted verification.
 const expectedPending: string[] = [
+  "20270301090000_sentinel_abstract_reasoning.sql",
   "20270220090000_sp_open_abu_dhabi_public_pilot.sql",
 ];
 
