@@ -1,93 +1,60 @@
-/**
- * Negative controls for `nullable-rpc-contract:check`.
- *
- * The guard passed the first time it ran, which for a guard made of regular
- * expressions over a 19 000-line generated file proves nothing at all. Each
- * assertion is proved here by planting the defect it exists to catch and
- * requiring the named diagnostic.
- *
- * The first two are the defect itself, exactly as a regeneration plants it.
- * The rest are the ways the exception could be "kept" while no longer being
- * true, or kept green while being bypassed.
- *
- * Every file is restored byte-for-byte by the shared runner.
- *
- * Run: bun run negative-controls:nullable-rpc-contract
- */
+// Plant defects in the stable overlay, SQL and callers; each must fail the
+// compiler-backed contract guard. Regeneration itself is a POSITIVE control
+// inside that guard, because it must now succeed rather than require repair.
 import { runControls, type Mutation } from "./runner";
-
-const TYPES = "src/integrations/supabase/types.ts";
+const OVERLAY = "src/integrations/supabase/database.ts";
 const BESKT = "src/lib/beskt/interview-conduct.functions.ts";
 const IV = "src/lib/interview-intelligence/runtime.functions.ts";
 const BESKT_SQL = "supabase/migrations/20261113090000_bcp_interview_conduct.sql";
-// The definition in force: the guard reads the NEWEST migration that defines
-// the function, so a planted defect must land there. 20261107090000 created
-// it; 20270111090000 (P1-B 4/5) re-created it with the active-organisation
-// gate, in pg_get_functiondef layout.
 const IV_SQL = "supabase/migrations/20270111090000_interview_beskt_active_employer.sql";
 const GUARD = "nullable-rpc-contract:check";
-
 const MUTATIONS: readonly Mutation[] = [
-  // ---- The regeneration, replayed -----------------------------------------
   {
-    id: "NRC-NC-REGEN-ERASES-BESKT",
-    defect:
-      "a types regeneration rewrites the BESKT divergent statement back to a bare string, exactly as c655d82 did, so the honest `?? null` call stops compiling",
-    file: TYPES,
-    find: "          _divergent_statement: string | null",
-    replace: "          _divergent_statement: string",
+    id: "NRC-NC-NULLABILITY-REMOVED",
+    defect: "the stable override rejects null again",
+    file: OVERLAY,
+    find: "Exclude<Args[Key], undefined> | null",
+    replace: "Exclude<Args[Key], undefined | null>",
     guard: GUARD,
-    expect: "_divergent_statement is typed `string | null`",
+    expect: "_agreed_statement is typed `string | null`",
   },
   {
-    id: "NRC-NC-REGEN-ERASES-FINALISE",
+    id: "NRC-NC-OVERRIDE-REMOVED",
     defect:
-      "a types regeneration rewrites the finalisation RPC's draft run id back to a bare string",
-    file: TYPES,
-    // The generator writes this function's arguments over several lines and in
-    // alphabetical order, which the 2026-09-22 regeneration changed it to; the
-    // one-line anchor this control used stopped matching and the control
-    // reported "anchor appears 0 times" rather than a missed defect.
-    find: "          _draft_run_id: string | null\n          _expected_basis_hash: string",
-    replace: "          _draft_run_id: string\n          _expected_basis_hash: string",
+      "finalisation relies on the manual generated annotation again, so regeneration breaks it",
+    file: OVERLAY,
+    find: 'Args: RequiredNullable<Functions["scp_iv_finalise_previewed_report"]["Args"], "_draft_run_id">;',
+    replace: 'Args: Functions["scp_iv_finalise_previewed_report"]["Args"];',
     guard: GUARD,
-    expect: "_draft_run_id is typed `string | null`",
+    expect: "regeneration-safe RPC calls compile",
   },
-
-  // ---- The exception kept, but wrongly ------------------------------------
   {
     id: "NRC-NC-MADE-OPTIONAL-INSTEAD",
-    defect:
-      "somebody 'fixes' the type by making the argument optional, which compiles and then fails at runtime: there is no SQL default, so PostgREST cannot resolve the function without it",
-    file: TYPES,
-    find: "          _draft_run_id: string | null\n          _expected_basis_hash: string",
-    replace: "          _draft_run_id?: string | null\n          _expected_basis_hash: string",
+    defect: "nullable arguments become optional even though SQL supplies no defaults",
+    file: OVERLAY,
+    find: "[Key in Keys]-?:",
+    replace: "[Key in Keys]?:",
     guard: GUARD,
     expect: "_draft_run_id is not optional",
   },
   {
     id: "NRC-NC-EXCEPTION-WIDENED",
-    defect:
-      "the exception spreads to an argument the database does require, so a null rationale type-checks and is refused at runtime",
-    file: TYPES,
-    find: "          _divergent_statement: string | null\n          _expected_revision: number\n          _item_key: string\n          _operation_id: string\n          _panel_id: string\n          _rationale: string",
-    replace:
-      "          _divergent_statement: string | null\n          _expected_revision: number\n          _item_key: string\n          _operation_id: string\n          _panel_id: string\n          _rationale: string | null",
+    defect: "a required rationale now accepts null",
+    file: OVERLAY,
+    find: '"_agreed_statement" | "_divergent_statement"',
+    replace: '"_agreed_statement" | "_divergent_statement" | "_rationale"',
     guard: GUARD,
     expect: "every other argument is still the generator's own non-null type",
   },
   {
     id: "NRC-NC-THIRD-EXCEPTION-ADDED-QUIETLY",
-    defect:
-      "a third hand-maintained nullable argument is added to the generated file without being pinned, so the next regeneration erases it as silently as it erased these",
-    file: TYPES,
-    find: "      scp_iv_finalise_report: {\n        Args: { _case_id: string; _draft_run_id?: string }",
-    replace:
-      "      scp_iv_finalise_report: {\n        Args: { _case_id: string | null; _draft_run_id?: string }",
+    defect: "an unreviewed function gains a new override",
+    file: OVERLAY,
+    find: "type Overrides = {",
+    replace: 'type Overrides = {\n  scp_iv_finalise_report: Functions["scp_iv_finalise_report"];',
     guard: GUARD,
-    expect: "every hand-maintained nullable RPC argument is one this guard pins",
+    expect: "only the documented functions have overrides",
   },
-
   // ---- The database stops justifying it -----------------------------------
   {
     id: "NRC-NC-SQL-GAINS-A-DEFAULT",
