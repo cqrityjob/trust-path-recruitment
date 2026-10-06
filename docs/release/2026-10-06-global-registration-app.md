@@ -90,3 +90,14 @@ registration is independent from market-catalogue availability.
 
 Final focused local result: all 15 india-entry negative controls detected their planted defect,
 including INDIA-NC-DESTINATION-DRIFT on the six-value vocabulary; files restored byte-for-byte.
+
+
+## USA prerequisite satisfied, 2026-10-06 08:15 UTC
+
+#437 was merged externally as `5627b3b`, and USA application is verified read-only in
+`2026-10-06-united-states-hosted-verification.json`. The two jurisdiction rows and widened
+CHECK exist; all US regulatory counts remain zero and US market access remains closed.
+Release-state is now applied with actual evidence and hosted ledger has 379 matching identities.
+Current main is merged into this branch; the PR is retargeted to main. Earlier pending/dependency
+statements above are historical checkpoints, superseded here. Final head CI must pass before
+owner merge/publication. No merge, production write or publication was performed by Codex.
