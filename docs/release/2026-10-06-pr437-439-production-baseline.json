@@ -1,0 +1,91 @@
+{
+  "projectRef": "wrygicdfxwjnrugduxnt",
+  "readAt": "2026-10-06 07:39:18.23346+00",
+  "main": "f4778fe609f0eba9f0c5ece19036e10f885e6ef5",
+  "migrationCount": 378,
+  "ledgerMd5": "fb6c52b4aba81b2aaf4ea5e9657ce433",
+  "grants": [
+    {
+      "role": "authenticated",
+      "table": "graph_versions",
+      "privilege": "SELECT"
+    },
+    {
+      "role": "anon",
+      "table": "graph_versions_published",
+      "privilege": "SELECT"
+    },
+    {
+      "role": "authenticated",
+      "table": "graph_versions_published",
+      "privilege": "SELECT"
+    },
+    {
+      "role": "authenticated",
+      "table": "scp_bundle_versions_published",
+      "privilege": "SELECT"
+    },
+    {
+      "role": "authenticated",
+      "table": "scp_role_weight_profiles_published",
+      "privilege": "SELECT"
+    }
+  ],
+  "policies": [
+    {
+      "qual": "is_platform_admin(auth.uid())",
+      "roles": [
+        "authenticated"
+      ],
+      "table": "graph_versions",
+      "policy": "graph_versions read all"
+    },
+    {
+      "qual": "scp_can_author(auth.uid())",
+      "roles": [
+        "authenticated"
+      ],
+      "table": "scp_bundle_versions",
+      "policy": "scp_bundle_versions_read"
+    },
+    {
+      "qual": "(scp_can_author(auth.uid()) OR (EXISTS ( SELECT 1\n   FROM (scp_forms f\n     JOIN scp_assessment_versions v ON ((v.id = f.assessment_version_id)))\n  WHERE ((f.id = scp_form_blocks.form_id) AND (v.content_status = 'published'::text)))))",
+      "roles": [
+        "authenticated"
+      ],
+      "table": "scp_form_blocks",
+      "policy": "scp_form_blocks_read"
+    },
+    {
+      "qual": "(scp_can_author(auth.uid()) OR (EXISTS ( SELECT 1\n   FROM scp_assessment_versions v\n  WHERE ((v.id = scp_forms.assessment_version_id) AND (v.content_status = 'published'::text)))))",
+      "roles": [
+        "authenticated"
+      ],
+      "table": "scp_forms",
+      "policy": "scp_forms_read"
+    },
+    {
+      "qual": "scp_can_author(auth.uid())",
+      "roles": [
+        "authenticated"
+      ],
+      "table": "scp_role_weight_profiles",
+      "policy": "scp_role_weight_profiles_read"
+    }
+  ],
+  "abu_dhabi": {
+    "is_active": false,
+    "pilot_state": "closed",
+    "legal_review_state": "pending"
+  },
+  "us_seeded": false,
+  "migrations": [
+    {
+      "name": "catalogue_internal_metadata_boundary",
+      "version": "20270218090000",
+      "statements_md5": "5a05258c416416cf76939126bbebb713"
+    }
+  ],
+  "lovableSyncedCommit": "f4778fe609f0eba9f0c5ece19036e10f885e6ef5",
+  "publishedCommit": "not established"
+}

@@ -13,8 +13,8 @@
   ],
   "source": "Supabase connector read-only SQL, explicit project wrygicdfxwjnrugduxnt",
   "projectRef": "wrygicdfxwjnrugduxnt",
-  "readAt": "2026-10-05T07:27:28.143717+00:00",
-  "readBy": "Read-only SELECT through the Supabase connector after PR #430 merged (f1faa5e) and the official integration applied 20270217090000, following 20270216090000 (PR #429). 377 rows, version:name newline MD5 8dcb3bba55a422ab257ecc722b016f95; the first 375 rows are unchanged (755d51cb6eb43f68f1e621478a1d0b81). See docs/release/2026-10-05-passport-number-and-public-share-hosted-verification.md.",
+  "readAt": "2026-10-06T07:39:18.233460+00:00",
+  "readBy": "Read-only Supabase connector after #436 merged as f4778fe. 378 rows, version:name newline MD5 fb6c52b4aba81b2aaf4ea5e9657ce433. Five policies and three view definitions/grants verified. See docs/release/2026-10-06-pr437-439-production-baseline.json.",
   "versions": [
     {
       "version": "20260716153446",
@@ -1523,6 +1523,10 @@
     {
       "version": "20270217090000",
       "name": "sp_passport_number_and_social_share"
+    },
+    {
+      "version": "20270218090000",
+      "name": "catalogue_internal_metadata_boundary"
     }
   ]
 }
