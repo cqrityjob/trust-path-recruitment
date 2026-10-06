@@ -159,7 +159,7 @@ BEGIN
  'jobs',coalesce((SELECT jsonb_agg(jsonb_build_object('id',j.id,'archivedAt',s.archived_at,
  'completedAt',s.completed_at,'state',coalesce(s.completion_state,'open'),
  'canManage',public.rec_can_manage(j.id),
- 'missingDate',s.completed_at IS NULL AND (j.status='archived' OR s.completion_state<>'open'),
+ 'missingDate',s.completed_at IS NULL AND (j.status IN ('expired','archived') OR s.completion_state<>'open'),
  'purgeAt',CASE WHEN s.completion_state<>'open' AND s.completed_at IS NOT NULL
   THEN s.completed_at + make_interval(months=>e.recruitment_retention_months) END))
  FROM public.jobs j JOIN public.employers e ON e.id=j.employer_id LEFT JOIN public.recruitment_settings s ON s.job_id=j.id

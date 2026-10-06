@@ -131,7 +131,7 @@ leverantörsloggar följer sina egna dokumenterade rutiner, inte portalens rader
 
 ## Verifieringsbevis
 
-- Lokal PostgreSQL 16: migrationsreplay och 44 obligatoriska livscykelassertioner på syntetiska data,
+- Lokal PostgreSQL 16: migrationsreplay och 45 obligatoriska livscykelassertioner på syntetiska data,
   inklusive två organisationer, ägare/medlem/kandidat, aktivt ärende, delad CV-fil, verkliga
   testtilldelningar, egna testdata/Passport, intervju-/testrapporter och cirkulärt rapportmanifest.
   Två sessionsrace verifierar väntan/blockering av en anteckning under raderingsbekräftelsens commit
