@@ -130,7 +130,9 @@ test("Sentinel actual shared assignment, practice, twenty responses, refresh, re
       if (r.url().includes("_server") && r.request().method() === "POST") {
         try {
           networkBodies.push(await r.text());
-        } catch {}
+        } catch {
+          // A closed page may no longer expose this response body.
+        }
       }
     });
     const mirror = await ctx.newPage();

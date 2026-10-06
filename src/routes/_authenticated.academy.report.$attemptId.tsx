@@ -36,8 +36,12 @@ export const Route = createFileRoute("/_authenticated/academy/report/$attemptId"
 });
 
 function ParticipantReport() {
- const {attemptId}=Route.useParams();
- return <SentinelReportGate attemptId={attemptId}><LegacyParticipantReport /></SentinelReportGate>;
+  const { attemptId } = Route.useParams();
+  return (
+    <SentinelReportGate attemptId={attemptId}>
+      <LegacyParticipantReport />
+    </SentinelReportGate>
+  );
 }
 
 function LegacyParticipantReport() {

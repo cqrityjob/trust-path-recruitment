@@ -107,13 +107,19 @@ function ResultsRoute() {
   return (
     <AcademyPage employerSlug={employerSlug} requires="reports">
       {(ws) => (
-        <SentinelReportGate attemptId={attemptId} employerId={ws.employerId} canManage={ws.role === "owner" || ws.role === "admin"}><Report
+        <SentinelReportGate
           attemptId={attemptId}
-          employerSlug={employerSlug}
           employerId={ws.employerId}
-          applicationId={application ?? null}
-          canDecide={ws.role === "owner" || ws.role === "admin"}
-        /></SentinelReportGate>
+          canManage={ws.role === "owner" || ws.role === "admin"}
+        >
+          <Report
+            attemptId={attemptId}
+            employerSlug={employerSlug}
+            employerId={ws.employerId}
+            applicationId={application ?? null}
+            canDecide={ws.role === "owner" || ws.role === "admin"}
+          />
+        </SentinelReportGate>
       )}
     </AcademyPage>
   );

@@ -216,7 +216,9 @@ export const getAcademyAttemptState = createServerFn({ method: "GET" })
     return {
       status,
       isOpen: status === "in_progress",
-      assessmentType: (row.scp_assessment_versions as {scp_assessment_definitions?:{slug?:string}} | null)?.scp_assessment_definitions?.slug,
+      assessmentType: (
+        row.scp_assessment_versions as { scp_assessment_definitions?: { slug?: string } } | null
+      )?.scp_assessment_definitions?.slug,
       language: normaliseAssignedLanguage(assignment?.language),
       minutesMin: form?.target_minutes_min ?? null,
       minutesMax: form?.target_minutes_max ?? null,
