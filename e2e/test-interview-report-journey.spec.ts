@@ -184,7 +184,7 @@ test.describe("Test → interview → final report", () => {
     for (let guard = 0; guard < 200; guard += 1) {
       const cont = page.getByRole("button", { name: /^Fortsätt$/ });
       const next = page.getByRole("button", { name: /^Nästa$/ });
-      const submit = page.getByRole("button", { name: /^Lämna in$/ });
+      const submit = page.getByRole("button", { name: /^Lämna in testet$/ });
       await expect(cont.or(next).or(submit).first()).toBeVisible({ timeout: 60_000 });
       if (await cont.isVisible()) {
         await cont.click();

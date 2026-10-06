@@ -83,6 +83,7 @@ import { crc32, deflateRawSync, gzipSync } from "node:zlib";
 import { createHash, createHmac } from "node:crypto";
 import os from "node:os";
 import path from "node:path";
+import ts from "typescript";
 import { mock } from "bun:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -2974,9 +2975,35 @@ console.log("\n14. CUTOVER: no runtime path calls the legacy finalisation");
   ok(
     previewedArgs.includes("_case_id: string") &&
       previewedArgs.includes("_expected_basis_hash: string") &&
-      /_draft_run_id: string \| null/.test(previewedArgs),
-    "14.3 the client types declare the previewed contract with all three arguments",
+      /_draft_run_id:\s*string(?:\s*\|\s*null)?/.test(previewedArgs),
+    "14.3 the generated types declare the previewed contract with all three arguments",
   );
+  // Generated RPC arguments cannot express SQL's required-but-nullable UUID.
+  // Compile the same positive/negative calls the regeneration-safe guard uses
+  // against the actual application overlay. A generated bare string is valid;
+  // losing nullability or making the argument optional must still fail here.
+  const rpcContract = ts.createProgram([path.join(root, "tests/types/nullable-rpc-contract.ts")], {
+    strict: true,
+    noEmit: true,
+    skipLibCheck: true,
+    target: ts.ScriptTarget.ES2022,
+    module: ts.ModuleKind.ESNext,
+    moduleResolution: ts.ModuleResolutionKind.Bundler,
+    types: [],
+  });
+  const rpcDiagnostics = ts.getPreEmitDiagnostics(rpcContract);
+  ok(
+    rpcDiagnostics.length === 0,
+    "14.3 effective RPC types accept null, require all arguments and reject invalid values",
+  );
+  if (rpcDiagnostics.length)
+    console.error(
+      ts.formatDiagnostics(rpcDiagnostics, {
+        getCurrentDirectory: () => root,
+        getCanonicalFileName: (file) => file,
+        getNewLine: () => "\n",
+      }),
+    );
   // And the nullable one is not quietly made optional instead: there is no SQL
   // default, so PostgREST could not resolve the function without it.
   ok(!/_draft_run_id\?/.test(previewedArgs), "14.3 and the draft run id is required, not optional");

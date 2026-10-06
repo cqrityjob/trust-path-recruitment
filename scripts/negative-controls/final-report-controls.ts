@@ -1284,6 +1284,24 @@ const MUTATIONS: readonly Mutation[] = [
     guard: E4,
     expect: "12.6 the suite APPLIES the rollback and reads its proof",
   },
+  {
+    id: "E4-RPC-NULLABILITY-REMOVED",
+    defect: "the application overlay rejects SQL's required nullable arguments",
+    file: "src/integrations/supabase/database.ts",
+    find: "Exclude<Args[Key], undefined> | null",
+    replace: "Exclude<Args[Key], undefined | null>",
+    guard: E4,
+    expect: "14.3 effective RPC types accept null, require all arguments and reject invalid values",
+  },
+  {
+    id: "E4-RPC-NULLABILITY-MADE-OPTIONAL",
+    defect: "nullable RPC arguments become optional despite having no SQL default",
+    file: "src/integrations/supabase/database.ts",
+    find: "[Key in Keys]-?:",
+    replace: "[Key in Keys]?:",
+    guard: E4,
+    expect: "14.3 effective RPC types accept null, require all arguments and reject invalid values",
+  },
 ];
 
 /* ---- The readback and the client ---------------------------------- */
