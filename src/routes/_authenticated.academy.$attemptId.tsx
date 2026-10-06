@@ -1055,7 +1055,7 @@ function AcademyAttemptRunner({
           stageLabel={currentBlock ? currentBlock.name : t("academy.stage")}
           current={sectionIndex + 1}
           total={sectionItems.length}
-          answered={answered}
+          answered={sectionItems.filter(isAnswered).length}
         />
 
         <div className="px-5 py-6 sm:px-8 sm:py-8">
