@@ -222,7 +222,7 @@ const M_LOC = "supabase/migrations/20261215090000_candidate_location_and_destina
     "3.2 the page lists exactly four Indian qualifications",
   );
   // The vocabulary is the LAST definition of the CHECK in migration order:
-  // 20261215090000 created it and 20270218090000 widened it (the United
+  // 20261215090000 created it and 20270219090000 widened it (the United
   // States). A mirror pinned to the first file would reject the real frontier.
   const mDest = readdirSync(join(ROOT, "supabase/migrations"))
     .filter((f) => f.endsWith(".sql"))

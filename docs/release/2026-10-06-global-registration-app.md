@@ -1,7 +1,7 @@
 # Global registration in the application — residence for every country, the United States, and "no local catalogue"
 
 Status: **prepared, not merged.** PR 2 of 3 in the global-registration delivery. Application only, no
-migration. **Depends on PR 1 (`20270218090000`) being applied and recorded `applied`** — the work-country
+migration. **Depends on PR 1 (`20270219090000`) being applied and recorded `applied`** — the work-country
 and destination selectors below offer `US`, and the database refuses it until then. The schema-first
 guard cannot see this dependency (the migration introduces no object), so the order is held by hand:
 PR 1 applied and verified, then this.
@@ -49,7 +49,7 @@ catalogues are open, and says nothing about permission to work.
 - Copy parity (`passport-fixture-check`): every new key exists in Swedish and English.
 - `passport-persona-journey-check`: the availability sentence still names Dubai and the United
   Kingdom and promises no date; every work-country option still splits into a seeded country
-  (`US` is seeded by `20270218090000`).
+  (`US` is seeded by `20270219090000`).
 - `passport-market-profiles-check` / `passport-market-catalogue-check`: the unsupported state still
   renders no credential and names the absence; the shared `isOfferableMarketState` rule is unchanged.
 - Two Profile e2e specs stub the new residence read so the page renders as before.

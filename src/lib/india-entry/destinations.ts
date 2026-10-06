@@ -16,7 +16,7 @@
 import type { IndiaCopyKey } from "./copy";
 
 /** The closed destination vocabulary. Order is the display order.
- *  "US" since 20270218090000: the United States as a market the owner has
+ *  "US" since 20270219090000: the United States as a market the owner has
  *  prioritised. A preference, like the rest: it grants nothing. */
 export const DESTINATIONS = ["AE-DU", "IN", "GB", "AE", "SE", "US"] as const;
 export type Destination = (typeof DESTINATIONS)[number];
