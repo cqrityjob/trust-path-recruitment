@@ -124,7 +124,8 @@ export const listAcademyWork = createServerFn({ method: "GET" })
     const ctx = context as Ctx;
     const { data: rows, error } = await ctx.supabase.rpc("scp_my_academy_work");
     if (error) throw fail(error.message, "academy_work_failed");
-    return (rows ?? []).map((r: RpcRow) => ({
+    const { withSentinelStatus } = await import("@/lib/sentinel/metadata.server");
+    return (await withSentinelStatus(ctx, rows ?? [])).map((r: RpcRow) => ({
       workKind: String(r.work_kind) as AcademyWorkItem["workKind"],
       workId: String(r.work_id),
       titleSv: (r.title_sv as string) ?? null,

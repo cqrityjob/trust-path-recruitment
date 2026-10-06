@@ -567,7 +567,7 @@ export function SendTestDialog({
                         checked={versionChoice === a.itemId}
                         onChange={() => setVersionChoice(a.itemId)}
                       />
-                      {sv ? a.nameSv : a.nameEn} · v{a.versionNumber} · {a.contentStatus}
+                      {sv ? a.nameSv : a.nameEn} · v{a.versionNumber} · {a.slug === "abstract_reasoning_v1" ? (sv ? "Visuellt logiktest · pilot" : "Visual logic assessment · pilot") : a.contentStatus}
                     </label>
                   ))}
                 </fieldset>

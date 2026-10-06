@@ -22,6 +22,9 @@
 
 \set ON_ERROR_STOP on
 
+-- Unwind the additive, unused Sentinel domain before rolling back its SCP spine.
+\ir ../rollback/20270301090000_sentinel_abstract_reasoning_rollback.sql
+
 -- Contract comes down before expand, just as in the operator recovery order.
 \ir ../rollback/20270207090000_interview_ai_config_contract_rollback.sql
 
@@ -1294,6 +1297,7 @@ END $$;
 -- ###########################################################################
 
 BEGIN;
+
 
 -- 1. Legacy retirement (A1 insert guard + A3 reactivation guard)
 DROP TRIGGER IF EXISTS assessment_assignments_block_retired_trg ON public.assessment_assignments;

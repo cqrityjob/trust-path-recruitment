@@ -34,6 +34,7 @@ function AdminAssessmentsPage() {
           {t("admin.assessments.list.heading")}
         </h1>
 
+        <Link to="/admin/assessments/sentinel" className="my-4 inline-block underline">{lang === "en" ? "Review Sentinel visual reasoning pilot" : "Granska Sentinel – visuellt logiktest"}</Link>
         <RecruitmentTestEditor />
 
         <div className="mt-6 flex flex-wrap gap-1">

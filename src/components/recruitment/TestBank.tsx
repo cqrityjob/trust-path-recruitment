@@ -351,15 +351,30 @@ export function TestBank({
             !offers.some((o) => o.level.assessmentSlug === a.slug),
         )
         .map((a) => (
-          <article key={a.itemId} className="my-4 rounded-xl border p-5">
+          <article
+            key={a.itemId}
+            data-testid={a.slug === "abstract_reasoning_v1" ? "sentinel-test-card" : undefined}
+            className="my-4 rounded-xl border bg-card p-5"
+          >
             <h2 className="text-xl font-semibold">{sv ? a.nameSv : a.nameEn}</h2>
             <p>{sv ? a.summarySv : a.summaryEn}</p>
+            {a.slug === "abstract_reasoning_v1" && (
+              <p className="mt-2 text-sm text-muted-foreground">
+                {sv
+                  ? "Problemlösning · Pilotinnehåll – inte psykometriskt validerat · v1"
+                  : "Reasoning · Pilot content — not psychometrically validated · v1"}
+              </p>
+            )}
+            {a.slug === "abstract_reasoning_v1" ? (
+              <p className="mt-3 text-sm">20 {sv ? "uppgifter" : "questions"} · SV / EN</p>
+            ) : (
+              <p>
+                {sv ? a.targetRoleSv : a.targetRoleEn} · {a.languages.join(", ")} · v
+                {a.versionNumber} · {a.contentStatus} · {a.validationStatus}
+              </p>
+            )}
             <p>
-              {sv ? a.targetRoleSv : a.targetRoleEn} · {a.languages.join(", ")} · v{a.versionNumber}{" "}
-              · {a.contentStatus} · {a.validationStatus}
-            </p>
-            <p>
-              {a.minutesMin}–{a.minutesMax} min
+              {a.minutesMin === a.minutesMax ? a.minutesMin : `${a.minutesMin}–${a.minutesMax}`} min
             </p>
             {a.assignable ? (
               <SendTestEntry
@@ -368,7 +383,13 @@ export function TestBank({
                 initialVersionId={a.itemId}
               />
             ) : (
-              <p>{t("sendTest.level.notAssignable")}</p>
+              <p className="mt-3 text-sm text-muted-foreground">
+                {a.slug === "abstract_reasoning_v1"
+                  ? sv
+                    ? "Inväntar innehålls- och releasegodkännande."
+                    : "Awaiting content and release approval."
+                  : t("sendTest.level.notAssignable")}
+              </p>
             )}
           </article>
         ))}

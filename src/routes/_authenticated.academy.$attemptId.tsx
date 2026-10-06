@@ -19,6 +19,7 @@
 // employer's workspace, and putting their run inside the employer's navigation
 // would imply an access relationship that does not exist.
 
+import { SentinelRunner } from "@/components/sentinel/Runner";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, useBlocker, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
@@ -152,7 +153,7 @@ function AcademyAttemptRoute() {
   const deliveryLang = resolveAttemptLanguage(resolved.state?.language ?? null, siteLang);
   return (
     <LanguageScope lang={deliveryLang}>
-      <AcademyAttemptRunner key={attemptId} attemptId={attemptId} initialState={resolved.state} />
+      {resolved.state?.assessmentType === "abstract_reasoning_v1" ? <SentinelRunner attemptId={attemptId} /> : <AcademyAttemptRunner key={attemptId} attemptId={attemptId} initialState={resolved.state} />}
     </LanguageScope>
   );
 }

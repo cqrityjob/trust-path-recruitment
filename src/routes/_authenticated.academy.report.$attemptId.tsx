@@ -2,6 +2,7 @@
 // contexts are unavailable in this app; the server enforces the same gate.
 // Employer report workflows use their separate audience and routes.
 
+import { SentinelReportGate } from "@/components/sentinel/ReportGate";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -35,6 +36,11 @@ export const Route = createFileRoute("/_authenticated/academy/report/$attemptId"
 });
 
 function ParticipantReport() {
+ const {attemptId}=Route.useParams();
+ return <SentinelReportGate attemptId={attemptId}><LegacyParticipantReport /></SentinelReportGate>;
+}
+
+function LegacyParticipantReport() {
   const { attemptId } = Route.useParams();
   const { t, lang } = useT();
   const reportFn = useServerFn(getAcademyReport);

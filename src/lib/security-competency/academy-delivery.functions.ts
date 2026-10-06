@@ -168,6 +168,7 @@ export const getAcademyAttemptItems = createServerFn({ method: "GET" })
  *  still has to read one, which language the run is delivered in and roughly
  *  how long it takes -- and nothing further. */
 export type AcademyAttemptState = {
+  assessmentType?: string;
   status: "in_progress" | "submitted" | "scored" | "released" | "abandoned";
   isOpen: boolean;
   /** The language the employer assigned this attempt in, from the assignment
@@ -197,7 +198,7 @@ export const getAcademyAttemptState = createServerFn({ method: "GET" })
     const { data: row, error } = await ctx.supabase
       .from("scp_attempts")
       .select(
-        "status, assessment_assignments(language), scp_forms(target_minutes_min, target_minutes_max)",
+        "status, assessment_assignments(language), scp_forms(target_minutes_min, target_minutes_max), scp_assessment_versions(scp_assessment_definitions(slug))",
       )
       .eq("id", data.attemptId)
       .maybeSingle();
@@ -215,6 +216,7 @@ export const getAcademyAttemptState = createServerFn({ method: "GET" })
     return {
       status,
       isOpen: status === "in_progress",
+      assessmentType: (row.scp_assessment_versions as {scp_assessment_definitions?:{slug?:string}} | null)?.scp_assessment_definitions?.slug,
       language: normaliseAssignedLanguage(assignment?.language),
       minutesMin: form?.target_minutes_min ?? null,
       minutesMax: form?.target_minutes_max ?? null,

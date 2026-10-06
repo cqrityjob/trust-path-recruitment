@@ -78,6 +78,9 @@ jobs:
       - name: Type-check the Passport guard scripts
         run: bun run scripts:typecheck
 
+      - name: Sentinel original matrix constraints
+        run: bun run sentinel:check
+
       - name: CIE deterministic regression check
         run: bun run cie:check
 
