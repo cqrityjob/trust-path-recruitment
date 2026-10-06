@@ -212,7 +212,10 @@ test("Sentinel actual shared assignment, practice, twenty responses, refresh, re
       .getByRole("button", { name: sv ? "Skicka in test" : "Submit assessment", exact: true })
       .click();
     await expect(
-      page.getByText(sv ? "Testtillfället är avslutat." : "This attempt is closed."),
+      page.getByRole("heading", {
+        name: sv ? "Tack! Ditt test är avslutat." : "Thank you! Your assessment is complete.",
+        exact: true,
+      }),
     ).toBeVisible();
     await expect(
       page.getByText(
