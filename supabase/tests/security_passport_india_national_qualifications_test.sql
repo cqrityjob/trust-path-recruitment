@@ -112,9 +112,9 @@ SELECT count(*) AS research_n FROM public.sp_approved_credential_catalogue WHERE
 -- Since 20261221090000 the UK and Dubai are a public pilot: their 44 opened
 -- definitions reach this holder too, with no grant, and Abu Dhabi none.
 SELECT pg_temp.ok(:se_n=8 AND :intl_n-:research_n=14 AND :research_n IN (0,140)
-   AND (SELECT count(*)=44 FROM public.sp_approved_credential_catalogue WHERE country IN ('GB','AE'))
-   AND (SELECT count(*)=0 FROM public.sp_approved_credential_catalogue WHERE region='AE-AZ'),
- '2.3 Sweden (8) and the 14 reviewed international certifications are unchanged (the 140 researched ones are all offered or none); GB and Dubai are their 44 public-pilot definitions, Abu Dhabi none');
+   AND (SELECT count(*)=51 FROM public.sp_approved_credential_catalogue WHERE country IN ('GB','AE'))
+   AND (SELECT count(*)=7 FROM public.sp_approved_credential_catalogue WHERE region='AE-AZ'),
+ '2.3 Sweden (8) and the 14 reviewed international certifications are unchanged (the 140 researched ones are all offered or none); GB and Dubai are their 44 public-pilot definitions and Abu Dhabi its 7 (20270220090000)');
 
 -- GUARDED RELEASE. Over PostgREST's listing path, an application that does not
 -- send the catalogue contract (one deployed before this release) is offered no
@@ -230,8 +230,8 @@ SELECT pg_temp.ok((SELECT jurisdiction_code='IN' AND sub_jurisdiction_code IS NU
 SELECT pg_temp.ok((SELECT count(*)=0 FROM public.sp_claims WHERE holder_user_id=auth.uid() AND lifecycle_state='active' AND jurisdiction_code<>'IN'),
  '4.2 and relabels no credential');
 SELECT pg_temp.ok(public.sp_market_access(auth.uid(),'AE-DU')='public_pilot'
-   AND public.sp_market_access(auth.uid(),'AE-AZ')='closed',
- '4.3 and changes no access: Dubai is the public pilot it is for every signed-in holder, Abu Dhabi stays closed');
+   AND public.sp_market_access(auth.uid(),'AE-AZ')='public_pilot',
+ '4.3 and changes no access: Dubai and Abu Dhabi are the public pilots they are for every signed-in holder');
 SELECT pg_temp.ok((SELECT locality='पुणे' FROM public.candidate_current_location WHERE user_id=auth.uid()),
  '4.4 a locality in any script is kept as written');
 RESET ROLE;

@@ -518,21 +518,29 @@ BEGIN
   PERFORM pg_temp.ok(_r = 'OK',
     '5.3 a holder with no stated work country records a CISSP (got ' || _r || ')');
 
-  -- A holder in a market nobody has opened. Abu Dhabi is authored, unreviewed
-  -- and deliberately CLOSED — a holder there can register no regulated
-  -- credential at all. The market gate never runs for their CISA, because the
-  -- claim names no jurisdiction for it to gate.
+  -- A holder in a market that is only a PUBLIC PILOT (Abu Dhabi, 20270220090000):
+  -- authored, unreviewed, open for registration and approved for nobody. Their
+  -- regulated licence saves as self-declared; the market gate never runs for
+  -- their CISA, because the claim names no jurisdiction for it to gate.
   INSERT INTO public.sp_passport_profiles
     (holder_user_id, jurisdiction_code, sub_jurisdiction_code)
   VALUES (_odd, 'AE', 'AE-AZ')
   ON CONFLICT (holder_user_id) DO UPDATE
     SET jurisdiction_code = 'AE', sub_jurisdiction_code = 'AE-AZ';
 
-  -- First, that their market really is shut: a regulated Abu Dhabi credential
-  -- is refused. If it were not, 5.4 would prove nothing.
-  _r := pg_temp.file_canonical(_odd, 'AE_AZ_PSBD_LICENCE_GUARD', 'active');
-  PERFORM pg_temp.ok(_r <> 'OK',
-    '5.4a their own regulated market is closed to them (got ' || _r || ')');
+  -- First, that their market is what it says, read from the DATA: a public
+  -- pilot, approved by nobody, review pending. The save itself and the
+  -- canonical decision are proven by the open_abu_dhabi suite on the
+  -- frontier. This suite also runs in db-test right after the 20261109090000
+  -- round-trip, which re-creates sp_market_access and the read policy WITHOUT
+  -- the public-pilot branch 20261220090000 added, so a save or a decision
+  -- here would prove the round-trip's state rather than the market's.
+  PERFORM pg_temp.ok(
+    (SELECT pilot_state = 'public_pilot' AND NOT is_active AND legal_review_state = 'pending'
+       FROM public.sp_market_packs WHERE code = 'AE-AZ')
+    AND (SELECT count(*) = 7 FROM public.sp_credential_types
+          WHERE market_pack_code = 'AE-AZ' AND pilot_state = 'public_pilot' AND NOT is_active),
+    '5.4a their own regulated market is a public pilot: its seven definitions open for registration, approved by nobody, review pending');
 
   _r := pg_temp.file_canonical(_odd, 'INTL_ISACA_CISA', 'active');
   PERFORM pg_temp.ok(_r = 'OK',

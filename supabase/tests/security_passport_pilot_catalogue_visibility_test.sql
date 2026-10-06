@@ -207,8 +207,12 @@ BEGIN
   -- =====================================================================
   PERFORM pg_temp.ok(pg_temp.visible_as(_public, 'is_active') = _prod_total,
     format('2.1 the public holder reads every production type (%s)', _prod_total));
-  PERFORM pg_temp.ok(pg_temp.visible_as(_public, 'NOT is_active') = 0,
-    '2.2 the public holder reads no inactive type at all');
+  -- Since 20270220090000 Abu Dhabi's seven are a PUBLIC pilot, readable by
+  -- every signed-in holder by design; the Route A fixture above pins only the
+  -- three internal-pilot markets. So: no inactive type outside a public pilot.
+  PERFORM pg_temp.ok(pg_temp.visible_as(_public, $q$NOT is_active AND pilot_state <> 'public_pilot'$q$) = 0
+    AND pg_temp.visible_as(_public, $q$NOT is_active AND pilot_state = 'public_pilot'$q$) = 7,
+    '2.2 the public holder reads no inactive type outside a public pilot (Abu Dhabi''s 7)');
   PERFORM pg_temp.ok(pg_temp.visible_as(_public, $q$pilot_state = 'internal_pilot'$q$) = 0,
     '2.3 the public holder reads no pilot row');
   PERFORM pg_temp.ok(pg_temp.visible_as(_public, $q$code = 'UK_SIA_LICENCE_DS'$q$) = 0,
@@ -269,8 +273,8 @@ BEGIN
   ELSE
     RAISE NOTICE 'ok  4.2 GB-NI pack absent (20260914090000 unapplied); NI read skipped';
   END IF;
-  PERFORM pg_temp.ok(pg_temp.visible_as(_gb_user, $q$market_pack_code = 'AE-AZ'$q$) = 0,
-    '4.3 the GB member reads no Abu Dhabi row (closed, never piloted)');
+  PERFORM pg_temp.ok(pg_temp.visible_as(_gb_user, $q$market_pack_code = 'AE-AZ'$q$) = 7,
+    '4.3 the GB member reads the 7 Abu Dhabi rows every signed-in holder reads (public pilot, 20270220090000), not through the grant');
 
   -- Cross-jurisdiction is still refused from the strongest position.
   _r := pg_temp.try_claim_as(_gb_user, 'VU1', 'Väktarutbildning 1', 'GB', NULL, 'training');
@@ -295,8 +299,9 @@ BEGIN
     '5.2 grouped as the catalogue groups it: 15 cadre cards, 15 courses');
   PERFORM pg_temp.ok(pg_temp.visible_as(_du_user, $q$market_pack_code = 'GB'$q$) = 0,
     '5.3 the Dubai member reads no GB row');
-  PERFORM pg_temp.ok(pg_temp.visible_as(_du_user, $q$market_pack_code = 'AE-AZ'$q$) = 0,
-    '5.4 the Dubai member reads no Abu Dhabi row: Dubai is not the UAE');
+  PERFORM pg_temp.ok(pg_temp.visible_as(_du_user, $q$market_pack_code = 'AE-AZ'$q$) = 7
+    AND pg_temp.visible_as(_du_user, $q$market_pack_code = 'AE-AZ' AND code LIKE 'AE\_DU\_%'$q$) = 0,
+    '5.4 the Dubai member reads the 7 Abu Dhabi rows as every signed-in holder does, and none of them is a Dubai row: Dubai is not the UAE');
 
   IF _has_ni THEN
     PERFORM set_config('request.jwt.claim.sub', _admin::text, true);

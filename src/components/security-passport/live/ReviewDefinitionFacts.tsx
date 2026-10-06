@@ -1,3 +1,4 @@
+import { AbuDhabiIssuerAttribution } from "../AbuDhabiIssuerAttribution";
 import { useEffect, useState } from "react";
 import type { DefinitionFacts } from "@/lib/security-passport/international.functions";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
@@ -154,6 +155,7 @@ export function ReviewDefinitionFacts({
           </ul>
         </details>
       )}
+      <AbuDhabiIssuerAttribution code={code} lang={lang} />
       {facts.source && (
         <p className="mt-2 text-xs text-muted-foreground">
           <a

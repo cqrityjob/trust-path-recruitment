@@ -365,6 +365,9 @@ jobs:
       # way an assertion that has quietly stopped testing anything becomes
       # visible. Every mutated file is restored byte-for-byte and the run ends
       # by asserting the working tree is clean.
+      - name: Abu Dhabi source attribution presentation
+        run: bun run scripts/abu-dhabi-source-attribution-check.tsx
+
       - name: Negative controls
         run: bun run negative-controls:all
 

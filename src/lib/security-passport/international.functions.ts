@@ -20,7 +20,7 @@ export interface CredentialOrganisationRole {
   certification_issuer_id: string | null;
   document_specific: boolean;
   source_url: string;
-  checked_on: string;
+  checked_on: string | null;
 }
 export interface CredentialDefinitionReview {
   credential_code: string;
