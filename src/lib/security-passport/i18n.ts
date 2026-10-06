@@ -813,7 +813,7 @@ const sv = {
   // internal and a public pilot alike, and each market then states which one
   // it is from the governed read.
   "jurisdiction.marketAvailability":
-    "Behörigheter från Sverige och indiska nationella yrkeskvalifikationer kan registreras av alla. Storbritannien och Dubai är i pilot, och varje marknad visar vem som kan registrera där. Du kan inte registrera en behörighet för ett land som inte är öppnat.",
+    "Behörigheter från Sverige och indiska nationella yrkeskvalifikationer kan registreras av alla. Storbritannien och Dubai är öppna piloter, och varje marknad visar vem som kan registrera där. Du kan inte registrera en behörighet för ett land som inte är öppnat; internationella certifieringar kan registreras från alla länder.",
   // Shown where the person states WHERE THEY WORK, which is a different
   // question from which regulated credentials the product supports. Says both
   // in one breath so a UK or UAE holder can answer truthfully and still knows,
@@ -854,6 +854,17 @@ const sv = {
   "jurisdiction.option.IN": "Indien",
   "workCountry.support.IN":
     "Indiska nationella yrkeskvalifikationer (NSQF) som Passport stöder kan registreras här. De är utbildningsbevis, inte licenser eller arbetstillstånd.",
+  "jurisdiction.US": "USA",
+  // No market pack and no state catalogue. The international certifications
+  // are what a US-based holder can register, and the sentence says in the
+  // same breath that they are not American work licences.
+  "workCountry.support.US":
+    "CQrityjob har ännu ingen lokal meritkatalog för USA; säkerhetslicenser utfärdas där per delstat. Internationella certifieringar kan registreras från alla länder, men de är inte amerikanska arbetslicenser.",
+  // Said in the unsupported state, after the absence: what a holder in a
+  // country with no local catalogue can still do. Never a market name.
+  "market.unsupported.staysOpen":
+    "Din grundprofil, dina uppgifter och de kataloger som är öppna för alla – de internationella certifieringarna – kan du använda ändå. Ingen av dem ger rätt att arbeta i något land.",
+  "market.unsupported.openInternational": "Öppna den internationella katalogen",
   // For a market that is OPEN to this holder right now, the sentence follows
   // the governed state rather than the country: the per-country lines above
   // say "not yet supported", which stops being true the day a pilot opens.
@@ -932,7 +943,7 @@ const sv = {
     "Vi har inte bekräftat var du arbetar. Ange ditt land så att ditt Passport visar rätt sammanhang. Det påverkar inte vilka behörigheter du kan registrera.",
   "jurisdiction.confirmAction": "Ange var jag arbetar",
   "jurisdiction.workCountryAvailability":
-    "Ange det land där du arbetar. Behörigheter från Sverige och indiska nationella yrkeskvalifikationer kan registreras av alla. Storbritannien och Dubai är i pilot, och varje marknad visar vem som kan registrera där. Du kan ange ditt land nu även om dess behörigheter ännu inte stöds.",
+    "Ange det land där du arbetar. Behörigheter från Sverige och indiska nationella yrkeskvalifikationer kan registreras av alla. Storbritannien och Dubai är öppna piloter, och varje marknad visar vem som kan registrera där. Du kan ange ditt land nu även om det saknar lokal meritkatalog: grundprofilen och de internationella certifieringarna är öppna för alla.",
   "jurisdiction.title": "Land och behörighet",
   "jurisdiction.crossBorderTitle": "Gäller i Sverige",
   "jurisdiction.crossBorderBody":
@@ -3258,7 +3269,7 @@ const en: Record<PassportCopyKey, string> = {
   "jurisdiction.AE": "United Arab Emirates",
   "jurisdiction.AE-DU": "Dubai",
   "jurisdiction.marketAvailability":
-    "Credentials from Sweden and Indian national qualifications can be recorded by everyone. The United Kingdom and Dubai are in pilot, and each market shows who can register there. You cannot record an authorisation for a country that is not open.",
+    "Credentials from Sweden and Indian national qualifications can be recorded by everyone. The United Kingdom and Dubai are public pilots, and each market shows who can register there. You cannot record an authorisation for a country that is not open; international certifications can be recorded from any country.",
   "workCountry.regulated": "Regulated credentials",
   "workCountry.support.SE":
     "Swedish regulated credential types supported by the Passport can be registered here.",
@@ -3281,6 +3292,12 @@ const en: Record<PassportCopyKey, string> = {
   "jurisdiction.option.IN": "India",
   "workCountry.support.IN":
     "Indian national qualifications (NSQF) supported by the Passport can be recorded here. They are qualifications, not licences or permission to work.",
+  "jurisdiction.US": "United States",
+  "workCountry.support.US":
+    "CQrityjob has no local credential catalogue for the United States yet; security licences there are issued per state. International certifications can be recorded from any country, but they are not US work licences.",
+  "market.unsupported.staysOpen":
+    "Your basic profile, your own records and the catalogues open to everyone – the international certifications – remain available. None of them is permission to work in any country.",
+  "market.unsupported.openInternational": "Open the international catalogue",
   "workCountry.support.publicPilot":
     "This market is in public pilot: every registered user can record its credentials here. The legal review of its rules is still pending.",
   "workCountry.support.internalPilot":
@@ -3341,7 +3358,7 @@ const en: Record<PassportCopyKey, string> = {
     "We have not confirmed where you work. Tell us your country so your Passport shows the right context. It does not change which authorisations you can record.",
   "jurisdiction.confirmAction": "Tell us where I work",
   "jurisdiction.workCountryAvailability":
-    "Tell us the country where you work. Credentials from Sweden and Indian national qualifications can be recorded by everyone. The United Kingdom and Dubai are in pilot, and each market shows who can register there. You can state your country now even if its authorisations are not supported yet.",
+    "Tell us the country where you work. Credentials from Sweden and Indian national qualifications can be recorded by everyone. The United Kingdom and Dubai are public pilots, and each market shows who can register there. You can state your country now even if it has no local credential catalogue: the basic profile and the international certifications are open to everyone.",
   "jurisdiction.title": "Country and eligibility",
   "jurisdiction.crossBorderTitle": "Applies in Sweden",
   "jurisdiction.crossBorderBody":

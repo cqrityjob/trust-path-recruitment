@@ -5,6 +5,8 @@
 //
 //   readIndiaSetup        everything the four steps need to resume where the
 //                         holder left off, read from persisted rows
+//   readCurrentLocation   the Profile's "where I live", on its own, for the
+//                         Profile page's residence card
 //   saveCurrentLocation   the Profile's "where I live" (candidate_current_location)
 //   saveJobPreferences    desired destinations (candidate_job_preferences)
 //
@@ -153,6 +155,24 @@ const locationInput = z
       .optional(),
   })
   .strict();
+
+/** Where the holder lives, as they stated it, or null. The same row the
+ *  setup reads; the Profile page shows and edits it outside the India journey
+ *  because residence is a fact about every holder, not only an Indian one. */
+export const readCurrentLocation = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(
+    async ({ context }): Promise<{ countryCode: string; locality: string | null } | null> => {
+      const { data, error } = await context.supabase
+        .from("candidate_current_location" as never)
+        .select("country_code,locality")
+        .eq("user_id" as never, context.userId as never)
+        .maybeSingle();
+      if (error) throw new Error("LOCATION_READ_FAILED");
+      const row = data as { country_code: string; locality: string | null } | null;
+      return row ? { countryCode: row.country_code, locality: row.locality } : null;
+    },
+  );
 
 export const saveCurrentLocation = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

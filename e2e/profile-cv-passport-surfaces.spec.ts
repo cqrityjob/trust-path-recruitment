@@ -344,6 +344,54 @@ test.describe("My Career names the three surfaces", () => {
 /* ------------------------------------------------------------------ */
 
 test.describe("Profile", () => {
+  for (const lang of ["sv", "en"] as const) {
+    test(`global residence is saved and reread separately from work country and credentials (${lang})`, async ({
+      page,
+    }) => {
+      const { state, overrides } = backend();
+      let residence: { countryCode: string; locality: string | null } | null = null;
+      const writes: Record<string, unknown>[] = [];
+      await mount(page, "hub_active", {
+        lang,
+        path: "/my-career/profile",
+        ready: "[data-profile-basics]",
+        overrides: {
+          ...overrides,
+          readCurrentLocation: (route: Route) => reply(route, residence),
+          saveCurrentLocation: (route: Route) => {
+            const data = dataOf(route);
+            writes.push(data);
+            residence = {
+              countryCode: String(data.countryCode),
+              locality: String(data.locality ?? "") || null,
+            };
+            return reply(route, { savedAt: "2026-10-06T08:00:00Z" });
+          },
+        },
+      });
+      const card = page.locator("[data-profile-residence-country]");
+      await expect(card).toBeVisible();
+      const choose = page.locator("#profile-residence-country");
+      await expect(choose.locator('option[value="KE"]')).toHaveCount(1);
+      await expect(choose.locator('option[value="US"]')).toHaveCount(1);
+      await choose.selectOption("US");
+      await page.locator("#profile-residence-locality").fill("Austin");
+      await card.getByRole("button").click();
+      await expect(page.locator('[data-residence-current="US"]')).toContainText("Austin");
+      expect(writes).toEqual([{ countryCode: "US", locality: "Austin" }]);
+      // No Passport/work-country/credential writer was called.
+      expect(state.writes).toEqual([]);
+      await choose.selectOption("KE");
+      await page.locator("#profile-residence-locality").fill("");
+      await card.getByRole("button").click();
+      await expect(page.locator('[data-residence-current="KE"]')).toBeVisible();
+      expect(writes[1].countryCode).toBe("KE");
+      // The existing seroval test decoder represents an omitted optional value as null.
+      expect(writes[1].locality == null).toBe(true);
+      expect(state.writes).toEqual([]);
+    });
+  }
+
   test("holds only Profile facts, and no dead 'edited here' label", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     const { overrides } = backend();

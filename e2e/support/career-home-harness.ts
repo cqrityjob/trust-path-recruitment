@@ -363,6 +363,9 @@ export function repliesFor(f: HomeFixture): Record<string, Reply> {
     // My Career's destination next steps (India entry). An existing account
     // by default; a scenario that tests the India journey overrides it.
     readIndiaSetup: ok(nonIndiaSetupFor(f)),
+    // The Profile's residence card (any country). Unstated by default; a
+    // scenario that states one overrides it.
+    readCurrentLocation: ok(null),
   };
 }
 

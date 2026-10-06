@@ -226,6 +226,11 @@ export function ExperienceForm({
           <option value="SE">{pt("jurisdiction.SE")}</option>
           <option value="GB">{pt("jurisdiction.GB")}</option>
           <option value="AE">{pt("jurisdiction.AE")}</option>
+          {/* Every country `sp_jurisdictions` holds, in the order the profile's
+              own country selector lists them. An employment period's country
+              is provenance: it grants no market and names no credential. */}
+          <option value="IN">{pt("jurisdiction.IN")}</option>
+          <option value="US">{pt("jurisdiction.US")}</option>
         </select>
       </Field>
 
