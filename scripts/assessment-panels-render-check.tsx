@@ -28,6 +28,8 @@ import {
   type MissingAnswer,
 } from "../src/components/academy/AttemptPanels";
 
+import { AssessmentProgressBar } from "../src/components/career-discovery/v31/shell/QuestionCard";
+
 const failures: string[] = [];
 let passed = 0;
 const check = (label: string, ok: boolean, detail = "") => {
@@ -316,6 +318,29 @@ check(
 check(
   "closed without submission never claims review is pending",
   !text(abandonedHtml).includes(sv["academy.done.reviewPending"]),
+);
+
+// Shared by role, learning, training and public assessments: navigating to an
+// unanswered question must not announce the question position as answer count.
+const progressHtml = render(
+  <AssessmentProgressBar stageLabel="Synthetic section" current={7} total={10} answered={2} />,
+);
+check(
+  "shared progress announces answers independently of the current question",
+  progressHtml.includes('aria-valuenow="2"') &&
+    progressHtml.includes('aria-valuemax="10"') &&
+    progressHtml.includes('aria-valuetext="2 av 10"'),
+);
+check(
+  "shared progress still describes the current question visually",
+  text(progressHtml).includes("Fråga 7 av 10"),
+);
+const newSectionHtml = render(
+  <AssessmentProgressBar stageLabel="Synthetic next section" current={1} total={6} answered={0} />,
+);
+check(
+  "an unanswered section starts empty and accessible",
+  newSectionHtml.includes('aria-valuenow="0"') && newSectionHtml.includes("width:0%"),
 );
 
 const total = passed + failures.length;

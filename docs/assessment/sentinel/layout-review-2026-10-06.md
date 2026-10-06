@@ -1,6 +1,15 @@
 # Sentinel presentation review — 6 October 2026
 
-## Delivery state
+## Delivery state — GitHub verified by Astra
+
+- Remote `main` is verified at `0aeca505f8d8902cc405fbaf3c5d89b8d98b4fa2`. Lovable's `ee45ab5` is an ancestor and the layout changes are already delivered to GitHub main. No layout PR needs merging. The owner reports the same Lovable version; this pass independently verifies GitHub, not Lovable API state.
+- Recovery PR [#442](https://github.com/cqrityjob/trust-path-recruitment/pull/442) is **merged**, merge commit `24b68b69356fb978773ca9a018f8f646e4a69bc6`. Its implementation and the nullable-RPC overlay are present in current main.
+- Separate correction branch: `codex/test-module-final-verification`. One reproduced product defect: role progress used the whole test's answer count against a section's question count (Väktare showed `10 av 6` at the next section). The correction changes only the caller's section answer count; the shared QuestionCard and Lovable layout remain intact.
+- Full assigned-role fixtures now use the actual `security-officer-recruitment` and `security-manager-recruitment` definitions, distinct synthetic applications/accounts, SV/EN, governed saving/review/release and populated report reads. No role is relabelled to manufacture coverage.
+- No merge, publication, production writes, real candidate notifications, schema/RLS/scoring/content/timing changes, type regeneration or archival work. Production project remains `wrygicdfxwjnrugduxnt`.
+- Correction PR and final commit/check status are recorded below after verification; the historical Lovable results that follow are **not** Astra's current-version test results.
+
+## Lovable's historical delivery notes
 
 - At the start of this completion pass, GitHub main and local HEAD both matched `8c6876d7280c94d22b1b7e268ad14161b08033ab`. The owner reports Lovable API at the same SHA; no independent API version read was available. #442 remains an ancestor.
 - Latest tested code commit: `ed63d80910ec95ce553d81431686077c8e3a0b27` (completion pass). Subsequent commit updates only this report and roadmap; final save SHA is reported in chat.
@@ -17,7 +26,7 @@
 | Employer TestBank | Sentinel time/language/question details aligned with role-card metadata; grouping and pilot notes retained | Synthetic actual TestBank component, SV/EN desktop/mobile; assignment flow outstanding |
 | Väktare/Säkerhetschef candidates and reports | No speculative restyling; shared progress announces answer count rather than question position | Synthetic shared candidate primitives and participant report with empty evidence, both role labels and locales; full assigned flows and populated role-specific reports outstanding |
 
-## Evidence and tests
+## Lovable’s earlier evidence and tests
 
 - Temporary fixture uses actual presentation components with synthetic data and mocked server calls/router. It is NOT a logged-in test, does NOT verify navigation blockers or persistence and does NOT expose private test content.
 - Screenshots: `/tmp/browser/test-layout/{before,after}-{sv,en}-{info,practice,running,completed,timed_out,abandoned,report,employer-report}-{1280,390}.png`. Same asset copies and fixture used for final before/after pairs.
@@ -35,7 +44,7 @@
 
 Runner session application, retries, state acceptance, navigation guards, scoring, answers, timing and server functions were not edited. Existing generated `types.ts` drift already in base `69d8c22f` differs from main in exactly `_agreed_statement`, `_divergent_statement`, `_draft_run_id` (bare string vs main's string|null); no generated types were edited here, and `database.ts` preserves the required null contract.
 
-Astra must verify remote branch delivery, full CI and the disposable authenticated browser regressions before merge. Owner approval is still required before publication. Catalogue security observations remain open. Rollback: revert only the presentation commits through the existing reviewed GitHub workflow; no database rollback is needed.
+Layout delivery is now verified on main. Astra’s current-code verification and the separate correction PR are recorded below; earlier #442 runs are not reused as current-code evidence. Owner approval is still required before publication. Catalogue security observations remain open. Rollback: revert only the presentation commits through the existing reviewed GitHub workflow; no database rollback is needed.
 
 ## Approved-layout completion pass (18:44 UTC request)
 
@@ -79,3 +88,26 @@ Full Sentinel assignment/report journey: run `e2e/sentinel.spec.ts` against the 
 Väktare/Säkerhetschef/TestBank: use `scripts/local-stack/test-env.sh` and its fresh/reseeded `beskt_e2e` fixture, following `scripts/local-stack/README.md` and `.github/workflows/e4-evidence.yml`. Run `e2e/test-bank-dispatch.spec.ts`, `e2e/test-interview-report-journey.spec.ts`, `e2e/employer-final-report-evidence.spec.ts` with `--project=chromium --project=mobile-390 --workers=1`. Supply the loopback variables documented at the top of each spec; reseed separately before non-idempotent journeys. Verify populated reports for both roles, candidate release access, denial cases, all completion statuses and saved-answer persistence. Record any unsupported role fixture rather than relabel a Väktare run as Säkerhetschef coverage.
 
 No database/RPC/RLS/scoring changes, type regeneration, auth changes, archive/delete work, merge or publication. The nullable override and all client imports remain byte-identical to the approved base. Await owner publication approval.
+
+## Astra’s authenticated isolated verification — current code
+
+Baseline: `0aeca505f8d8902cc405fbaf3c5d89b8d98b4fa2`; a fresh remote-main check after desktop role verification still returned that SHA. These are **newly executed** checks, separate from the Lovable/component and earlier #442 evidence above.
+
+- Frozen dependency install: passed. App and configured script typechecks passed using the repository-pinned `tsc` (`tsconfig.json`, `tsconfig.scripts.json`), and standalone production build passed. The document's `bunx tsgo` was unavailable in this checkout; no unpinned replacement compiler was installed.
+- `scripts/sentinel-recovery-stack.sh`: **44/44** passed, Chromium desktop + 390px mobile, SV/EN; **27** session-state assertions passed. Practice and save recovery, active-answer blockers, all three server closure statuses, accepted-only timeout scoring, late replies, unconfirmed-submission retry, focus, persistent closure, `/academy`, reload/back are covered.
+- Existing full Sentinel journey (`e2e/sentinel.spec.ts`): **1/1** passed on the documented original journey gateway/app, with actual local assignment, practice, 20 accepted responses, save retry, reload/deadline persistence, server-confirmed completion and employer-controlled candidate report sharing, both locales and its explicit mobile context.
+- New actual assigned-role desktop journeys: **4/4** passed (officer/manager × SV/EN). Both candidate/employer report documents are populated from server-derived evidence after permitted human review/release. Before release no candidate report is returned. Other candidate and employer-audience refusals are checked, including own candidate denied the employer document. Keyboard return to `/academy` and report reload work.
+- Shared-component callers audited: learning and training pass answers and total from the same item list; public Career Discovery uses its frozen 28-question buffer. The role caller alone mixed scopes. Shared accessible progress now has render checks for question position independent of answer count and an empty new section; candidate primitives retain layout and translations.
+- Current deterministic checks: language **40**, panels **47**, reliability **129**, recruitment report render and regeneration-safe nullable RPC contract passed. Changed-file ESLint and new typed browser spec passed. The existing interview journey's submit selector was updated to the current product label `Lämna in testet`; product copy was preserved.
+
+### Reproduction and isolation
+
+The negative browser run on unmodified main failed with `aria-valuenow="10"`, `aria-valuemax="6"`, `aria-valuetext="10 av 6"`; after the caller correction it walks every section and asserts its own answer count, limits and SV/EN accessible text before and after every answer.
+
+Reproduce new role/TestBank coverage with `bash scripts/role-assessment-browser-check.sh`. It uses `scripts/local-stack/test-env.sh`, replays migrations into disposable `beskt_e2e`, reseeds before each mutating suite/project, adds `scripts/fixtures/role-assessment-journey-fixture.sql`, and runs Chromium + mobile-390. Its JSON gate refuses skipped new role cases; the existing TestBank spec's one intentional mobile batch-mutation skip is explicitly counted. App/script checks use `bunx tsc --noEmit -p tsconfig.json`, `bunx tsc --noEmit -p tsconfig.scripts.json`; the new RPC-typed browser spec also has `tsconfig.assessment-e2e.json`.
+
+Local stack: PostgreSQL 16; pinned PostgREST 14.15; real JWT, Postgres policies/RPCs and routed application, with the documented local GoTrue substitute. All API/app/database addresses are loopback. No external email provider. This proves authenticated synthetic local browser flows, **not hosted Auth, production preview or real email delivery**. Other parallel containers/worktrees were not archived or removed.
+
+### Final GitHub status and remaining runs
+
+Separate correction PR: pending creation. Mobile role journeys, TestBank, test→interview and canonical employer final-report matrix, final-commit build/typechecks and CI are in progress. No green status is inferred from pending or earlier runs.
