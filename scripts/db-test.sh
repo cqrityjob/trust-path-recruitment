@@ -247,7 +247,7 @@ psql_q -d "$TEST_DB" -f supabase/tests/retention_manual_routines_test.sql
 echo "==> Running application lifecycle and retention assertions"
 RETENTION_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/application_retention_lifecycle_test.sql 2>&1)" || { echo "$RETENTION_OUT"; exit 1; }
 RETENTION_PASSED="$(echo "$RETENTION_OUT" | grep -c 'NOTICE:  ok  L')"
-[ "$RETENTION_PASSED" -ge 43 ] || { echo "$RETENTION_OUT"; echo 'FAIL: application retention assertion shortfall'; exit 1; }
+[ "$RETENTION_PASSED" -ge 44 ] || { echo "$RETENTION_OUT"; echo 'FAIL: application retention assertion shortfall'; exit 1; }
 echo "    ok  $RETENTION_PASSED application retention assertions passed"
 TEST_DB="$TEST_DB" bash scripts/application-retention-race-check.sh
 # Preserve the original historical rollback proofs in their pre-feature state.
