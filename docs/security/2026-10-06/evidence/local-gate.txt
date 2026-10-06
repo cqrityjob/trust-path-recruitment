@@ -1,0 +1,153 @@
+psql:supabase/tests/catalogue_internal_metadata_preservation_test.sql:29: NOTICE:  ok C5 PRESERVE: 34 ACL/policy/column states and all 39 row fingerprints unchanged
+ok catalogue-five: 139 access assertions
+ok catalogue-five negative control: graph_versions allow-all
+ok catalogue-five negative control: scp_bundle_versions allow-all
+ok catalogue-five negative control: scp_role_weight_profiles allow-all
+ok catalogue-five negative control: scp_forms allow-all
+ok catalogue-five negative control: scp_form_blocks allow-all
+ok catalogue-five negative control: graph_versions_published no publication filter
+ok catalogue-five negative control: graph_versions_published internal column
+ok catalogue-five negative control: scp_bundle_versions_published no publication filter
+ok catalogue-five negative control: scp_bundle_versions_published internal column
+ok catalogue-five negative control: scp_role_weight_profiles_published no publication filter
+ok catalogue-five negative control: scp_role_weight_profiles_published internal column
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 base graph_versions candidate A
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 published graph_versions candidate A
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 base graph_versions candidate B
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 published graph_versions candidate B
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 base graph_versions employer A member
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 published graph_versions employer A member
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 base graph_versions employer B owner
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 published graph_versions employer B owner
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 base graph_versions assessment_editor (not a content author)
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 published graph_versions assessment_editor (not a content author)
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 author graph_versions content editor
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 author graph_versions content reviewer
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 author graph_versions platform admin
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 anon base graph_versions
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 anon published graph_versions
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 projection no writes graph_versions_published anon
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 no writes graph_versions anon
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 projection no writes graph_versions_published authenticated
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 no writes graph_versions authenticated
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 mutation denied graph_versions candidate A
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 mutation denied graph_versions candidate B
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 mutation denied graph_versions employer A member
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 mutation denied graph_versions employer B owner
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 mutation denied graph_versions assessment_editor (not a content author)
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 mutation denied graph_versions content editor
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 mutation denied graph_versions content reviewer
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 mutation denied graph_versions platform admin
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 base scp_bundle_versions candidate A
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 published scp_bundle_versions candidate A
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 base scp_bundle_versions candidate B
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 published scp_bundle_versions candidate B
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 base scp_bundle_versions employer A member
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 published scp_bundle_versions employer A member
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 base scp_bundle_versions employer B owner
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 published scp_bundle_versions employer B owner
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 base scp_bundle_versions assessment_editor (not a content author)
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 published scp_bundle_versions assessment_editor (not a content author)
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 author scp_bundle_versions content editor
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 author scp_bundle_versions content reviewer
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 author scp_bundle_versions platform admin
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 anon base scp_bundle_versions
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 anon published scp_bundle_versions
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 projection no writes scp_bundle_versions_published anon
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 no writes scp_bundle_versions anon
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 projection no writes scp_bundle_versions_published authenticated
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 no writes scp_bundle_versions authenticated
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 mutation denied scp_bundle_versions candidate A
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 mutation denied scp_bundle_versions candidate B
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 mutation denied scp_bundle_versions employer A member
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 mutation denied scp_bundle_versions employer B owner
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 mutation denied scp_bundle_versions assessment_editor (not a content author)
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 mutation denied scp_bundle_versions content editor
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 mutation denied scp_bundle_versions content reviewer
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 mutation denied scp_bundle_versions platform admin
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 base scp_role_weight_profiles candidate A
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 published scp_role_weight_profiles candidate A
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 base scp_role_weight_profiles candidate B
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 published scp_role_weight_profiles candidate B
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 base scp_role_weight_profiles employer A member
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 published scp_role_weight_profiles employer A member
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 base scp_role_weight_profiles employer B owner
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 published scp_role_weight_profiles employer B owner
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 base scp_role_weight_profiles assessment_editor (not a content author)
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 published scp_role_weight_profiles assessment_editor (not a content author)
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 author scp_role_weight_profiles content editor
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 author scp_role_weight_profiles content reviewer
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 author scp_role_weight_profiles platform admin
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 anon base scp_role_weight_profiles
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 anon published scp_role_weight_profiles
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 projection no writes scp_role_weight_profiles_published anon
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 no writes scp_role_weight_profiles anon
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 projection no writes scp_role_weight_profiles_published authenticated
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 no writes scp_role_weight_profiles authenticated
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 mutation denied scp_role_weight_profiles candidate A
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 mutation denied scp_role_weight_profiles candidate B
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 mutation denied scp_role_weight_profiles employer A member
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 mutation denied scp_role_weight_profiles employer B owner
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 mutation denied scp_role_weight_profiles assessment_editor (not a content author)
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 mutation denied scp_role_weight_profiles content editor
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 mutation denied scp_role_weight_profiles content reviewer
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 mutation denied scp_role_weight_profiles platform admin
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 base scp_forms candidate A
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 published scp_forms candidate A
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 base scp_forms candidate B
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 published scp_forms candidate B
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 base scp_forms employer A member
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 published scp_forms employer A member
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 base scp_forms employer B owner
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 published scp_forms employer B owner
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 base scp_forms assessment_editor (not a content author)
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 published scp_forms assessment_editor (not a content author)
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 author scp_forms content editor
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 author scp_forms content reviewer
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 author scp_forms platform admin
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 anon base scp_forms
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 anon published scp_forms
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 projection no writes scp_forms anon
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 no writes scp_forms anon
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 projection no writes scp_forms authenticated
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 no writes scp_forms authenticated
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 mutation denied scp_forms candidate A
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 mutation denied scp_forms candidate B
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 mutation denied scp_forms employer A member
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 mutation denied scp_forms employer B owner
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 mutation denied scp_forms assessment_editor (not a content author)
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 mutation denied scp_forms content editor
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 mutation denied scp_forms content reviewer
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 mutation denied scp_forms platform admin
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 base scp_form_blocks candidate A
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 published scp_form_blocks candidate A
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 base scp_form_blocks candidate B
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 published scp_form_blocks candidate B
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 base scp_form_blocks employer A member
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 published scp_form_blocks employer A member
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 base scp_form_blocks employer B owner
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 published scp_form_blocks employer B owner
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 base scp_form_blocks assessment_editor (not a content author)
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 published scp_form_blocks assessment_editor (not a content author)
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 author scp_form_blocks content editor
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 author scp_form_blocks content reviewer
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 author scp_form_blocks platform admin
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 anon base scp_form_blocks
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 anon published scp_form_blocks
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 projection no writes scp_form_blocks anon
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 no writes scp_form_blocks anon
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 projection no writes scp_form_blocks authenticated
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 no writes scp_form_blocks authenticated
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 mutation denied scp_form_blocks candidate A
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 mutation denied scp_form_blocks candidate B
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 mutation denied scp_form_blocks employer A member
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 mutation denied scp_form_blocks employer B owner
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 mutation denied scp_form_blocks assessment_editor (not a content author)
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 mutation denied scp_form_blocks content editor
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 mutation denied scp_form_blocks content reviewer
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:170: NOTICE:  ok  C5 mutation denied scp_form_blocks platform admin
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:173: NOTICE:  ok  C5 internal columns excluded
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:175: NOTICE:  ok  C5 exactly 34 unchanged unconditional reads
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:177: NOTICE:  ok  C5 published learning fixture remains readable
+psql:supabase/tests/catalogue_internal_metadata_boundary_test.sql:179: NOTICE:  ok  C5 author draft preview remains readable
+ok catalogue-five: 11 negative controls, rollback exposes old access, reapply passes

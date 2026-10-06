@@ -436,7 +436,7 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // grants, RLS and the closed boundary are as reviewed; nothing was written and
 // the statistics stay hidden. Nothing is pending.
 // Evidence: docs/release/2026-10-05-passport-number-and-public-share-hosted-verification.md.
-const expectedPending: string[] = [];
+const expectedPending: string[] = ["20270218090000_catalogue_internal_metadata_boundary.sql"];
 
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
