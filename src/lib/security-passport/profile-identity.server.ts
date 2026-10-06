@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import type { PassportProfileIdentity } from "./credential-passport";
-import { readHolderDisplayName } from "./holder-display-name";
+import { readHolderDisplayName } from "./holder-display-name.server";
 
 /** Read the same canonical sources as ProfessionalIdentityV1. Never fall back
  * to the old Passport headline or a credential-derived eligibility title.

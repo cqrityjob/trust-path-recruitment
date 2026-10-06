@@ -33,10 +33,8 @@
 
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import {
-  readHolderDisplayName,
-  resolveHolderDisplayName,
-} from "../src/lib/security-passport/holder-display-name";
+import { resolveHolderDisplayName } from "../src/lib/security-passport/holder-display-name";
+import { readHolderDisplayName } from "../src/lib/security-passport/holder-display-name.server";
 import { readPassportProfileIdentity } from "../src/lib/security-passport/profile-identity.server";
 import { readProfessionalIdentity } from "../src/lib/professional-identity/identity.functions";
 
@@ -240,7 +238,7 @@ console.log("\n4 · no reader takes the account name directly");
   ];
   for (const file of readers) {
     const src = read(file);
-    ck(`${file} imports the rule`, /holder-display-name"/.test(src));
+    ck(`${file} imports the rule`, /holder-display-name(\.server)?"/.test(src));
     ck(
       `${file} no longer hands profiles.display_name out as the holder's name`,
       !/displayName:\s*\(?\s*(accountRow|profile\.data)\?\.display_name/.test(src) &&

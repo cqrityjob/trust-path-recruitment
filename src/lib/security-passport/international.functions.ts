@@ -6,7 +6,7 @@ import type {
   CredentialJurisdiction,
   CredentialVerificationEvent,
 } from "./international";
-import { readHolderDisplayName } from "./holder-display-name";
+import { readHolderDisplayName } from "./holder-display-name.server";
 import { NOT_OPEN_FOR_REGISTRATION, isAvailabilityRefusal } from "./market-access";
 import {
   PASSPORT_CATALOGUE_CONTRACT,

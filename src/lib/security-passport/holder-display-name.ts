@@ -18,9 +18,10 @@
 // reserve when the Passport name is missing, empty or only whitespace. Nothing
 // here changes what a share shows (that is decided in the database, from the
 // Passport column and the holder's privacy setting) and nothing here writes.
-
-import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database } from "@/integrations/supabase/types";
+//
+// This module is the pure rule, importable from any tier. The database read
+// that applies it is holder-display-name.server.ts (the server tier, as
+// scripts/passport-separation-check.ts requires).
 
 /** The Passport name when it has any non-blank content, else the account
  *  name on the same terms, else null. Both inputs are trimmed. */
@@ -32,35 +33,4 @@ export function resolveHolderDisplayName(
   if (passport) return passport;
   const account = accountName?.trim();
   return account || null;
-}
-
-export interface HolderDisplayNameRead {
-  /** The resolved name, or null when neither column has one. */
-  readonly name: string | null;
-  /** True when either read failed: the caller decides whether that is fatal
-   *  (the Passport's own identity) or tolerable (a consistency hint). */
-  readonly failed: boolean;
-}
-
-/** Both columns, through the caller's own client (row-level security applies
- *  as before: a holder reads their own rows and nobody else's). */
-export async function readHolderDisplayName(
-  db: SupabaseClient<Database>,
-  userId: string,
-): Promise<HolderDisplayNameRead> {
-  const [passport, account] = await Promise.all([
-    db
-      .from("sp_passport_profiles")
-      .select("display_name")
-      .eq("holder_user_id", userId)
-      .maybeSingle(),
-    db.from("profiles").select("display_name").eq("id", userId).maybeSingle(),
-  ]);
-  return {
-    name: resolveHolderDisplayName(
-      passport.error ? null : passport.data?.display_name,
-      account.error ? null : account.data?.display_name,
-    ),
-    failed: Boolean(passport.error || account.error),
-  };
 }
