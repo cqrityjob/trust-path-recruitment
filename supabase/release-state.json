@@ -8,8 +8,8 @@
   "frontier": [
     {
       "file": "20270305090000_application_retention_lifecycle.sql",
-      "hostedState": "pending",
-      "note": "Development only. No production schema application or destructive production activation is authorised by this delivery. Schema and application PRs are separate; automation is off by default.",
+      "hostedState": "applied",
+      "note": "Owner authorised ordered merges #443 → #444 → #445. Schema installation verified separately from Lovable publication. Destructive production activation is not authorised: worker, scheduler and automatic queueing remain off; real synthetic Storage verification and the separate activation plan are still required.",
       "verify": "Compare installed function hashes, exact row capability grants, archive columns and disabled activation flag to disposable replay; follow docs/release/2026-10-06-application-retention-activation.md.",
       "introduces": [
         {
@@ -80,7 +80,10 @@
           "object": "recruitment_retention_months",
           "table": "employers"
         }
-      ]
+      ],
+      "hostedVersion": "20270305090000",
+      "hostedName": "application_retention_lifecycle",
+      "evidenceSource": "Read-only hosted verification 2026-10-06 21:26 UTC on wrygicdfxwjnrugduxnt after #444 merged as cfecf778 and the official Supabase GitHub integration applied the migration: 19 function bodies/security config/ACL, four archive/retention/queue columns, RLS, 58 guard triggers, private capabilities and seven preserved immutability guards match isolated replay. Ledger 382 rows; previous 381 identities unchanged. PostgreSQL 17 MAINTAIN difference documented. Activation false, zero erasure jobs/capabilities/linked files, no worker/cron deployed. Evidence: docs/release/2026-10-06-application-retention-hosted-verification.json."
     },
     {
       "note": "Schema installed by official integration after #440 merge. User authorised #441 production release. Private content/configuration release is separate; scientific validation is not claimed.",
