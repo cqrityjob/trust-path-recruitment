@@ -229,6 +229,18 @@ console.log("\nContract wiring: the runner reads the assignment, not the toggle"
     /<LanguageScope lang=\{deliveryLang\}>\s*<AcademyAttemptRunner/.test(runner),
   );
   check(
+    "W4b Sentinel is independently rendered under the assignment LanguageScope",
+    /<LanguageScope lang=\{deliveryLang\}>\s*<SentinelRunner/.test(runner),
+  );
+  const sentinel = stripComments(read("src/components/sentinel/Runner.tsx"));
+  check(
+    "W4c every Sentinel shell displays the locked delivery language",
+    (sentinel.match(/<AssessmentShell\b[^>]*>/g) ?? []).length === 3 &&
+      (sentinel.match(/<AssessmentShell\b[^>]*>/g) ?? []).every((s) =>
+        /deliveryLanguage=\{lang\}/.test(s),
+      ),
+  );
+  check(
     "W5 items and blocks are loaded under the scoped language",
     /loadItems\(\{ data: \{ attemptId, locale: lang \} \}\)/.test(runner) &&
       /loadBlocks\(\{ data: \{ attemptId, locale: lang \} \}\)/.test(runner),

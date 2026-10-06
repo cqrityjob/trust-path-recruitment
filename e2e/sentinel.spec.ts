@@ -95,7 +95,7 @@ test("Sentinel actual shared assignment, practice, twenty responses, refresh, re
     ["bo@journey.test", false],
   ] as const) {
     const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
-    const auth = await account(ctx, email, sv ? "sv" : "en");
+    const auth = await account(ctx, email, sv ? "en" : "sv");
     const rpc = async (name: string, body: object) => {
       const r = await fetch(`${gateway}/rest/v1/rpc/${name}`, {
         method: "POST",
@@ -229,10 +229,10 @@ test("Sentinel actual shared assignment, practice, twenty responses, refresh, re
     await expect(ep.getByRole("button", { name: "Dela resultat med kandidaten" })).toHaveCount(0);
     await page.goto(`${base}/academy/report/${target.work_id}`);
     await expect(
-      page.getByText(sv ? "rätt svar" : "correct answers", { exact: false }),
+      page.getByText(sv ? "correct answers" : "rätt svar", { exact: false }),
     ).toBeVisible();
     await page.screenshot({
-      path: `${shots}/candidate-report-${sv ? "sv" : "en"}.png`,
+      path: `${shots}/candidate-report-${sv ? "en" : "sv"}.png`,
       fullPage: true,
     });
     await ctx.close();

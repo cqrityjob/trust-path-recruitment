@@ -151,13 +151,16 @@ function AcademyAttemptRoute() {
   }
 
   const deliveryLang = resolveAttemptLanguage(resolved.state?.language ?? null, siteLang);
+  if (resolved.state?.assessmentType === "abstract_reasoning_v1") {
+    return (
+      <LanguageScope lang={deliveryLang}>
+        <SentinelRunner attemptId={attemptId} />
+      </LanguageScope>
+    );
+  }
   return (
     <LanguageScope lang={deliveryLang}>
-      {resolved.state?.assessmentType === "abstract_reasoning_v1" ? (
-        <SentinelRunner attemptId={attemptId} />
-      ) : (
-        <AcademyAttemptRunner key={attemptId} attemptId={attemptId} initialState={resolved.state} />
-      )}
+      <AcademyAttemptRunner key={attemptId} attemptId={attemptId} initialState={resolved.state} />
     </LanguageScope>
   );
 }

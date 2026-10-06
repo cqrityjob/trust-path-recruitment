@@ -160,7 +160,7 @@ export function SentinelRunner({ attemptId }: { attemptId: string }) {
   const outline = "min-h-11 rounded-lg border px-4 text-sm disabled:opacity-50";
   if (!session)
     return (
-      <AssessmentShell>
+      <AssessmentShell deliveryLanguage={lang}>
         <AssessmentPanel>
           <p role={error ? "alert" : "status"}>
             {error || (sv ? "Hämtar test…" : "Loading assessment…")}
@@ -175,7 +175,7 @@ export function SentinelRunner({ attemptId }: { attemptId: string }) {
     );
   if (["completed", "timed_out", "abandoned"].includes(session.status))
     return (
-      <AssessmentShell>
+      <AssessmentShell deliveryLanguage={lang}>
         <AssessmentPanel>
           <div className="mb-6 flex items-center gap-2">
             <CheckCircle2 className="h-5 w-5" />
@@ -191,7 +191,7 @@ export function SentinelRunner({ attemptId }: { attemptId: string }) {
   const item = session.questions[index];
   const exercise = practice[pindex];
   return (
-    <AssessmentShell>
+    <AssessmentShell deliveryLanguage={lang}>
       <AssessmentPanel>
         <header className="mb-7 flex items-start justify-between gap-3">
           <div>
