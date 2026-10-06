@@ -1,0 +1,19 @@
+{
+  "base_commit": "a35131496bc0acfeeb70872a18717265982ef40d",
+  "strict_replayed_migrations": 378,
+  "scoped_access_assertions": 139,
+  "negative_controls": 11,
+  "row_and_policy_preservation": "pass: 34 policy/grant/column states, 39 row fingerprints",
+  "rollback_and_reapply": "pass",
+  "existing_authoring_and_delivery_suites": "pass",
+  "historical_catalogue_suites": "pass, explicit pre-decision policy phase",
+  "typecheck": "pass",
+  "changed_typescript_lint": "pass: scripts/release-frontier-check.ts",
+  "global_lint": "fails: 750 errors, 114 warnings; unrelated existing files; unchanged CI treats lint as continue-on-error",
+  "migration_safety": "pass",
+  "schema_first": "pass",
+  "release_parity": "pass: one pending migration",
+  "release_frontier": "pass: one pending migration",
+  "sql_security_guard": "pass",
+  "production_changes": false
+}
