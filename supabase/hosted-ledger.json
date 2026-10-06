@@ -13,8 +13,8 @@
   ],
   "source": "Supabase connector read-only SQL, explicit project wrygicdfxwjnrugduxnt",
   "projectRef": "wrygicdfxwjnrugduxnt",
-  "readAt": "2026-10-06T08:15:07.020284+00:00",
-  "readBy": "Read-only Supabase connector after #437 merged as 5627b3b. 379 rows, version:name MD5 dc79e59bffeafd4e6c82b356befce662. US jurisdiction/national credential jurisdiction and six-value destination CHECK verified; no US market or regulated definitions. See docs/release/2026-10-06-united-states-hosted-verification.json.",
+  "readAt": "2026-10-06T16:12:55.489645+00:00",
+  "readBy": "Read-only verification after #440 merge: previous identities unchanged; two official integration identities appended. See docs/release/2026-10-06-sentinel-hosted-verification.json.",
   "versions": [
     {
       "version": "20260716153446",
@@ -1531,6 +1531,14 @@
     {
       "version": "20270219090000",
       "name": "sp_united_states_jurisdiction_and_destinations"
+    },
+    {
+      "name": "sp_open_abu_dhabi_public_pilot",
+      "version": "20270220090000"
+    },
+    {
+      "name": "sentinel_abstract_reasoning",
+      "version": "20270301090000"
     }
   ]
 }

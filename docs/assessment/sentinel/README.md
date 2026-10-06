@@ -10,7 +10,7 @@ Every item stores template/version, generator version, seed, variant, rules, key
 
 The repository is public. **The proposed private pilot bank and keys are not committed.** `bun run sentinel:content --output /private/path/content.sql` creates a mode-0600 private import, using a 256-bit random seed and a separate opaque version identifier. `bun scripts/sentinel-review.tsx /private/path/content.sql /private/path/review.html` produces the exact offline gallery of forty candidates and three exercises. The author-only in-app gallery is `/admin/assessments/sentinel`. Neither gallery creates approvals. Synthetic preview seed 1000 is deliberately reproducible and is never a production form.
 
-Checklist before activating any real assignment:
+Original preparation checklist (superseded for this authorised release by [the 2026-10-06 owner release record](../../release/2026-10-06-sentinel-production-release.md); individual item review and independent certification are not claimed):
 
 - [ ] Mostafa reviews the actual private bank, selected twenty, solutions and alternative plausible interpretations; records item decisions.
 - [ ] Review SVG readability, distractor clues, keyboard, zoom, mobile and Swedish/English copy.
@@ -57,6 +57,6 @@ Disable **new** assignments while preserving historical sessions and reports:
 UPDATE public.sentinel_forms SET assignments_enabled=false;
 ```
 
-Do not replace the bank/version for existing assignments. The full rollback file `supabase/rollback/20270301090000_sentinel_abstract_reasoning_rollback.sql` refuses if any sessions exist. Before any data exists it removes the additive objects and restores the shared assignment condition; afterward use the disable flag and retain history. No production operation has been performed.
+Do not replace the bank/version for existing assignments. The full rollback file `supabase/rollback/20270301090000_sentinel_abstract_reasoning_rollback.sql` refuses if any sessions exist. Before any data exists it removes the additive objects and restores the shared assignment condition; afterward use the disable flag and retain history. The schema is installed in production after #440. Content import and activation are tracked separately in the owner-authorised release record.
 
 See [evidence.md](evidence.md) and [sources.md](sources.md). Screenshots use synthetic local accounts and synthetic questions only; private proposed keys/seed must never enter public CI artifacts.

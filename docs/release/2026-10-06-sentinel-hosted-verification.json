@@ -1,0 +1,18 @@
+{
+  "date": "2026-10-06",
+  "schema_pr": 440,
+  "schema_merge": "847c51b172d6ca622faf9ca91d3986d59a0ba7f8",
+  "canonical_schema": "20270301090000_sentinel_abstract_reasoning.sql",
+  "verified": {
+    "installed": true,
+    "local_function_bodies_match": 12,
+    "private_tables_rls_and_client_denial": true,
+    "internal_function_client_execution_denied": true,
+    "account_erasure_cascade": true,
+    "previous_ledger_identities_unchanged": true
+  },
+  "already_installed_abu_dhabi": "public_pilot, legal review pending; verified only, not reapplied",
+  "authorisation": "Direct user approval in this chat on 2026-10-06 to update #441 and release to production",
+  "backup": "Physical backup listing 403; full backup/PITR unverified. Private import and before-release catalogue metadata retained outside the public repository.",
+  "detailed_evidence": "Kept privately outside public source; no candidate responses or user identities exported."
+}
