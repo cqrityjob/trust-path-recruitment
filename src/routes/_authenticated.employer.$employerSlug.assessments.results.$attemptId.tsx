@@ -27,6 +27,7 @@
 // page that degrades to what it showed last year is better than one that
 // invents the sections it cannot fill.
 
+import { SentinelReportGate } from "@/components/sentinel/ReportGate";
 import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
@@ -106,13 +107,19 @@ function ResultsRoute() {
   return (
     <AcademyPage employerSlug={employerSlug} requires="reports">
       {(ws) => (
-        <Report
+        <SentinelReportGate
           attemptId={attemptId}
-          employerSlug={employerSlug}
           employerId={ws.employerId}
-          applicationId={application ?? null}
-          canDecide={ws.role === "owner" || ws.role === "admin"}
-        />
+          canManage={ws.role === "owner" || ws.role === "admin"}
+        >
+          <Report
+            attemptId={attemptId}
+            employerSlug={employerSlug}
+            employerId={ws.employerId}
+            applicationId={application ?? null}
+            canDecide={ws.role === "owner" || ws.role === "admin"}
+          />
+        </SentinelReportGate>
       )}
     </AcademyPage>
   );

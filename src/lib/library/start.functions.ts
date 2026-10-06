@@ -373,6 +373,22 @@ export const sendTestFromSetup = createServerFn({ method: "POST" })
       assignable: boolean;
       designed_for: string;
     }> | null;
+    const sentinelResult = await db.rpc(
+      "sentinel_catalog" as never,
+      { _employer_id: data.employerId } as never,
+    );
+    if (
+      sentinelResult.error &&
+      !["PGRST202", "42883"].includes((sentinelResult.error as { code?: string }).code ?? "")
+    )
+      throw new Error("SCP_START_NO_TEST");
+    for (const meta of (sentinelResult.data ?? []) as {
+      versionId: string;
+      assignable: boolean;
+    }[]) {
+      const entry = library?.find((r) => r.item_id === meta.versionId);
+      if (entry) entry.assignable = meta.assignable;
+    }
     const version = (library ?? []).find(
       (r) =>
         r.library_kind === "assessment" &&

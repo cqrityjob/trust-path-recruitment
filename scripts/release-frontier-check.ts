@@ -438,13 +438,9 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // Evidence: docs/release/2026-10-05-passport-number-and-public-share-hosted-verification.md.
 // USA 20270219090000 is applied and verified read-only (379 hosted identities).
 // Evidence: docs/release/2026-10-06-united-states-hosted-verification.json.
-// Only the owner-approved Abu Dhabi pilot migration remains pending. Remove
-// its entry only with hosted application/postflight evidence, never on merge alone.
-// Sentinel is known pending; remove only after authorised hosted verification.
-const expectedPending: string[] = [
-  "20270301090000_sentinel_abstract_reasoning.sql",
-  "20270220090000_sp_open_abu_dhabi_public_pilot.sql",
-];
+// Official integration applied Abu Dhabi and Sentinel; read-only verification
+// 2026-10-06: 381 identities. See sentinel-hosted-verification.json.
+const expectedPending: string[] = [];
 
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",

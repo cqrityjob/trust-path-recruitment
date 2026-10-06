@@ -60,7 +60,6 @@ import { Route as JobsIndexRouteImport } from './routes/jobs.index'
 import { Route as JobsSlugRouteImport } from './routes/jobs.$slug'
 import { Route as PTokenRouteImport } from './routes/p.$token'
 import { Route as SPublicIdRouteImport } from './routes/s.$publicId'
-import { Route as OgSharePublicIdRouteImport } from './routes/og.share.$publicId'
 import { Route as SecurityPassportIndexRouteImport } from './routes/security-passport.index'
 import { Route as SecurityPassportIndiaRouteImport } from './routes/security-passport.india'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
@@ -114,12 +113,14 @@ import { Route as ApiRecruitmentReceiptsSweepRouteImport } from './routes/api.re
 import { Route as CareerCenterYrkeCigSlugRouteImport } from './routes/career-center.yrke.$cigSlug'
 import { Route as JobsFamilyFamilyIdRouteImport } from './routes/jobs.family.$familyId'
 import { Route as JobsProfessionProfessionSlugRouteImport } from './routes/jobs.profession.$professionSlug'
+import { Route as OgSharePublicIdRouteImport } from './routes/og.share.$publicId'
 import { Route as AuthenticatedAcademyLearningFormIdRouteImport } from './routes/_authenticated.academy.learning.$formId'
 import { Route as AuthenticatedAcademyReportAttemptIdRouteImport } from './routes/_authenticated.academy.report.$attemptId'
 import { Route as AuthenticatedAdminApplicationsIndexRouteImport } from './routes/_authenticated.admin.applications.index'
 import { Route as AuthenticatedAdminApplicationsApplicationIdRouteImport } from './routes/_authenticated.admin.applications.$applicationId'
 import { Route as AuthenticatedAdminAssessmentsIndexRouteImport } from './routes/_authenticated.admin.assessments.index'
 import { Route as AuthenticatedAdminAssessmentsAssessmentIdRouteImport } from './routes/_authenticated.admin.assessments.$assessmentId'
+import { Route as AuthenticatedAdminAssessmentsSentinelRouteImport } from './routes/_authenticated.admin.assessments.sentinel'
 import { Route as AuthenticatedAdminAssignmentsIndexRouteImport } from './routes/_authenticated.admin.assignments.index'
 import { Route as AuthenticatedAdminAssignmentsAssignmentIdRouteImport } from './routes/_authenticated.admin.assignments.$assignmentId'
 import { Route as AuthenticatedAdminBesktMethodsIndexRouteImport } from './routes/_authenticated.admin.beskt-methods.index'
@@ -478,11 +479,6 @@ const SPublicIdRoute = SPublicIdRouteImport.update({
   path: '/s/$publicId',
   getParentRoute: () => rootRouteImport,
 } as any)
-const OgSharePublicIdRoute = OgSharePublicIdRouteImport.update({
-  id: '/og/share/$publicId',
-  path: '/og/share/$publicId',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const SecurityPassportIndexRoute = SecurityPassportIndexRouteImport.update({
   id: '/security-passport/',
   path: '/security-passport/',
@@ -791,6 +787,11 @@ const JobsProfessionProfessionSlugRoute =
     path: '/profession/$professionSlug',
     getParentRoute: () => JobsRoute,
   } as any)
+const OgSharePublicIdRoute = OgSharePublicIdRouteImport.update({
+  id: '/og/share/$publicId',
+  path: '/og/share/$publicId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedAcademyLearningFormIdRoute =
   AuthenticatedAcademyLearningFormIdRouteImport.update({
     id: '/academy/learning/$formId',
@@ -825,6 +826,12 @@ const AuthenticatedAdminAssessmentsAssessmentIdRoute =
   AuthenticatedAdminAssessmentsAssessmentIdRouteImport.update({
     id: '/$assessmentId',
     path: '/$assessmentId',
+    getParentRoute: () => AuthenticatedAdminAssessmentsRoute,
+  } as any)
+const AuthenticatedAdminAssessmentsSentinelRoute =
+  AuthenticatedAdminAssessmentsSentinelRouteImport.update({
+    id: '/sentinel',
+    path: '/sentinel',
     getParentRoute: () => AuthenticatedAdminAssessmentsRoute,
   } as any)
 const AuthenticatedAdminAssignmentsIndexRoute =
@@ -1493,7 +1500,6 @@ export interface FileRoutesByFullPath {
   '/jobs/$slug': typeof JobsSlugRoute
   '/p/$token': typeof PTokenRoute
   '/s/$publicId': typeof SPublicIdRoute
-  '/og/share/$publicId': typeof OgSharePublicIdRoute
   '/security-passport/india': typeof SecurityPassportIndiaRoute
   '/career-center/': typeof CareerCenterIndexRoute
   '/jobs/': typeof JobsIndexRoute
@@ -1542,6 +1548,7 @@ export interface FileRoutesByFullPath {
   '/career-center/yrke/$cigSlug': typeof CareerCenterYrkeCigSlugRoute
   '/jobs/family/$familyId': typeof JobsFamilyFamilyIdRoute
   '/jobs/profession/$professionSlug': typeof JobsProfessionProfessionSlugRoute
+  '/og/share/$publicId': typeof OgSharePublicIdRoute
   '/academy/': typeof AuthenticatedAcademyIndexRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
   '/beskt-governance/': typeof AuthenticatedBesktGovernanceIndexRoute
@@ -1553,6 +1560,7 @@ export interface FileRoutesByFullPath {
   '/academy/report/$attemptId': typeof AuthenticatedAcademyReportAttemptIdRoute
   '/admin/applications/$applicationId': typeof AuthenticatedAdminApplicationsApplicationIdRoute
   '/admin/assessments/$assessmentId': typeof AuthenticatedAdminAssessmentsAssessmentIdRoute
+  '/admin/assessments/sentinel': typeof AuthenticatedAdminAssessmentsSentinelRoute
   '/admin/assignments/$assignmentId': typeof AuthenticatedAdminAssignmentsAssignmentIdRoute
   '/admin/beskt-methods/$methodVersionId': typeof AuthenticatedAdminBesktMethodsMethodVersionIdRoute
   '/admin/beskt-methods/new': typeof AuthenticatedAdminBesktMethodsNewRoute
@@ -1691,7 +1699,6 @@ export interface FileRoutesByTo {
   '/jobs/$slug': typeof JobsSlugRoute
   '/p/$token': typeof PTokenRoute
   '/s/$publicId': typeof SPublicIdRoute
-  '/og/share/$publicId': typeof OgSharePublicIdRoute
   '/security-passport/india': typeof SecurityPassportIndiaRoute
   '/career-center': typeof CareerCenterIndexRoute
   '/jobs': typeof JobsIndexRoute
@@ -1727,6 +1734,7 @@ export interface FileRoutesByTo {
   '/career-center/yrke/$cigSlug': typeof CareerCenterYrkeCigSlugRoute
   '/jobs/family/$familyId': typeof JobsFamilyFamilyIdRoute
   '/jobs/profession/$professionSlug': typeof JobsProfessionProfessionSlugRoute
+  '/og/share/$publicId': typeof OgSharePublicIdRoute
   '/academy': typeof AuthenticatedAcademyIndexRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
   '/beskt-governance': typeof AuthenticatedBesktGovernanceIndexRoute
@@ -1738,6 +1746,7 @@ export interface FileRoutesByTo {
   '/academy/report/$attemptId': typeof AuthenticatedAcademyReportAttemptIdRoute
   '/admin/applications/$applicationId': typeof AuthenticatedAdminApplicationsApplicationIdRoute
   '/admin/assessments/$assessmentId': typeof AuthenticatedAdminAssessmentsAssessmentIdRoute
+  '/admin/assessments/sentinel': typeof AuthenticatedAdminAssessmentsSentinelRoute
   '/admin/assignments/$assignmentId': typeof AuthenticatedAdminAssignmentsAssignmentIdRoute
   '/admin/beskt-methods/$methodVersionId': typeof AuthenticatedAdminBesktMethodsMethodVersionIdRoute
   '/admin/beskt-methods/new': typeof AuthenticatedAdminBesktMethodsNewRoute
@@ -1884,7 +1893,6 @@ export interface FileRoutesById {
   '/jobs/$slug': typeof JobsSlugRoute
   '/p/$token': typeof PTokenRoute
   '/s/$publicId': typeof SPublicIdRoute
-  '/og/share/$publicId': typeof OgSharePublicIdRoute
   '/security-passport/india': typeof SecurityPassportIndiaRoute
   '/career-center/': typeof CareerCenterIndexRoute
   '/jobs/': typeof JobsIndexRoute
@@ -1933,6 +1941,7 @@ export interface FileRoutesById {
   '/career-center/yrke/$cigSlug': typeof CareerCenterYrkeCigSlugRoute
   '/jobs/family/$familyId': typeof JobsFamilyFamilyIdRoute
   '/jobs/profession/$professionSlug': typeof JobsProfessionProfessionSlugRoute
+  '/og/share/$publicId': typeof OgSharePublicIdRoute
   '/_authenticated/academy/': typeof AuthenticatedAcademyIndexRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/beskt-governance/': typeof AuthenticatedBesktGovernanceIndexRoute
@@ -1944,6 +1953,7 @@ export interface FileRoutesById {
   '/_authenticated/academy/report/$attemptId': typeof AuthenticatedAcademyReportAttemptIdRoute
   '/_authenticated/admin/applications/$applicationId': typeof AuthenticatedAdminApplicationsApplicationIdRoute
   '/_authenticated/admin/assessments/$assessmentId': typeof AuthenticatedAdminAssessmentsAssessmentIdRoute
+  '/_authenticated/admin/assessments/sentinel': typeof AuthenticatedAdminAssessmentsSentinelRoute
   '/_authenticated/admin/assignments/$assignmentId': typeof AuthenticatedAdminAssignmentsAssignmentIdRoute
   '/_authenticated/admin/beskt-methods/$methodVersionId': typeof AuthenticatedAdminBesktMethodsMethodVersionIdRoute
   '/_authenticated/admin/beskt-methods/new': typeof AuthenticatedAdminBesktMethodsNewRoute
@@ -2092,7 +2102,6 @@ export interface FileRouteTypes {
     | '/jobs/$slug'
     | '/p/$token'
     | '/s/$publicId'
-    | '/og/share/$publicId'
     | '/security-passport/india'
     | '/career-center/'
     | '/jobs/'
@@ -2141,6 +2150,7 @@ export interface FileRouteTypes {
     | '/career-center/yrke/$cigSlug'
     | '/jobs/family/$familyId'
     | '/jobs/profession/$professionSlug'
+    | '/og/share/$publicId'
     | '/academy/'
     | '/admin/'
     | '/beskt-governance/'
@@ -2152,6 +2162,7 @@ export interface FileRouteTypes {
     | '/academy/report/$attemptId'
     | '/admin/applications/$applicationId'
     | '/admin/assessments/$assessmentId'
+    | '/admin/assessments/sentinel'
     | '/admin/assignments/$assignmentId'
     | '/admin/beskt-methods/$methodVersionId'
     | '/admin/beskt-methods/new'
@@ -2290,7 +2301,6 @@ export interface FileRouteTypes {
     | '/jobs/$slug'
     | '/p/$token'
     | '/s/$publicId'
-    | '/og/share/$publicId'
     | '/security-passport/india'
     | '/career-center'
     | '/jobs'
@@ -2326,6 +2336,7 @@ export interface FileRouteTypes {
     | '/career-center/yrke/$cigSlug'
     | '/jobs/family/$familyId'
     | '/jobs/profession/$professionSlug'
+    | '/og/share/$publicId'
     | '/academy'
     | '/admin'
     | '/beskt-governance'
@@ -2337,6 +2348,7 @@ export interface FileRouteTypes {
     | '/academy/report/$attemptId'
     | '/admin/applications/$applicationId'
     | '/admin/assessments/$assessmentId'
+    | '/admin/assessments/sentinel'
     | '/admin/assignments/$assignmentId'
     | '/admin/beskt-methods/$methodVersionId'
     | '/admin/beskt-methods/new'
@@ -2482,7 +2494,6 @@ export interface FileRouteTypes {
     | '/jobs/$slug'
     | '/p/$token'
     | '/s/$publicId'
-    | '/og/share/$publicId'
     | '/security-passport/india'
     | '/career-center/'
     | '/jobs/'
@@ -2531,6 +2542,7 @@ export interface FileRouteTypes {
     | '/career-center/yrke/$cigSlug'
     | '/jobs/family/$familyId'
     | '/jobs/profession/$professionSlug'
+    | '/og/share/$publicId'
     | '/_authenticated/academy/'
     | '/_authenticated/admin/'
     | '/_authenticated/beskt-governance/'
@@ -2542,6 +2554,7 @@ export interface FileRouteTypes {
     | '/_authenticated/academy/report/$attemptId'
     | '/_authenticated/admin/applications/$applicationId'
     | '/_authenticated/admin/assessments/$assessmentId'
+    | '/_authenticated/admin/assessments/sentinel'
     | '/_authenticated/admin/assignments/$assignmentId'
     | '/_authenticated/admin/beskt-methods/$methodVersionId'
     | '/_authenticated/admin/beskt-methods/new'
@@ -2676,11 +2689,11 @@ export interface RootRouteChildren {
   InviteTokenRoute: typeof InviteTokenRoute
   PTokenRoute: typeof PTokenRoute
   SPublicIdRoute: typeof SPublicIdRoute
-  OgSharePublicIdRoute: typeof OgSharePublicIdRoute
   SecurityPassportIndiaRoute: typeof SecurityPassportIndiaRoute
   SecurityPassportIndexRoute: typeof SecurityPassportIndexRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   ApiRecruitmentReceiptsSweepRoute: typeof ApiRecruitmentReceiptsSweepRoute
+  OgSharePublicIdRoute: typeof OgSharePublicIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -3040,13 +3053,6 @@ declare module '@tanstack/react-router' {
       path: '/s/$publicId'
       fullPath: '/s/$publicId'
       preLoaderRoute: typeof SPublicIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/og/share/$publicId': {
-      id: '/og/share/$publicId'
-      path: '/og/share/$publicId'
-      fullPath: '/og/share/$publicId'
-      preLoaderRoute: typeof OgSharePublicIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/security-passport/': {
@@ -3420,6 +3426,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof JobsProfessionProfessionSlugRouteImport
       parentRoute: typeof JobsRoute
     }
+    '/og/share/$publicId': {
+      id: '/og/share/$publicId'
+      path: '/og/share/$publicId'
+      fullPath: '/og/share/$publicId'
+      preLoaderRoute: typeof OgSharePublicIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/academy/learning/$formId': {
       id: '/_authenticated/academy/learning/$formId'
       path: '/academy/learning/$formId'
@@ -3460,6 +3473,13 @@ declare module '@tanstack/react-router' {
       path: '/$assessmentId'
       fullPath: '/admin/assessments/$assessmentId'
       preLoaderRoute: typeof AuthenticatedAdminAssessmentsAssessmentIdRouteImport
+      parentRoute: typeof AuthenticatedAdminAssessmentsRoute
+    }
+    '/_authenticated/admin/assessments/sentinel': {
+      id: '/_authenticated/admin/assessments/sentinel'
+      path: '/sentinel'
+      fullPath: '/admin/assessments/sentinel'
+      preLoaderRoute: typeof AuthenticatedAdminAssessmentsSentinelRouteImport
       parentRoute: typeof AuthenticatedAdminAssessmentsRoute
     }
     '/_authenticated/admin/assignments/': {
@@ -4143,6 +4163,7 @@ const AuthenticatedAdminApplicationsRouteWithChildren =
 
 interface AuthenticatedAdminAssessmentsRouteChildren {
   AuthenticatedAdminAssessmentsAssessmentIdRoute: typeof AuthenticatedAdminAssessmentsAssessmentIdRoute
+  AuthenticatedAdminAssessmentsSentinelRoute: typeof AuthenticatedAdminAssessmentsSentinelRoute
   AuthenticatedAdminAssessmentsIndexRoute: typeof AuthenticatedAdminAssessmentsIndexRoute
 }
 
@@ -4150,6 +4171,8 @@ const AuthenticatedAdminAssessmentsRouteChildren: AuthenticatedAdminAssessmentsR
   {
     AuthenticatedAdminAssessmentsAssessmentIdRoute:
       AuthenticatedAdminAssessmentsAssessmentIdRoute,
+    AuthenticatedAdminAssessmentsSentinelRoute:
+      AuthenticatedAdminAssessmentsSentinelRoute,
     AuthenticatedAdminAssessmentsIndexRoute:
       AuthenticatedAdminAssessmentsIndexRoute,
   }
@@ -4883,11 +4906,11 @@ const rootRouteChildren: RootRouteChildren = {
   InviteTokenRoute: InviteTokenRoute,
   PTokenRoute: PTokenRoute,
   SPublicIdRoute: SPublicIdRoute,
-  OgSharePublicIdRoute: OgSharePublicIdRoute,
   SecurityPassportIndiaRoute: SecurityPassportIndiaRoute,
   SecurityPassportIndexRoute: SecurityPassportIndexRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
   ApiRecruitmentReceiptsSweepRoute: ApiRecruitmentReceiptsSweepRoute,
+  OgSharePublicIdRoute: OgSharePublicIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

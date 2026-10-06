@@ -25,6 +25,8 @@
   // application's.
   "extends": "./tsconfig.json",
   "include": [
+    "scripts/sentinel-*.ts",
+    "scripts/sentinel-review.tsx",
     "scripts/security-work-*.ts",
     "scripts/passport-*.ts",
     // The .tsx Passport guards and the trust-surface guard, on the same terms.

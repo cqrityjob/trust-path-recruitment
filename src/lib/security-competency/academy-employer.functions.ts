@@ -436,6 +436,16 @@ export const listContentLibrary = createServerFn({ method: "GET" })
       _employer_id: data.employerId,
     });
     if (error) throw fail(error.message, "content_library_failed");
+    const sentinel = await ctx.supabase.rpc("sentinel_catalog", { _employer_id: data.employerId });
+    // Before the additive migration is installed, the existing library remains
+    // usable. Other Sentinel failures are surfaced rather than mislabelled.
+    if (sentinel.error && sentinel.error.code !== "PGRST202" && sentinel.error.code !== "42883")
+      throw fail(sentinel.error.message, "content_library_failed");
+    const metadata = (sentinel.data ?? []) as {
+      versionId: string;
+      durationSeconds: number;
+      assignable: boolean;
+    }[];
     return (rows ?? []).map((r: RpcRow) => ({
       libraryKind: String(r.library_kind) as ContentLibraryEntry["libraryKind"],
       itemId: String(r.item_id),
@@ -443,8 +453,14 @@ export const listContentLibrary = createServerFn({ method: "GET" })
       slug: String(r.slug),
       nameSv: String(r.name_sv),
       nameEn: String(r.name_en),
-      summarySv: r.summary_sv ?? null,
-      summaryEn: r.summary_en ?? null,
+      summarySv:
+        r.slug === "abstract_reasoning_v1"
+          ? "Ett visuellt test där kandidaten identifierar mönster och väljer den figur som saknas. Ger ett separat underlag om prestation i abstrakta problemlösningsuppgifter inför en strukturerad intervju."
+          : (r.summary_sv ?? null),
+      summaryEn:
+        r.slug === "abstract_reasoning_v1"
+          ? "A visual assessment in which the candidate identifies patterns and chooses the missing figure. Provides separate evidence of performance on abstract reasoning tasks ahead of a structured interview."
+          : (r.summary_en ?? null),
       lifecycleState: String(r.lifecycle_state) as LifecycleState,
       contentStatus: String(r.content_status),
       validationStatus: String(r.validation_status),
@@ -452,10 +468,11 @@ export const listContentLibrary = createServerFn({ method: "GET" })
       isTestFixture: Boolean(r.is_test_fixture),
       ownerEmployerId: r.owner_employer_id ?? null,
       ownership: String(r.ownership) as ContentLibraryEntry["ownership"],
-      assignable: Boolean(r.assignable),
+      assignable:
+        metadata.find((v) => v.versionId === r.item_id)?.assignable ?? Boolean(r.assignable),
       unassignableReason: r.unassignable_reason ?? null,
       governanceMode: (r.governance_mode ?? null) as ContentLibraryEntry["governanceMode"],
-      itemCount: Number(r.item_count ?? 0),
+      itemCount: metadata.some((v) => v.versionId === r.item_id) ? 20 : Number(r.item_count ?? 0),
       moduleCount: Number(r.module_count ?? 0),
       minutesMin: r.minutes_min ?? null,
       minutesMax: r.minutes_max ?? null,
@@ -876,20 +893,21 @@ export const listAcademyParticipants = createServerFn({ method: "GET" })
       _employer_id: data.employerId,
     });
     if (error) throw fail(error.message, "participants_failed");
-    return (rows ?? []).map((r: RpcRow) => ({
+    const { withSentinelStatus } = await import("@/lib/sentinel/metadata.server");
+    return (await withSentinelStatus(ctx, rows ?? [])).map((r: RpcRow) => ({
       attemptId: String(r.attempt_id),
       assignmentId: r.assignment_id ? String(r.assignment_id) : null,
-      programmeNameSv: r.programme_name_sv ?? null,
-      programmeNameEn: r.programme_name_en ?? null,
+      programmeNameSv: r.programme_name_sv == null ? null : String(r.programme_name_sv),
+      programmeNameEn: r.programme_name_en == null ? null : String(r.programme_name_en),
       attemptStatus: String(r.attempt_status),
       answered: Number(r.answered ?? 0),
       totalItems: Number(r.total_items ?? 0),
       reviewsOutstanding: Number(r.reviews_outstanding ?? 0),
-      deadline: r.deadline ?? null,
-      startedAt: r.started_at ?? null,
-      submittedAt: r.submitted_at ?? null,
-      scoredAt: r.scored_at ?? null,
-      releasedAt: r.released_at ?? null,
+      deadline: r.deadline == null ? null : String(r.deadline),
+      startedAt: r.started_at == null ? null : String(r.started_at),
+      submittedAt: r.submitted_at == null ? null : String(r.submitted_at),
+      scoredAt: r.scored_at == null ? null : String(r.scored_at),
+      releasedAt: r.released_at == null ? null : String(r.released_at),
       identityResolvable: Boolean(r.identity_resolvable),
     }));
   });
@@ -2014,7 +2032,8 @@ export const listApplicationAssessments = createServerFn({ method: "GET" })
       _application_id: data.applicationId,
     });
     if (error) throw fail(error.message, "application_assessments_failed");
-    return (rows ?? []).map((r: RpcRow) => ({
+    const { withSentinelStatus } = await import("@/lib/sentinel/metadata.server");
+    return (await withSentinelStatus(ctx, rows ?? [])).map((r: RpcRow) => ({
       assignmentId: String(r.assignment_id),
       attemptId: String(r.attempt_id),
       assessmentSlug: String(r.assessment_slug ?? ""),
@@ -2089,7 +2108,8 @@ export const getPersonOverview = createServerFn({ method: "GET" })
       _subject_id: data.subjectId,
     });
     if (error) throw fail(error.message, "person_overview_failed");
-    return newestFirst((rows ?? []).map(personOverviewRow));
+    const { withSentinelStatus } = await import("@/lib/sentinel/metadata.server");
+    return newestFirst((await withSentinelStatus(ctx, rows ?? [])).map(personOverviewRow));
   });
 
 /** Candidate 360: one application, the person who made it, and everything this
@@ -2165,7 +2185,10 @@ export const getApplicationCandidate = createServerFn({ method: "GET" })
       if (overviewErr) {
         console.error("[candidate360] person overview unavailable", overviewErr);
       } else {
-        timeline = newestFirst((overview ?? []).map(personOverviewRow));
+        const { withSentinelStatus } = await import("@/lib/sentinel/metadata.server");
+        timeline = newestFirst(
+          (await withSentinelStatus(ctx, overview ?? [])).map(personOverviewRow),
+        );
       }
     }
 

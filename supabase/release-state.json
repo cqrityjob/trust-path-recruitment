@@ -7,8 +7,9 @@
   "$comment": "RELEASE PARITY STATE. Enforced by scripts/release-parity-check.ts, which runs in CI and before a release. This file records, for every canonical migration at the release frontier, whether it is believed applied on the hosted database, and which database objects it introduces. The guard fails when application code on this branch references an object whose migration is not applied -- the exact class of failure that stopped employers saving jobs during UAT. It NEVER connects to a database, holds no credentials and applies no migration; it compares this repository against itself. Edit it deliberately: every entry is an owner-level statement about production.", 
   "frontier": [
     {
-      "note": "Original Sentinel fixed-form pilot schema. Known unapplied: tested only on a disposable local PostgreSQL. Schema-first release must precede dependent app release. No claim of hosted application or owner/content/privacy approval; historical sessions prevent destructive rollback.",
-      "hostedState": "pending",
+      "note": "Schema installed by official integration after #440 merge. User authorised #441 production release. Private content/configuration release is separate; scientific validation is not claimed.",
+      "hostedState": "applied",
+      "evidenceSource": "Read-only verification after #440 merge: installed schema, function bodies and private privilege boundary verified. See docs/release/2026-10-06-sentinel-hosted-verification.json.",
       "file": "20270301090000_sentinel_abstract_reasoning.sql",
       "rollback": "supabase/rollback/20270301090000_sentinel_abstract_reasoning_rollback.sql",
       "verify": "Review explicit client privilege revocations and RLS; compare function bodies to local replay; no content imported, no grants or real assignments activated. Owner approval and private bank import remain separate prerequisites.",
@@ -53,7 +54,8 @@
     },
     {
       "file": "20270220090000_sp_open_abu_dhabi_public_pilot.sql",
-      "hostedState": "pending",
+      "hostedState": "applied",
+      "evidenceSource": "Read-only verification after #440 merge: installed schema, function bodies and private privilege boundary verified. See docs/release/2026-10-06-sentinel-hosted-verification.json.",
       "introduces": [],
       "rollback": "supabase/rollback/20270220090000_sp_open_abu_dhabi_public_pilot_rollback.sql",
       "verify": "SELECT code,pilot_state,is_active,legal_review_state FROM public.sp_market_packs WHERE code='AE-AZ'; -- public_pilot, false, pending. SELECT count(*) FROM public.sp_credential_types WHERE market_pack_code='AE-AZ' AND pilot_state='public_pilot' AND NOT is_active AND legal_review_state='pending'; -- 7. SELECT is_active FROM public.sp_sub_jurisdictions WHERE code='AE-AZ'; -- true. SELECT count(*) FROM public.sp_credential_organisation_roles r JOIN public.sp_authorities a ON a.id=r.authority_id WHERE r.credential_code LIKE 'AE\\_AZ\\_%' AND a.code='AE_MOI_PSBD' AND r.role IN ('regulator','issuer'); -- 14. SELECT count(*) FROM public.sp_market_packs WHERE pilot_state='public_pilot'; -- 4. SELECT count(*) FROM public.sp_credential_types WHERE pilot_state='public_pilot'; -- 51. SELECT checked_on, review_state FROM public.sp_regulatory_sources WHERE source_key='ae_moi_private_security'; -- NULL, review_needed (unchanged). Compare the md5 of sp_claims, sp_professional_titles, sp_pilot_members, sp_regulatory_sources and sp_authorities with the values read before the apply: all unchanged.",
