@@ -215,6 +215,10 @@ done
 echo "    ok  ${REPLAYED} migrations applied cleanly, in filename order"
 # STRICT-REPLAY-CONTRACT END
 
+# Owner catalogue decision: final boundaries first; old suites retain their historical state.
+TEST_DB="$TEST_DB" bash scripts/catalogue-five-db-check.sh
+psql_q -d "$TEST_DB" -f supabase/rollback/20270218090000_catalogue_internal_metadata_boundary_rollback.sql
+
 # #428 launch decision: verify the final API policy and each negative control.
 # Older suites below deliberately exercise the previous participant/funnel
 # contracts, including their original rollback proofs. Keep those historical

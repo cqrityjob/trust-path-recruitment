@@ -1,0 +1,236 @@
+[
+  {
+    "finding": "sp_credential_definition_versions",
+    "lovable_level": "Critical",
+    "original_verdict": "Kan avfärdas",
+    "production_verdict": "Kan avfärdas — oförändrat beslut"
+  },
+  {
+    "finding": "sp_recognition_policies",
+    "lovable_level": "Critical",
+    "original_verdict": "Kan avfärdas",
+    "production_verdict": "Kan avfärdas — oförändrat beslut"
+  },
+  {
+    "finding": "sp_credential_scopes",
+    "lovable_level": "Critical",
+    "original_verdict": "Kan avfärdas",
+    "production_verdict": "Kan avfärdas — oförändrat beslut"
+  },
+  {
+    "finding": "sp_credential_organisation_roles",
+    "lovable_level": "Critical",
+    "original_verdict": "Kan avfärdas",
+    "production_verdict": "Kan avfärdas — oförändrat beslut"
+  },
+  {
+    "finding": "sp_credential_definition_reviews",
+    "lovable_level": "Critical",
+    "original_verdict": "Kan avfärdas",
+    "production_verdict": "Kan avfärdas — oförändrat beslut"
+  },
+  {
+    "finding": "scp_observable_behaviours",
+    "lovable_level": "Warning",
+    "original_verdict": "Kan avfärdas",
+    "production_verdict": "Kan avfärdas — oförändrat beslut"
+  },
+  {
+    "finding": "scp_report_versions",
+    "lovable_level": "Warning",
+    "original_verdict": "Kan avfärdas",
+    "production_verdict": "Kan avfärdas — oförändrat beslut"
+  },
+  {
+    "finding": "scp_bundle_versions",
+    "lovable_level": "Warning",
+    "original_verdict": "Inte verifierat",
+    "production_verdict": "Inte verifierat efter rättning i produktion"
+  },
+  {
+    "finding": "scp_competency_versions",
+    "lovable_level": "Warning",
+    "original_verdict": "Kan avfärdas",
+    "production_verdict": "Kan avfärdas — oförändrat beslut"
+  },
+  {
+    "finding": "scp_role_weight_profiles",
+    "lovable_level": "Warning",
+    "original_verdict": "Inte verifierat",
+    "production_verdict": "Inte verifierat efter rättning i produktion"
+  },
+  {
+    "finding": "scp_purpose_versions",
+    "lovable_level": "Warning",
+    "original_verdict": "Kan avfärdas",
+    "production_verdict": "Kan avfärdas — oförändrat beslut"
+  },
+  {
+    "finding": "sp_certification_issuers",
+    "lovable_level": "Warning",
+    "original_verdict": "Kan avfärdas",
+    "production_verdict": "Kan avfärdas — oförändrat beslut"
+  },
+  {
+    "finding": "scp_role_competency_map",
+    "lovable_level": "Warning",
+    "original_verdict": "Kan avfärdas",
+    "production_verdict": "Kan avfärdas — oförändrat beslut"
+  },
+  {
+    "finding": "scp_followup_prompts",
+    "lovable_level": "Warning",
+    "original_verdict": "Kan avfärdas",
+    "production_verdict": "Kan avfärdas — oförändrat beslut"
+  },
+  {
+    "finding": "scp_competency_facets",
+    "lovable_level": "Warning",
+    "original_verdict": "Kan avfärdas",
+    "production_verdict": "Kan avfärdas — oförändrat beslut"
+  },
+  {
+    "finding": "scp_scenarios",
+    "lovable_level": "Warning",
+    "original_verdict": "Kan avfärdas",
+    "production_verdict": "Kan avfärdas — oförändrat beslut"
+  },
+  {
+    "finding": "scp_bundles",
+    "lovable_level": "Warning",
+    "original_verdict": "Kan avfärdas",
+    "production_verdict": "Kan avfärdas — oförändrat beslut"
+  },
+  {
+    "finding": "scp_evidence_source_types",
+    "lovable_level": "Warning",
+    "original_verdict": "Kan avfärdas",
+    "production_verdict": "Kan avfärdas — oförändrat beslut"
+  },
+  {
+    "finding": "sp_certification_issuer_aliases",
+    "lovable_level": "Warning",
+    "original_verdict": "Kan avfärdas",
+    "production_verdict": "Kan avfärdas — oförändrat beslut"
+  },
+  {
+    "finding": "scp_behaviour_competency_map",
+    "lovable_level": "Warning",
+    "original_verdict": "Kan avfärdas",
+    "production_verdict": "Kan avfärdas — oförändrat beslut"
+  },
+  {
+    "finding": "scp_recruitment_role_profiles",
+    "lovable_level": "Warning",
+    "original_verdict": "Kan avfärdas",
+    "production_verdict": "Kan avfärdas — oförändrat beslut"
+  },
+  {
+    "finding": "sp_credential_classes",
+    "lovable_level": "Warning",
+    "original_verdict": "Kan avfärdas",
+    "production_verdict": "Kan avfärdas — oförändrat beslut"
+  },
+  {
+    "finding": "scp_processing_purposes",
+    "lovable_level": "Warning",
+    "original_verdict": "Kan avfärdas",
+    "production_verdict": "Kan avfärdas — oförändrat beslut"
+  },
+  {
+    "finding": "sp_certification_definitions",
+    "lovable_level": "Warning",
+    "original_verdict": "Kan avfärdas",
+    "production_verdict": "Kan avfärdas — oförändrat beslut"
+  },
+  {
+    "finding": "scp_forms",
+    "lovable_level": "Warning",
+    "original_verdict": "Inte verifierat",
+    "production_verdict": "Inte verifierat efter rättning i produktion"
+  },
+  {
+    "finding": "scp_recruitment_content_links",
+    "lovable_level": "Warning",
+    "original_verdict": "Kan avfärdas",
+    "production_verdict": "Kan avfärdas — oförändrat beslut"
+  },
+  {
+    "finding": "scp_roles",
+    "lovable_level": "Warning",
+    "original_verdict": "Kan avfärdas",
+    "production_verdict": "Kan avfärdas — oförändrat beslut"
+  },
+  {
+    "finding": "graph_versions",
+    "lovable_level": "Warning",
+    "original_verdict": "Inte verifierat",
+    "production_verdict": "Inte verifierat efter rättning i produktion"
+  },
+  {
+    "finding": "scp_assessment_families",
+    "lovable_level": "Warning",
+    "original_verdict": "Kan avfärdas",
+    "production_verdict": "Kan avfärdas — oförändrat beslut"
+  },
+  {
+    "finding": "scp_contract_versions",
+    "lovable_level": "Warning",
+    "original_verdict": "Kan avfärdas",
+    "production_verdict": "Kan avfärdas — oförändrat beslut"
+  },
+  {
+    "finding": "scp_professions",
+    "lovable_level": "Warning",
+    "original_verdict": "Kan avfärdas",
+    "production_verdict": "Kan avfärdas — oförändrat beslut"
+  },
+  {
+    "finding": "assessments",
+    "lovable_level": "Warning",
+    "original_verdict": "Kan avfärdas",
+    "production_verdict": "Kan avfärdas — oförändrat beslut"
+  },
+  {
+    "finding": "scp_maturity_thresholds",
+    "lovable_level": "Warning",
+    "original_verdict": "Kan avfärdas",
+    "production_verdict": "Kan avfärdas — oförändrat beslut"
+  },
+  {
+    "finding": "scp_form_blocks",
+    "lovable_level": "Warning",
+    "original_verdict": "Inte verifierat",
+    "production_verdict": "Inte verifierat efter rättning i produktion"
+  },
+  {
+    "finding": "assessment_versions",
+    "lovable_level": "Warning",
+    "original_verdict": "Kan avfärdas",
+    "production_verdict": "Kan avfärdas — oförändrat beslut"
+  },
+  {
+    "finding": "sp_sub_jurisdictions",
+    "lovable_level": "Info",
+    "original_verdict": "Kan avfärdas",
+    "production_verdict": "Kan avfärdas — oförändrat beslut"
+  },
+  {
+    "finding": "sp_skill_types",
+    "lovable_level": "Info",
+    "original_verdict": "Kan avfärdas",
+    "production_verdict": "Kan avfärdas — oförändrat beslut"
+  },
+  {
+    "finding": "scp_jurisdictions",
+    "lovable_level": "Info",
+    "original_verdict": "Kan avfärdas",
+    "production_verdict": "Kan avfärdas — oförändrat beslut"
+  },
+  {
+    "finding": "scp_competencies",
+    "lovable_level": "Info",
+    "original_verdict": "Kan avfärdas",
+    "production_verdict": "Kan avfärdas — oförändrat beslut"
+  }
+]
