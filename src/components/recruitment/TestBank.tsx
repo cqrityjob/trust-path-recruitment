@@ -425,7 +425,8 @@ export function TestBank({
               <div>
                 <dt className="text-xs text-muted-foreground">{sv ? "Tid" : "Time"}</dt>
                 <dd>
-                  {a.minutesMin === a.minutesMax ? a.minutesMin : `${a.minutesMin}–${a.minutesMax}`} min
+                  {a.minutesMin === a.minutesMax ? a.minutesMin : `${a.minutesMin}–${a.minutesMax}`}{" "}
+                  min
                 </dd>
               </div>
               <div>
@@ -434,7 +435,9 @@ export function TestBank({
               </div>
               {a.slug === "abstract_reasoning_v1" && (
                 <div>
-                  <dt className="text-xs text-muted-foreground">{sv ? "Uppgifter" : "Questions"}</dt>
+                  <dt className="text-xs text-muted-foreground">
+                    {sv ? "Uppgifter" : "Questions"}
+                  </dt>
                   <dd>20</dd>
                 </div>
               )}
