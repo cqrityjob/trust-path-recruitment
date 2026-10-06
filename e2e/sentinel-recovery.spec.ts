@@ -72,6 +72,23 @@ async function beforeUnloadBlocked(page: Page) {
     () => !window.dispatchEvent(new Event("beforeunload", { cancelable: true })),
   );
 }
+function isPracticeRequest(url: string) {
+  // TanStack's dev function id includes the source/export identity. Match that
+  // identity, not a generated id or unrelated, cancellable route-loader GETs.
+  const encoded = new URL(url).pathname.split("/_serverFn/")[1];
+  if (!encoded) return false;
+  const identity: unknown = JSON.parse(Buffer.from(encoded, "base64url").toString());
+  return (
+    typeof identity === "object" &&
+    identity !== null &&
+    "file" in identity &&
+    typeof identity.file === "string" &&
+    identity.file.includes("/src/lib/sentinel/sentinel.functions.ts") &&
+    "export" in identity &&
+    typeof identity.export === "string" &&
+    identity.export.startsWith("sentinelPractice_")
+  );
+}
 async function shareSyntheticReport(id: string) {
   const auth = await fetch(`${gateway}/auth/v1/token?grant_type=password`, {
     method: "POST",
@@ -158,10 +175,7 @@ for (const sv of [true, false]) {
     let release!: () => void;
     let failed = false;
     await page.route("**/_serverFn/**", async (route) => {
-      if (
-        route.request().method() === "GET" &&
-        decodeURIComponent(route.request().url()).includes(id)
-      ) {
+      if (route.request().method() === "GET" && isPracticeRequest(route.request().url())) {
         const response = await route.fetch();
         if ((await response.text()).includes('"explanation"')) {
           await new Promise<void>((resolve) => {
@@ -266,13 +280,10 @@ for (const sv of [true, false]) {
     const { id, state } = await candidate(context, sv);
     let requests = 0;
     let release!: () => void;
-    // Identify the real synthetic practice response by its public explanations,
-    // so neither route-loader GETs nor generated function hashes are pinned.
+    // Fetch only the practice response; allow route-loader GETs to continue
+    // normally, including cancellation during background revalidation.
     await page.route("**/_serverFn/**", async (route) => {
-      if (
-        route.request().method() === "GET" &&
-        decodeURIComponent(route.request().url()).includes(id)
-      ) {
+      if (route.request().method() === "GET" && isPracticeRequest(route.request().url())) {
         const response = await route.fetch();
         if ((await response.text()).includes('"explanation"')) {
           requests++;
