@@ -348,20 +348,24 @@ BEGIN
     RAISE NOTICE 'ok  6.2 Fujairah is refused, and never answered with Dubai';
   END;
 
+  -- 20270219090000 opened Abu Dhabi as a public pilot, like Dubai. This block
+  -- runs with NO signed-in user, so both are refused on the same rule: a
+  -- public pilot is admitted to a signed-in holder only. Its own suite proves
+  -- the acceptance; this one proves it is still never answered with Dubai.
   BEGIN
     INSERT INTO public.sp_claims
       (holder_user_id, claim_type, title, credential_code, jurisdiction_code,
        sub_jurisdiction_code, claimed_issuer_name, valid_until, authorisation_scope)
     VALUES (_h, 'licence', 'Private Security Guard licence · Abu Dhabi',
             'AE_AZ_PSBD_LICENCE_GUARD', 'AE', 'AE-AZ',
-            'Ministry of Interior', current_date + 365, 'Fictional LLC');
-    RAISE EXCEPTION 'ASSERTION FAILED: 6.3 an unreviewed Abu Dhabi pack accepted a claim';
+            'Ministry of Interior — Private Security Business Department', current_date + 365, 'Fictional LLC');
+    RAISE EXCEPTION 'ASSERTION FAILED: 6.3 a public pilot accepted an Abu Dhabi claim with no signed-in holder';
   EXCEPTION WHEN check_violation THEN
     GET STACKED DIAGNOSTICS _txt = MESSAGE_TEXT;
     IF _txt NOT LIKE 'SP_APPROVED_DEFINITION_REQUIRED%' THEN
       RAISE EXCEPTION 'ASSERTION FAILED: 6.3 wrong error: %', _txt;
     END IF;
-    RAISE NOTICE 'ok  6.3 Abu Dhabi is refused as pending review, never as Dubai';
+    RAISE NOTICE 'ok  6.3 Abu Dhabi (a public pilot since 20270219090000) is refused without a signed-in holder, as Dubai is, never as Dubai';
   END;
 
   -- =====================================================================
@@ -476,7 +480,11 @@ BEGIN
     RAISE EXCEPTION 'ASSERTION FAILED: 7.7 an Abu Dhabi licence was filed against Dubai';
   EXCEPTION WHEN check_violation THEN
     GET STACKED DIAGNOSTICS _txt = MESSAGE_TEXT;
-    IF _txt NOT LIKE 'SP_APPROVED_DEFINITION_REQUIRED%' THEN
+    -- Since 20270219090000 the definition IS in the approved catalogue, so the
+    -- closed-catalogue guard refuses the wrong emirate by name (governed
+    -- metadata), exactly as 7.6 refuses the mirror case. Either refusal keeps
+    -- the territory; neither is an acceptance.
+    IF _txt NOT LIKE 'SP_APPROVED_DEFINITION_REQUIRED%' AND _txt NOT LIKE 'SP_GOVERNED_METADATA_IMMUTABLE%' THEN
       RAISE EXCEPTION 'ASSERTION FAILED: 7.7 wrong error: %', _txt;
     END IF;
     RAISE NOTICE 'ok  7.7 and an Abu Dhabi licence cannot be filed against Dubai';

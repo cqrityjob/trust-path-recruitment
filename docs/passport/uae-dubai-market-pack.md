@@ -14,22 +14,24 @@ SIRA regulates private security in Dubai. It does not regulate Sharjah, and a
 Security Cadre Card is **not a UAE licence**.
 
 Every row is pinned to `AE-DU`. All seven emirates are listed in
-`sp_sub_jurisdictions`; one is active.
+`sp_sub_jurisdictions`; two are active: Dubai, and Abu Dhabi since its public
+pilot (`20270219090000`, its own pack under the Ministry of Interior, never
+SIRA).
 
 | Emirate        | Code    | Supported |
 | -------------- | ------- | --------- |
 | Dubai          | `AE-DU` | yes       |
-| Abu Dhabi      | `AE-AZ` | no        |
+| Abu Dhabi      | `AE-AZ` | public pilot (own pack, Ministry of Interior) |
 | Sharjah        | `AE-SH` | no        |
 | Ajman          | `AE-AJ` | no        |
 | Umm Al Quwain  | `AE-UQ` | no        |
 | Ras Al Khaimah | `AE-RK` | no        |
 | Fujairah       | `AE-FU` | no        |
 
-**The six are listed rather than omitted on purpose.** An absent row rejects
-`AE-AZ` with a foreign-key error that reads like a bug; an inactive row lets
-the trigger answer _"Abu Dhabi is not supported yet"_ — a true statement the UI
-can render as a state.
+**The other emirates are listed rather than omitted on purpose.** An absent row
+rejects `AE-SH` with a foreign-key error that reads like a bug; an inactive row
+lets the trigger answer _"Sharjah is not supported yet"_ — a true statement the
+UI can render as a state. Abu Dhabi carried that answer until its public pilot.
 
 **Switching Dubai on does not make `AE` a jurisdiction.** With the pack live, a
 claim for the country with no emirate is still refused with

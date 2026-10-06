@@ -117,10 +117,10 @@ SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub','fc240000-0000-4000-8000-000000000003',true);
 SELECT pg_temp.ok(public.sp_market_access(auth.uid(),'AE-DU')='pilot' AND public.sp_market_access(auth.uid(),'GB')='closed','Dubai member: Dubai pilot, GB closed');
 SELECT pg_temp.ok((SELECT count(*)=30 FROM public.sp_approved_credential_catalogue WHERE country='AE' AND region='AE-DU')
- AND (SELECT count(*)=0 FROM public.sp_approved_credential_catalogue WHERE region='AE-AZ')
+ AND (SELECT count(*)=7 FROM public.sp_approved_credential_catalogue WHERE region='AE-AZ')
  AND (SELECT count(*)=0 FROM public.sp_approved_credential_catalogue WHERE country='GB')
  AND (SELECT count(*)=:se_n FROM public.sp_approved_credential_catalogue WHERE country='SE'),
- 'a Dubai member sees all 30 Dubai pilot definitions — never Abu Dhabi, never GB; Sweden unchanged');
+ 'a Dubai member sees all 30 Dubai pilot definitions through the grant, Abu Dhabi''s 7 as every signed-in holder does (public pilot, 20270219090000), never GB; Sweden unchanged');
 SELECT public.sp_save_international_credential('{"definition_code":"AE_DU_BASIC_FIRE_SAFETY","market_country":"AE","market_region":"AE-DU","identifier":"","issued_on":"2024-05-01","valid_until":"2027-05-01","no_expiry":false,"issuer_name":"Fiktivt Training Centre LLC"}') AS du_claim \gset
 SELECT pg_temp.ok((SELECT credential_code='AE_DU_BASIC_FIRE_SAFETY' AND jurisdiction_code='AE' AND sub_jurisdiction_code='AE-DU' AND claimed_issuer_name='Fiktivt Training Centre LLC'
  AND assertion_level='self_declared' AND lifecycle_state='active' FROM public.sp_claims WHERE id=:'du_claim' AND holder_user_id=auth.uid()),

@@ -83,10 +83,13 @@ SELECT pg_temp.ok((SELECT count(*)=44 FROM public.sp_credential_types
    AND (SELECT count(*)=1 FROM public.sp_credential_types WHERE pilot_state='public_pilot' AND market_pack_code='GB-NI')
    AND (SELECT count(*)=30 FROM public.sp_credential_types WHERE pilot_state='public_pilot' AND market_pack_code='AE-DU'),
  '1.2 their 44 definitions are public pilot -- 13 GB, 1 Northern Ireland, 30 Dubai -- none approved, none reviewed');
-SELECT pg_temp.ok((SELECT NOT is_active AND pilot_state='closed' FROM public.sp_market_packs WHERE code='AE-AZ')
-   AND (SELECT count(*)=0 FROM public.sp_credential_types WHERE market_pack_code='AE-AZ' AND (is_active OR pilot_state<>'closed'))
+-- 20270219090000 opened Abu Dhabi as a public pilot by its own decision; this
+-- suite proves the UK and Dubai, and only notes that Abu Dhabi is neither
+-- active nor approved. Its own suite (open_abu_dhabi) proves the rest.
+SELECT pg_temp.ok((SELECT NOT is_active AND pilot_state='public_pilot' AND legal_review_state='pending' FROM public.sp_market_packs WHERE code='AE-AZ')
+   AND (SELECT count(*)=0 FROM public.sp_credential_types WHERE market_pack_code='AE-AZ' AND (is_active OR pilot_state<>'public_pilot'))
    AND (SELECT is_active AND pilot_state='closed' FROM public.sp_market_packs WHERE code='SE'),
- '1.3 Abu Dhabi stays closed; Sweden stays the one active market');
+ '1.3 Abu Dhabi is a public pilot since 20270219090000, never active; Sweden stays the one active market');
 SELECT pg_temp.ok(NOT EXISTS(SELECT 1 FROM public.sp_pilot_members WHERE user_id::text LIKE 'fe221000-%'),
  '1.4 nobody in this suite holds a pilot grant');
 SET LOCAL ROLE authenticated;
@@ -94,17 +97,17 @@ SELECT set_config('request.jwt.claim.sub','fe221000-0000-4000-8000-000000000005'
 SELECT pg_temp.ok(public.sp_market_access(auth.uid(),'GB')='public_pilot'
    AND public.sp_market_access(auth.uid(),'GB-NI')='public_pilot'
    AND public.sp_market_access(auth.uid(),'AE-DU')='public_pilot'
-   AND public.sp_market_access(auth.uid(),'AE-AZ')='closed'
+   AND public.sp_market_access(auth.uid(),'AE-AZ')='public_pilot'
    AND public.sp_market_access(auth.uid(),'SE')='production'
    AND public.sp_market_access(auth.uid(),'ZZ')='closed',
- '1.5 the canonical decision, for a signed-in holder with no grant: public pilot for the three, closed for Abu Dhabi and the unknown');
-SELECT pg_temp.ok((SELECT count(*)=70 FROM public.sp_approved_credential_catalogue WHERE code NOT IN (SELECT code FROM research_codes))
+ '1.5 the canonical decision, for a signed-in holder with no grant: public pilot for the three and for Abu Dhabi, closed for the unknown');
+SELECT pg_temp.ok((SELECT count(*)=70 FROM public.sp_approved_credential_catalogue WHERE code NOT IN (SELECT code FROM research_codes) AND region IS DISTINCT FROM 'AE-AZ')
    AND (SELECT count(*) FROM public.sp_approved_credential_catalogue WHERE code IN (SELECT code FROM research_codes)) IN (0,140)
    AND (SELECT count(*)=13 FROM public.sp_approved_credential_catalogue WHERE country='GB' AND region IS NULL)
    AND (SELECT count(*)=1 FROM public.sp_approved_credential_catalogue WHERE region='GB-NI')
    AND (SELECT count(*)=30 FROM public.sp_approved_credential_catalogue WHERE region='AE-DU')
-   AND (SELECT count(*)=0 FROM public.sp_approved_credential_catalogue WHERE region='AE-AZ'),
- '1.6 the catalogue offers 70 (the 140 researched definitions are offered all or none, and counted apart): 14 international, 8 Sweden, 4 India, 13 GB, 1 Northern Ireland, 30 Dubai -- no Abu Dhabi');
+   AND (SELECT count(*)=7 FROM public.sp_approved_credential_catalogue WHERE region='AE-AZ'),
+ '1.6 the catalogue offers the 70 this migration accounts for (the 140 researched definitions are offered all or none, and counted apart): 14 international, 8 Sweden, 4 India, 13 GB, 1 Northern Ireland, 30 Dubai -- and Abu Dhabi''s 7 since 20270219090000');
 RESET ROLE;
 SELECT pg_temp.ok(public.sp_market_access(NULL,'GB')='closed' AND public.sp_market_access(NULL,'AE-DU')='closed',
  '1.7 without a signed-in user the public pilot is closed');
@@ -153,8 +156,9 @@ SELECT pg_temp.refused($q$SELECT public.sp_save_international_credential('{"defi
  'SP_DEFINITION_NOT_AVAILABLE_IN_MARKET','3.3 a Dubai card filed as UAE-wide is refused: the emirate, never the whole UAE');
 SELECT pg_temp.refused($q$SELECT public.sp_save_international_credential('{"definition_code":"UK_SIA_LICENCE_VI","market_country":"GB","market_region":"","identifier":"","issued_on":"2024-05-01","valid_until":"2029-05-01","no_expiry":false}')$q$,
  'SP_DEFINITION_NOT_AVAILABLE_IN_MARKET','3.4 Northern Ireland''s licence cannot be filed as a GB-wide one');
-SELECT pg_temp.refused($q$SELECT public.sp_save_international_credential('{"definition_code":"AE_AZ_PSBD_LICENCE_GUARD","market_country":"AE","market_region":"AE-AZ","identifier":"","issued_on":"2024-05-01","valid_until":"2029-05-01","no_expiry":false,"authorisation_scope":"Fiktivt bolag"}')$q$,
- 'SP_APPROVED_DEFINITION_REQUIRED','3.5 Abu Dhabi stays closed to a Dubai holder');
+SELECT public.sp_save_international_credential('{"definition_code":"AE_AZ_PSBD_LICENCE_GUARD","market_country":"AE","market_region":"AE-AZ","identifier":"","issued_on":"2024-05-01","valid_until":"2029-05-01","no_expiry":false,"authorisation_scope":"Fiktivt bolag"}') AS az_by_dubai \gset
+SELECT pg_temp.ok((SELECT jurisdiction_code='AE' AND sub_jurisdiction_code='AE-AZ' FROM public.sp_claims WHERE id=:'az_by_dubai'),
+ '3.5 a Dubai holder may register an Abu Dhabi licence since 20270219090000, and it is filed under Abu Dhabi, never Dubai');
 SELECT pg_temp.refused($q$SELECT public.sp_save_international_credential('{"definition_code":"AE_DU_SIRA_CARD_GUARD","market_country":"AE","market_region":"AE-DU","identifier":"","issued_on":"2024-05-01","valid_until":"2029-05-01","no_expiry":false,"authorisation_scope":"Fiktivt bolag","issuer_name":"Fake SIRA"}')$q$,
  'SP_ISSUER_IS_GOVERNED','3.6 SIRA stays the governed issuer of the card');
 RESET ROLE;
@@ -175,7 +179,7 @@ SELECT pg_temp.ok(NOT EXISTS(
  '4.1 moving to Dubai and then India changes none of the six: the international and foreign credentials keep their own territory');
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub','fe221000-0000-4000-8000-000000000005',true);
-SELECT pg_temp.ok((SELECT count(*)=70 FROM public.sp_approved_credential_catalogue WHERE code NOT IN (SELECT code FROM research_codes)),
+SELECT pg_temp.ok((SELECT count(*)=70 FROM public.sp_approved_credential_catalogue WHERE code NOT IN (SELECT code FROM research_codes) AND region IS DISTINCT FROM 'AE-AZ'),
  '4.2 and availability does not follow the work country: the same 70');
 RESET ROLE;
 

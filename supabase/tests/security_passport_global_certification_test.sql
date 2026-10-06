@@ -518,21 +518,22 @@ BEGIN
   PERFORM pg_temp.ok(_r = 'OK',
     '5.3 a holder with no stated work country records a CISSP (got ' || _r || ')');
 
-  -- A holder in a market nobody has opened. Abu Dhabi is authored, unreviewed
-  -- and deliberately CLOSED — a holder there can register no regulated
-  -- credential at all. The market gate never runs for their CISA, because the
-  -- claim names no jurisdiction for it to gate.
+  -- A holder in a market that is only a PUBLIC PILOT (Abu Dhabi, 20270219090000):
+  -- authored, unreviewed, open for registration and approved for nobody. Their
+  -- regulated licence saves as self-declared; the market gate never runs for
+  -- their CISA, because the claim names no jurisdiction for it to gate.
   INSERT INTO public.sp_passport_profiles
     (holder_user_id, jurisdiction_code, sub_jurisdiction_code)
   VALUES (_odd, 'AE', 'AE-AZ')
   ON CONFLICT (holder_user_id) DO UPDATE
     SET jurisdiction_code = 'AE', sub_jurisdiction_code = 'AE-AZ';
 
-  -- First, that their market really is shut: a regulated Abu Dhabi credential
-  -- is refused. If it were not, 5.4 would prove nothing.
+  -- First, that their market is what it says: a regulated Abu Dhabi licence
+  -- saves (public pilot), and nothing about it is approved.
   _r := pg_temp.file_canonical(_odd, 'AE_AZ_PSBD_LICENCE_GUARD', 'active');
-  PERFORM pg_temp.ok(_r <> 'OK',
-    '5.4a their own regulated market is closed to them (got ' || _r || ')');
+  PERFORM pg_temp.ok(_r = 'OK'
+    AND NOT EXISTS (SELECT 1 FROM public.sp_credential_types WHERE market_pack_code = 'AE-AZ' AND is_active),
+    '5.4a their own regulated market is a public pilot: the licence saves, approved by nobody (got ' || _r || ')');
 
   _r := pg_temp.file_canonical(_odd, 'INTL_ISACA_CISA', 'active');
   PERFORM pg_temp.ok(_r = 'OK',

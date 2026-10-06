@@ -64,15 +64,15 @@ INSERT INTO public.user_roles(user_id,role) VALUES
 -- three markets and 44 definitions, and nothing else is public_pilot.
 SELECT pg_temp.ok((SELECT count(*)=3 FROM public.sp_market_packs
                     WHERE pilot_state='public_pilot' AND code IN ('GB','GB-NI','AE-DU'))
-   AND (SELECT count(*)=3 FROM public.sp_market_packs WHERE pilot_state='public_pilot')
+   AND (SELECT count(*)=4 FROM public.sp_market_packs WHERE pilot_state='public_pilot')
    AND (SELECT count(*)=44 FROM public.sp_credential_types
          WHERE pilot_state='public_pilot' AND market_pack_code IN ('GB','GB-NI','AE-DU'))
-   AND (SELECT count(*)=44 FROM public.sp_credential_types WHERE pilot_state='public_pilot'),
- '1.1 only what 20261221090000 opened is public_pilot: the UK, Northern Ireland, Dubai and their 44 definitions');
+   AND (SELECT count(*)=51 FROM public.sp_credential_types WHERE pilot_state='public_pilot'),
+ '1.1 what 20261221090000 opened is public_pilot (the UK, Northern Ireland, Dubai, 44 definitions) plus Abu Dhabi''s 7 since 20270219090000: four packs, 51 definitions');
 SELECT pg_temp.ok((SELECT bool_and(NOT is_active AND legal_review_state='pending')
      FROM public.sp_market_packs WHERE code IN ('GB','GB-NI','AE-DU'))
-   AND (SELECT NOT is_active AND pilot_state='closed' FROM public.sp_market_packs WHERE code='AE-AZ'),
- '1.2 the UK and Dubai are public pilots under pending review, never active; Abu Dhabi stays closed');
+   AND (SELECT NOT is_active AND pilot_state='public_pilot' AND legal_review_state='pending' FROM public.sp_market_packs WHERE code='AE-AZ'),
+ '1.2 the UK, Dubai and Abu Dhabi are public pilots under pending review, never active');
 -- The groups below prove the TRANSITIONS, from the state 20261220090000 left:
 -- the three markets in internal pilot. Pinned back for this transaction only.
 \ir security_passport_route_a_markets_fixture.sql
@@ -99,12 +99,12 @@ SELECT pg_temp.refused($q$UPDATE public.sp_market_packs SET is_active=true WHERE
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub','fe220000-0000-4000-8000-000000000001',true);
 SELECT pg_temp.ok(public.sp_market_access(auth.uid(),'GB')='public_pilot' AND public.sp_market_access(auth.uid(),'AE-DU')='public_pilot'
-   AND public.sp_market_access(auth.uid(),'AE-AZ')='closed' AND public.sp_market_access(auth.uid(),'SE')='production',
- '2.3 the canonical market decision reports public_pilot for an ordinary holder, closed for Abu Dhabi');
+   AND public.sp_market_access(auth.uid(),'AE-AZ')='public_pilot' AND public.sp_market_access(auth.uid(),'SE')='production',
+ '2.3 the canonical market decision reports public_pilot for an ordinary holder, Abu Dhabi included (20270219090000; the Route A fixture pins only the three)');
 SELECT pg_temp.ok((SELECT count(*)>0 FROM public.sp_approved_credential_catalogue WHERE country='GB' AND region IS NULL)
    AND (SELECT count(*)>0 FROM public.sp_approved_credential_catalogue WHERE region='AE-DU')
-   AND (SELECT count(*)=0 FROM public.sp_approved_credential_catalogue WHERE region='AE-AZ'),
- '2.4 the catalogue offers UK and Dubai credentials to a holder with no grant, and still no Abu Dhabi one');
+   AND (SELECT count(*)=7 FROM public.sp_approved_credential_catalogue WHERE region='AE-AZ'),
+ '2.4 the catalogue offers UK and Dubai credentials to a holder with no grant, and Abu Dhabi''s seven');
 SELECT pg_temp.ok((SELECT count(*)=13 FROM public.sp_credential_types WHERE market_pack_code='GB'),
  '2.5 the definitions themselves are readable to that holder (every layer agrees)');
 SELECT public.sp_save_international_credential(pg_temp.save_input('UK_SIA_LICENCE_DS')) AS gb_claim \gset
@@ -121,10 +121,10 @@ SELECT pg_temp.ok((SELECT count(*)=0 FROM public.sp_pilot_members WHERE user_id=
  '2.8 no grant was created for that holder');
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub','fe220000-0000-4000-8000-000000000001',true);
-SELECT pg_temp.refused(format('SELECT public.sp_save_international_credential(%L::jsonb)',
-   jsonb_build_object('definition_code','AE_AZ_PSBD_LICENCE_GUARD','market_country','AE','market_region','AE-AZ','identifier','',
-     'issued_on','2024-05-01','valid_until','2029-05-01','no_expiry',false,'authorisation_scope','Fiktivt bolag')),
- 'SP_APPROVED_DEFINITION_REQUIRED','2.9 Abu Dhabi stays closed');
+SELECT public.sp_save_international_credential(jsonb_build_object('definition_code','AE_AZ_PSBD_LICENCE_GUARD','market_country','AE','market_region','AE-AZ','identifier','',
+     'issued_on','2024-05-01','valid_until','2029-05-01','no_expiry',false,'authorisation_scope','Fiktivt bolag')) AS az_claim \gset
+SELECT pg_temp.ok((SELECT jurisdiction_code='AE' AND sub_jurisdiction_code='AE-AZ' AND assertion_level='self_declared' FROM public.sp_claims WHERE id=:'az_claim'),
+ '2.9 Abu Dhabi is a public pilot too: the same holder saves one of its licences, self-declared, under Abu Dhabi');
 SELECT pg_temp.refused(format('SELECT public.sp_save_international_credential(%L::jsonb)',
    pg_temp.save_input('AE_DU_SIRA_CARD_GUARD')-'authorisation_scope'),
  'SP_CREDENTIAL_REQUIRES_SCOPE','2.10 a scoped Dubai card still requires its scope');

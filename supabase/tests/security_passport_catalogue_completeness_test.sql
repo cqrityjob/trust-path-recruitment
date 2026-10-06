@@ -14,7 +14,9 @@
 --                                        everyone, no market pack — 20261214090000)
 --   13 Great Britain + 1 Northern Ireland   (public pilot)
 --   30 Dubai                            (public pilot)
---    7 Abu Dhabi                        (CLOSED by owner decision: never listed)
+--    7 Abu Dhabi                        (public pilot since 20270219090000; NOT pinned
+--                                        here: it carries no definition-review row, and
+--                                        its own suite proves it)
 --
 -- THE PUBLIC PILOT (20261221090000). GB, GB-NI and Dubai definitions are
 -- public_pilot and keep is_active = false for the WHOLE suite: nothing is
@@ -111,8 +113,9 @@ SELECT pg_temp.ok(NOT EXISTS(SELECT 1 FROM public.sp_pilot_members WHERE user_id
 -- ── BEFORE any approval: what the product offers today ──────────────────
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub','fc260000-0000-4000-8000-000000000001',true);
-SELECT pg_temp.ok((SELECT count(*)=70 FROM public.sp_approved_credential_catalogue WHERE code NOT IN (SELECT code FROM research_added)),
- 'today a Swedish holder, with no grant, is offered 70: all 14 international, all 8 Swedish (VU1, VU2 and SV included), the 4 Indian qualifications and the 44 UK and Dubai public-pilot definitions');
+SELECT pg_temp.ok((SELECT count(*)=70 FROM public.sp_approved_credential_catalogue WHERE code NOT IN (SELECT code FROM research_added) AND region IS DISTINCT FROM 'AE-AZ')
+ AND (SELECT count(*)=7 FROM public.sp_approved_credential_catalogue WHERE region='AE-AZ'),
+ 'today a Swedish holder, with no grant, is offered the 70 pinned here: all 14 international, all 8 Swedish (VU1, VU2 and SV included), the 4 Indian qualifications and the 44 UK and Dubai public-pilot definitions -- and, counted apart, Abu Dhabi''s 7 (public pilot since 20270219090000)');
 SELECT pg_temp.ok((SELECT count(*)=3 FROM public.sp_approved_credential_catalogue WHERE code IN ('VU1','VU2','SV')),
  'VU1, VU2 and SV are no longer withheld');
 -- The researched definitions are offered exactly when they are active: every active one, no inactive one.
@@ -147,17 +150,18 @@ SELECT pg_temp.ok((SELECT count(*) FROM public.sp_approved_credential_catalogue 
    = (SELECT count(*) FROM research_active),
  'an OLD application is offered exactly the active researched definitions too: it can save every one of them');
 SELECT set_config('request.headers','{"x-passport-catalogue-contract":"2"}',true);
-SELECT pg_temp.ok((SELECT count(*)=70 FROM public.sp_approved_credential_catalogue WHERE code NOT IN (SELECT code FROM research_added)),
- 'the NEW application declares the contract and is offered all 70');
+SELECT pg_temp.ok((SELECT count(*)=70 FROM public.sp_approved_credential_catalogue WHERE code NOT IN (SELECT code FROM research_added) AND region IS DISTINCT FROM 'AE-AZ')
+ AND (SELECT count(*)=7 FROM public.sp_approved_credential_catalogue WHERE region='AE-AZ'),
+ 'the NEW application declares the contract and is offered all 70, and Abu Dhabi''s 7 scoped licences with them');
 SELECT set_config('request.path','/rpc/sp_save_international_credential',true);
 SELECT set_config('request.headers','{}',true);
-SELECT pg_temp.ok((SELECT count(*)=70 FROM public.sp_approved_credential_catalogue WHERE code NOT IN (SELECT code FROM research_added)),
+SELECT pg_temp.ok((SELECT count(*)=70 FROM public.sp_approved_credential_catalogue WHERE code NOT IN (SELECT code FROM research_added) AND region IS DISTINCT FROM 'AE-AZ')
+ AND (SELECT count(*)=7 FROM public.sp_approved_credential_catalogue WHERE region='AE-AZ'),
  'the guard narrows the LISTING only: the save RPC and the table guards read the whole catalogue');
 SELECT set_config('request.path','',true);
 SELECT set_config('request.headers','',true);
 RESET ROLE;
--- Abu Dhabi: even an APPROVED definition of a closed market is offered to nobody.
-UPDATE public.sp_credential_types SET is_active=true WHERE market_pack_code='AE-AZ';
+-- Abu Dhabi is a public pilot (20270219090000): offered as its own seven, approved by nobody.
 
 -- ── every definition: visible, saved, read back ─────────────────────────
 DO $$
@@ -252,13 +256,14 @@ BEGIN
 END $$;
 RESET ROLE;
 
--- ── Abu Dhabi stays closed even with its definitions approved ───────────
+-- ── Abu Dhabi: a public pilot of its own, approved by nobody ────────────
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub','fc260000-0000-4000-8000-000000000004',true);
-SELECT pg_temp.ok((SELECT count(*)=0 FROM public.sp_approved_credential_catalogue WHERE region='AE-AZ'),
- 'Abu Dhabi is offered to nobody, a Dubai holder included: the market is closed, not in pilot');
-SELECT pg_temp.refused($q$SELECT public.sp_save_international_credential('{"definition_code":"AE_AZ_PSBD_LICENCE_GUARD","market_country":"AE","market_region":"AE-AZ","identifier":"","issued_on":"2024-05-01","valid_until":"2027-05-01","no_expiry":false,"authorisation_scope":"Fiktivt bolag"}')$q$,
- 'SP_APPROVED_DEFINITION_REQUIRED','an Abu Dhabi licence cannot be saved');
+SELECT pg_temp.ok((SELECT count(*)=7 FROM public.sp_approved_credential_catalogue WHERE region='AE-AZ')
+ AND (SELECT count(*)=0 FROM public.sp_credential_types WHERE market_pack_code='AE-AZ' AND is_active),
+ 'Abu Dhabi is offered to a Dubai holder as its own seven, none of them approved: a public pilot since 20270219090000, proved in full by its own suite');
+SELECT pg_temp.refused($q$SELECT public.sp_save_international_credential('{"definition_code":"AE_AZ_PSBD_LICENCE_GUARD","market_country":"AE","market_region":"AE-AZ","identifier":"","issued_on":"2024-05-01","valid_until":"2027-05-01","no_expiry":false}')$q$,
+ 'SP_CREDENTIAL_REQUIRES_SCOPE','an Abu Dhabi licence without the company it is tied to cannot be saved');
 
 -- ── the scope contract ──────────────────────────────────────────────────
 SELECT pg_temp.refused($q$SELECT public.sp_save_international_credential('{"definition_code":"AE_DU_SIRA_CARD_GUARD","market_country":"AE","market_region":"AE-DU","identifier":"","issued_on":"2024-05-01","valid_until":"2027-05-01","no_expiry":false}')$q$,

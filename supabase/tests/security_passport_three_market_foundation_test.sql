@@ -51,12 +51,14 @@ BEGIN
   IF (SELECT count(*) FROM public.sp_sub_jurisdictions WHERE jurisdiction_code = 'AE') <> 7 THEN
     RAISE EXCEPTION 'ASSERTION FAILED: 1.3 expected all seven emirates to be listed';
   END IF;
+  -- Dubai (20260907090000) and Abu Dhabi (20270219090000, a public pilot).
   IF (SELECT count(*) FROM public.sp_sub_jurisdictions
-       WHERE jurisdiction_code = 'AE' AND is_active) <> 1 THEN
-    RAISE EXCEPTION 'ASSERTION FAILED: 1.4 exactly one emirate must be supported';
+       WHERE jurisdiction_code = 'AE' AND is_active) <> 2
+  OR (SELECT bool_and(is_active) FROM public.sp_sub_jurisdictions WHERE code IN ('AE-DU', 'AE-AZ')) IS DISTINCT FROM true THEN
+    RAISE EXCEPTION 'ASSERTION FAILED: 1.4 exactly two emirates must be supported: Dubai and Abu Dhabi';
   END IF;
   RAISE NOTICE 'ok  1.3 all seven emirates are listed rather than omitted';
-  RAISE NOTICE 'ok  1.4 exactly one emirate (Dubai) is active';
+  RAISE NOTICE 'ok  1.4 exactly two emirates (Dubai and Abu Dhabi) are active';
 
   -- An emirate cannot be filed under the wrong country.
   BEGIN
@@ -268,20 +270,26 @@ BEGIN
   -- approved" — a different true sentence, and the one the UI should render.
   -- It must NOT become an acceptance, and it must NOT answer with Dubai's
   -- catalogue.
+  -- 20270219090000 opened it as a PUBLIC PILOT, exactly like Dubai (5.3): a
+  -- signed-in holder may register its licence (its own suite proves that),
+  -- and this block, which runs with NO signed-in user, is refused for the
+  -- same reason Dubai is -- the catalogue admits a public pilot to a signed-in
+  -- holder only. It must NOT become an acceptance here, and it must NOT
+  -- answer with Dubai's catalogue.
   BEGIN
     INSERT INTO public.sp_claims
       (holder_user_id, claim_type, title, credential_code, jurisdiction_code,
        sub_jurisdiction_code, claimed_issuer_name, valid_until, authorisation_scope)
     VALUES (_h1, 'licence', 'Private Security Guard licence · Abu Dhabi',
             'AE_AZ_PSBD_LICENCE_GUARD', 'AE', 'AE-AZ',
-            'Ministry of Interior', current_date + 365, 'Fictional Security Services LLC');
-    RAISE EXCEPTION 'ASSERTION FAILED: 5.2b an unreviewed Abu Dhabi pack accepted a claim';
+            'Ministry of Interior — Private Security Business Department', current_date + 365, 'Fictional Security Services LLC');
+    RAISE EXCEPTION 'ASSERTION FAILED: 5.2b a public pilot accepted an Abu Dhabi claim with no signed-in holder';
   EXCEPTION WHEN check_violation THEN
     GET STACKED DIAGNOSTICS _txt = MESSAGE_TEXT;
     IF _txt NOT LIKE 'SP_APPROVED_DEFINITION_REQUIRED%' THEN
       RAISE EXCEPTION 'ASSERTION FAILED: 5.2b wrong error for Abu Dhabi: %', _txt;
     END IF;
-    RAISE NOTICE 'ok  5.2b Abu Dhabi is refused as "pending legal review", never as Dubai';
+    RAISE NOTICE 'ok  5.2b Abu Dhabi, a public pilot since 20270219090000, is refused without a signed-in holder exactly as Dubai is, never as Dubai';
   END;
 
   -- Dubai is registered but its pack is unreviewed, so it too is refused —

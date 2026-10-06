@@ -2783,7 +2783,7 @@ psql_q -d postgres -c "DROP DATABASE ${TEST_DB}_sw_race;" >/dev/null
 
 # International Passport: test fixtures roll back; rollback refuses adoption.
 for passport_round in before after; do
-  for passport_suite in international_foundation international_wallet credential_sharing_v2 closed_catalogue organisation_roles pilot_scope catalogue_completeness hayat_assessments india_national_qualifications public_pilot_availability open_uk_dubai catalogue_research; do
+  for passport_suite in international_foundation international_wallet credential_sharing_v2 closed_catalogue organisation_roles pilot_scope catalogue_completeness hayat_assessments india_national_qualifications public_pilot_availability open_uk_dubai open_abu_dhabi catalogue_research; do
     passport_output="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f "supabase/tests/security_passport_${passport_suite}_test.sql" 2>&1)" || { echo "$passport_output"; exit 1; }
     passport_count="$(printf '%s\n' "$passport_output" | grep -c 'NOTICE:  ok ' || true)"
     echo "    $passport_count assertions passed: Passport $passport_suite ($passport_round rollback/reapply)"
@@ -2817,11 +2817,32 @@ for passport_round in before after; do
     rs_found_left="$(psql_q -d "$TEST_DB" -Atc "SELECT (to_regclass('public.sp_catalogue_research_records') IS NOT NULL)::int + (to_regclass('public.sp_catalogue_requests') IS NOT NULL)::int + (to_regclass('public.sp_certification_definition_aliases') IS NOT NULL)::int + (SELECT count(*) FROM pg_proc WHERE pronamespace='public'::regnamespace AND proname IN ('sp_catalogue_unavailable_matches','sp_request_catalogue_definition','sp_list_my_catalogue_requests','sp_admin_resolve_catalogue_request','sp_admin_review_research_record','sp_catalogue_research_provenance_immutable')) + (SELECT count(*) FROM public.sp_credential_classes) - 8")"
     [ "$rs_found_left" = "0" ] || { echo "FAIL: 20270212090000 rollback left $rs_found_left object(s) behind"; exit 1; }
     echo "    ok  the research foundation stood down: no table, function or class remains"
-    # 20261221090000 (the UK and Dubai opened as a public pilot) is DATA only
-    # and the newest Passport migration: it stands down FIRST, returning the
-    # three markets and their 44 definitions to internal pilot and touching no
-    # claim and no grant. It must refuse a second run, and the suite that
+    # 20270219090000 (Abu Dhabi opened as a public pilot) is DATA only and
+    # the newest Passport market unit: it stands down FIRST -- Abu Dhabi closed,
+    # its emirate inactive, its fourteen Ministry roles gone -- touching no
+    # claim and no grant, and 20261221090000's rollback (which requires Abu
+    # Dhabi closed) follows. It must refuse a second run, and the suite that
     # proves the opened state must fail without it.
+    az_out="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" -f "supabase/rollback/20270219090000_sp_open_abu_dhabi_public_pilot_rollback.sql" 2>&1)" || { echo "$az_out"; exit 1; }
+    printf '%s' "$az_out" | grep -q 'SP_OPEN_ABU_DHABI_ROLLBACK ok' || { echo "FAIL: 20270219090000 rollback did not prove itself: $az_out"; exit 1; }
+    az_left="$(psql_q -d "$TEST_DB" -Atc "SELECT (SELECT count(*) FROM public.sp_market_packs WHERE code='AE-AZ' AND pilot_state<>'closed') + (SELECT count(*) FROM public.sp_credential_types WHERE market_pack_code='AE-AZ' AND pilot_state<>'closed') + (SELECT count(*) FROM public.sp_sub_jurisdictions WHERE code='AE-AZ' AND is_active) + (SELECT count(*) FROM public.sp_credential_organisation_roles WHERE credential_code LIKE 'AE\_AZ\_%') || '/' || (SELECT count(*) FROM public.sp_market_packs WHERE pilot_state='public_pilot') || '/' || (SELECT count(*) FROM public.sp_credential_types WHERE pilot_state='public_pilot')")"
+    [ "$az_left" = "0/3/44" ] || { echo "FAIL: 20270219090000 rollback left Abu Dhabi traces/public packs/public definitions $az_left, expected 0/3/44"; exit 1; }
+    echo "    ok  Abu Dhabi stood down: closed, emirate inactive, no Ministry role; the UK and Dubai still 3 packs and 44 definitions in public pilot"
+    if psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" -f "supabase/rollback/20270219090000_sp_open_abu_dhabi_public_pilot_rollback.sql" >/dev/null 2>&1; then
+      echo "FAIL: the 20270219090000 rollback ran twice" >&2
+      exit 1
+    fi
+    echo "    ok  and it refuses to run a second time"
+    if psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_passport_open_abu_dhabi_test.sql >/dev/null 2>&1; then
+      echo "FAIL: the open-Abu-Dhabi suite passed WITHOUT its migration -- it proves nothing" >&2
+      exit 1
+    fi
+    echo "    ok  and the open-Abu-Dhabi suite refuses to pass without the migration (negative control)"
+    # 20261221090000 (the UK and Dubai opened as a public pilot) is DATA only
+    # and stands down next, returning the three markets and their 44
+    # definitions to internal pilot and touching no claim and no grant. It
+    # must refuse a second run, and the suite that proves the opened state
+    # must fail without it.
     ou_out="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" -f "supabase/rollback/20261221090000_sp_open_uk_dubai_public_pilot_rollback.sql" 2>&1)" || { echo "$ou_out"; exit 1; }
     printf '%s' "$ou_out" | grep -q 'SP_OPEN_UK_DUBAI_ROLLBACK ok' || { echo "FAIL: 20261221090000 rollback did not prove itself: $ou_out"; exit 1; }
     ou_left="$(psql_q -d "$TEST_DB" -Atc "SELECT (SELECT count(*) FROM public.sp_market_packs WHERE pilot_state='public_pilot') + (SELECT count(*) FROM public.sp_credential_types WHERE pilot_state='public_pilot') || '/' || (SELECT count(*) FROM public.sp_market_packs WHERE code IN ('GB','GB-NI','AE-DU') AND pilot_state='internal_pilot') || '/' || (SELECT count(*) FROM public.sp_credential_types WHERE market_pack_code IN ('GB','GB-NI','AE-DU') AND pilot_state='internal_pilot')")"
@@ -2941,6 +2962,9 @@ for passport_round in before after; do
     ou_back="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" -f "supabase/migrations/20261221090000_sp_open_uk_dubai_public_pilot.sql" 2>&1)" || { echo "$ou_back"; exit 1; }
     printf '%s' "$ou_back" | grep -q 'SP_OPEN_UK_DUBAI_PROOF ok' || { echo "FAIL: 20261221090000 did not re-apply on top of its rollback"; exit 1; }
     echo "    ok  the UK and Dubai reopened as a public pilot on top of the availability model: proof ok"
+    az_back="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" -f "supabase/migrations/20270219090000_sp_open_abu_dhabi_public_pilot.sql" 2>&1)" || { echo "$az_back"; exit 1; }
+    printf '%s' "$az_back" | grep -q 'SP_OPEN_ABU_DHABI_PROOF ok' || { echo "FAIL: 20270219090000 did not re-apply on top of its rollback"; exit 1; }
+    echo "    ok  Abu Dhabi reopened as a public pilot on top of the UK and Dubai: proof ok"
     # The certification research integration, back on top: foundation, import, publication.
     for rs_migration in 20270212090000_sp_catalogue_research_foundation 20270213090000_sp_catalogue_research_import 20270214090000_sp_catalogue_research_publish; do
       psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" -f "supabase/migrations/${rs_migration}.sql" >/dev/null 2>&1 || { echo "FAIL: ${rs_migration} did not re-apply on top of its rollback"; exit 1; }
@@ -9203,6 +9227,7 @@ psql_q -d postgres -c "DROP DATABASE ${PASSPORT_MAIN_TEST_DB}_pristine;" >/dev/n
 psql_q -d "$TEST_DB" -f supabase/rollback/20270214090000_sp_catalogue_research_publish_rollback.sql >/dev/null
 psql_q -d "$TEST_DB" -f supabase/rollback/20270213090000_sp_catalogue_research_import_rollback.sql >/dev/null
 psql_q -d "$TEST_DB" -f supabase/rollback/20270212090000_sp_catalogue_research_foundation_rollback.sql >/dev/null
+psql_q -d "$TEST_DB" -f supabase/rollback/20270219090000_sp_open_abu_dhabi_public_pilot_rollback.sql >/dev/null
 psql_q -d "$TEST_DB" -f supabase/rollback/20261221090000_sp_open_uk_dubai_public_pilot_rollback.sql >/dev/null
 psql_q -d "$TEST_DB" -f supabase/rollback/20261220090000_sp_public_pilot_availability_rollback.sql >/dev/null
 psql_q -d "$TEST_DB" -f supabase/rollback/20261214090000_sp_india_national_qualifications_rollback.sql >/dev/null
@@ -10835,6 +10860,7 @@ fi
 psql_q -d "$TEST_DB" -f supabase/rollback/20270214090000_sp_catalogue_research_publish_rollback.sql >/dev/null
 psql_q -d "$TEST_DB" -f supabase/rollback/20270213090000_sp_catalogue_research_import_rollback.sql >/dev/null
 psql_q -d "$TEST_DB" -f supabase/rollback/20270212090000_sp_catalogue_research_foundation_rollback.sql >/dev/null
+psql_q -d "$TEST_DB" -f supabase/rollback/20270219090000_sp_open_abu_dhabi_public_pilot_rollback.sql >/dev/null
 psql_q -d "$TEST_DB" -f supabase/rollback/20261221090000_sp_open_uk_dubai_public_pilot_rollback.sql >/dev/null
 psql_q -d "$TEST_DB" -f supabase/rollback/20261220090000_sp_public_pilot_availability_rollback.sql >/dev/null
 psql_q -d "$TEST_DB" -f supabase/rollback/20261214090000_sp_india_national_qualifications_rollback.sql >/dev/null

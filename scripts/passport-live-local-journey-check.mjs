@@ -881,12 +881,12 @@ async function main() {
     },
   );
 
-  /* ── COMPLETENESS over real GoTrue + PostgREST: all 70 definitions ────── */
+  /* ── COMPLETENESS over real GoTrue + PostgREST: all 77 definitions ────── */
   // (66 until 20261214090000 added India's four national qualifications,
   // which every holder reaches with no membership: the Swedish holder saves them.)
   // Fresh holders, so nothing saved above interferes. Every GB, GB-NI and Dubai
   // definition is approved LOCALLY for this run (restored at exit); the market
-  // packs stay internal_pilot and Abu Dhabi stays closed.
+  // packs stay internal_pilot; Abu Dhabi is a public pilot (20270219090000).
   const seAll = await user("complete-se");
   const gbAll = await user("complete-gb");
   const niAll = await user("complete-ni");
@@ -916,18 +916,20 @@ async function main() {
   // ROUTE A: nothing is approved for this loop. Each holder reaches their
   // market's definitions through their membership alone.
   const expectedCodes = sql(
-    "select string_agg(code, ',' order by code) from public.sp_credential_types where market_pack_code is distinct from 'AE-AZ'",
+    "select string_agg(code, ',' order by code) from public.sp_credential_types",
   ).split(",");
   const savedCodes = [];
   await check(
-    "Completeness · every in-scope definition saves through the real RPC and reloads (70)",
+    "Completeness · every in-scope definition saves through the real RPC and reloads (77)",
     async () => {
-      ok(expectedCodes.length === 70, "expected set is " + expectedCodes.length);
+      // 70 as before, plus Abu Dhabi's 7 (a public pilot since 20270219090000,
+      // reached by the Dubai holder with no grant, as by every signed-in holder).
+      ok(expectedCodes.length === 77, "expected set is " + expectedCodes.length);
       const plans = [
         [seAll, (d) => d.country === null || d.country === "SE" || d.country === "IN"],
         [gbAll, (d) => d.country === "GB" && d.region === null],
         [niAll, (d) => d.region === "GB-NI"],
-        [duAll, (d) => d.region === "AE-DU"],
+        [duAll, (d) => d.region === "AE-DU" || d.region === "AE-AZ"],
       ];
       for (const [u, mine] of plans) {
         const rows = good(
@@ -974,7 +976,7 @@ async function main() {
         savedCodes.join(",") === expectedCodes.join(","),
         "saved " +
           savedCodes.length +
-          " of 70; missing: " +
+          " of 77; missing: " +
           expectedCodes.filter((c) => !savedCodes.includes(c)).join(" "),
       );
     },
@@ -1047,14 +1049,15 @@ async function main() {
     );
   }
 
-  await check("Completeness · Abu Dhabi is offered to nobody", async () => {
+  await check("Completeness · Abu Dhabi is offered to every signed-in holder as a public pilot (7)", async () => {
     const rows = good(
       await duAll.client
         .from("sp_approved_credential_catalogue")
         .select("code")
-        .eq("region", "AE-AZ"),
+        .eq("region", "AE-AZ")
+        .setHeader("x-passport-catalogue-contract", "2"),
     );
-    ok(rows.length === 0, "Abu Dhabi rows: " + rows.length);
+    ok(rows.length === 7, "Abu Dhabi rows: " + rows.length);
   });
   await check("Completeness · a scoped card without its company is refused by name", async () => {
     const r = await duAll.client.rpc("sp_save_international_credential", {
