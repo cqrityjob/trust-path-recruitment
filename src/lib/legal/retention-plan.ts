@@ -92,14 +92,14 @@ export const RETENTION_PLAN: readonly RetentionRow[] = [
     id: "recruitment",
     data: "Rekryteringsmaterial som hanteras för arbetsgivare: ansökningar, meddelanden, tester och intervjuer",
     period:
-      "Standardtiden är 24 månader efter att rekryteringen avslutades, enligt arbetsgivarens fastställda instruktioner. Arbetsgivaren kan ange en kortare tid. Därefter raderas eller anonymiseras materialet.",
+      "Standardtiden är 24 månader efter att rekryteringen avslutades, enligt arbetsgivarens fastställda instruktioner. Arbetsgivaren kan välja sex månader som kortare tid. Gallringsdatum räknas från det verkliga avslutsdatumet; arkivering, sidvisning och anteckningar påverkar inte tiden. Saknat avslutsdatum måste klarläggas. Därefter raderas ansökningsmaterialet. Kandidatens konto, Security Passport, egna tester och material som används i andra ansökningar eller organisationer följer sina egna lagringsregler.",
     approval: "approved",
     inPolicy: true,
     mechanism: "pending",
     routine:
-      "Runbook R7: the standard (24 months after the recruitment ended, as the employer's instructions set it) is decided, but no routine applies it yet, so it is manual per request and logged. Nothing can be due before 2028-08 (the oldest application is from 2026-08-17); a routine that can determine each recruitment's end date must exist before then.",
+      "Runbook R7: default 24 calendar months, employer choice 6 months after recruitment_settings.completed_at. Server worker, dry-run and separate activation plan: docs/release/2026-10-06-application-retention-activation.md. Pending until deployed, activated, carried out and logged. No production erasure is part of development.",
     evidence:
-      "No scheduled deletion or anonymisation exists. The older sweep_application_retention() (migration 20260719173615) deletes applications 12 months after a withdrawn application or a closed job, is service-role only and is not scheduled; it deviates from the decided standard (12 months, deletes instead of anonymising) and must not be used or scheduled before it is aligned with it. A recruitment counts as ended when the employer closes it; where that cannot be determined for a case, nothing is deleted until it has been clarified. Nothing is old enough to be affected yet (oldest application 2026-08-17).",
+      "Built: reviewed application dependency erasure, durable job and Storage queue, exact-row immutability exception, server worker with retry and Storage readback, tested on synthetic data. Migration 20270305090000 and worker are not applied/activated in production by this delivery. The 12-month updated_at sweep is disabled by that migration. See docs/release/2026-10-06-application-retention-activation.md for evidence and activation prerequisites. Mechanism remains pending until an authorised run is logged and verified.",
   },
   {
     id: "info-mailbox",

@@ -801,11 +801,14 @@ export const listApplicationStatusEvents = createServerFn({ method: "POST" })
 // -------------------- EMPLOYER LIST --------------------
 
 const listApplicationsForEmployerSchema = z.object({
+  includeArchived: z.boolean().default(false),
   employerId: z.string().uuid(),
   jobId: z.string().uuid().optional(),
 });
 
 export type EmployerApplicationRow = {
+  archivedAt?: string | null;
+  recruitmentArchivedAt?: string | null;
   id: string;
   jobId: string;
   jobTitleSv: string | null;
@@ -838,7 +841,7 @@ export const listApplicationsForEmployer = createServerFn({ method: "POST" })
     let query = ctx.supabase
       .from("job_applications")
       .select(
-        "id, job_id, applicant_user_id, phone, cover_note, status, cv_storage_path, cv_source, created_at, jobs(title_sv, title_en)",
+        "id, job_id, applicant_user_id, phone, cover_note, status, cv_storage_path, cv_source, created_at, employer_archived_at, jobs(title_sv, title_en, recruitment_settings(archived_at))",
       )
       .eq("employer_id", data.employerId)
       .order("created_at", { ascending: false })
@@ -891,6 +894,8 @@ export const listApplicationsForEmployer = createServerFn({ method: "POST" })
     return (rows ?? []).map((r: any) => {
       const job = Array.isArray(r.jobs) ? r.jobs[0] : r.jobs;
       return {
+        archivedAt: r.employer_archived_at ?? null,
+        recruitmentArchivedAt: (Array.isArray(job?.recruitment_settings) ? job.recruitment_settings[0] : job?.recruitment_settings)?.archived_at ?? null,
         id: r.id as string,
         jobId: r.job_id as string,
         jobTitleSv: (job?.title_sv as string | null) ?? null,
@@ -903,7 +908,7 @@ export const listApplicationsForEmployer = createServerFn({ method: "POST" })
         cvSource: (r.cv_source as ApplicationCvSource) ?? "upload",
         createdAt: r.created_at as string,
       };
-    });
+    }).filter((r: EmployerApplicationRow) => data.includeArchived || (!r.archivedAt && !r.recruitmentArchivedAt));
   });
 
 // -------------------- CV DOWNLOAD --------------------

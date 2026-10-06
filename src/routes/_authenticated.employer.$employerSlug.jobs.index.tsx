@@ -183,8 +183,8 @@ function JobsList({
   // Phase, responsible person and counts come from the same overview read the
   // dashboard uses, so a count there and a row here are computed once.
   const overviewQuery = useQuery({
-    queryKey: ["employer", employerId, "recruitment-overview"],
-    queryFn: () => loadOverview({ data: { employerId } }),
+    queryKey: ["employer", employerId, "recruitment-overview", "with-archives"],
+    queryFn: () => loadOverview({ data: { employerId, includeArchived: true } }),
   });
   const summaryByJob = new Map((overviewQuery.data?.recruitments ?? []).map((r) => [r.jobId, r]));
   function setView(next: Partial<z.infer<typeof searchSchema>>) {
@@ -264,6 +264,9 @@ function JobsList({
   };
   const matchesView = (filter: PhaseFilter | undefined, r: EmployerJobRow) => {
     const { phase, unresolved } = rowPhase(r);
+    const archived = Boolean(summaryByJob.get(r.id)?.archivedAt);
+    if (filter === "archived") return archived;
+    if (archived) return false;
     return filter === undefined
       ? matchesDefaultListView(phase, unresolved)
       : matchesPhaseFilter(filter, phase, unresolved);

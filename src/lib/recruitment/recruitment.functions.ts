@@ -140,6 +140,7 @@ async function readTeam(ctx: Ctx, employerId: string): Promise<TeamMember[]> {
 // ═══════════════════════════════════════════════════════════════════════════
 
 export type RecruitmentSummary = {
+  archivedAt?: string | null;
   jobId: string;
   titleSv: string | null;
   titleEn: string | null;
@@ -186,7 +187,7 @@ export type RecruitmentOverview = {
 
 export const getRecruitmentOverview = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ employerId: z.string().uuid() }).parse(d))
+  .inputValidator((d: unknown) => z.object({ employerId: z.string().uuid(), includeArchived: z.boolean().default(false) }).parse(d))
   .handler(async ({ data, context }): Promise<RecruitmentOverview> => {
     const ctx = context as Ctx;
     const { role } = await requireMember(ctx, data.employerId);
@@ -213,7 +214,7 @@ export const getRecruitmentOverview = createServerFn({ method: "POST" })
         .limit(500),
       ctx.supabase
         .from("recruitment_settings")
-        .select("job_id, responsible_user_id, completion_state")
+        .select("job_id, responsible_user_id, completion_state, archived_at")
         .eq("employer_id", data.employerId),
       // Counted by the database, every application of every vacancy: the
       // overview's numbers are the case page's numbers, with no hidden limit.
@@ -245,10 +246,10 @@ export const getRecruitmentOverview = createServerFn({ method: "POST" })
     }
 
     const teamNames = new Map(team.map((m) => [m.userId, m.name]));
-    const settings = new Map<string, { responsible: string | null; completion: string }>(
+    const settings = new Map<string, { responsible: string | null; completion: string; archivedAt: string | null }>(
       (settingsRes.data ?? []).map((s: Loose) => [
         s.job_id,
-        { responsible: s.responsible_user_id ?? null, completion: s.completion_state },
+        { responsible: s.responsible_user_id ?? null, completion: s.completion_state, archivedAt: s.archived_at ?? null },
       ]),
     );
     const countsByJob = new Map<
@@ -324,6 +325,7 @@ export const getRecruitmentOverview = createServerFn({ method: "POST" })
         now,
       );
       return {
+        archivedAt: s?.archivedAt ?? null,
         jobId: j.id,
         titleSv: j.title_sv,
         titleEn: j.title_en,
@@ -363,7 +365,7 @@ export const getRecruitmentOverview = createServerFn({ method: "POST" })
     }));
 
     return {
-      recruitments,
+      recruitments: data.includeArchived ? recruitments : recruitments.filter((r) => !r.archivedAt),
       upcomingInterviews,
       team,
       myUserId: ctx.userId,

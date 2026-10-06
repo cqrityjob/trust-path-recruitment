@@ -1,0 +1,35 @@
+name: Application retention — worker and UI
+on:
+  pull_request:
+    branches: [main, "codex/**"]
+    paths:
+      - "src/components/recruitment/MaterialLifecycle.tsx"
+      - "src/lib/recruitment/lifecycle.functions.ts"
+      - "src/i18n/recruitment-copy.ts"
+      - "supabase/functions/**"
+      - "scripts/application-retention-worker.test.ts"
+      - "scripts/retention-browser-check.mjs"
+      - "scripts/fixtures/retention-ui/**"
+      - ".github/workflows/application-retention.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  worker-and-ui:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+      - run: bun install --frozen-lockfile
+      - name: Storage failure and retry tests (synthetic only)
+        run: bun test scripts/application-retention-worker.test.ts
+      - run: bunx playwright install --with-deps chromium
+      - name: Swedish/English and mobile/desktop component evidence
+        run: bun scripts/retention-browser-check.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: application-retention-ui
+          path: artifacts/application-retention

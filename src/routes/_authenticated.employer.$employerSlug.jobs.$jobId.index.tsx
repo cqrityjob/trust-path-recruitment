@@ -1,3 +1,4 @@
+import { MaterialLifecycle } from "@/components/recruitment/MaterialLifecycle";
 // The recruitment case — /employer/$employerSlug/jobs/$jobId.
 //
 // ── ONE CASE, FIVE STEPS ───────────────────────────────────────────────
@@ -656,6 +657,8 @@ function JobHub({
           counts={counts ? { applications: counts.total } : undefined}
         />
       </div>
+
+      <MaterialLifecycle employerId={employerId} jobId={jobId} />
 
       {/* ── Header views: team, activity ────────────────────────────── */}
       {view === "team" && (

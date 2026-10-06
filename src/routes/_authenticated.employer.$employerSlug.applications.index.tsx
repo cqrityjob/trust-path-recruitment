@@ -94,7 +94,7 @@ import { isUnresolved } from "@/lib/recruitment/definitions";
 // shareable, survives a reload, and can be linked to precisely by whoever is
 // naming the number. `catch` rather than a hard failure: a stale bookmark
 // shows the unfiltered list rather than a validation error.
-const STATUS_FILTERS = ["submitted", "reviewing", "interview", "hired", "rejected"] as const;
+const STATUS_FILTERS = ["submitted", "reviewing", "interview", "hired", "rejected", "archived"] as const;
 
 // Three orderings, because a recruiter asks three different questions of the
 // same inbox: what just arrived, what has been here longest, and -- the one
@@ -231,8 +231,8 @@ function ApplicationsList({
   } | null>(null);
 
   const query = useQuery({
-    queryKey: ["employer", employerId, "applications"],
-    queryFn: () => listFn({ data: { employerId } }),
+    queryKey: ["employer", employerId, "applications", "with-archives"],
+    queryFn: () => listFn({ data: { employerId, includeArchived: true } }),
   });
 
   // Only to name the vacancy in the filter banner. Shares the cache key the
@@ -334,7 +334,8 @@ function ApplicationsList({
   const rows = allRows
     .filter((r) => {
       const jobMatches = jobFilter === undefined || r.jobId === jobFilter;
-      const statusMatches = statusFilter === undefined || r.status === statusFilter;
+      const archived = Boolean(r.archivedAt || r.recruitmentArchivedAt);
+      const statusMatches = statusFilter === "archived" ? archived : !archived && (statusFilter === undefined || r.status === statusFilter);
       // Withheld rather than guessed while the pair of reads is in flight or
       // has failed: a list that quietly showed everything would tell the
       // recruiter the filter found no one.
@@ -425,7 +426,7 @@ function ApplicationsList({
         {STATUS_FILTERS.map((sf) => (
           <FilterChip
             key={sf}
-            label={t(APPLICATION_STATUS_LABEL_KEY[sf])}
+            label={sf === "archived" ? t("rec.list.phase.archived") : t(APPLICATION_STATUS_LABEL_KEY[sf])}
             active={statusFilter === sf}
             onSelect={() =>
               void navigate({ search: (prev) => ({ ...prev, status: sf }), replace: true })

@@ -1,3 +1,4 @@
+import { MaterialLifecycle } from "@/components/recruitment/MaterialLifecycle";
 import { SendTestDialog } from "@/components/recruitment/SendTestDialog";
 // Candidate 360 — one application, one person, one page.
 //
@@ -726,6 +727,7 @@ function Candidate360({
           {" · "}
           {t("employer.candidate.appliedOn")} {formatDate(c.appliedAt, lang)}
         </p>
+        {c.jobId && <MaterialLifecycle employerId={employerId} jobId={c.jobId} applicationId={applicationId} />}
         <div className="mt-3 flex flex-wrap items-center gap-2">
           {/* Stage and decision in the one vocabulary every recruitment list
               uses, as text with an icon. */}

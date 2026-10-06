@@ -60,6 +60,7 @@ export async function sweepStorageErasureQueue(): Promise<StorageErasureSweepRes
     .from("storage_erasure_queue")
     .select("id, bucket_id, object_path, attempts")
     .is("completed_at", null)
+    .is("recruitment_erasure_job_id", null)
     .order("requested_at", { ascending: true })
     .limit(BATCH);
 
