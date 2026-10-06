@@ -120,3 +120,8 @@ surfaces, and leave other credentials unchanged. Current full CI must pass on fi
 Claude's unknown local run is not counted. No merge, production activation or publication performed.
 
 Negative control: restoring the misleading date in a local transaction fails exactly assertion 1.8; disconnect rolls back the planted value.
+
+
+## USA prerequisite fulfilled at takeover
+
+The owner merged #437 as `5627b3bfc006fd5c6f9b5b89df0a8bf98a997204`; this branch contains that main commit through a normal merge. A read-only production postflight at 2026-10-06 08:15:07 UTC verified USA migration `20270219090000`, the active national jurisdiction and destination constraints, closed US market access and no US credential packs, authorities or licence definitions. Evidence: `2026-10-06-united-states-hosted-verification.json`. The hosted ledger has 379 identities; USA is recorded applied. Only Abu Dhabi `20270220090000` remains pending. This supersedes the historical USA-absent baseline and merge prerequisite above. No production activation or publication was performed during takeover.
