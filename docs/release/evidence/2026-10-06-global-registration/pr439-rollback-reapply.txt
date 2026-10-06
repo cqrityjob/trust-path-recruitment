@@ -1,0 +1,305 @@
+BEGIN
+CREATE TABLE
+INSERT 0 7
+SELECT 1
+DO
+DELETE 14
+ALTER TABLE
+ALTER TABLE
+UPDATE 7
+UPDATE 1
+UPDATE 1
+psql:supabase/rollback/20270220090000_sp_open_abu_dhabi_public_pilot_rollback.sql:127: NOTICE:  SP_OPEN_ABU_DHABI_ROLLBACK ok: Abu Dhabi is closed again; claims, grants, approval and review untouched
+DO
+COMMIT
+BEGIN
+CREATE TABLE
+INSERT 0 7
+SELECT 1
+DO
+UPDATE 1
+UPDATE 1
+UPDATE 7
+ALTER TABLE
+ALTER TABLE
+INSERT 0 14
+psql:supabase/migrations/20270220090000_sp_open_abu_dhabi_public_pilot.sql:312: NOTICE:  SP_OPEN_ABU_DHABI_PROOF ok: 4 packs and 51 definitions in public pilot; Abu Dhabi active as a region with 14 Ministry roles; approval, legal review, claims, titles, grants, sources and authorities unchanged
+DO
+COMMIT
+BEGIN
+SELECT 140
+GRANT
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+SELECT 1
+CREATE TABLE
+INSERT 0 7
+GRANT
+INSERT 0 4
+INSERT 0 3
+INSERT 0 1
+psql:supabase/tests/security_passport_open_abu_dhabi_test.sql:66: NOTICE:  ok 1.1 Abu Dhabi is a public pilot: not active, legal review pending
+ ok
+----
+
+(1 row)
+
+psql:supabase/tests/security_passport_open_abu_dhabi_test.sql:70: NOTICE:  ok 1.2 its seven definitions are public pilot -- none approved, none reviewed
+ ok
+----
+
+(1 row)
+
+psql:supabase/tests/security_passport_open_abu_dhabi_test.sql:74: NOTICE:  ok 1.3 the emirate is active; Dubai and Abu Dhabi are the two, the other five stay listed and inactive
+ ok
+----
+
+(1 row)
+
+psql:supabase/tests/security_passport_open_abu_dhabi_test.sql:79: NOTICE:  ok 1.4 the Ministry of Interior is regulator and issuer of each of the seven, and nothing else is claimed about them
+ ok
+----
+
+(1 row)
+
+psql:supabase/tests/security_passport_open_abu_dhabi_test.sql:82: NOTICE:  ok 1.5 no definition review is claimed and the Ministry source is still registered unread: opening is availability, not review
+ ok
+----
+
+(1 row)
+
+psql:supabase/tests/security_passport_open_abu_dhabi_test.sql:88: NOTICE:  ok 1.6 four public pilots and 51 definitions (44 + 7); the UK and Dubai exactly as before; Sweden the one active market
+ ok
+----
+
+(1 row)
+
+psql:supabase/tests/security_passport_open_abu_dhabi_test.sql:90: NOTICE:  ok 1.7 nobody in this suite holds a pilot grant
+ ok
+----
+
+(1 row)
+
+psql:supabase/tests/security_passport_open_abu_dhabi_test.sql:91: NOTICE:  ok 1.8 without a signed-in user the public pilot is closed
+ ok
+----
+
+(1 row)
+
+psql:supabase/tests/security_passport_open_abu_dhabi_test.sql:95: NOTICE:  ok 1.8 prior Ministry attribution is not represented as a completed source check
+ ok
+----
+
+(1 row)
+
+psql:supabase/tests/security_passport_open_abu_dhabi_test.sql:98: NOTICE:  ok 1.9 non-Abu-Dhabi source-check requirements remain intact
+ refused
+---------
+
+(1 row)
+
+SET
+              set_config
+--------------------------------------
+ fe222000-0000-4000-8000-000000000001
+(1 row)
+
+psql:supabase/tests/security_passport_open_abu_dhabi_test.sql:104: NOTICE:  ok 2.1 the canonical decision, for a signed-in holder with no grant: public pilot for Abu Dhabi, as for Dubai
+ ok
+----
+
+(1 row)
+
+psql:supabase/tests/security_passport_open_abu_dhabi_test.sql:108: NOTICE:  ok 2.2 the catalogue offers the seven, beside the 70 it offered before: 77 (the researched definitions counted apart)
+ ok
+----
+
+(1 row)
+
+psql:supabase/tests/security_passport_open_abu_dhabi_test.sql:111: NOTICE:  ok 2.3 each names the Ministry as its governed issuer and Abu Dhabi as its territory
+ ok
+----
+
+(1 row)
+
+psql:supabase/tests/security_passport_open_abu_dhabi_test.sql:113: NOTICE:  ok 2.4 the definitions themselves are readable to that holder (every layer agrees)
+ ok
+----
+
+(1 row)
+
+psql:supabase/tests/security_passport_open_abu_dhabi_test.sql:118: NOTICE:  ok 2.5 the holder saves a guard licence and a supervisor licence through the real RPC, self-declared
+ ok
+----
+
+(1 row)
+
+psql:supabase/tests/security_passport_open_abu_dhabi_test.sql:123: NOTICE:  ok 2.6 filed under Abu Dhabi -- never Dubai, never the whole UAE -- with the Ministry as issuer, its scope and its own expiry
+ ok
+----
+
+(1 row)
+
+psql:supabase/tests/security_passport_open_abu_dhabi_test.sql:125: NOTICE:  ok 2.7 and each carries its governed details
+ ok
+----
+
+(1 row)
+
+RESET
+psql:supabase/tests/security_passport_open_abu_dhabi_test.sql:128: NOTICE:  ok 2.8 and no pilot grant was created to make it possible
+ ok
+----
+
+(1 row)
+
+SET
+              set_config
+--------------------------------------
+ fe222000-0000-4000-8000-000000000004
+(1 row)
+
+psql:supabase/tests/security_passport_open_abu_dhabi_test.sql:133: NOTICE:  ok 2.9 a Swedish holder is offered the same seven: availability is the market's, not the holder's country's
+ ok
+----
+
+(1 row)
+
+RESET
+SET
+              set_config
+--------------------------------------
+ fe222000-0000-4000-8000-000000000002
+(1 row)
+
+psql:supabase/tests/security_passport_open_abu_dhabi_test.sql:140: NOTICE:  ok 3.1 an Abu Dhabi licence still needs the company it is tied to
+ refused
+---------
+
+(1 row)
+
+psql:supabase/tests/security_passport_open_abu_dhabi_test.sql:142: NOTICE:  ok 3.2 an Abu Dhabi licence cannot be filed in Dubai
+ refused
+---------
+
+(1 row)
+
+psql:supabase/tests/security_passport_open_abu_dhabi_test.sql:144: NOTICE:  ok 3.3 nor UAE-wide: the emirate, never the whole UAE
+ refused
+---------
+
+(1 row)
+
+psql:supabase/tests/security_passport_open_abu_dhabi_test.sql:146: NOTICE:  ok 3.4 a Dubai cadre card cannot be filed in Abu Dhabi: Abu Dhabi does not inherit Dubai
+ refused
+---------
+
+(1 row)
+
+psql:supabase/tests/security_passport_open_abu_dhabi_test.sql:148: NOTICE:  ok 3.5 the Ministry stays the governed issuer
+ refused
+---------
+
+(1 row)
+
+psql:supabase/tests/security_passport_open_abu_dhabi_test.sql:150: NOTICE:  ok 3.6 a licence that requires an expiry cannot be saved without one
+ refused
+---------
+
+(1 row)
+
+psql:supabase/tests/security_passport_open_abu_dhabi_test.sql:153: NOTICE:  ok 3.7 a direct table insert cannot bypass the scope either
+ refused
+---------
+
+(1 row)
+
+RESET
+psql:supabase/tests/security_passport_open_abu_dhabi_test.sql:157: NOTICE:  ok 3.8 a public-pilot pack still cannot be made active over a pending review
+ refused
+---------
+
+(1 row)
+
+SET
+ set_config
+------------
+
+(1 row)
+
+psql:supabase/tests/security_passport_open_abu_dhabi_test.sql:161: NOTICE:  ok 3.9 a session without a subject is offered no Abu Dhabi definition
+ ok
+----
+
+(1 row)
+
+RESET
+SET
+              set_config
+--------------------------------------
+ fe222000-0000-4000-8000-000000000001
+(1 row)
+
+psql:supabase/tests/security_passport_open_abu_dhabi_test.sql:168: NOTICE:  ok 4.1 the holder shares the licence selectively
+ ok
+----
+
+(1 row)
+
+RESET
+psql:supabase/tests/security_passport_open_abu_dhabi_test.sql:178: NOTICE:  ok 4.2 the recipient sees the licence with the Ministry as issuer, Abu Dhabi as territory, a limited scope whose text is withheld, and its honest self-declared label
+ ok
+----
+
+(1 row)
+
+SET
+              set_config
+--------------------------------------
+ fe222000-0000-4000-8000-000000000001
+(1 row)
+
+          sp_attach_evidence
+--------------------------------------
+ a2604ead-6f44-4999-a823-feabda235944
+(1 row)
+
+RESET
+SET
+              set_config
+--------------------------------------
+ fe222000-0000-4000-8000-000000000003
+(1 row)
+
+psql:supabase/tests/security_passport_open_abu_dhabi_test.sql:189: NOTICE:  ok 5.1 the reviewer, who holds no grant, finds the request in the queue
+ ok
+----
+
+(1 row)
+
+psql:supabase/tests/security_passport_open_abu_dhabi_test.sql:193: NOTICE:  ok 5.2 and opens the Abu Dhabi credential with its evidence
+ ok
+----
+
+(1 row)
+
+ sp_verifier_decide
+--------------------
+
+(1 row)
+
+RESET
+psql:supabase/tests/security_passport_open_abu_dhabi_test.sql:198: NOTICE:  ok 5.3 a decision is recorded and the claim's trust is what the reviewer decided, never raised by the opening
+ ok
+----
+
+(1 row)
+
+psql:supabase/tests/security_passport_open_abu_dhabi_test.sql:204: NOTICE:  ok 6.1 no pilot definition, pack or Abu Dhabi title is active or reviewed: this suite and the migration approve nothing
+ ok
+----
+
+(1 row)
+
+ROLLBACK

@@ -1,3 +1,4 @@
+import { AbuDhabiIssuerAttribution } from "../AbuDhabiIssuerAttribution";
 // Security Passport — the disclosed credentials, as the recipient page lists
 // them in full.
 //
@@ -153,6 +154,7 @@ export function RecipientCredentialList({
 
             <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-4">
               <Row label={pt("rec.issuer")} value={c.issuer ?? pt("common.notStated")} />
+              <AbuDhabiIssuerAttribution code={c.code} lang={lang} />
               {/* The credential's OWN market, on every credential. Rendered
                   through credentialTerritoryLabel so a Dubai credential prints
                   as "Dubai, UAE" — the label it carries everywhere — and is

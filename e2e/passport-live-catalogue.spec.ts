@@ -328,13 +328,15 @@ test("6 · admin: the catalogue page says WHY each researched definition is or i
     await expect(root.locator("[data-catalogue-counts]")).toBeVisible({ timeout: 30_000 });
     // 14 international + 8 Swedish + the 140 definitions the certification research
     // publication approved (20270214090000) are selectable by everyone; all 44 GB, NI and
-    // Dubai definitions by their own market's pilot members; Abu Dhabi is closed.
+    // Dubai definitions by their own market's pilot members; Abu Dhabi's 7 by every
+    // signed-in holder as a public pilot (20270220090000).
     await expect(root.locator('[data-count="selectable"]')).toHaveText("162");
     await expect(root.locator('[data-count="selectable_pilot_members"]')).toHaveText("44");
+    await expect(root.locator('[data-count="selectable_public_pilot"]')).toHaveText("7");
     // Nothing is left awaiting approval once the publication has been applied.
     await expect(root.locator('[data-count="awaiting_definition_approval"]')).toHaveText("0");
     await expect(root.locator('[data-count="retired"]')).toHaveText("0");
-    await expect(root.locator('[data-count="market_closed"]')).toHaveText("7");
+    await expect(root.locator('[data-count="market_closed"]')).toHaveText("0");
     await expect(root.locator('[data-count="blocked"]')).toHaveText("0");
     const vu1 = root.locator('[data-catalogue-row="VU1"]');
     await expect(vu1).toContainText("Polismyndigheten");
@@ -353,9 +355,9 @@ test("6 · admin: the catalogue page says WHY each researched definition is or i
     await expect(card).toContainText("not approved for the public");
     await expect(card).toContainText("named pilot members only");
     await expect(card).toContainText("sira.gov.ae");
-    await expect(root.locator('[data-catalogue-row="AE_AZ_PSBD_LICENCE_GUARD"]')).toContainText(
-      "neither active nor in internal pilot",
-    );
+    await expect(
+      root.locator('[data-catalogue-row="AE_AZ_PSBD_LICENCE_GUARD"] [data-availability]'),
+    ).toHaveAttribute("data-availability", "selectable_public_pilot");
   }
 });
 

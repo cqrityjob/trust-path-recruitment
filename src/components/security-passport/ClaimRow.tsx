@@ -1,3 +1,4 @@
+import { AbuDhabiIssuerAttribution } from "./AbuDhabiIssuerAttribution";
 // One claim, with the context that must always travel with it.
 //
 // Issuer, verifier, jurisdiction, dates, evidence level, lifecycle state and
@@ -157,6 +158,7 @@ export function ClaimRow({
           <Field label={pt(provenanceLabelKeys(claim).at)} value={claim.verifiedOn} />
         ) : null}
       </dl>
+      <AbuDhabiIssuerAttribution code={claim.credentialCode} lang={lang} />
 
       <LifecycleNote state={claim.lifecycleState} entry={{ ...claim, subjectKind: "credential" }} />
 

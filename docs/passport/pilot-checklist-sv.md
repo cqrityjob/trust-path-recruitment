@@ -21,7 +21,7 @@ OV, SV, personalgodkännande) och alla 14 internationella certifieringar.
 beslutat Route A: det redan registrerade pilotgodkännandet per definition gäller för uttryckligt
 beviljade pilotmedlemmar. Inget mer godkännande behövs. Definitionerna är fortsatt **inte**
 godkända för allmänheten, och ingen marknad aktiveras. Nordirland är en egen marknad (`GB-NI`)
-med egen åtkomst. Abu Dhabi är stängt och erbjuds ingen.
+med egen åtkomst. Abu Dhabi (7 definitioner) är sedan 20270220090000 en öppen pilot för alla inloggade, utan pilotåtkomst.
 
 Utan pilotåtkomst ser en användare en **tom** brittisk eller dubaisk katalog, med en förklaring.
 Det är avsett. Exakta releasesteg: [pilot-approval-decisions.md](pilot-approval-decisions.md).
@@ -31,7 +31,7 @@ Det är avsett. Exakta releasesteg: [pilot-approval-decisions.md](pilot-approval
 - [ ] PR #265 mergad; migrationen 20261126090000 applicerad; de fem verifieringsfrågorna i
       [pilot-approval-decisions.md](pilot-approval-decisions.md) körda (endast läsning); appen synkad.
 - [ ] Öppna **Admin → Passport-katalog**. Kontrollera: *Valbar för alla* = 22, *Blockerad* = 0.
-- [ ] Katalogsidan ska visa *Valbar för pilotmedlemmar i marknaden* = 44 och *Marknaden är stängd* = 7.
+- [ ] Katalogsidan ska visa *Valbar för pilotmedlemmar i marknaden* = 44, *Valbar för alla inloggade — öppen pilot* = 7 (Abu Dhabi) och *Marknaden är stängd* = 0.
 - [ ] För brittiska/dubaiska testare: ge pilotåtkomst till rätt marknad (`GB`, `GB-NI` eller `AE-DU`).
 - [ ] Minst en granskare har rollen `passport_verifier` (eller är plattformsadmin).
 
