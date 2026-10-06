@@ -7,6 +7,51 @@
   "$comment": "RELEASE PARITY STATE. Enforced by scripts/release-parity-check.ts, which runs in CI and before a release. This file records, for every canonical migration at the release frontier, whether it is believed applied on the hosted database, and which database objects it introduces. The guard fails when application code on this branch references an object whose migration is not applied -- the exact class of failure that stopped employers saving jobs during UAT. It NEVER connects to a database, holds no credentials and applies no migration; it compares this repository against itself. Edit it deliberately: every entry is an owner-level statement about production.", 
   "frontier": [
     {
+      "note": "Original Sentinel fixed-form pilot schema. Known unapplied: tested only on a disposable local PostgreSQL. Schema-first release must precede dependent app release. No claim of hosted application or owner/content/privacy approval; historical sessions prevent destructive rollback.",
+      "hostedState": "pending",
+      "file": "20270301090000_sentinel_abstract_reasoning.sql",
+      "rollback": "supabase/rollback/20270301090000_sentinel_abstract_reasoning_rollback.sql",
+      "verify": "Review explicit client privilege revocations and RLS; compare function bodies to local replay; no content imported, no grants or real assignments activated. Owner approval and private bank import remain separate prerequisites.",
+      "introduces": [
+        {
+          "kind": "table",
+          "object": "sentinel_forms"
+        },
+        {
+          "kind": "table",
+          "object": "sentinel_sessions"
+        },
+        {
+          "kind": "function",
+          "object": "sentinel_catalog"
+        },
+        {
+          "kind": "function",
+          "object": "sentinel_session"
+        },
+        {
+          "kind": "function",
+          "object": "sentinel_report"
+        },
+        {
+          "kind": "function",
+          "object": "sentinel_employer_action"
+        },
+        {
+          "kind": "function",
+          "object": "sentinel_review"
+        },
+        {
+          "kind": "function",
+          "object": "sentinel_practice"
+        },
+        {
+          "kind": "function",
+          "object": "sentinel_status"
+        }
+      ]
+    },
+    {
       "file": "20270220090000_sp_open_abu_dhabi_public_pilot.sql",
       "hostedState": "pending",
       "introduces": [],

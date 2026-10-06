@@ -213,6 +213,15 @@ for f in supabase/migrations/*.sql; do
   REPLAYED=$((REPLAYED + 1))
 done
 echo "    ok  ${REPLAYED} migrations applied cleanly, in filename order"
+
+SENTINEL_CONTENT_FILE="$(mktemp)"
+bun scripts/sentinel-content.ts --preview --output "$SENTINEL_CONTENT_FILE"
+psql_q -d "$TEST_DB" -f "$SENTINEL_CONTENT_FILE"
+rm -f "$SENTINEL_CONTENT_FILE"
+echo "==> Running original Sentinel pilot integration assertions"
+SENTINEL_OUT="$(psql_q -d "$TEST_DB" -f supabase/tests/sentinel_test.sql 2>&1)" || { echo "$SENTINEL_OUT"; exit 1; }
+[ "$(echo "$SENTINEL_OUT" | command grep -c 'NOTICE:  ok  S[0-9]')" -ge 35 ] || { echo "$SENTINEL_OUT"; exit 1; }
+echo "    ok  35 Sentinel pilot assertions passed"
 # STRICT-REPLAY-CONTRACT END
 
 # Owner catalogue decision: final boundaries first; old suites retain their historical state.
