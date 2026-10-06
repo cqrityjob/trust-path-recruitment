@@ -9,7 +9,7 @@
 // send and pass the key only via `apikey`.
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import type { Database } from "@/integrations/supabase/types";
+import type { Database } from "@/integrations/supabase/database";
 
 export function serverPublicClient(): SupabaseClient<Database> {
   const url = process.env.SUPABASE_URL;

@@ -1,54 +1,18 @@
-// The two hand-maintained nullable RPC argument types — pinned.
-//
+// The three required nullable RPC arguments live in database.ts, outside the
+// generated file. Check the effective types, SQL, callers and a simulated
+// regeneration that removes every manual nullable annotation from types.ts.
 // Run: bun run nullable-rpc-contract:check
-//
-// ── THE EXCEPTION THIS PROTECTS ────────────────────────────────────────
-//
-// `src/integrations/supabase/types.ts` is generated. Two entries in it are
-// NOT what the generator writes, on purpose:
-//
-//   bcp_conduct_record_resolution      _agreed_statement:    string | null
-//                                      _divergent_statement: string | null
-//   scp_iv_finalise_previewed_report   _draft_run_id:        string | null
-//
-// A Postgres function argument is nullable unless the function is STRICT.
-// The Supabase generator has exactly one way to say "you need not supply a
-// string here" — an optional key, which it emits only when the argument has
-// a DEFAULT. These three have no default and their functions are not STRICT,
-// so the generator writes a bare `string` and the honest call
-// (`value ?? null`) stops compiling.
-//
-// And null is REQUIRED, not merely allowed: the BESKT resolution table's
-// shape CHECK demands `divergent_statement IS NULL` for an agreed
-// resolution, so an empty string is a runtime violation, and with no SQL
-// default the argument cannot be omitted either.
-//
-// ── THE DEFECT THIS PINS ───────────────────────────────────────────────
-//
-// A regeneration silently rewrites both entries back to `string`. It has
-// happened four times (restored by PR #236, 9af156e, ba2edd9 and PR #261;
-// last erased by c655d82). Each time the only symptom was three bare `tsc`
-// errors in BESKT and Interview Intelligence code nobody had touched —
-// which reads as "those files are broken" and invites the wrong repair: an
-// `as unknown as string` cast, tried and reverted on 2026-09-16. This guard
-// turns the next wipe into a diagnostic that names the cause and the fix.
-//
-// ── IT PINS BOTH SIDES OF THE CONTRACT ─────────────────────────────────
-//
-// Pinning the types alone would preserve the exception after it stopped
-// being true. So this also reads the LATEST SQL definition of each function
-// and asserts the facts that justify it: the argument exists, has no
-// DEFAULT, and the function is not STRICT. If a migration ever gives one a
-// default, this fails and says the exception should be retired — by
-// regenerating, not by hand.
 
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
+import ts from "typescript";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
 const read = (rel: string) => readFileSync(path.join(ROOT, rel), "utf8");
 
 const TYPES = "src/integrations/supabase/types.ts";
+const OVERLAY = "src/integrations/supabase/database.ts";
+const TYPE_TEST = "tests/types/nullable-rpc-contract.ts";
 const MIGRATIONS = "supabase/migrations";
 
 interface Exception {
@@ -137,7 +101,8 @@ function latestDefinition(fn: string): { file: string; args: string; header: str
         if (sql[i] === "(") depth += 1;
         else if (sql[i] === ")") depth -= 1;
       }
-      const body = sql.indexOf("$$", i);
+      const bodyStart = sql.slice(i).search(/\bAS\s+\$(?:[a-z_][a-z_0-9]*)?\$/i);
+      const body = bodyStart < 0 ? -1 : i + bodyStart;
       found = {
         file,
         args: sql.slice(open, i - 1),
@@ -149,32 +114,61 @@ function latestDefinition(fn: string): { file: string; args: string; header: str
 }
 
 const types = read(TYPES);
-
+const options: ts.CompilerOptions = {
+  strict: true,
+  noEmit: true,
+  skipLibCheck: true,
+  target: ts.ScriptTarget.ES2022,
+  module: ts.ModuleKind.ESNext,
+  moduleResolution: ts.ModuleResolutionKind.Bundler,
+  types: [],
+};
+function compile(generated: string) {
+  const host = ts.createCompilerHost(options);
+  const readFile = host.readFile;
+  host.readFile = (file) =>
+    path.resolve(file) === path.join(ROOT, TYPES) ? generated : readFile(file);
+  return ts.createProgram([path.join(ROOT, TYPE_TEST)], options, host);
+}
+const program = compile(types);
+const checker = program.getTypeChecker();
+const overlay = program.getSourceFile(path.join(ROOT, OVERLAY))!;
+function alias(name: string) {
+  const node = overlay.statements.find((n) => ts.isTypeAliasDeclaration(n) && n.name.text === name);
+  return node ? checker.getTypeAtLocation(node) : undefined;
+}
+function field(type: ts.Type | undefined, name: string) {
+  const symbol = type?.getProperty(name);
+  const location = symbol?.declarations?.[0];
+  return symbol && location ? checker.getTypeOfSymbolAtLocation(symbol, location) : undefined;
+}
+const functions = field(field(alias("Database"), "public"), "Functions");
 for (const ex of EXCEPTIONS) {
   console.log(`\n${ex.fn}`);
-
-  // ── 1 · the generated types carry the exception ────────────────────
+  const args = field(field(functions, ex.fn), "Args");
   const block = argsBlockOf(types, ex.fn);
   ck("1.1 the function is declared in the generated types", block !== null);
   for (const arg of ex.nullableArgs) {
+    const type = field(args, arg);
     ck(
-      `1.2 ${arg} is typed \`string | null\` — the hand-maintained exception`,
-      block !== null && new RegExp(`\\b${arg}: string \\| null\\b`).test(block),
-      `a types regeneration has erased it. Restore \`${arg}: string | null\` in ${TYPES} ` +
-        "(see this guard's header). Do NOT cast at the call site and do NOT pass an empty string.",
+      `1.2 ${arg} is typed \`string | null\` in the application overlay`,
+      !!type && checker.typeToString(type) === "string | null",
+      `Keep the SQL-backed override in ${OVERLAY}; do not edit the generated file or cast the caller.`,
     );
     ck(
       `1.3 ${arg} is not optional — there is no SQL default to fall back on`,
-      block !== null && !new RegExp(`\\b${arg}\\?:`).test(block),
+      !!args?.getProperty(arg) && !(args.getProperty(arg)!.flags & ts.SymbolFlags.Optional),
     );
   }
   ck(
     "1.4 every other argument is still the generator's own non-null type",
-    block !== null &&
-      ex.allArgs
-        .filter((a) => !ex.nullableArgs.includes(a))
-        .every((a) => new RegExp(`\\b${a}: (string|number)\\b(?! \\| null)`).test(block)),
-    "the exception must stay exactly as wide as the database contract, and no wider",
+    ex.allArgs
+      .filter((a) => !ex.nullableArgs.includes(a))
+      .every((a) => {
+        const type = field(args, a);
+        return !!type && ["string", "number"].includes(checker.typeToString(type));
+      }),
+    "the override must stay exactly as wide as the database contract",
   );
 
   // ── 2 · the database still justifies it ────────────────────────────
@@ -220,42 +214,70 @@ for (const ex of EXCEPTIONS) {
   }
 }
 
-// ── 4 · the exception list is closed ─────────────────────────────────
-//
-// The generator never writes `| null` inside an Args block. Every one found
-// is therefore hand-maintained, and must be one this guard knows about — a
-// third, added quietly, would be erased just as quietly.
-console.log("\nthe exception list is closed");
-{
-  const functionsAt = types.indexOf("    Functions: {");
-  const functionsEnd = types.indexOf("\n    Enums: {", functionsAt);
-  const functions = types.slice(functionsAt, functionsEnd < 0 ? undefined : functionsEnd);
-  const found: string[] = [];
-  for (const m of functions.matchAll(/^\s{6}(\w+): \{\s*\n?\s*Args: \{/gm)) {
-    const block = argsBlockOf(functions, m[1]!);
-    if (!block) continue;
-    for (const a of code(block).matchAll(/(\w+)\??: [^\n;]*\| null/g))
-      found.push(`${m[1]}.${a[1]}`);
-  }
-  const known = EXCEPTIONS.flatMap((e) => e.nullableArgs.map((a) => `${e.fn}.${a}`));
+// The overlay remains closed to these two functions; unchanged generator
+// output, including Sentinel and Passport additions, passes through intact.
+console.log("\nthe override list is closed");
+ck(
+  "4.1 only the documented functions have overrides",
+  JSON.stringify(
+    alias("Overrides")
+      ?.getProperties()
+      .map((p) => p.name)
+      .sort(),
+  ) === JSON.stringify(EXCEPTIONS.map((e) => e.fn).sort()),
+);
+for (const file of ["client.ts", "client.server.ts", "auth-middleware.ts", "public-server.ts"]) {
   ck(
-    "4.1 the sweep actually read the Functions block",
-    functionsAt > 0 && found.length >= known.length,
-    `found ${found.length}`,
-  );
-  ck(
-    "4.2 every hand-maintained nullable RPC argument is one this guard pins",
-    JSON.stringify([...found].sort()) === JSON.stringify([...known].sort()),
-    `in types.ts: ${found.join(", ") || "none"}`,
+    `4.2 ${file} uses the application Database overlay`,
+    /import type \{ Database \} from ['"][^'"]*database['"]/.test(
+      read(`src/integrations/supabase/${file}`),
+    ),
   );
 }
+function diagnostics(p: ts.Program) {
+  return ts
+    .getPreEmitDiagnostics(p)
+    .map((d) => ts.flattenDiagnosticMessageText(d.messageText, "\n"));
+}
+const errors = diagnostics(program);
+ck(
+  "5.1 actual Supabase RPC calls accept null and reject omission/wrong types",
+  errors.length === 0,
+  errors.join("\n"),
+);
+
+// Simulate the real regeneration in memory. Never edit tracked files or need
+// production credentials. The second compile proves the fix survives bare
+// generator strings rather than merely detecting another wipe in CI.
+let regenerated = types;
+for (const ex of EXCEPTIONS) {
+  const original = argsBlockOf(regenerated, ex.fn);
+  if (!original) continue;
+  let bare = original;
+  for (const arg of ex.nullableArgs)
+    bare = bare.replace(new RegExp(`(\\b${arg}: string) \\| null\\b`), "$1");
+  regenerated = regenerated.replace(original, bare);
+}
+for (const ex of EXCEPTIONS) {
+  const block = argsBlockOf(regenerated, ex.fn) ?? "";
+  for (const arg of ex.nullableArgs)
+    ck(
+      `5.0 simulated regeneration actually erases ${ex.fn}.${arg}`,
+      new RegExp(`\\b${arg}: string\\s*(?:;|$)`, "m").test(block) &&
+        !new RegExp(`\\b${arg}: string \\| null`).test(block),
+    );
+}
+const regenerationErrors = diagnostics(compile(regenerated));
+ck(
+  "5.2 regeneration-safe RPC calls compile after all three fields become bare strings",
+  regenerationErrors.length === 0,
+  regenerationErrors.join("\n"),
+);
 
 if (failures > 0) {
   console.error(`\nnullable-rpc-contract: ${failures} assertion(s) failed.`);
   process.exit(1);
 }
 console.log(
-  "\nnullable-rpc-contract:check OK (both hand-maintained nullable RPC argument types are " +
-    "present, exactly as wide as the database contract; the latest SQL definitions still " +
-    "justify them; the call sites pass null honestly; and the exception list is closed)",
+  "\nnullable-rpc-contract:check OK (stable overlay; required nullable arguments; current and regenerated type checks; SQL contracts and honest callers).",
 );

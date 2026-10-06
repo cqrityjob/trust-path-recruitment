@@ -11,6 +11,7 @@ import {
 } from "@/components/career-discovery/v31/shell/AssessmentShell";
 import { Matrix, Options } from "./Figure";
 import { SentinelReportView } from "./Report";
+import { acceptsSnapshot, isClosed } from "./session-state";
 type Practice = { question: Question; key: string; explanation: { sv: string; en: string } };
 export function SentinelRunner({ attemptId }: { attemptId: string }) {
   const { lang } = useT();
@@ -23,25 +24,48 @@ export function SentinelRunner({ attemptId }: { attemptId: string }) {
   const [busy, setBusy] = useState(false);
   const [phase, setPhase] = useState<"info" | "practice" | "start">("info");
   const [practice, setPractice] = useState<Practice[]>([]);
+  const [practiceStatus, setPracticeStatus] = useState<"loading" | "loaded" | "error">("loading");
+  const practiceLoading = useRef(false);
   const [pindex, setPindex] = useState(0);
   const [panswer, setPanswer] = useState("");
   const [revealed, setRevealed] = useState(false);
   const [index, setIndex] = useState(0);
   const [pending, setPending] = useState<{ questionId: string; optionId: string } | null>(null);
+  const pendingResponse = useRef<typeof pending>(null);
+  const operation = useRef(false);
+  const [failedAction, setFailedAction] = useState<"start" | "finish" | null>(null);
+  const [discardedResponse, setDiscardedResponse] = useState(false);
+  const completionHeading = useRef<HTMLHeadingElement>(null);
   const [confirm, setConfirm] = useState(false);
-  useBlocker({ shouldBlockFn: () => !!pending, enableBeforeUnload: () => !!pending });
+  const shouldBlock = () => current.current?.status === "running" && !!pendingResponse.current;
+  useBlocker({ shouldBlockFn: shouldBlock, enableBeforeUnload: shouldBlock });
   const [clock, setClock] = useState({ server: Date.now(), client: Date.now() });
   const [now, setNow] = useState(Date.now());
-  const apply = useCallback((s: Session) => {
-    if (current.current && s.revision < current.current.revision) return;
-    current.current = s;
-    setSession(s);
-    setClock({ server: Date.parse(s.serverNow), client: Date.now() });
-  }, []);
+  const apply = useCallback(
+    (s: Session) => {
+      if (!acceptsSnapshot(current.current, s, attemptId)) return false;
+      current.current = s;
+      if (isClosed(s)) {
+        const answer = pendingResponse.current;
+        if (answer && s.answers[answer.questionId] !== answer.optionId) setDiscardedResponse(true);
+        pendingResponse.current = null;
+        setPending(null);
+        setBusy(false);
+        setConfirm(false);
+        setFailedAction(null);
+        setError("");
+      }
+      setSession(s);
+      setClock({ server: Date.parse(s.serverNow), client: Date.now() });
+      return true;
+    },
+    [attemptId],
+  );
   const refresh = useCallback(async () => {
     try {
       const s = await call({ data: { attemptId, action: "get" } });
       if (!s) {
+        if (isClosed(current.current)) return;
         setError(
           sv
             ? "Testet är inte tillgängligt för ditt konto."
@@ -51,21 +75,35 @@ export function SentinelRunner({ attemptId }: { attemptId: string }) {
       }
       apply(s);
     } catch {
-      setError(sv ? "Kunde inte ansluta. Försök igen." : "Could not connect. Retry.");
+      if (!isClosed(current.current))
+        setError(sv ? "Kunde inte ansluta. Försök igen." : "Could not connect. Retry.");
     }
   }, [attemptId, call, apply, sv]);
   useEffect(() => {
     void refresh();
-    void practiceFn({ data: { attemptId } })
-      .then(setPractice)
-      .catch(() =>
-        setError(
-          sv
-            ? "Övningarna kunde inte hämtas. Försök igen."
-            : "Practice could not be loaded. Retry.",
-        ),
-      );
-  }, [refresh, practiceFn, attemptId, sv]);
+  }, [refresh]);
+  const loadPractice = useCallback(async () => {
+    if (practiceLoading.current) return;
+    practiceLoading.current = true;
+    setPracticeStatus("loading");
+    try {
+      const exercises = await practiceFn({ data: { attemptId } });
+      if (!exercises.length) throw new Error("EMPTY_PRACTICE");
+      setPractice(exercises);
+      setPracticeStatus("loaded");
+    } catch {
+      setPracticeStatus("error");
+    } finally {
+      practiceLoading.current = false;
+    }
+  }, [attemptId, practiceFn]);
+  useEffect(() => {
+    if (session?.status === "ready") void loadPractice();
+  }, [session?.status, loadPractice]);
+  const closed = isClosed(session);
+  useEffect(() => {
+    if (closed) completionHeading.current?.focus();
+  }, [closed]);
   useEffect(() => {
     const tick = window.setInterval(() => setNow(Date.now()), 1000);
     const poll = window.setInterval(() => {
@@ -98,34 +136,36 @@ export function SentinelRunner({ attemptId }: { attemptId: string }) {
       });
     }
   }, [remaining, session?.status, busy, refresh]);
-  useEffect(() => {
-    const guard = (e: BeforeUnloadEvent) => {
-      if (pending) {
-        e.preventDefault();
-        e.returnValue = "";
-      }
-    };
-    window.addEventListener("beforeunload", guard);
-    return () => window.removeEventListener("beforeunload", guard);
-  }, [pending]);
   async function act(action: "start" | "finish") {
+    if (operation.current || isClosed(current.current) || pendingResponse.current) return;
+    operation.current = true;
     setBusy(true);
     setError("");
+    setFailedAction(null);
     try {
       const s = await call({ data: { attemptId, action } });
-      if (s) apply(s);
+      if (!s) throw new Error("UNCONFIRMED_ACTION");
+      apply(s);
+      if (action === "finish" && !isClosed(current.current))
+        throw new Error("UNCONFIRMED_SUBMISSION");
     } catch {
+      if (isClosed(current.current)) return;
+      setFailedAction(action);
       setError(
         sv
           ? "Åtgärden kunde inte bekräftas. Försök igen."
           : "The action could not be confirmed. Retry.",
       );
     } finally {
+      operation.current = false;
       setBusy(false);
       setConfirm(false);
     }
   }
   async function save(answer: { questionId: string; optionId: string }) {
+    if (operation.current || current.current?.status !== "running") return;
+    operation.current = true;
+    pendingResponse.current = answer;
     setPending(answer);
     setBusy(true);
     setError("");
@@ -133,13 +173,22 @@ export function SentinelRunner({ attemptId }: { attemptId: string }) {
       const s = await call({
         data: { attemptId, action: "save", ...answer, revision: current.current?.revision ?? 0 },
       });
-      if (s) {
-        apply(s);
+      if (!s) throw new Error("UNCONFIRMED_RESPONSE");
+      apply(s);
+      // Only the latest accepted snapshot can acknowledge this exact choice.
+      // A terminal snapshot clears pending separately, without claiming a save.
+      if (
+        current.current?.status === "running" &&
+        current.current.answers[answer.questionId] === answer.optionId
+      ) {
+        pendingResponse.current = null;
         setPending(null);
-      }
+      } else if (!isClosed(current.current)) throw new Error("UNCONFIRMED_RESPONSE");
     } catch (e) {
+      if (isClosed(current.current)) return;
       if (String(e).includes("SENTINEL_REVISION_CONFLICT")) {
         await refresh();
+        if (isClosed(current.current)) return;
         setError(
           sv
             ? "Testet uppdaterades i en annan flik. Kontrollera ditt val och tryck Spara igen."
@@ -152,6 +201,7 @@ export function SentinelRunner({ attemptId }: { attemptId: string }) {
             : "The response is not saved. Check your connection and retry.",
         );
     } finally {
+      operation.current = false;
       setBusy(false);
     }
   }
@@ -173,18 +223,78 @@ export function SentinelRunner({ attemptId }: { attemptId: string }) {
         </AssessmentPanel>
       </AssessmentShell>
     );
-  if (["completed", "timed_out", "abandoned"].includes(session.status))
+  if (isClosed(session))
     return (
       <AssessmentShell deliveryLanguage={lang}>
         <AssessmentPanel>
-          <div className="mb-6 flex items-center gap-2">
-            <CheckCircle2 className="h-5 w-5" />
-            <p>{sv ? "Testtillfället är avslutat." : "This attempt is closed."}</p>
+          <section aria-labelledby="sentinel-completion-heading" className="space-y-4">
+            <div className="flex items-start gap-3">
+              {session.status === "completed" ? (
+                <CheckCircle2 aria-hidden="true" className="mt-1 h-5 w-5 shrink-0" />
+              ) : (
+                <Clock3 aria-hidden="true" className="mt-1 h-5 w-5 shrink-0" />
+              )}
+              <h1
+                id="sentinel-completion-heading"
+                ref={completionHeading}
+                tabIndex={-1}
+                className="text-2xl font-semibold focus:outline-none"
+              >
+                {session.status === "completed"
+                  ? sv
+                    ? "Tack! Ditt test är avslutat."
+                    : "Thank you! Your assessment is complete."
+                  : session.status === "timed_out"
+                    ? sv
+                      ? "Testtiden är slut."
+                      : "Your assessment time has ended."
+                    : sv
+                      ? "Testet har avbrutits."
+                      : "This assessment has been stopped."}
+              </h1>
+            </div>
+            <p className="text-sm leading-relaxed">
+              {session.status === "completed"
+                ? discardedResponse
+                  ? sv
+                    ? "De svar som servern tog emot har sparats och testet har skickats in till arbetsgivaren. Arbetsgivaren går igenom underlaget och återkommer till dig inom kort med information om nästa steg."
+                    : "The responses received by the server have been saved and the assessment has been submitted to the employer. The employer will review your responses and contact you shortly about the next steps."
+                  : sv
+                    ? "Dina svar har sparats och testet har skickats in till arbetsgivaren. Arbetsgivaren går igenom underlaget och återkommer till dig inom kort med information om nästa steg."
+                    : "Your responses have been saved and the assessment has been submitted to the employer. The employer will review your responses and contact you shortly about the next steps."
+                : session.status === "timed_out"
+                  ? sv
+                    ? "Testtiden är slut och testet har avslutats. Endast de svar som servern tog emot före tidsgränsen ligger till grund för resultatet. Osparade svar ingår inte. Arbetsgivaren går igenom underlaget och återkommer med information om nästa steg."
+                    : "Your assessment time has ended and the assessment has closed. Your result is based only on responses the server received before the deadline. Unsaved responses are excluded. The employer will review your responses and contact you about the next steps."
+                  : sv
+                    ? "Det här testtillfället har avbrutits eller är inte längre tillgängligt. Kontakta arbetsgivaren för information om hur du går vidare."
+                    : "This assessment has been stopped or is no longer available. Please contact the employer for information about how to proceed."}
+            </p>
+            {discardedResponse && (
+              <p className="text-sm">
+                {sv
+                  ? "Det osparade svaret har inte skickats in."
+                  : "The unsaved response has not been submitted."}
+              </p>
+            )}
+            <Link
+              to="/academy"
+              className={`${button} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2`}
+            >
+              {sv ? "Till mina tester" : "Back to my assessments"}
+            </Link>
+          </section>
+          <div className="mt-6">
+            {session.report ? (
+              <SentinelReportView report={session.report} status={session.status} sv={sv} />
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                {sv
+                  ? "Arbetsgivaren avgör när resultatet delas med dig."
+                  : "The employer decides when to share the result with you."}
+              </p>
+            )}
           </div>
-          <SentinelReportView report={session.report} status={session.status} sv={sv} />
-          <Link to="/academy" className="mt-5 inline-block underline">
-            {sv ? "Till mina tester" : "Back to my assessments"}
-          </Link>
         </AssessmentPanel>
       </AssessmentShell>
     );
@@ -225,6 +335,49 @@ export function SentinelRunner({ attemptId }: { attemptId: string }) {
                 {sv ? "Spara igen" : "Save again"}
               </button>
             )}
+            {failedAction && (
+              <button
+                disabled={busy}
+                className="ml-3 underline"
+                onClick={() => void act(failedAction)}
+              >
+                {failedAction === "finish"
+                  ? sv
+                    ? "Försök skicka in igen"
+                    : "Retry submission"
+                  : sv
+                    ? "Försök starta igen"
+                    : "Retry starting"}
+              </button>
+            )}
+            {!pending && !failedAction && (
+              <button disabled={busy} className="ml-3 underline" onClick={() => void refresh()}>
+                {sv ? "Försök igen" : "Retry"}
+              </button>
+            )}
+          </div>
+        )}
+        {session.status === "ready" && practiceStatus !== "loaded" && (
+          <div
+            className="mb-4 rounded-lg border p-3 text-sm"
+            aria-busy={practiceStatus === "loading"}
+          >
+            <p role={practiceStatus === "error" ? "alert" : "status"}>
+              {practiceStatus === "loading"
+                ? sv
+                  ? "Hämtar övningar…"
+                  : "Loading practice…"
+                : sv
+                  ? "Övningarna kunde inte hämtas. Försök igen."
+                  : "Practice could not be loaded. Please try again."}
+            </p>
+            <button
+              disabled={practiceStatus === "loading"}
+              className={`${outline} mt-3`}
+              onClick={() => void loadPractice()}
+            >
+              {sv ? "Hämta övningarna igen" : "Retry loading practice"}
+            </button>
           </div>
         )}
         {session.status === "ready" && phase === "info" && (
