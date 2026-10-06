@@ -50,7 +50,15 @@ async function account(ctx: BrowserContext, email: string, lang: string) {
     body: JSON.stringify({ email, password: "LocalJourney!2026" }),
   });
   expect(r.ok).toBe(true);
-  const auth = await r.json();
+  const auth: unknown = await r.json();
+  if (
+    !auth ||
+    typeof auth !== "object" ||
+    !("access_token" in auth) ||
+    typeof auth.access_token !== "string"
+  ) {
+    throw new Error("The synthetic gateway returned no access token");
+  }
   await ctx.addInitScript(
     ({ auth, lang }) => {
       localStorage.setItem("sb-127-auth-token", JSON.stringify(auth));
@@ -58,7 +66,7 @@ async function account(ctx: BrowserContext, email: string, lang: string) {
     },
     { auth, lang },
   );
-  return auth.access_token as string;
+  return auth.access_token;
 }
 async function shot(page: Page, name: string) {
   mkdirSync(OUT, { recursive: true });
@@ -115,7 +123,7 @@ for (const [idx, role, lang] of [
           `SELECT count(*) FROM scp_form_items f JOIN scp_attempts t ON t.form_id=f.form_id WHERE t.id='${attempt}'`,
         ),
       );
-      expect(count).toBeGreaterThan(10);
+      expect(count).toBe(role === "officer" ? 50 : 37);
       const candidateCtx = await create(),
         candidateToken = await account(candidateCtx, `role-${idx}@local.test`, lang),
         candidate = await candidateCtx.newPage();

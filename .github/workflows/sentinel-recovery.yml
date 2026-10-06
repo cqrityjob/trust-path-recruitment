@@ -4,6 +4,8 @@ on:
     branches: [main]
     paths:
       - "src/components/sentinel/**"
+      # The shared academy route selects the Sentinel runner and report flow.
+      - "src/routes/_authenticated.academy.*"
       - "e2e/sentinel-recovery.spec.ts"
       - "scripts/sentinel-session-state-check.ts"
       - "scripts/sentinel-recovery-stack.sh"

@@ -10,11 +10,19 @@ export LOCAL_STACK_LOG_DIR="${LOCAL_STACK_LOG_DIR:-/tmp/role-assessment-e2e}"
 export APP_PORT="${APP_PORT:-3119}" GATEWAY_PORT="${GATEWAY_PORT:-54331}"
 export PGREST_PORT="${PGREST_PORT:-59433}"
 export POSTGREST_IMAGE="postgrest/postgrest:v14.15"
+export LOCAL_DB_NAME=beskt_e2e LOCAL_DB_PASSWORD=localbeskt
 export RESEND_API_KEY=""
 # The harness rewrites these to its own local tokens. Never inherit a mail key.
 export E2E_LOCAL_STACK=1 E2E_BASE_URL="http://127.0.0.1:${APP_PORT}"
 export E2E_SUPABASE_URL="http://127.0.0.1:${GATEWAY_PORT}"
 export JOURNEY_DATABASE_URL="postgresql://postgres:localbeskt@127.0.0.1:5432/beskt_e2e"
+export SUPABASE_URL="$E2E_SUPABASE_URL" VITE_SUPABASE_URL="$E2E_SUPABASE_URL"
+export SUPABASE_PROJECT_ID=local-beskt-evidence VITE_SUPABASE_PROJECT_ID=local-beskt-evidence
+export PUBLIC_SITE_URL="$E2E_BASE_URL"
+# up.sh mints its own loopback tokens into .env.local. Inherited credentials
+# must not override that file when Vite starts the app.
+unset SUPABASE_PUBLISHABLE_KEY VITE_SUPABASE_PUBLISHABLE_KEY SUPABASE_SERVICE_ROLE_KEY
+unset SUPABASE_ANON_KEY VITE_SUPABASE_ANON_KEY SUPABASE_ACCESS_TOKEN SUPABASE_DB_PASSWORD
 export ROLE_EVIDENCE_DIR="${ROLE_EVIDENCE_DIR:-/tmp/role-assessment-evidence}"
 trap 'bash scripts/local-stack/down.sh' EXIT
 bash scripts/local-stack/test-env.sh
