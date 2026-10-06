@@ -143,6 +143,7 @@ const en = {
   "dest.AE": "Other emirates, United Arab Emirates",
   "dest.GB": "United Kingdom",
   "dest.SE": "Sweden",
+  "dest.US": "United States",
 
   // ── Destination next steps ──────────────────────────────────────────
   "check.title": "Next steps for Dubai",
@@ -299,6 +300,7 @@ const sv: Record<IndiaCopyKey, string> = {
   "dest.AE": "Övriga emirat, Förenade Arabemiraten",
   "dest.GB": "Storbritannien",
   "dest.SE": "Sverige",
+  "dest.US": "USA",
   "check.title": "Nästa steg för Dubai",
   "check.lead":
     "En checklista, inte ett betyg. Kraven bestäms av Dubais myndigheter och arbetsgivare och kan ändras.",

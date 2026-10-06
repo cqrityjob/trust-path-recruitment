@@ -199,6 +199,13 @@ export const ONBOARDING_STEPS: readonly OnboardingStep[] = [
           // a country in `sp_jurisdictions`. Choosing it opens no market — India
           // has no market pack — and records nothing about a credential.
           { value: "IN", labelKey: "jurisdiction.option.IN" },
+          // The United States (20270218090000): a country in `sp_jurisdictions`
+          // and a market the owner has prioritised. Choosing it opens no
+          // catalogue -- there is no US market pack and no state is authored
+          // -- and records nothing about a credential. Security is licensed
+          // per STATE there; a state becomes its own answer (US-TX and so on)
+          // only when a reviewed pack exists, as Dubai did for the UAE.
+          { value: "US", labelKey: "jurisdiction.US" },
         ],
       },
     ],

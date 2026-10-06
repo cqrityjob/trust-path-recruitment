@@ -83,6 +83,8 @@ export function formatJurisdiction(code: string | null, lang: PassportLang): str
       return passportT("jurisdiction.GB-NI", lang);
     case "IN":
       return passportT("jurisdiction.IN", lang);
+    case "US":
+      return passportT("jurisdiction.US", lang);
     default:
       return code;
   }
@@ -306,6 +308,10 @@ const WORK_COUNTRY_SUPPORT_KEY: Readonly<Record<string, PassportCopyKey>> = {
   // without one because they authorise no work (scope national_qualification,
   // 20261214090000), and the sentence says exactly that.
   IN: "workCountry.support.IN",
+  // No market pack and no state catalogue: the sentence says that a local
+  // catalogue is not available and that the international certifications,
+  // which authorise no work anywhere, remain open from any country.
+  US: "workCountry.support.US",
 };
 
 export function workCountrySupportKey(

@@ -221,7 +221,16 @@ const M_LOC = "supabase/migrations/20261215090000_candidate_location_and_destina
     (page.match(/code: "IN_MEPSC_Q\d{4}", title/g) ?? []).length === 4,
     "3.2 the page lists exactly four Indian qualifications",
   );
-  const check = /desired_destinations <@ ARRAY\[([^\]]+)\]/.exec(mLoc)?.[1] ?? "";
+  // The vocabulary is the LAST definition of the CHECK in migration order:
+  // 20261215090000 created it and 20270218090000 widened it (the United
+  // States). A mirror pinned to the first file would reject the real frontier.
+  const mDest = readdirSync(join(ROOT, "supabase/migrations"))
+    .filter((f) => f.endsWith(".sql"))
+    .sort()
+    .map((f) => read(`supabase/migrations/${f}`))
+    .filter((sql) => /desired_destinations <@ ARRAY\[/.test(sql))
+    .at(-1);
+  const check = /desired_destinations <@ ARRAY\[([^\]]+)\]/.exec(mDest ?? mLoc)?.[1] ?? "";
   const dbDest = [...check.matchAll(/'([A-Z-]+)'/g)].map((m) => m[1]).sort();
   ok(
     dbDest.join("|") === [...DESTINATIONS].sort().join("|"),

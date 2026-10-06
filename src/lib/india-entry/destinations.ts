@@ -15,8 +15,10 @@
 
 import type { IndiaCopyKey } from "./copy";
 
-/** The closed destination vocabulary. Order is the display order. */
-export const DESTINATIONS = ["AE-DU", "IN", "GB", "AE", "SE"] as const;
+/** The closed destination vocabulary. Order is the display order.
+ *  "US" since 20270218090000: the United States as a market the owner has
+ *  prioritised. A preference, like the rest: it grants nothing. */
+export const DESTINATIONS = ["AE-DU", "IN", "GB", "AE", "SE", "US"] as const;
 export type Destination = (typeof DESTINATIONS)[number];
 
 export const DESTINATION_LABEL_KEY: Record<Destination, IndiaCopyKey> = {
@@ -25,6 +27,7 @@ export const DESTINATION_LABEL_KEY: Record<Destination, IndiaCopyKey> = {
   GB: "dest.GB",
   AE: "dest.AE",
   SE: "dest.SE",
+  US: "dest.US",
 };
 
 export function isDestination(value: string): value is Destination {
