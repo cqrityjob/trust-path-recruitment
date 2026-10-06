@@ -528,12 +528,19 @@ BEGIN
   ON CONFLICT (holder_user_id) DO UPDATE
     SET jurisdiction_code = 'AE', sub_jurisdiction_code = 'AE-AZ';
 
-  -- First, that their market is what it says: a regulated Abu Dhabi licence
-  -- saves (public pilot), and nothing about it is approved.
-  _r := pg_temp.file_canonical(_odd, 'AE_AZ_PSBD_LICENCE_GUARD', 'active');
-  PERFORM pg_temp.ok(_r = 'OK'
-    AND NOT EXISTS (SELECT 1 FROM public.sp_credential_types WHERE market_pack_code = 'AE-AZ' AND is_active),
-    '5.4a their own regulated market is a public pilot: the licence saves, approved by nobody (got ' || _r || ')');
+  -- First, that their market is what it says, read from the DATA: a public
+  -- pilot, approved by nobody, review pending. The save itself and the
+  -- canonical decision are proven by the open_abu_dhabi suite on the
+  -- frontier. This suite also runs in db-test right after the 20261109090000
+  -- round-trip, which re-creates sp_market_access and the read policy WITHOUT
+  -- the public-pilot branch 20261220090000 added, so a save or a decision
+  -- here would prove the round-trip's state rather than the market's.
+  PERFORM pg_temp.ok(
+    (SELECT pilot_state = 'public_pilot' AND NOT is_active AND legal_review_state = 'pending'
+       FROM public.sp_market_packs WHERE code = 'AE-AZ')
+    AND (SELECT count(*) = 7 FROM public.sp_credential_types
+          WHERE market_pack_code = 'AE-AZ' AND pilot_state = 'public_pilot' AND NOT is_active),
+    '5.4a their own regulated market is a public pilot: its seven definitions open for registration, approved by nobody, review pending');
 
   _r := pg_temp.file_canonical(_odd, 'INTL_ISACA_CISA', 'active');
   PERFORM pg_temp.ok(_r = 'OK',
