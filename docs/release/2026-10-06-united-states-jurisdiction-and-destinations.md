@@ -8,7 +8,7 @@ applied and verified, and the Abu Dhabi public pilot as its own data PR with its
 
 ## 1 · What the migration changes, and nothing else
 
-`supabase/migrations/20270218090000_sp_united_states_jurisdiction_and_destinations.sql`
+`supabase/migrations/20270219090000_sp_united_states_jurisdiction_and_destinations.sql`
 
 | Table | Change |
 |---|---|
@@ -45,7 +45,7 @@ script reapplies this migration after that block so every later suite sees the r
 
 ## 3 · Rollback
 
-`supabase/rollback/20270218090000_sp_united_states_jurisdiction_and_destinations_rollback.sql`
+`supabase/rollback/20270219090000_sp_united_states_jurisdiction_and_destinations_rollback.sql`
 
 Removes the two rows and restores the five-value CHECK with its cap of 5. It **refuses once adopted**:
 a profile, claim, employment period, definition-jurisdiction row or destination list that names the

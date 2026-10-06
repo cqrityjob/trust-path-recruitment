@@ -1,7 +1,7 @@
 # Security Passport — United States: what exists, and a proposal for a first state catalogue
 
 Status (2026-10-06): **proposal.** Nothing in this document is data. The only United States rows in
-the schema are the ones `20270218090000_sp_united_states_jurisdiction_and_destinations` adds: the
+the schema are the ones `20270219090000_sp_united_states_jurisdiction_and_destinations` adds: the
 country a holder may *state* as a work country and *want* as a destination. No market pack, no
 authority, no definition, no state and no regulatory source names the United States, and this
 document authors none of them. It exists so that the owner's decision to prioritise the market can be
@@ -12,8 +12,8 @@ taken on a written model rather than on a plausible-looking migration.
 | Fact | Where it lives | United States |
 |---|---|---|
 | Where they live | `candidate_current_location` (any ISO country) | Yes, already; a city or state as free text |
-| Where they work | `sp_passport_profiles.jurisdiction_code` | Yes, after 20270218090000 (`US`, no state) |
-| Where they would like to work | `candidate_job_preferences.desired_destinations` | Yes, after 20270218090000 |
+| Where they work | `sp_passport_profiles.jurisdiction_code` | Yes, after 20270219090000 (`US`, no state) |
+| Where they would like to work | `candidate_job_preferences.desired_destinations` | Yes, after 20270219090000 |
 | Regulated credentials | the approved catalogue, per market pack | **None.** The market read answers `unsupported`; the surfaces say a local catalogue is not available and that the basic profile and the open catalogues remain usable |
 | International certifications | the global catalogue (ASIS, ISC2, ISACA, ACFE, ACAMS and the published research set) | Yes, from any country |
 | Provenance | a practical skill or an employment period may carry `US` | Yes |

@@ -215,6 +215,10 @@ done
 echo "    ok  ${REPLAYED} migrations applied cleanly, in filename order"
 # STRICT-REPLAY-CONTRACT END
 
+# Owner catalogue decision: final boundaries first; old suites retain their historical state.
+TEST_DB="$TEST_DB" bash scripts/catalogue-five-db-check.sh
+psql_q -d "$TEST_DB" -f supabase/rollback/20270218090000_catalogue_internal_metadata_boundary_rollback.sql
+
 # #428 launch decision: verify the final API policy and each negative control.
 # Older suites below deliberately exercise the previous participant/funnel
 # contracts, including their original rollback proofs. Keep those historical
@@ -3028,7 +3032,7 @@ for agreement_mode in "" "--pin-route-a"; do
 done
 
 # The United States as a stated country and a wanted destination
-# (20270218090000): run on the fully migrated database, stand down ALONE (the
+# (20270219090000): run on the fully migrated database, stand down ALONE (the
 # rows gone, the five-value destination CHECK back), prove the suite cannot
 # pass without it, reapply, run again. Runs BEFORE the 20261215090000 block
 # below, which re-creates candidate_job_preferences with its original CHECK and
@@ -3039,13 +3043,13 @@ for us_round in before after; do
   [ "$us_count" -ge 23 ] || { echo "United States jurisdiction assertion shortfall: $us_count"; exit 1; }
   echo "    $us_count assertions passed: the United States as a stated country and destination ($us_round rollback/reapply)"
   if [ "$us_round" = before ]; then
-    us_rb="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" -f supabase/rollback/20270218090000_sp_united_states_jurisdiction_and_destinations_rollback.sql 2>&1)" || { echo "$us_rb"; exit 1; }
-    printf '%s' "$us_rb" | grep -q 'SP_UNITED_STATES_JURISDICTION_ROLLBACK ok' || { echo "FAIL: the 20270218090000 rollback did not prove itself: $us_rb"; exit 1; }
+    us_rb="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" -f supabase/rollback/20270219090000_sp_united_states_jurisdiction_and_destinations_rollback.sql 2>&1)" || { echo "$us_rb"; exit 1; }
+    printf '%s' "$us_rb" | grep -q 'SP_UNITED_STATES_JURISDICTION_ROLLBACK ok' || { echo "FAIL: the 20270219090000 rollback did not prove itself: $us_rb"; exit 1; }
     us_left="$(psql_q -d "$TEST_DB" -Atc "SELECT (SELECT count(*) FROM public.sp_jurisdictions WHERE code='US') + (SELECT count(*) FROM public.sp_credential_jurisdictions WHERE code='US') + (SELECT count(*) FROM pg_constraint WHERE conname='candidate_job_preferences_desired_destinations_check' AND pg_get_constraintdef(oid) LIKE '%''US''%')")"
-    [ "$us_left" = "0" ] || { echo "FAIL: 20270218090000 rollback left $us_left trace(s) of the United States behind"; exit 1; }
+    [ "$us_left" = "0" ] || { echo "FAIL: 20270219090000 rollback left $us_left trace(s) of the United States behind"; exit 1; }
     echo "    ok  the United States stood down alone: no jurisdiction row, no credential jurisdiction, five destinations again"
-    if psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" -f "supabase/rollback/20270218090000_sp_united_states_jurisdiction_and_destinations_rollback.sql" >/dev/null 2>&1; then
-      echo "FAIL: the 20270218090000 rollback ran twice" >&2
+    if psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" -f "supabase/rollback/20270219090000_sp_united_states_jurisdiction_and_destinations_rollback.sql" >/dev/null 2>&1; then
+      echo "FAIL: the 20270219090000 rollback ran twice" >&2
       exit 1
     fi
     echo "    ok  and it refuses to run a second time"
@@ -3054,8 +3058,8 @@ for us_round in before after; do
       exit 1
     fi
     echo "    ok  and the suite refuses to pass without the migration (negative control)"
-    us_back="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" -f supabase/migrations/20270218090000_sp_united_states_jurisdiction_and_destinations.sql 2>&1)" || { echo "$us_back"; exit 1; }
-    printf '%s' "$us_back" | grep -q 'SP_UNITED_STATES_JURISDICTION_PROOF ok' || { echo "FAIL: 20270218090000 did not re-apply on top of its rollback"; exit 1; }
+    us_back="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" -f supabase/migrations/20270219090000_sp_united_states_jurisdiction_and_destinations.sql 2>&1)" || { echo "$us_back"; exit 1; }
+    printf '%s' "$us_back" | grep -q 'SP_UNITED_STATES_JURISDICTION_PROOF ok' || { echo "FAIL: 20270219090000 did not re-apply on top of its rollback"; exit 1; }
     echo "    ok  the United States reapplied on top of its rollback: proof ok"
   fi
 done
@@ -3064,7 +3068,7 @@ done
 # stand down ALONE (no table, helper or funnel name left; the anonymisation
 # function restored), prove the suite cannot pass without it, reapply, run again.
 # Its reapply re-creates candidate_job_preferences with the ORIGINAL five-value
-# CHECK, so 20270218090000 (which widens that CHECK) is reapplied after it, and
+# CHECK, so 20270219090000 (which widens that CHECK) is reapplied after it, and
 # the database the later suites see is the real frontier.
 for loc_round in before after; do
   loc_output="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/candidate_location_and_destinations_test.sql 2>&1)" || { echo "$loc_output"; exit 1; }
@@ -3082,12 +3086,12 @@ for loc_round in before after; do
     fi
     echo "    ok  and the suite refuses to pass without the migration (negative control)"
     psql_q -d "$TEST_DB" -f supabase/migrations/20261215090000_candidate_location_and_destinations.sql >/dev/null
-    # The destination CHECK is the 20261215090000 one again; 20270218090000
+    # The destination CHECK is the 20261215090000 one again; 20270219090000
     # widens it back to the frontier. Its own postflight proves the rest.
-    us_reapply="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" -f supabase/rollback/20270218090000_sp_united_states_jurisdiction_and_destinations_rollback.sql 2>&1)" || { echo "$us_reapply"; exit 1; }
-    printf '%s' "$us_reapply" | grep -q 'SP_UNITED_STATES_JURISDICTION_ROLLBACK ok' || { echo "FAIL: the 20270218090000 rollback did not stand down before the 20261215090000 reapply chain: $us_reapply"; exit 1; }
-    us_reapply="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" -f supabase/migrations/20270218090000_sp_united_states_jurisdiction_and_destinations.sql 2>&1)" || { echo "$us_reapply"; exit 1; }
-    printf '%s' "$us_reapply" | grep -q 'SP_UNITED_STATES_JURISDICTION_PROOF ok' || { echo "FAIL: 20270218090000 did not re-apply after the 20261215090000 reapply"; exit 1; }
+    us_reapply="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" -f supabase/rollback/20270219090000_sp_united_states_jurisdiction_and_destinations_rollback.sql 2>&1)" || { echo "$us_reapply"; exit 1; }
+    printf '%s' "$us_reapply" | grep -q 'SP_UNITED_STATES_JURISDICTION_ROLLBACK ok' || { echo "FAIL: the 20270219090000 rollback did not stand down before the 20261215090000 reapply chain: $us_reapply"; exit 1; }
+    us_reapply="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" -f supabase/migrations/20270219090000_sp_united_states_jurisdiction_and_destinations.sql 2>&1)" || { echo "$us_reapply"; exit 1; }
+    printf '%s' "$us_reapply" | grep -q 'SP_UNITED_STATES_JURISDICTION_PROOF ok' || { echo "FAIL: 20270219090000 did not re-apply after the 20261215090000 reapply"; exit 1; }
     echo "    ok  the United States reapplied after the candidate-location reapply: the frontier CHECK is back"
   fi
 done

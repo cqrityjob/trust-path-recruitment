@@ -1,5 +1,5 @@
 -- =============================================================================
--- ROLLBACK for 20270218090000_sp_united_states_jurisdiction_and_destinations.sql
+-- ROLLBACK for 20270219090000_sp_united_states_jurisdiction_and_destinations.sql
 -- =============================================================================
 --
 -- Removes the United States from sp_jurisdictions and sp_credential_jurisdictions

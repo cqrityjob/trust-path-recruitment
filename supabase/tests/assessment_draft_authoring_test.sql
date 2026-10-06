@@ -35,16 +35,43 @@ SELECT pg_temp.ok(NOT EXISTS(SELECT 1 FROM public.scp_form_items fresh JOIN publ
 SELECT pg_temp.ok(EXISTS(SELECT 1 FROM public.scp_form_blocks b JOIN public.scp_forms f ON f.id=b.form_id WHERE f.assessment_version_id=(SELECT id FROM new_draft)), 'AD7 participant sections copied');
 SELECT pg_temp.ok((SELECT aa.scp_assessment_version_id=(SELECT version_id FROM rjv) AND a.assessment_version_id=(SELECT version_id FROM rjv)
  FROM public.assessment_assignments aa JOIN public.scp_attempts a ON a.assignment_id=aa.id WHERE aa.id=(SELECT assignment_id FROM pinned)), 'AD8 existing assignment and attempt retain original version');
+-- Owner decision 2026-10-06: draft library aggregates are an explicit exception.
+-- Expected values are captured as the fixture administrator, then compared via RPC.
+CREATE TEMP TABLE library_expected AS SELECT
+ (SELECT count(*)::int FROM public.scp_forms f JOIN public.scp_form_blocks b ON b.form_id=f.id
+   WHERE f.assessment_version_id=(SELECT id FROM new_draft)) blocks,
+ min(f.target_minutes_min) minutes_min, max(f.target_minutes_max) minutes_max
+ FROM public.scp_forms f WHERE f.assessment_version_id=(SELECT id FROM new_draft);
+GRANT SELECT ON library_expected TO authenticated;
 GRANT SELECT ON new_draft,new_test,pinned TO authenticated;
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claim.sub = 'ea000000-0000-0000-0000-000000000001';
 SELECT pg_temp.ok((SELECT NOT assignable AND unassignable_reason='not_permitted' FROM public.scp_employer_content_library((SELECT employer FROM rj)) WHERE item_id=(SELECT id FROM new_draft)), 'AD9 library refuses authored draft despite definition designation');
 SELECT pg_temp.ok((SELECT assignable FROM public.scp_employer_content_library((SELECT employer FROM rj)) WHERE item_id=(SELECT version_id FROM rjv)), 'AD10 existing permitted version remains usable');
+SELECT pg_temp.ok(EXISTS(SELECT 1 FROM public.scp_employer_content_library((SELECT employer FROM rj)) l
+ CROSS JOIN library_expected e WHERE l.item_id=(SELECT id FROM new_draft)
+ AND l.module_count=e.blocks AND l.minutes_min IS NOT DISTINCT FROM e.minutes_min
+ AND l.minutes_max IS NOT DISTINCT FROM e.minutes_max),
+ 'AD15 authorised employer retains exact draft block/time aggregates');
+SELECT pg_temp.ok(NOT EXISTS(SELECT 1 FROM public.scp_employer_content_library((SELECT employer FROM rj)) l,
+ LATERAL jsonb_object_keys(to_jsonb(l)) k(name) WHERE k.name NOT IN (
+ 'library_kind','item_id','parent_id','slug','name_sv','name_en','summary_sv','summary_en',
+ 'lifecycle_state','content_status','validation_status','version_number','is_test_fixture',
+ 'owner_employer_id','ownership','assignable','unassignable_reason','governance_mode',
+ 'item_count','module_count','minutes_min','minutes_max','languages','requires_human_review',
+ 'target_role_sv','target_role_en','competencies_sv','competencies_en','does_not_measure_sv',
+ 'does_not_measure_en','published_at','updated_at','designed_for')),
+ 'AD16 fixed catalogue contract excludes questions instructions answers notes and actor IDs');
 -- A different recipient avoids the intentional per-application idempotent replay.
 SELECT pg_temp.must_fail(format('SELECT * FROM public.scp_employer_assign(%L,%L,''bo@journey.test'',NULL,''sv'',''workforce'')',
  (SELECT employer FROM rj),(SELECT id FROM new_draft)), 'SCP_CONTENT_RELEASE_REQUIRED','AD11 direct assignment RPC cannot bypass draft hold');
 SET LOCAL request.jwt.claim.sub = 'ea000000-0000-0000-0000-000000000009';
 SELECT pg_temp.ok(NOT EXISTS(SELECT 1 FROM public.scp_employer_content_library((SELECT employer FROM rj))), 'AD12 foreign organisation cannot read library');
+SET LOCAL request.jwt.claim.sub = 'ea000000-0000-0000-0000-000000000002';
+SELECT pg_temp.ok(NOT EXISTS(SELECT 1 FROM public.scp_employer_content_library((SELECT employer FROM rj))),
+ 'AD17 ordinary candidate cannot read employer library');
 RESET ROLE; RESET request.jwt.claim.sub;
 SELECT pg_temp.ok(NOT has_function_privilege('anon','public.scp_author_assessment_draft(uuid,text,uuid[],text,text,text)','EXECUTE'), 'AD13 anonymous cannot author');
+SELECT pg_temp.ok(NOT has_function_privilege('anon','public.scp_employer_content_library(uuid)','EXECUTE'),
+ 'AD18 anonymous cannot execute employer library');
 ROLLBACK;

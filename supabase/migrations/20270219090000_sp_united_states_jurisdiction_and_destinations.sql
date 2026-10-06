@@ -61,7 +61,7 @@
 --
 -- One transaction: the change and its proof commit together or not at all.
 --
--- Rollback: supabase/rollback/20270218090000_sp_united_states_jurisdiction_and_destinations_rollback.sql
+-- Rollback: supabase/rollback/20270219090000_sp_united_states_jurisdiction_and_destinations_rollback.sql
 -- =============================================================================
 
 BEGIN;
@@ -124,7 +124,7 @@ ALTER TABLE public.candidate_job_preferences
 
 COMMENT ON COLUMN public.candidate_job_preferences.desired_destinations IS
   'Where the candidate would LIKE to work, from a closed vocabulary: IN, AE-DU '
-  '(Dubai), AE (the other emirates), GB, SE and, since 20270218090000, US. A '
+  '(Dubai), AE (the other emirates), GB, SE and, since 20270219090000, US. A '
   'preference: it grants no market, changes no work country and no credential '
   'jurisdiction, and says nothing about permission to work.';
 
