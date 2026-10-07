@@ -278,10 +278,12 @@ for (const [name, nullable] of foundation) {
   );
   for (const key of sqlArgs ?? []) {
     const type = field(args, key);
+    const property = args?.getProperty(key);
     ck(
       `4.6 ${name}.${key} is required and has only its reviewed nullability`,
       !!type &&
-        !(args?.getProperty(key)!.flags! & ts.SymbolFlags.Optional) &&
+        !!property &&
+        !(property.flags & ts.SymbolFlags.Optional) &&
         checker.typeToString(type).includes("null") ===
           (nullable as readonly string[]).includes(key),
     );
