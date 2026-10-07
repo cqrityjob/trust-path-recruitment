@@ -249,6 +249,8 @@ RETENTION_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/applica
 RETENTION_PASSED="$(echo "$RETENTION_OUT" | grep -c 'NOTICE:  ok  L')"
 [ "$RETENTION_PASSED" -ge 45 ] || { echo "$RETENTION_OUT"; echo 'FAIL: application retention assertion shortfall'; exit 1; }
 echo "    ok  $RETENTION_PASSED application retention assertions passed"
+echo "==> Application retention operator dry-run report (synthetic only)"
+psql_q -d "$TEST_DB" -f supabase/tests/application_retention_dry_run_test.sql >/dev/null
 TEST_DB="$TEST_DB" bash scripts/application-retention-race-check.sh
 # Preserve the original historical rollback proofs in their pre-feature state.
 # The guarded teardown is CI-only; operational rollback preserves all debt.

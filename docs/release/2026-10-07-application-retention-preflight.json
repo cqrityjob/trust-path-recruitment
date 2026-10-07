@@ -1,0 +1,134 @@
+{
+  "schemaVersion": 1,
+  "projectRef": "wrygicdfxwjnrugduxnt",
+  "verifiedMainSha": "e3223033d679fdc4f87086088b67d9a8e534f7fa",
+  "checkedAt": "2026-10-07T04:46:49.762939+00:00",
+  "readOnly": true,
+  "productionMutationsPerformed": [],
+  "schemaReinstalled": false,
+  "testProject": null,
+  "realStorageVerification": "blocked_no_approved_test_project_access",
+  "authenticatedPortalVerification": "blocked_no_approved_test_project_access",
+  "dryRun": {
+    "summary": {
+      "dueByDate": 0,
+      "blockedJobs": 0,
+      "failedFiles": 0,
+      "applications": 16,
+      "pendingFiles": 0,
+      "recruitments": 28,
+      "pendingManual": 0,
+      "pendingAutomatic": 0,
+      "automaticEligible": 0,
+      "completedWithDate": 0,
+      "missingCompletionDate": 23,
+      "missingDateApplications": 11
+    },
+    "timezone": "UTC",
+    "checkedAt": "2026-10-07T04:46:49.762939+00:00",
+    "pendingJobs": [],
+    "workerLimits": {
+      "claims": 10,
+      "enqueue": 10,
+      "filesPerClaim": 100
+    },
+    "automaticEnabled": false,
+    "dependencyAssessment": "Existing blocked jobs only. Eligible scopes need a separate read-only dependency assessment before approval; zero eligible scopes means no first-run dependencies.",
+    "manualModeFirstClaims": [],
+    "automaticFirstEnqueueCandidates": [],
+    "missingDateHandling": {
+      "recruitments": 23,
+      "applications": 11,
+      "datesInferred": 0
+    }
+  },
+  "infrastructure": {
+    "ledgerRows": 382,
+    "migrationInstalled": true,
+    "availableExtensions": [
+      {
+        "name": "pg_cron",
+        "available": "1.6.4",
+        "installed": null
+      },
+      {
+        "name": "pg_net",
+        "available": "0.20.4",
+        "installed": null
+      },
+      {
+        "name": "supabase_vault",
+        "available": "0.3.1",
+        "installed": "0.3.1"
+      }
+    ],
+    "workerVaultSecretNames": []
+  },
+  "protectedMaterialCounts": {
+    "accounts": 23,
+    "passportClaims": 49,
+    "ownRuns": 14,
+    "cvObjects": 10
+  },
+  "worker": {
+    "version": 1,
+    "deployedBundleSha256": "e068569f0c729b9266bf396bb08516a07f7f8fac11e64c513b2789f990e15257",
+    "verifyJwt": false,
+    "sourceMainSha": "e3223033d679fdc4f87086088b67d9a8e534f7fa",
+    "unauthorizedPostStatus": 404,
+    "environmentEnabledFlag": "not_verified_connector_cannot_read_environment",
+    "activationPerformed": false,
+    "sourceComparison": "MATCH after TypeScript ES2022/ESNext transpilation with comments removed; formatting differs.",
+    "sourceSha256": {
+      "functions/recruitment-retention/index.ts": "2218bcb2231a0c30c7c6b91bbcc0094a37d6888bb661e9aa57ba39f40cc9131e",
+      "functions/_shared/retention-worker.ts": "cfb92e06142468f1901a5397292402294bd193b560fd0eed1711550c032d1089"
+    }
+  },
+  "productionActivationDecision": "HOLD_PENDING_REAL_STORAGE_AND_AUTHENTICATED_PORTAL_TESTS",
+  "dependencyAssessment": {
+    "eligibleScopes": 0,
+    "pendingScopes": 0,
+    "blockedPendingJobs": 0,
+    "emptyFirstRun": true,
+    "futureScopesVerified": false
+  },
+  "firstRun": {
+    "workerWithAutomaticDisabled": {
+      "jobs": 0,
+      "applications": 0,
+      "files": 0
+    },
+    "workerWithAutomaticEnabled": {
+      "enqueueCandidates": 0,
+      "jobs": 0,
+      "applications": 0,
+      "files": 0
+    }
+  },
+  "afterReadOnlyChecks": {
+    "jobs": 0,
+    "files": 0,
+    "ownRuns": 14,
+    "accounts": 23,
+    "checkedAt": "2026-10-07T04:50:18.986466+00:00",
+    "cvObjects": 10,
+    "applications": 16,
+    "passportClaims": 49,
+    "automaticEnabled": false
+  },
+  "protectedMaterialCountsUnchanged": true,
+  "aggregateCountLimitation": "Aggregate before/after checks are not per-row integrity proofs; synthetic tests still need row/object digests.",
+  "operatorReportTests": {
+    "database": "retention_merge_verify",
+    "engine": "PostgreSQL 16.14",
+    "connection": "loopback:55432",
+    "syntheticOnly": true,
+    "assertions": 14,
+    "status": "PASS",
+    "rollback": true,
+    "reportSha256": "80cf39ce1a8fbe181c1bee86b9a1f3e8ae1ad2bb9c399137906c4dd6aba760e4",
+    "testSha256": "5e61df38eaed1ef01608335ac85729d0f9e5de21cee1ec5bad44413bf53e6549",
+    "privateLogSha256": "2c1975ab1d2356a745c4de13c6b97086ffa8c203d6d59868006964bab0d7cd95",
+    "realStorage": false
+  }
+}
