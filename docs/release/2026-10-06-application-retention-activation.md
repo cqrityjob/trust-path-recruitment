@@ -1,12 +1,22 @@
 # Ansökningslivscykel: separat schema, applikation och aktivering
 
-Status 2026-10-06: ägaren har godkänt mergeordningen #443 → #444 → #445.
-#443 och schema-PR #444 är mergade. Den officiella Supabase-integrationen installerade
+Status 2026-10-07: #443 → #444 → #445 är mergade. Hämtad GitHub-main är
+`e3223033d679fdc4f87086088b67d9a8e534f7fa`.
+Den officiella Supabase-integrationen installerade
 `20270305090000` på `wrygicdfxwjnrugduxnt`; schemat verifierades skrivskyddat 21:26 UTC.
 Bevis: [hosted-verifiering](2026-10-06-application-retention-hosted-verification.json) och
 [läsfrågor](2026-10-06-application-retention-hosted-verification.sql).
-Ingen befintlig produktionsuppgift har raderats. Worker, scheduler och automatisk gallring är avstängda;
-aktivering enligt steg 5–9 nedan kräver fortfarande separat test och ägarbeslut.
+Ingen produktionsradering har utförts i detta uppdrag. Skrivskyddad kontroll 2026-10-07 visar
+automatisk köläggning avstängd, ingen cron och tom raderingskö. Integrationen har nu deployat
+worker version 1 efter #445; deployment är skilt från exekveringsaktivering. Dashboardens
+hemlighetslista kontrollerades skrivskyddat 2026-10-07 04:57 UTC: både
+`RECRUITMENT_RETENTION_WORKER_ENABLED` och `RECRUITMENT_RETENTION_TOKEN` saknas.
+Workern kan därför inte passera sin körspärr. Inga hemlighetsvärden öppnades eller ändrades.
+Ett obehörigt POST ger också 404 före databasåtkomst; detta ensamt bevisar inte flaggans värde.
+Se [återstående förberedelser och beslut](2026-10-07-application-retention-preflight.md) och
+[skrivskyddat bevis](2026-10-07-application-retention-preflight.json).
+Verkligt Storage-test och inloggat portaltest väntar på ett separat godkänt testprojekt.
+Aktivering enligt steg 5–9 nedan kräver fortfarande dessa testbevis och separat ägarbeslut.
 Lovables befintliga rekryterings- och ansökningslayout behålls; en gemensam livscykelsektion läggs till.
 
 ## Kartläggning och återanvändning
@@ -91,11 +101,15 @@ Storage-remove räcker inte: bucket och Storage-katalog kontrolleras. Förlorad 
    använder injicerad Storage; den ersätter inte detta test av Supabases verkliga Storage API.
 7. Kör `supabase/retention/application-material.dry-run.sql` skrivskyddat mot avsedd miljö. Granska
    omfattning, arbetsgivarnas instruktioner, saknade avslutsdatum, blockerade delade beroenden och
-   potentiellt förfallna sexmånadersärenden. Ingen produktionstorrkörning/aktivering utförs i utvecklingen.
+   potentiellt förfallna sexmånadersärenden. Kör i `BEGIN TRANSACTION READ ONLY` / `COMMIT`.
+   Ägaren har separat beställt produktionstorrkörning utan produktionsaktivering; den utfördes
+   2026-10-07 medan testprojektåtkomst saknades. Den ska upprepas efter testbevis och direkt före beslut.
 8. **Separat produktionsaktivering efter ägarbeslut**: deploya verifierad worker, sätt serverhemlighet,
    aktivera arbetaren och lägg till den namngivna cron-körningen nedan. Först efter godkänt
    gallringsunderlag sätts `recruitment_erasure.activation.enabled=true` av databasadministratören.
    Manuellt bekräftade raderingsjobb kan köras när arbetaren är på även om automatisk gallring är av.
+   **Flaggan spärrar endast ny automatisk köläggning. Worker verkställer även redan köade automatiska
+   jobb. Ett beslut om enbart manuell drift kräver därför noll väntande automatiska jobb.**
 9. Verifiera första tillåtna körningen: fysiska rader borta, exklusiva filer borta, delade filer kvar,
    andra organisationer/konto/Passport/egna tester oförändrade, fel redovisade. Skriv datum, projekt,
    instruktion, antal, kvarvarande skuld och bevis i `docs/legal/retention-execution-log.md`.
