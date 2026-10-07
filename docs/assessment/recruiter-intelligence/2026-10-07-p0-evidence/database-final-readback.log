@@ -1,0 +1,11 @@
+Database: disposable loopback scp_ci_test; synthetic candidates only.
+ai_enabled=false
+transcript_enabled=false
+P0 AI run rows=0
+P0 reported cases=12
+P0 reports=12
+Each guard standalone viewport: completed session REST readback process_reflection=B, protocol_deviations=B.
+Each guard standalone viewport: session note B typed during pending process save is present in direct notes REST readback.
+The interviewer explicitly confirmed note B as candidate assessment material; note B then appears in the immutable final report.
+Process reflection/deviation text remains session process documentation; it is not included in the current report basis.
+Actual PostgreSQL version:16.15; PostgREST16.2; Chromium149.0.7827.55.
