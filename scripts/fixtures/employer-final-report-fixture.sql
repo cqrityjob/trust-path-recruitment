@@ -313,6 +313,7 @@ LANGUAGE plpgsql AS $$
 DECLARE
   _owner  uuid := '9e000000-0000-4000-8000-000000000001';
   _member uuid := '9e000000-0000-4000-8000-000000000003';
+  _candidate uuid;
   _packv uuid; _q1 uuid; _q2 uuid; _case uuid; _sess uuid; _note uuid; _plan uuid; _q uuid;
   _src uuid; _pp1 uuid; _pp2 uuid;
 BEGIN
@@ -332,6 +333,19 @@ BEGIN
   SELECT id INTO _q2 FROM public.scp_interview_core_questions
    WHERE pack_version_id = _packv AND code = 'Q2';
 
+  -- The application is the authority for its candidate and advert. Do not
+  -- create a candidate-bound standalone case or attach an application after
+  -- the report has been locked: both would bypass the lifecycle this fixture
+  -- exists to exercise. A standalone test has only its synthetic reference.
+  IF _app IS NOT NULL THEN
+    SELECT applicant_user_id INTO _candidate FROM public.job_applications
+     WHERE id = _app AND job_id = _job
+       AND employer_id = '9e000000-0000-4000-8000-00000000000a';
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'SCP_E4_FIXTURE_APPLICATION_MISMATCH';
+    END IF;
+  END IF;
+
   -- The RPCs are SECURITY DEFINER and read auth.uid(); they must be called as
   -- somebody. The journey owner is the person who would really have done this.
   PERFORM set_config('request.jwt.claims',
@@ -341,7 +355,7 @@ BEGIN
 
   _case := public.scp_iv_create_case('9e000000-0000-4000-8000-00000000000a',
              _title, _packv, 'E4 Kandidat',
-             'e4000000-0000-4000-8000-0000000000c1', NULL, _job, _app);
+             _candidate, CASE WHEN _app IS NULL THEN 'e4-fixture:' || _title END, _job, _app);
   PERFORM public.scp_iv_add_source(_case, 'employer_requirements', 'Kravprofil',
     E'Väktarutbildning. Erfarenhet av stationär bevakning.', 'recruitment_interview',
     'Berättigat intresse.');
