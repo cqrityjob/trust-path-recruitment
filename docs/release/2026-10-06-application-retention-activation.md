@@ -8,9 +8,11 @@ Bevis: [hosted-verifiering](2026-10-06-application-retention-hosted-verification
 [läsfrågor](2026-10-06-application-retention-hosted-verification.sql).
 Ingen produktionsradering har utförts i detta uppdrag. Skrivskyddad kontroll 2026-10-07 visar
 automatisk köläggning avstängd, ingen cron och tom raderingskö. Integrationen har nu deployat
-worker version 1 efter #445; deployment är skilt från exekveringsaktivering. Miljöflaggan kan
-inte verifieras genom den tillgängliga anslutningen. Ett obehörigt POST ger 404 före databasåtkomst;
-detta bevisar inte flaggans värde. Kontrollera den säkert före aktiveringsbeslutet.
+worker version 1 efter #445; deployment är skilt från exekveringsaktivering. Dashboardens
+hemlighetslista kontrollerades skrivskyddat 2026-10-07 04:57 UTC: både
+`RECRUITMENT_RETENTION_WORKER_ENABLED` och `RECRUITMENT_RETENTION_TOKEN` saknas.
+Workern kan därför inte passera sin körspärr. Inga hemlighetsvärden öppnades eller ändrades.
+Ett obehörigt POST ger också 404 före databasåtkomst; detta ensamt bevisar inte flaggans värde.
 Se [återstående förberedelser och beslut](2026-10-07-application-retention-preflight.md) och
 [skrivskyddat bevis](2026-10-07-application-retention-preflight.json).
 Verkligt Storage-test och inloggat portaltest väntar på ett separat godkänt testprojekt.

@@ -49,7 +49,7 @@ enqueue-batchen vara 0 och första exekveringsbatchen 0. Detta gäller bara obse
 ovan. Kör rapporten igen efter testerna och omedelbart före godkännande; nya manuella
 jobb, avslut och arbetsgivarval kan ändra omfattningen.
 
-## Installerad worker och kvarvarande inställningskontroll
+## Installerad worker och verifierad körspärr
 
 Supabases GitHub-integration har efter #445 deployat `recruitment-retention`, version **1**,
 med `verify_jwt=false`. Deployad bundle SHA-256:
@@ -60,11 +60,12 @@ Hämtade båda källfiler matchar main efter TypeScript-transpilering utan komme
 
 Ett POST utan Authorization gav HTTP 404 före databasåtkomst. Kodens grind kräver
 POST, miljöflaggan exakt `true`, token minst 32 tecken och rätt Bearer-token.
-**404 bevisar inte miljöflaggans värde.** Den tillgängliga MCP-anslutningen kan inte
-läsa Edge-hemligheternas konfiguration; en behörig operatör behöver säkert kontrollera
-att `RECRUITMENT_RETENTION_WORKER_ENABLED` är `false` eller saknas. Logga bara
-kontrollens resultat, aldrig hemlighetens värde eller en bearer-header. Detta är en
-kvarvarande aktiveringsspärr, inte ett antagande om att worker är körbar.
+**404 bevisar inte miljöflaggans värde.** MCP saknar denna inställningsåtkomst, men
+en separat skrivskyddad kontroll av den befintliga inloggade dashboardens kompletta
+Custom secrets-lista gjordes **2026-10-07 04:57 UTC**. Den innehåller en hemlighet;
+både `RECRUITMENT_RETENTION_WORKER_ENABLED` och `RECRUITMENT_RETENTION_TOKEN` saknas.
+Workern kan därför inte passera sin körspärr. Inga värden öppnades, kopierades eller
+ändrades. Metadata finns i bevisfilen. Upprepa kontrollen direkt före ägarbeslutet.
 
 Databasens `recruitment_erasure.activation.enabled=false` är verifierad. Cron-tabell
 saknas. Vault 0.3.1 är installerat; de namngivna worker-hemligheterna finns inte i Vault.
@@ -128,7 +129,7 @@ Nuvarande lokala SQL-, worker-mock- och komponentbevis ersätter inte dessa test
 ## Exakt framtida aktiveringsbeslut
 
 Detta beslut ska visas för ägaren först när ovanstående tester är gröna, miljögrinden
-verifierad och en ny skrivskyddad snapshot ger exakt mängd, ID och materialomfattning.
+återkontrollerad och en ny skrivskyddad snapshot ger exakt mängd, ID och materialomfattning.
 Nu saknas testbevis; aktivering ska därför inte godkännas på detta underlag.
 
 **A — Verkställning av manuellt bekräftade jobb:** Godkänn aktivering av verifierad

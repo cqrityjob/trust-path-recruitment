@@ -76,7 +76,16 @@
     "verifyJwt": false,
     "sourceMainSha": "e3223033d679fdc4f87086088b67d9a8e534f7fa",
     "unauthorizedPostStatus": 404,
-    "environmentEnabledFlag": "not_verified_connector_cannot_read_environment",
+    "environmentEnabledFlag": "absent_verified_in_dashboard_custom_secrets",
+    "environmentVerification": {
+      "checkedAt": "2026-10-07T04:57:06Z",
+      "url": "https://supabase.com/dashboard/project/wrygicdfxwjnrugduxnt/functions/secrets",
+      "customSecretCount": 1,
+      "workerEnabledPresent": false,
+      "retentionTokenPresent": false,
+      "secretValuesRead": false,
+      "settingsChanged": false
+    },
     "activationPerformed": false,
     "sourceComparison": "MATCH after TypeScript ES2022/ESNext transpilation with comments removed; formatting differs.",
     "sourceSha256": {
