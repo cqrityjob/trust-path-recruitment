@@ -1,0 +1,3894 @@
+{
+  "schema_version": 1,
+  "observed_at_utc": "2026-10-07 20:23:45 UTC",
+  "repository": "cqrityjob/trust-path-recruitment",
+  "main": {
+    "sha": "7fb66dcdaf22b7e0aec31b95c0cd4f220b0b873d",
+    "protected": false,
+    "protection": {
+      "enabled": false,
+      "required_status_checks": {
+        "enforcement_level": "off",
+        "contexts": [],
+        "checks": []
+      }
+    },
+    "visible_rulesets": []
+  },
+  "lovable": {
+    "project_id": "9ec625ef-34a1-4b4b-8cbb-712cae168579",
+    "latest_commit_sha": "7fb66dcdaf22b7e0aec31b95c0cd4f220b0b873d",
+    "is_published": true,
+    "published_runtime_commit_verified": false
+  },
+  "mandatory_policy": "All six CI core jobs and activated separate workflows must pass on current PR head/base. Global lint step is continue-on-error; skipped preview is not an install proof. No server-enforced required checks observed.",
+  "release_status": "NOT_RELEASE_READY; app schema-first pending gate; owner approval absent; real Auth/Storage/runtime and content preventive freeze outstanding",
+  "pull_requests": [
+    {
+      "number": 447,
+      "url": "https://github.com/cqrityjob/trust-path-recruitment/pull/447",
+      "state": "open",
+      "merged": false,
+      "draft": false,
+      "head_branch": "codex/recruiter-intelligence-v03-p0-schema",
+      "head_sha": "82564cc3ad390f0a378d8a8ef4376dbbc31fae12",
+      "base_branch": "main",
+      "base_sha": "7fb66dcdaf22b7e0aec31b95c0cd4f220b0b873d",
+      "check_count": 14,
+      "checks": [
+        {
+          "id": 112984347990,
+          "name": "CV browser — the signed-in journey",
+          "head_sha": "82564cc3ad390f0a378d8a8ef4376dbbc31fae12",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37677287715/job/112984347990",
+          "started_at": "2026-10-07T19:49:35Z",
+          "completed_at": "2026-10-07T19:55:25Z"
+        },
+        {
+          "id": 112984347987,
+          "name": "Public entry browser — homepage, employers and the employer journey",
+          "head_sha": "82564cc3ad390f0a378d8a8ef4376dbbc31fae12",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37677287715/job/112984347987",
+          "started_at": "2026-10-07T19:49:35Z",
+          "completed_at": "2026-10-07T20:22:55Z"
+        },
+        {
+          "id": 112984347836,
+          "name": "CV export — PDF and ATS proof",
+          "head_sha": "82564cc3ad390f0a378d8a8ef4376dbbc31fae12",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37677287715/job/112984347836",
+          "started_at": "2026-10-07T19:49:35Z",
+          "completed_at": "2026-10-07T19:51:08Z"
+        },
+        {
+          "id": 112984347795,
+          "name": "Lint, typecheck and deterministic checks",
+          "head_sha": "82564cc3ad390f0a378d8a8ef4376dbbc31fae12",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37677287715/job/112984347795",
+          "started_at": "2026-10-07T19:49:36Z",
+          "completed_at": "2026-10-07T20:13:40Z"
+        },
+        {
+          "id": 112984347531,
+          "name": "Passport three-market browser — catalogue, cards, pilot access",
+          "head_sha": "82564cc3ad390f0a378d8a8ef4376dbbc31fae12",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37677287715/job/112984347531",
+          "started_at": "2026-10-07T19:49:35Z",
+          "completed_at": "2026-10-07T20:01:33Z"
+        },
+        {
+          "id": 112984347463,
+          "name": "Migration replay, RLS and rollback tests",
+          "head_sha": "82564cc3ad390f0a378d8a8ef4376dbbc31fae12",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37677287715/job/112984347463",
+          "started_at": "2026-10-07T19:49:35Z",
+          "completed_at": "2026-10-07T20:01:40Z"
+        },
+        {
+          "id": 112984007498,
+          "name": "Passport public pilot browser evidence (isolated local stack)",
+          "head_sha": "82564cc3ad390f0a378d8a8ef4376dbbc31fae12",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37677287673/job/112984007498",
+          "started_at": "2026-10-07T19:48:48Z",
+          "completed_at": "2026-10-07T19:56:31Z"
+        },
+        {
+          "id": 112983941644,
+          "name": "Recruitment workspace browser evidence (isolated local stack)",
+          "head_sha": "82564cc3ad390f0a378d8a8ef4376dbbc31fae12",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37677287800/job/112983941644",
+          "started_at": "2026-10-07T19:48:40Z",
+          "completed_at": "2026-10-07T19:54:08Z"
+        },
+        {
+          "id": 112983941474,
+          "name": "E4 routed browser evidence (isolated local stack)",
+          "head_sha": "82564cc3ad390f0a378d8a8ef4376dbbc31fae12",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37677287749/job/112983941474",
+          "started_at": "2026-10-07T19:48:40Z",
+          "completed_at": "2026-10-07T19:53:38Z"
+        },
+        {
+          "id": 112983941463,
+          "name": "browser",
+          "head_sha": "82564cc3ad390f0a378d8a8ef4376dbbc31fae12",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37677287744/job/112983941463",
+          "started_at": "2026-10-07T19:48:40Z",
+          "completed_at": "2026-10-07T20:08:09Z"
+        },
+        {
+          "id": 112983941314,
+          "name": "Career Center persistence browser evidence (isolated local stack)",
+          "head_sha": "82564cc3ad390f0a378d8a8ef4376dbbc31fae12",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37677287735/job/112983941314",
+          "started_at": "2026-10-07T19:48:45Z",
+          "completed_at": "2026-10-07T19:51:58Z"
+        },
+        {
+          "id": 112983941159,
+          "name": "Assigned officer/manager reports and TestBank (isolated desktop/mobile)",
+          "head_sha": "82564cc3ad390f0a378d8a8ef4376dbbc31fae12",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37677287746/job/112983941159",
+          "started_at": "2026-10-07T19:48:40Z",
+          "completed_at": "2026-10-07T20:00:13Z"
+        },
+        {
+          "id": 112983941086,
+          "name": "Job ad back navigation browser evidence (isolated local stack)",
+          "head_sha": "82564cc3ad390f0a378d8a8ef4376dbbc31fae12",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37677287696/job/112983941086",
+          "started_at": "2026-10-07T19:48:40Z",
+          "completed_at": "2026-10-07T19:59:11Z"
+        },
+        {
+          "id": 112983917318,
+          "name": "Supabase Preview",
+          "head_sha": "82564cc3ad390f0a378d8a8ef4376dbbc31fae12",
+          "status": "completed",
+          "conclusion": "skipped",
+          "url": "https://github.com/cqrityjob/trust-path-recruitment/runs/112983917318",
+          "started_at": "2026-10-07T19:48:33Z",
+          "completed_at": "2026-10-07T19:48:33Z"
+        }
+      ],
+      "workflow_runs": [
+        {
+          "id": 37677287735,
+          "name": "Career Center persistence — routed browser evidence",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 364,
+          "jobs_url": "https://api.github.com/repos/cqrityjob/trust-path-recruitment/actions/runs/37677287735/jobs",
+          "logs_url": "https://api.github.com/repos/cqrityjob/trust-path-recruitment/actions/runs/37677287735/logs",
+          "workflow_id": 368173933
+        },
+        {
+          "id": 37677287749,
+          "name": "E4 employer final report — routed browser evidence",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 645,
+          "jobs_url": "https://api.github.com/repos/cqrityjob/trust-path-recruitment/actions/runs/37677287749/jobs",
+          "logs_url": "https://api.github.com/repos/cqrityjob/trust-path-recruitment/actions/runs/37677287749/logs",
+          "workflow_id": 355184616
+        },
+        {
+          "id": 37677287696,
+          "name": "Job ad back navigation — routed browser evidence",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 366,
+          "jobs_url": "https://api.github.com/repos/cqrityjob/trust-path-recruitment/actions/runs/37677287696/jobs",
+          "logs_url": "https://api.github.com/repos/cqrityjob/trust-path-recruitment/actions/runs/37677287696/logs",
+          "workflow_id": 368167355
+        },
+        {
+          "id": 37677287746,
+          "name": "Role assessment and TestBank regression",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 12,
+          "jobs_url": "https://api.github.com/repos/cqrityjob/trust-path-recruitment/actions/runs/37677287746/jobs",
+          "logs_url": "https://api.github.com/repos/cqrityjob/trust-path-recruitment/actions/runs/37677287746/logs",
+          "workflow_id": 376750970
+        },
+        {
+          "id": 37677287673,
+          "name": "Passport public pilot — real-backend evidence",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 326,
+          "jobs_url": "https://api.github.com/repos/cqrityjob/trust-path-recruitment/actions/runs/37677287673/jobs",
+          "logs_url": "https://api.github.com/repos/cqrityjob/trust-path-recruitment/actions/runs/37677287673/logs",
+          "workflow_id": 368639091
+        },
+        {
+          "id": 37677287800,
+          "name": "Recruitment workspace — routed browser evidence",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 401,
+          "jobs_url": "https://api.github.com/repos/cqrityjob/trust-path-recruitment/actions/runs/37677287800/jobs",
+          "logs_url": "https://api.github.com/repos/cqrityjob/trust-path-recruitment/actions/runs/37677287800/logs",
+          "workflow_id": 366188871
+        },
+        {
+          "id": 37677287744,
+          "name": "Security Work browser evidence",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 414,
+          "jobs_url": "https://api.github.com/repos/cqrityjob/trust-path-recruitment/actions/runs/37677287744/jobs",
+          "logs_url": "https://api.github.com/repos/cqrityjob/trust-path-recruitment/actions/runs/37677287744/logs",
+          "workflow_id": 365751290
+        },
+        {
+          "id": 37677287715,
+          "name": "CI",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 1696,
+          "jobs_url": "https://api.github.com/repos/cqrityjob/trust-path-recruitment/actions/runs/37677287715/jobs",
+          "logs_url": "https://api.github.com/repos/cqrityjob/trust-path-recruitment/actions/runs/37677287715/logs",
+          "workflow_id": 316060196
+        }
+      ],
+      "ci_jobs": [
+        {
+          "id": 112984347463,
+          "name": "Migration replay, RLS and rollback tests",
+          "status": "completed",
+          "conclusion": "success",
+          "steps": [
+            {
+              "number": 1,
+              "name": "Set up job",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 2,
+              "name": "Initialize containers",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 3,
+              "name": "Checkout repository",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 4,
+              "name": "Set up Bun",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 5,
+              "name": "Verify PostgreSQL client",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 6,
+              "name": "Wait for PostgreSQL",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 7,
+              "name": "Migration replay + database assertions + rollback verification",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 12,
+              "name": "Post Set up Bun",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 13,
+              "name": "Post Checkout repository",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 14,
+              "name": "Stop containers",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 15,
+              "name": "Complete job",
+              "status": "completed",
+              "conclusion": "success"
+            }
+          ]
+        },
+        {
+          "id": 112984347531,
+          "name": "Passport three-market browser — catalogue, cards, pilot access",
+          "status": "completed",
+          "conclusion": "success",
+          "steps": [
+            {
+              "number": 1,
+              "name": "Set up job",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 2,
+              "name": "Checkout repository",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 3,
+              "name": "Set up Bun",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 4,
+              "name": "Install dependencies",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 5,
+              "name": "Install Chromium",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 6,
+              "name": "Start the application",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 7,
+              "name": "Three-market browser suite (desktop and 375px)",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 8,
+              "name": "HAYAT document reading and saved assessment browser suite",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 9,
+              "name": "Passport date input browser suite",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 10,
+              "name": "Passport sharing browser suite (desktop and 375px)",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 11,
+              "name": "Upload the share screen pictures",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 12,
+              "name": "Server log",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 13,
+              "name": "Upload the failure traces",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 25,
+              "name": "Post Set up Bun",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 26,
+              "name": "Post Checkout repository",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 27,
+              "name": "Complete job",
+              "status": "completed",
+              "conclusion": "success"
+            }
+          ]
+        },
+        {
+          "id": 112984347795,
+          "name": "Lint, typecheck and deterministic checks",
+          "status": "completed",
+          "conclusion": "success",
+          "steps": [
+            {
+              "number": 1,
+              "name": "Set up job",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 2,
+              "name": "Checkout repository",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 3,
+              "name": "Set up Bun",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 4,
+              "name": "Install dependencies",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 5,
+              "name": "Lint",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 6,
+              "name": "Nullable RPC argument contract check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 7,
+              "name": "Interview case capability reader",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 8,
+              "name": "Type-check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 9,
+              "name": "Type-check the Passport guard scripts",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 10,
+              "name": "Sentinel original matrix constraints",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 11,
+              "name": "CIE deterministic regression check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 12,
+              "name": "Security Work programme rules check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 13,
+              "name": "Career profession bridge check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 14,
+              "name": "Knowledge graph integrity check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 15,
+              "name": "Security Competency / Career Guidance separation check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 16,
+              "name": "Career Discovery v3 instrument check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 17,
+              "name": "Career Discovery v3.2 content and readability check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 18,
+              "name": "Career Discovery v3.2 scoring equivalence check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 19,
+              "name": "Career Discovery v3.1 domain model check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 20,
+              "name": "Career Discovery v3.1 profession matching check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 21,
+              "name": "Career Discovery v3.1 golden personas",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 22,
+              "name": "Career Discovery recommendation check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 23,
+              "name": "Career Discovery report render check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 24,
+              "name": "Career Discovery v3.1 AI-explanation fallback check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 25,
+              "name": "Career Discovery v3.1 report locale guard",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 26,
+              "name": "Career Discovery profession differentiation check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 27,
+              "name": "v3.1 cd_evidence payload check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 28,
+              "name": "Career Discovery canonical result check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 29,
+              "name": "Career Discovery recommendation integrity check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 30,
+              "name": "Career Discovery conversion contract check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 31,
+              "name": "Career Discovery anonymous claim check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 32,
+              "name": "Public assessment auth and buffer check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 33,
+              "name": "Career analysis availability check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 34,
+              "name": "Career analysis surfaces check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 35,
+              "name": "My Career assessment gate check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 36,
+              "name": "Passport share transport check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 37,
+              "name": "Passport share gateway schema check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 38,
+              "name": "Passport share gateway transport check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 39,
+              "name": "Passport social image check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 40,
+              "name": "Security Passport Network statistics check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 41,
+              "name": "Security Passport Network statistics database test",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 42,
+              "name": "Security Passport public share check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 43,
+              "name": "Security Passport preview image check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 44,
+              "name": "Passport preview test-deployment guard",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 45,
+              "name": "Security Passport stale review check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 46,
+              "name": "Launch legal pages and signup acceptance check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 47,
+              "name": "Generative AI gate check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 48,
+              "name": "Generative AI texts check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 49,
+              "name": "Funnel measurement off check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 50,
+              "name": "Abu Dhabi source attribution presentation",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 51,
+              "name": "Negative controls",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 52,
+              "name": "Career Journey and canonical profile check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 53,
+              "name": "Career Card check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 54,
+              "name": "Passport separation check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 55,
+              "name": "Passport fixture and copy-parity check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 56,
+              "name": "Passport first-run journey check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 57,
+              "name": "Trust surface check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 58,
+              "name": "Application dialog scroll check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 59,
+              "name": "My Career dashboard check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 60,
+              "name": "Profile section navigation check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 61,
+              "name": "My Career experience check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 62,
+              "name": "My Career premium overview check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 63,
+              "name": "Passport identity engine check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 64,
+              "name": "Passport title derivation guard",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 65,
+              "name": "Passport credential form contract",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 66,
+              "name": "Passport pilot bug fix",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 67,
+              "name": "Passport profile basics check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 68,
+              "name": "Passport market profiles check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 69,
+              "name": "Passport market catalogue check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 70,
+              "name": "Passport global certification catalogue check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 71,
+              "name": "Passport certification research import check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 72,
+              "name": "Passport private credential reference check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 73,
+              "name": "Passport classifier behaviour (executed, not read)",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 74,
+              "name": "Passport governed issuer (application half)",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 75,
+              "name": "Passport schema-drift resilience check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 76,
+              "name": "Release parity bookkeeping check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 77,
+              "name": "Release frontier selection check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 78,
+              "name": "Deploy plan check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 79,
+              "name": "Deploy plan negative controls",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 80,
+              "name": "Schema-first release contract",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 81,
+              "name": "Interview UX and safety contract guard",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 82,
+              "name": "Passport regulatory-claim guard",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 83,
+              "name": "Passport scope surface check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 84,
+              "name": "Passport error-scope check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 85,
+              "name": "Passport product status truthfulness",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 86,
+              "name": "Passport decision truthfulness check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 87,
+              "name": "Passport reviewer decision quality and trust attribution",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 88,
+              "name": "Passport trust-source containment",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 89,
+              "name": "Passport sharing flow check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 90,
+              "name": "Passport employer employment verification",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 91,
+              "name": "Passport employer matching check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 92,
+              "name": "Employer job lifecycle check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 93,
+              "name": "Employer hire continuity check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 94,
+              "name": "Employer Other/Annat taxonomy check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 95,
+              "name": "Review proposal contract check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 96,
+              "name": "Candidate notification check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 97,
+              "name": "Employer UAT reconciliation check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 98,
+              "name": "Invitation links and requirement explanations",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 99,
+              "name": "Recruitment assessment UX check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 100,
+              "name": "Send-test dialog and levels check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 101,
+              "name": "Assessment pilot reliability check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 102,
+              "name": "Assessment participant panels render check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 103,
+              "name": "Assessment language contract check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 104,
+              "name": "Candidate journey launch check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 105,
+              "name": "Väktare pilot truth check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 106,
+              "name": "Väktare content quality check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 107,
+              "name": "Väktare self-report quality check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 108,
+              "name": "TRUST evidence report contract check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 109,
+              "name": "rds-v1 next-step parity (TypeScript half)",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 110,
+              "name": "Legacy assessment route guard",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 111,
+              "name": "Interview Intelligence pack contract check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 112,
+              "name": "BESKT architecture contract check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 113,
+              "name": "BESKT architecture negative controls",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 114,
+              "name": "BESKT governed-content guard",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 115,
+              "name": "BESKT candidate preparation (PR 3) source guard",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 116,
+              "name": "BESKT interview-case bridge (PR 4) source guard",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 117,
+              "name": "BESKT interview conduct (PR 5A) source guard",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 118,
+              "name": "BESKT conduct prompts and report (PR 6) source guard",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 119,
+              "name": "BESKT report independence boundary schema guard",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 120,
+              "name": "BESKT content authoring (PR 7) source guard",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 121,
+              "name": "Interview-method library tenant-read guard",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 122,
+              "name": "Outstanding-reviews operator-only guard",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 123,
+              "name": "BESKT interview tool (PR 5B) source and render guard",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 124,
+              "name": "BESKT product completion (PR 6) source and behaviour guard",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 125,
+              "name": "BESKT product completion (PR 6) render guard",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 126,
+              "name": "BESKT v0.1 import check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 127,
+              "name": "BESKT internal test activation guard",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 128,
+              "name": "BESKT complete-product guard",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 129,
+              "name": "Library direct access and recruitment setup guard",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 130,
+              "name": "Library structure and employer journey guard",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 131,
+              "name": "Test → interview start guard",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 132,
+              "name": "BESKT candidate notice copy digest",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 133,
+              "name": "Interview Intelligence pack render check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 134,
+              "name": "Interview Intelligence AI evaluation",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 135,
+              "name": "Interview Intelligence runtime contract check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 136,
+              "name": "Interview context bridge check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 137,
+              "name": "Interview finalisation capability check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 138,
+              "name": "Interview recruiter workflow check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 139,
+              "name": "Employer process continuity check (E1)",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 140,
+              "name": "Employer lifecycle check (phases 2 and 3)",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 141,
+              "name": "Employer access lifecycle check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 142,
+              "name": "Employer report access check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 143,
+              "name": "Participant report availability check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 144,
+              "name": "Recruitment workspace check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 145,
+              "name": "Interview context governance check (E3)",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 146,
+              "name": "Employer final report check (E4)",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 147,
+              "name": "Interview Intelligence AI provider adapter",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 148,
+              "name": "Interview evidence reliability guard",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 149,
+              "name": "Interview Intelligence gold dataset independence",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 150,
+              "name": "Migration content-duplicate check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 151,
+              "name": "Backend deployment target lock",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 152,
+              "name": "Authentication provider target lock",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 153,
+              "name": "SQL security guard",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 154,
+              "name": "Security Career Center check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 155,
+              "name": "Career Center journey check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 156,
+              "name": "Saved-report confidence check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 157,
+              "name": "Saved-report stage check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 158,
+              "name": "Security Career Center negative controls",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 159,
+              "name": "Security Career Center sources",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 160,
+              "name": "Professional identity and AI CV contract check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 161,
+              "name": "CQrityjob CV as an application source check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 162,
+              "name": "CV pilot flow check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 163,
+              "name": "CV provider data minimisation check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 164,
+              "name": "Candidate app navigation and terminology check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 165,
+              "name": "My Career hub check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 166,
+              "name": "Account confirmation state (Emsoms",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 167,
+              "name": "Passport / CV boundary",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 168,
+              "name": "Passport page composition (sketch 2)",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 169,
+              "name": "Passport credential shields",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 170,
+              "name": "Passport HAYAT reading and verification",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 171,
+              "name": "India entry journey",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 172,
+              "name": "Public address guard",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 173,
+              "name": "E-mail transport diagnosis",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 174,
+              "name": "Job ad JSON-LD escaping",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 175,
+              "name": "Job board launch readiness",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 176,
+              "name": "Passport card surface and homepage panel",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 177,
+              "name": "Passport catalogue filter model",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 178,
+              "name": "Passport credential picker",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 179,
+              "name": "Passport catalogue administration",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 180,
+              "name": "Passport expired-trust language",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 181,
+              "name": "Passport date validation",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 182,
+              "name": "Passport persona journeys",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 183,
+              "name": "Passport recipient card",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 184,
+              "name": "Passport holder name",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 185,
+              "name": "Passport skill contract",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 186,
+              "name": "Passport workspace",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 187,
+              "name": "Candidate destination composition (sketches 3, 4, 5)",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 188,
+              "name": "Candidate journey composition (images 0, 1, 2)",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 189,
+              "name": "Public header entry-point check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 190,
+              "name": "Employer registration and activation check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 191,
+              "name": "Employer registration notification chain check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 192,
+              "name": "MCP exposure check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 193,
+              "name": "Transactional e-mail function check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 194,
+              "name": "Employer new-application notice check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 195,
+              "name": "Security headers check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 196,
+              "name": "Invitation email guard check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 197,
+              "name": "Admin Portal error contract check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 198,
+              "name": "Admin Portal operational scope check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 199,
+              "name": "Admin Control Center lifecycle check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 200,
+              "name": "Admin employer status guard check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 201,
+              "name": "Public homepage check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 202,
+              "name": "Brand messaging check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 203,
+              "name": "Job ad back-navigation check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 204,
+              "name": "Employer landing page check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 205,
+              "name": "Root fallback screens check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 206,
+              "name": "Page head language check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 207,
+              "name": "Production build",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 413,
+              "name": "Post Set up Bun",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 414,
+              "name": "Post Checkout repository",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 415,
+              "name": "Complete job",
+              "status": "completed",
+              "conclusion": "success"
+            }
+          ]
+        },
+        {
+          "id": 112984347836,
+          "name": "CV export — PDF and ATS proof",
+          "status": "completed",
+          "conclusion": "success",
+          "steps": [
+            {
+              "number": 1,
+              "name": "Set up job",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 2,
+              "name": "Checkout repository",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 3,
+              "name": "Set up Bun",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 4,
+              "name": "Install dependencies",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 5,
+              "name": "Install poppler",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 6,
+              "name": "Install Chromium",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 7,
+              "name": "Production build",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 8,
+              "name": "Real PDF export and ATS proof",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 9,
+              "name": "Upload the exported PDFs",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 17,
+              "name": "Post Set up Bun",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 18,
+              "name": "Post Checkout repository",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 19,
+              "name": "Complete job",
+              "status": "completed",
+              "conclusion": "success"
+            }
+          ]
+        },
+        {
+          "id": 112984347987,
+          "name": "Public entry browser — homepage, employers and the employer journey",
+          "status": "completed",
+          "conclusion": "success",
+          "steps": [
+            {
+              "number": 1,
+              "name": "Set up job",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 2,
+              "name": "Checkout repository",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 3,
+              "name": "Set up Bun",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 4,
+              "name": "Install dependencies",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 5,
+              "name": "Install Chromium",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 6,
+              "name": "Start the application",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 7,
+              "name": "Public entry browser suites",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 8,
+              "name": "Signed-in header desktop widths",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 9,
+              "name": "Security Work programme browser journey",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 10,
+              "name": "Career Discovery explore-link browser suite",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 11,
+              "name": "Career Center journey browser suite",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 12,
+              "name": "Jobs product experience — bilingual responsive and navigation checks",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 13,
+              "name": "Reported user flows — desktop and mobile, Swedish and English",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 14,
+              "name": "Upload jobs responsive evidence",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 15,
+              "name": "Server log",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 16,
+              "name": "Upload the routed browser evidence",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 17,
+              "name": "Upload the failure traces",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 33,
+              "name": "Post Set up Bun",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 34,
+              "name": "Post Checkout repository",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 35,
+              "name": "Complete job",
+              "status": "completed",
+              "conclusion": "success"
+            }
+          ]
+        },
+        {
+          "id": 112984347990,
+          "name": "CV browser — the signed-in journey",
+          "status": "completed",
+          "conclusion": "success",
+          "steps": [
+            {
+              "number": 1,
+              "name": "Set up job",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 2,
+              "name": "Checkout repository",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 3,
+              "name": "Set up Bun",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 4,
+              "name": "Install dependencies",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 5,
+              "name": "Install Chromium",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 6,
+              "name": "Start the application",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 7,
+              "name": "Signed-in CV browser suite",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 8,
+              "name": "CV preview reveal browser suite",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 9,
+              "name": "Profile section navigation browser suite",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 10,
+              "name": "Profile, CV and Passport surfaces browser suite",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 11,
+              "name": "Server log",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 12,
+              "name": "Upload the failure traces",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 23,
+              "name": "Post Set up Bun",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 24,
+              "name": "Post Checkout repository",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 25,
+              "name": "Complete job",
+              "status": "completed",
+              "conclusion": "success"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "number": 448,
+      "url": "https://github.com/cqrityjob/trust-path-recruitment/pull/448",
+      "state": "open",
+      "merged": false,
+      "draft": true,
+      "head_branch": "codex/recruiter-intelligence-v03-p0-app",
+      "head_sha": "20dd01e7c73017dd44e250ebbefd7c02995f043c",
+      "base_branch": "codex/recruiter-intelligence-v03-p0-schema",
+      "base_sha": "82564cc3ad390f0a378d8a8ef4376dbbc31fae12",
+      "check_count": 8,
+      "checks": [
+        {
+          "id": 112985113175,
+          "name": "CV export — PDF and ATS proof",
+          "head_sha": "20dd01e7c73017dd44e250ebbefd7c02995f043c",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37677452111/job/112985113175",
+          "started_at": "2026-10-07T19:51:22Z",
+          "completed_at": "2026-10-07T19:55:14Z"
+        },
+        {
+          "id": 112985113167,
+          "name": "Passport three-market browser — catalogue, cards, pilot access",
+          "head_sha": "20dd01e7c73017dd44e250ebbefd7c02995f043c",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37677452111/job/112985113167",
+          "started_at": "2026-10-07T19:51:23Z",
+          "completed_at": "2026-10-07T20:06:07Z"
+        },
+        {
+          "id": 112985113158,
+          "name": "Lint, typecheck and deterministic checks",
+          "head_sha": "20dd01e7c73017dd44e250ebbefd7c02995f043c",
+          "status": "completed",
+          "conclusion": "failure",
+          "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37677452111/job/112985113158",
+          "started_at": "2026-10-07T19:51:22Z",
+          "completed_at": "2026-10-07T20:14:26Z"
+        },
+        {
+          "id": 112985113075,
+          "name": "Migration replay, RLS and rollback tests",
+          "head_sha": "20dd01e7c73017dd44e250ebbefd7c02995f043c",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37677452111/job/112985113075",
+          "started_at": "2026-10-07T19:51:23Z",
+          "completed_at": "2026-10-07T20:03:13Z"
+        },
+        {
+          "id": 112985112987,
+          "name": "CV browser — the signed-in journey",
+          "head_sha": "20dd01e7c73017dd44e250ebbefd7c02995f043c",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37677452111/job/112985112987",
+          "started_at": "2026-10-07T19:51:22Z",
+          "completed_at": "2026-10-07T19:57:29Z"
+        },
+        {
+          "id": 112985112904,
+          "name": "Public entry browser — homepage, employers and the employer journey",
+          "head_sha": "20dd01e7c73017dd44e250ebbefd7c02995f043c",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37677452111/job/112985112904",
+          "started_at": "2026-10-07T19:51:22Z",
+          "completed_at": "2026-10-07T20:22:11Z"
+        },
+        {
+          "id": 112984510194,
+          "name": "Preview image in workerd (Cloudflare Worker runtime)",
+          "head_sha": "20dd01e7c73017dd44e250ebbefd7c02995f043c",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37677452033/job/112984510194",
+          "started_at": "2026-10-07T19:49:58Z",
+          "completed_at": "2026-10-07T19:51:33Z"
+        },
+        {
+          "id": 112984474071,
+          "name": "Supabase Preview",
+          "head_sha": "20dd01e7c73017dd44e250ebbefd7c02995f043c",
+          "status": "completed",
+          "conclusion": "skipped",
+          "url": "https://github.com/cqrityjob/trust-path-recruitment/runs/112984474071",
+          "started_at": "2026-10-07T19:49:51Z",
+          "completed_at": "2026-10-07T19:49:51Z"
+        }
+      ],
+      "workflow_runs": [
+        {
+          "id": 37677452033,
+          "name": "Passport preview image — Cloudflare Worker runtime evidence",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 25,
+          "jobs_url": "https://api.github.com/repos/cqrityjob/trust-path-recruitment/actions/runs/37677452033/jobs",
+          "logs_url": "https://api.github.com/repos/cqrityjob/trust-path-recruitment/actions/runs/37677452033/logs",
+          "workflow_id": 375232636
+        },
+        {
+          "id": 37677452111,
+          "name": "CI",
+          "status": "completed",
+          "conclusion": "failure",
+          "run_number": 1697,
+          "jobs_url": "https://api.github.com/repos/cqrityjob/trust-path-recruitment/actions/runs/37677452111/jobs",
+          "logs_url": "https://api.github.com/repos/cqrityjob/trust-path-recruitment/actions/runs/37677452111/logs",
+          "workflow_id": 316060196
+        }
+      ],
+      "ci_jobs": [
+        {
+          "id": 112985112904,
+          "name": "Public entry browser — homepage, employers and the employer journey",
+          "status": "completed",
+          "conclusion": "success",
+          "steps": [
+            {
+              "number": 1,
+              "name": "Set up job",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 2,
+              "name": "Checkout repository",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 3,
+              "name": "Set up Bun",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 4,
+              "name": "Install dependencies",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 5,
+              "name": "Install Chromium",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 6,
+              "name": "Start the application",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 7,
+              "name": "Public entry browser suites",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 8,
+              "name": "Signed-in header desktop widths",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 9,
+              "name": "Security Work programme browser journey",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 10,
+              "name": "Career Discovery explore-link browser suite",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 11,
+              "name": "Career Center journey browser suite",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 12,
+              "name": "Jobs product experience — bilingual responsive and navigation checks",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 13,
+              "name": "Reported user flows — desktop and mobile, Swedish and English",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 14,
+              "name": "Upload jobs responsive evidence",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 15,
+              "name": "Server log",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 16,
+              "name": "Upload the routed browser evidence",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 17,
+              "name": "Upload the failure traces",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 33,
+              "name": "Post Set up Bun",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 34,
+              "name": "Post Checkout repository",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 35,
+              "name": "Complete job",
+              "status": "completed",
+              "conclusion": "success"
+            }
+          ]
+        },
+        {
+          "id": 112985112987,
+          "name": "CV browser — the signed-in journey",
+          "status": "completed",
+          "conclusion": "success",
+          "steps": [
+            {
+              "number": 1,
+              "name": "Set up job",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 2,
+              "name": "Checkout repository",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 3,
+              "name": "Set up Bun",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 4,
+              "name": "Install dependencies",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 5,
+              "name": "Install Chromium",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 6,
+              "name": "Start the application",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 7,
+              "name": "Signed-in CV browser suite",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 8,
+              "name": "CV preview reveal browser suite",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 9,
+              "name": "Profile section navigation browser suite",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 10,
+              "name": "Profile, CV and Passport surfaces browser suite",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 11,
+              "name": "Server log",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 12,
+              "name": "Upload the failure traces",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 23,
+              "name": "Post Set up Bun",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 24,
+              "name": "Post Checkout repository",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 25,
+              "name": "Complete job",
+              "status": "completed",
+              "conclusion": "success"
+            }
+          ]
+        },
+        {
+          "id": 112985113075,
+          "name": "Migration replay, RLS and rollback tests",
+          "status": "completed",
+          "conclusion": "success",
+          "steps": [
+            {
+              "number": 1,
+              "name": "Set up job",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 2,
+              "name": "Initialize containers",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 3,
+              "name": "Checkout repository",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 4,
+              "name": "Set up Bun",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 5,
+              "name": "Verify PostgreSQL client",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 6,
+              "name": "Wait for PostgreSQL",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 7,
+              "name": "Migration replay + database assertions + rollback verification",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 12,
+              "name": "Post Set up Bun",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 13,
+              "name": "Post Checkout repository",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 14,
+              "name": "Stop containers",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 15,
+              "name": "Complete job",
+              "status": "completed",
+              "conclusion": "success"
+            }
+          ]
+        },
+        {
+          "id": 112985113158,
+          "name": "Lint, typecheck and deterministic checks",
+          "status": "completed",
+          "conclusion": "failure",
+          "steps": [
+            {
+              "number": 1,
+              "name": "Set up job",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 2,
+              "name": "Checkout repository",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 3,
+              "name": "Set up Bun",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 4,
+              "name": "Install dependencies",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 5,
+              "name": "Lint",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 6,
+              "name": "Nullable RPC argument contract check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 7,
+              "name": "Interview case capability reader",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 8,
+              "name": "Recruiter Intelligence P0 process persistence and frozen readback",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 9,
+              "name": "Type-check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 10,
+              "name": "Type-check the Passport guard scripts",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 11,
+              "name": "Sentinel original matrix constraints",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 12,
+              "name": "CIE deterministic regression check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 13,
+              "name": "Security Work programme rules check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 14,
+              "name": "Career profession bridge check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 15,
+              "name": "Knowledge graph integrity check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 16,
+              "name": "Security Competency / Career Guidance separation check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 17,
+              "name": "Career Discovery v3 instrument check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 18,
+              "name": "Career Discovery v3.2 content and readability check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 19,
+              "name": "Career Discovery v3.2 scoring equivalence check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 20,
+              "name": "Career Discovery v3.1 domain model check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 21,
+              "name": "Career Discovery v3.1 profession matching check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 22,
+              "name": "Career Discovery v3.1 golden personas",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 23,
+              "name": "Career Discovery recommendation check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 24,
+              "name": "Career Discovery report render check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 25,
+              "name": "Career Discovery v3.1 AI-explanation fallback check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 26,
+              "name": "Career Discovery v3.1 report locale guard",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 27,
+              "name": "Career Discovery profession differentiation check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 28,
+              "name": "v3.1 cd_evidence payload check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 29,
+              "name": "Career Discovery canonical result check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 30,
+              "name": "Career Discovery recommendation integrity check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 31,
+              "name": "Career Discovery conversion contract check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 32,
+              "name": "Career Discovery anonymous claim check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 33,
+              "name": "Public assessment auth and buffer check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 34,
+              "name": "Career analysis availability check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 35,
+              "name": "Career analysis surfaces check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 36,
+              "name": "My Career assessment gate check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 37,
+              "name": "Passport share transport check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 38,
+              "name": "Passport share gateway schema check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 39,
+              "name": "Passport share gateway transport check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 40,
+              "name": "Passport social image check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 41,
+              "name": "Security Passport Network statistics check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 42,
+              "name": "Security Passport Network statistics database test",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 43,
+              "name": "Security Passport public share check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 44,
+              "name": "Security Passport preview image check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 45,
+              "name": "Passport preview test-deployment guard",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 46,
+              "name": "Security Passport stale review check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 47,
+              "name": "Launch legal pages and signup acceptance check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 48,
+              "name": "Generative AI gate check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 49,
+              "name": "Generative AI texts check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 50,
+              "name": "Funnel measurement off check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 51,
+              "name": "Abu Dhabi source attribution presentation",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 52,
+              "name": "Negative controls",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 53,
+              "name": "Career Journey and canonical profile check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 54,
+              "name": "Career Card check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 55,
+              "name": "Passport separation check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 56,
+              "name": "Passport fixture and copy-parity check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 57,
+              "name": "Passport first-run journey check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 58,
+              "name": "Trust surface check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 59,
+              "name": "Application dialog scroll check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 60,
+              "name": "My Career dashboard check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 61,
+              "name": "Profile section navigation check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 62,
+              "name": "My Career experience check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 63,
+              "name": "My Career premium overview check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 64,
+              "name": "Passport identity engine check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 65,
+              "name": "Passport title derivation guard",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 66,
+              "name": "Passport credential form contract",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 67,
+              "name": "Passport pilot bug fix",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 68,
+              "name": "Passport profile basics check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 69,
+              "name": "Passport market profiles check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 70,
+              "name": "Passport market catalogue check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 71,
+              "name": "Passport global certification catalogue check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 72,
+              "name": "Passport certification research import check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 73,
+              "name": "Passport private credential reference check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 74,
+              "name": "Passport classifier behaviour (executed, not read)",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 75,
+              "name": "Passport governed issuer (application half)",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 76,
+              "name": "Passport schema-drift resilience check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 77,
+              "name": "Release parity bookkeeping check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 78,
+              "name": "Release frontier selection check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 79,
+              "name": "Deploy plan check",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 80,
+              "name": "Deploy plan negative controls",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 81,
+              "name": "Schema-first release contract",
+              "status": "completed",
+              "conclusion": "failure"
+            },
+            {
+              "number": 82,
+              "name": "Interview UX and safety contract guard",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 83,
+              "name": "Passport regulatory-claim guard",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 84,
+              "name": "Passport scope surface check",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 85,
+              "name": "Passport error-scope check",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 86,
+              "name": "Passport product status truthfulness",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 87,
+              "name": "Passport decision truthfulness check",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 88,
+              "name": "Passport reviewer decision quality and trust attribution",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 89,
+              "name": "Passport trust-source containment",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 90,
+              "name": "Passport sharing flow check",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 91,
+              "name": "Passport employer employment verification",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 92,
+              "name": "Passport employer matching check",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 93,
+              "name": "Employer job lifecycle check",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 94,
+              "name": "Employer hire continuity check",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 95,
+              "name": "Employer Other/Annat taxonomy check",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 96,
+              "name": "Review proposal contract check",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 97,
+              "name": "Candidate notification check",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 98,
+              "name": "Employer UAT reconciliation check",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 99,
+              "name": "Invitation links and requirement explanations",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 100,
+              "name": "Recruitment assessment UX check",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 101,
+              "name": "Send-test dialog and levels check",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 102,
+              "name": "Assessment pilot reliability check",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 103,
+              "name": "Assessment participant panels render check",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 104,
+              "name": "Assessment language contract check",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 105,
+              "name": "Candidate journey launch check",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 106,
+              "name": "Väktare pilot truth check",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 107,
+              "name": "Väktare content quality check",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 108,
+              "name": "Väktare self-report quality check",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 109,
+              "name": "TRUST evidence report contract check",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 110,
+              "name": "rds-v1 next-step parity (TypeScript half)",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 111,
+              "name": "Legacy assessment route guard",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 112,
+              "name": "Interview Intelligence pack contract check",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 113,
+              "name": "BESKT architecture contract check",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 114,
+              "name": "BESKT architecture negative controls",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 115,
+              "name": "BESKT governed-content guard",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 116,
+              "name": "BESKT candidate preparation (PR 3) source guard",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 117,
+              "name": "BESKT interview-case bridge (PR 4) source guard",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 118,
+              "name": "BESKT interview conduct (PR 5A) source guard",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 119,
+              "name": "BESKT conduct prompts and report (PR 6) source guard",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 120,
+              "name": "BESKT report independence boundary schema guard",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 121,
+              "name": "BESKT content authoring (PR 7) source guard",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 122,
+              "name": "Interview-method library tenant-read guard",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 123,
+              "name": "Outstanding-reviews operator-only guard",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 124,
+              "name": "BESKT interview tool (PR 5B) source and render guard",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 125,
+              "name": "BESKT product completion (PR 6) source and behaviour guard",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 126,
+              "name": "BESKT product completion (PR 6) render guard",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 127,
+              "name": "BESKT v0.1 import check",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 128,
+              "name": "BESKT internal test activation guard",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 129,
+              "name": "BESKT complete-product guard",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 130,
+              "name": "Library direct access and recruitment setup guard",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 131,
+              "name": "Library structure and employer journey guard",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 132,
+              "name": "Test → interview start guard",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 133,
+              "name": "BESKT candidate notice copy digest",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 134,
+              "name": "Interview Intelligence pack render check",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 135,
+              "name": "Interview Intelligence AI evaluation",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 136,
+              "name": "Interview Intelligence runtime contract check",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 137,
+              "name": "Interview context bridge check",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 138,
+              "name": "Interview finalisation capability check",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 139,
+              "name": "Interview recruiter workflow check",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 140,
+              "name": "Employer process continuity check (E1)",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 141,
+              "name": "Employer lifecycle check (phases 2 and 3)",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 142,
+              "name": "Employer access lifecycle check",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 143,
+              "name": "Employer report access check",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 144,
+              "name": "Participant report availability check",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 145,
+              "name": "Recruitment workspace check",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 146,
+              "name": "Interview context governance check (E3)",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 147,
+              "name": "Employer final report check (E4)",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 148,
+              "name": "Interview Intelligence AI provider adapter",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 149,
+              "name": "Interview evidence reliability guard",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 150,
+              "name": "Interview Intelligence gold dataset independence",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 151,
+              "name": "Migration content-duplicate check",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 152,
+              "name": "Backend deployment target lock",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 153,
+              "name": "Authentication provider target lock",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 154,
+              "name": "SQL security guard",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 155,
+              "name": "Security Career Center check",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 156,
+              "name": "Career Center journey check",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 157,
+              "name": "Saved-report confidence check",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 158,
+              "name": "Saved-report stage check",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 159,
+              "name": "Security Career Center negative controls",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 160,
+              "name": "Security Career Center sources",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 161,
+              "name": "Professional identity and AI CV contract check",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 162,
+              "name": "CQrityjob CV as an application source check",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 163,
+              "name": "CV pilot flow check",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 164,
+              "name": "CV provider data minimisation check",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 165,
+              "name": "Candidate app navigation and terminology check",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 166,
+              "name": "My Career hub check",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 167,
+              "name": "Account confirmation state (Emsoms",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 168,
+              "name": "Passport / CV boundary",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 169,
+              "name": "Passport page composition (sketch 2)",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 170,
+              "name": "Passport credential shields",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 171,
+              "name": "Passport HAYAT reading and verification",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 172,
+              "name": "India entry journey",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 173,
+              "name": "Public address guard",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 174,
+              "name": "E-mail transport diagnosis",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 175,
+              "name": "Job ad JSON-LD escaping",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 176,
+              "name": "Job board launch readiness",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 177,
+              "name": "Passport card surface and homepage panel",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 178,
+              "name": "Passport catalogue filter model",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 179,
+              "name": "Passport credential picker",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 180,
+              "name": "Passport catalogue administration",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 181,
+              "name": "Passport expired-trust language",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 182,
+              "name": "Passport date validation",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 183,
+              "name": "Passport persona journeys",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 184,
+              "name": "Passport recipient card",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 185,
+              "name": "Passport holder name",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 186,
+              "name": "Passport skill contract",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 187,
+              "name": "Passport workspace",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 188,
+              "name": "Candidate destination composition (sketches 3, 4, 5)",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 189,
+              "name": "Candidate journey composition (images 0, 1, 2)",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 190,
+              "name": "Public header entry-point check",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 191,
+              "name": "Employer registration and activation check",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 192,
+              "name": "Employer registration notification chain check",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 193,
+              "name": "MCP exposure check",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 194,
+              "name": "Transactional e-mail function check",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 195,
+              "name": "Employer new-application notice check",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 196,
+              "name": "Security headers check",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 197,
+              "name": "Invitation email guard check",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 198,
+              "name": "Admin Portal error contract check",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 199,
+              "name": "Admin Portal operational scope check",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 200,
+              "name": "Admin Control Center lifecycle check",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 201,
+              "name": "Admin employer status guard check",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 202,
+              "name": "Public homepage check",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 203,
+              "name": "Brand messaging check",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 204,
+              "name": "Job ad back-navigation check",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 205,
+              "name": "Employer landing page check",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 206,
+              "name": "Root fallback screens check",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 207,
+              "name": "Page head language check",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 208,
+              "name": "Production build",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 415,
+              "name": "Post Set up Bun",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 416,
+              "name": "Post Checkout repository",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 417,
+              "name": "Complete job",
+              "status": "completed",
+              "conclusion": "success"
+            }
+          ]
+        },
+        {
+          "id": 112985113167,
+          "name": "Passport three-market browser — catalogue, cards, pilot access",
+          "status": "completed",
+          "conclusion": "success",
+          "steps": [
+            {
+              "number": 1,
+              "name": "Set up job",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 2,
+              "name": "Checkout repository",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 3,
+              "name": "Set up Bun",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 4,
+              "name": "Install dependencies",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 5,
+              "name": "Install Chromium",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 6,
+              "name": "Start the application",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 7,
+              "name": "Three-market browser suite (desktop and 375px)",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 8,
+              "name": "HAYAT document reading and saved assessment browser suite",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 9,
+              "name": "Passport date input browser suite",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 10,
+              "name": "Passport sharing browser suite (desktop and 375px)",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 11,
+              "name": "Upload the share screen pictures",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 12,
+              "name": "Server log",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 13,
+              "name": "Upload the failure traces",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 25,
+              "name": "Post Set up Bun",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 26,
+              "name": "Post Checkout repository",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 27,
+              "name": "Complete job",
+              "status": "completed",
+              "conclusion": "success"
+            }
+          ]
+        },
+        {
+          "id": 112985113175,
+          "name": "CV export — PDF and ATS proof",
+          "status": "completed",
+          "conclusion": "success",
+          "steps": [
+            {
+              "number": 1,
+              "name": "Set up job",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 2,
+              "name": "Checkout repository",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 3,
+              "name": "Set up Bun",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 4,
+              "name": "Install dependencies",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 5,
+              "name": "Install poppler",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 6,
+              "name": "Install Chromium",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 7,
+              "name": "Production build",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 8,
+              "name": "Real PDF export and ATS proof",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 9,
+              "name": "Upload the exported PDFs",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 17,
+              "name": "Post Set up Bun",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 18,
+              "name": "Post Checkout repository",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 19,
+              "name": "Complete job",
+              "status": "completed",
+              "conclusion": "success"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

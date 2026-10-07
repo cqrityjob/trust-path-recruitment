@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "evidence": "selected completed verify-job log lines; not full logs",
+  "entries": [
+    {
+      "sha": "82564cc3ad390f0a378d8a8ef4376dbbc31fae12",
+      "job_id": 112984347795,
+      "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37677287715/job/112984347795",
+      "lines": [
+        "2026-10-07T19:50:54.8143983Z ✖ 925 problems (811 errors, 114 warnings)",
+        "2026-10-07T19:50:54.8502637Z ##[error]Process completed with exit code 1.",
+        "2026-10-07T19:53:28.7191049Z 33 checks, 0 failures",
+        "2026-10-07T20:02:49.1951242Z negative-controls:interview-method-tenant-read: all 29 mutations were detected, every file restored byte-for-byte, working tree clean.",
+        "2026-10-07T20:12:07.9871259Z   SCHEMA RELEASE — this branch changes no application code.",
+        "2026-10-07T20:12:10.7170440Z  0 fail",
+        "2026-10-07T20:12:12.8266474Z 65 checks passed, 0 failed.",
+        "2026-10-07T20:12:15.2957483Z Interview-method library tenant-read guard: 117 of 117 assertions passed.",
+        "2026-10-07T20:12:17.1554841Z 443 passed, 0 failed",
+        "2026-10-07T20:12:17.3085425Z 91 passed, 0 failed",
+        "2026-10-07T20:12:17.5301751Z 1438 passed, 0 failed",
+        "2026-10-07T20:12:17.8284221Z 597 passed, 0 failed",
+        "2026-10-07T20:12:17.9544225Z 183 passed, 0 failed",
+        "2026-10-07T20:12:21.7735578Z 130 passed, 0 failed",
+        "2026-10-07T20:12:38.9135575Z 182 assertions, 0 failed"
+      ]
+    },
+    {
+      "sha": "20dd01e7c73017dd44e250ebbefd7c02995f043c",
+      "job_id": 112985113158,
+      "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37677452111/job/112985113158",
+      "lines": [
+        "2026-10-07T19:52:35.1635492Z ✖ 888 problems (774 errors, 114 warnings)",
+        "2026-10-07T19:52:35.1996417Z ##[error]Process completed with exit code 1.",
+        "2026-10-07T19:52:40.2331966Z  33 pass",
+        "2026-10-07T19:52:40.2332276Z  0 fail",
+        "2026-10-07T19:52:40.2332591Z  197 expect() calls",
+        "2026-10-07T19:55:17.1295124Z 33 checks, 0 failures",
+        "2026-10-07T20:05:00.3355292Z negative-controls:interview-method-tenant-read: all 29 mutations were detected, every file restored byte-for-byte, working tree clean.",
+        "2026-10-07T20:14:25.0800425Z   BLOCKED — application code depends on a migration that is not applied.",
+        "2026-10-07T20:14:25.0803837Z       needs function \"scp_iv_save_session_process\"",
+        "2026-10-07T20:14:25.0805559Z       needs function \"scp_iv_create_manual_finding\"",
+        "2026-10-07T20:14:25.0807171Z       needs function \"scp_iv_review_manual_finding\"",
+        "2026-10-07T20:14:25.0809075Z       needs function \"scp_iv_manual_finding_capabilities\"",
+        "2026-10-07T20:14:25.0811441Z       needs function \"scp_iv_case_content_manifest\"",
+        "2026-10-07T20:14:25.0813592Z       needs column \"scp_interview_findings.origin\"",
+        "2026-10-07T20:14:25.0815815Z       needs column \"scp_interview_findings.neutral_question\"",
+        "2026-10-07T20:14:25.0818024Z       needs column \"scp_interview_findings.source_label\"",
+        "2026-10-07T20:14:25.0820679Z       needs column \"scp_interview_findings.responsible_label\"",
+        "2026-10-07T20:14:25.0822688Z       needs column \"scp_interview_findings.next_action\"",
+        "2026-10-07T20:14:25.0824673Z       needs column \"scp_interview_findings.due_on\"",
+        "2026-10-07T20:14:25.0826896Z       needs column \"scp_interview_findings.created_by\"",
+        "2026-10-07T20:14:25.0829008Z       needs column \"scp_interview_findings.operation_id\"",
+        "2026-10-07T20:14:25.0830856Z       needs column \"scp_interview_findings.creation_request_hash\"",
+        "2026-10-07T20:14:25.0832701Z       needs column \"scp_interview_findings.revision\"",
+        "2026-10-07T20:14:25.0834481Z       needs column \"scp_interview_findings.updated_at\"",
+        "2026-10-07T20:14:25.0935203Z ##[error]Process completed with exit code 1."
+      ]
+    }
+  ]
+}
