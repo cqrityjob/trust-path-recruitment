@@ -7,6 +7,90 @@
   "$comment": "RELEASE PARITY STATE. Enforced by scripts/release-parity-check.ts, which runs in CI and before a release. This file records, for every canonical migration at the release frontier, whether it is believed applied on the hosted database, and which database objects it introduces. The guard fails when application code on this branch references an object whose migration is not applied -- the exact class of failure that stopped employers saving jobs during UAT. It NEVER connects to a database, holds no credentials and applies no migration; it compares this repository against itself. Edit it deliberately: every entry is an owner-level statement about production.", 
   "frontier": [
     {
+      "file": "20270306090000_recruiter_intelligence_interview_foundation.sql",
+      "hostedState": "pending",
+      "note": "Recruiter Intelligence v0.3 P0: schema-only review. No production application or activation is authorised in this task. The dependent application PR must remain blocked until official integration, read-only verification and a separately reviewed applied record. Existing content approvals and legacy hashes are preserved.",
+      "rollback": "supabase/rollback/20270306090000_recruiter_intelligence_interview_foundation_rollback.sql",
+      "verify": "Replay canonical history and new SQL tests in isolated synthetic PostgreSQL; compare RPC bodies, ACLs, nullable contracts, findings columns/constraints, report builder and event constraint to hosted read-only observations before recording applied. Confirm unchanged pack hashes, approvals, eight questions/six competencies, final report payloads and disabled AI/transcript/retention flags. See docs/release/2026-10-07-recruiter-intelligence-p0.md.",
+      "introduces": [
+        {
+          "kind": "function",
+          "object": "scp_iv_save_session_process"
+        },
+        {
+          "kind": "function",
+          "object": "scp_iv_create_manual_finding"
+        },
+        {
+          "kind": "function",
+          "object": "scp_iv_review_manual_finding"
+        },
+        {
+          "kind": "function",
+          "object": "scp_iv_manual_finding_capabilities"
+        },
+        {
+          "kind": "function",
+          "object": "scp_iv_case_content_manifest"
+        },
+        {
+          "kind": "column",
+          "object": "origin",
+          "table": "scp_interview_findings"
+        },
+        {
+          "kind": "column",
+          "object": "neutral_question",
+          "table": "scp_interview_findings"
+        },
+        {
+          "kind": "column",
+          "object": "source_label",
+          "table": "scp_interview_findings"
+        },
+        {
+          "kind": "column",
+          "object": "responsible_label",
+          "table": "scp_interview_findings"
+        },
+        {
+          "kind": "column",
+          "object": "next_action",
+          "table": "scp_interview_findings"
+        },
+        {
+          "kind": "column",
+          "object": "due_on",
+          "table": "scp_interview_findings"
+        },
+        {
+          "kind": "column",
+          "object": "created_by",
+          "table": "scp_interview_findings"
+        },
+        {
+          "kind": "column",
+          "object": "operation_id",
+          "table": "scp_interview_findings"
+        },
+        {
+          "kind": "column",
+          "object": "creation_request_hash",
+          "table": "scp_interview_findings"
+        },
+        {
+          "kind": "column",
+          "object": "revision",
+          "table": "scp_interview_findings"
+        },
+        {
+          "kind": "column",
+          "object": "updated_at",
+          "table": "scp_interview_findings"
+        }
+      ]
+    },
+    {
       "file": "20270305090000_application_retention_lifecycle.sql",
       "hostedState": "applied",
       "note": "Owner authorised ordered merges #443 → #444 → #445. Schema installation verified separately from Lovable publication. Destructive production activation is not authorised: worker, scheduler and automatic queueing remain off; real synthetic Storage verification and the separate activation plan are still required.",

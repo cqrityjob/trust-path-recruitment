@@ -12114,6 +12114,31 @@ elif [ "$SPRC_PASSED" -lt 4 ]; then
 fi
 
 # ---------------------------------------------------------------------------
+# Recruiter Intelligence v0.3 P0. The historical rollback chain above restores
+# the original report builder by design. Restore only the latest additive
+# report extension from its canonical migration, then test the current API.
+# No migration is applied to a hosted database by this runner.
+# ---------------------------------------------------------------------------
+echo "==> Running Recruiter Intelligence interview foundation assertions"
+set +e
+RI_REPORT_OUT="$(sed -n '/^-- Extend the existing builder/,/^-- No broad UPDATE/p' \
+  supabase/migrations/20270306090000_recruiter_intelligence_interview_foundation.sql \
+  | psql -v ON_ERROR_STOP=1 -d "$TEST_DB" 2>&1)"
+RI_REPORT_RC=$?
+RI_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" \
+  -f supabase/tests/recruiter_intelligence_interview_foundation_test.sql 2>&1)"
+RI_RC=$?
+set -e
+RI_PASSED="$(echo "$RI_OUT" | grep -c "ok  " || true)"
+if [ "$RI_REPORT_RC" -ne 0 ] || [ "$RI_RC" -ne 0 ] || [ "$RI_PASSED" -lt 56 ]; then
+  echo "$RI_REPORT_OUT" >&2
+  echo "$RI_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "Recruiter Intelligence interview foundation"
+else
+  echo "    ok  ${RI_PASSED} AI-off persistence, access, provenance and immutable report assertions"
+fi
+
+# ---------------------------------------------------------------------------
 # 7. Tidy up
 # ---------------------------------------------------------------------------
 if [ "${KEEP_TEST_DB:-0}" = "1" ]; then
@@ -12175,6 +12200,7 @@ echo "              ${IIP_PASSED} Role Interview Pack governance assertions,"
 echo "              ${IVR_PASSED} Interview Intelligence runtime assertions,"
 echo "              ${IVI_PASSED} Interview Intelligence integrity assertions,"
 echo "              ${TRUST_PASSED} CQrity TRUST method assertions,"
+echo "              ${RI_PASSED} Recruiter Intelligence interview foundation assertions,"
 echo "              ${ROLLBACK_PASSED} rollback assertions,"
 echo "              ${SPAP_PASSED} application-disclosure assertions,"
 echo "              ${SPSK_PASSED} skill/language taxonomy assertions,"
