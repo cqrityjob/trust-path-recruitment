@@ -35,7 +35,7 @@ import { derivePreviewIdentity } from "./identity/visibility";
 import type { TitleRule } from "./identity/types";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import type { Database } from "@/integrations/supabase/types";
+import type { Database } from "@/integrations/supabase/database";
 import { orNull } from "./rpc";
 import { confirmedWorkLocation, splitWorkCountry } from "./onboarding";
 import type {

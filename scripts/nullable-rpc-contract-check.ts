@@ -214,8 +214,8 @@ for (const ex of EXCEPTIONS) {
   }
 }
 
-// The overlay remains closed to these two functions; unchanged generator
-// output, including Sentinel and Passport additions, passes through intact.
+// The two legacy nullable exceptions remain closed. Additive RI foundation
+// contracts are reviewed separately below; all other generated types pass through.
 console.log("\nthe override list is closed");
 ck(
   "4.1 only the documented functions have overrides",
@@ -233,6 +233,59 @@ for (const file of ["client.ts", "client.server.ts", "auth-middleware.ts", "publ
       read(`src/integrations/supabase/${file}`),
     ),
   );
+}
+const foundation = [
+  ["scp_iv_save_session_process", ["_reflection", "_deviations"]],
+  [
+    "scp_iv_create_manual_finding",
+    ["_question_id", "_source_passage_id", "_source_label", "_responsible_label", "_due_on"],
+  ],
+  ["scp_iv_review_manual_finding", ["_responsible_label", "_due_on"]],
+  ["scp_iv_manual_finding_capabilities", []],
+  ["scp_iv_case_content_manifest", []],
+] as const;
+ck(
+  "4.3 only the reviewed RI foundation functions have additive contracts",
+  JSON.stringify(
+    alias("FoundationFunctions")
+      ?.getProperties()
+      .map((p) => p.name)
+      .sort(),
+  ) === JSON.stringify(foundation.map(([name]) => name).sort()),
+);
+for (const [name, nullable] of foundation) {
+  const def = latestDefinition(name);
+  const args = field(field(functions, name), "Args");
+  const sqlArgs = def?.args
+    .split(",")
+    .map((v) => v.trim().split(/\s+/)[0])
+    .sort();
+  ck(
+    `4.4 ${name} argument names match its versioned SQL`,
+    JSON.stringify(sqlArgs) ===
+      JSON.stringify(
+        args
+          ?.getProperties()
+          .map((p) => p.name)
+          .sort(),
+      ),
+  );
+  ck(
+    `4.5 ${name} has no defaults or STRICT short-circuit`,
+    Boolean(def) &&
+      !/\bDEFAULT\b|=/i.test(def!.args) &&
+      !/\bSTRICT\b|RETURNS\s+NULL\s+ON\s+NULL\s+INPUT/i.test(def!.header),
+  );
+  for (const key of sqlArgs ?? []) {
+    const type = field(args, key);
+    ck(
+      `4.6 ${name}.${key} is required and has only its reviewed nullability`,
+      !!type &&
+        !(args?.getProperty(key)!.flags! & ts.SymbolFlags.Optional) &&
+        checker.typeToString(type).includes("null") ===
+          (nullable as readonly string[]).includes(key),
+    );
+  }
 }
 function diagnostics(p: ts.Program) {
   return ts

@@ -1,3 +1,4 @@
+import { isOutstandingFinding } from "@/lib/interview-intelligence/finding-state";
 // Assess — the recruiter interprets confirmed material against the role.
 //
 // This lived at the bottom of the review screen, which made Review and Assess
@@ -293,7 +294,7 @@ function Page() {
   // Questions with a judgement, not judgement ROWS. See assessedQuestionCount.
   const done = assessedQuestionCount(d.assessments);
   const total = d.questions.length;
-  const openItems = d.findings.filter((f) => f.resolutionState !== "resolved");
+  const openItems = d.findings.filter((f) => isOutstandingFinding(f.resolutionState));
   // Editable until the record is released. The database supersedes rather than
   // overwrites at any point; what the product locks is the published report.
   const released = d.report?.status === "final" || d.status === "reported";

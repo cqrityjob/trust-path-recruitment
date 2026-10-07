@@ -12,7 +12,7 @@ import {
 } from "../src/lib/security-passport/international";
 import { readPassportProfileIdentity } from "../src/lib/security-passport/profile-identity.server";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database } from "../src/integrations/supabase/types";
+import type { Database } from "../src/integrations/supabase/database";
 
 describe("credential-only Passport ownership", () => {
   for (const [claimType, credentialCode, expected] of [

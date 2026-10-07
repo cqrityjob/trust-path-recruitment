@@ -4,7 +4,7 @@
 // international metadata function, each through the caller's own client.
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database } from "@/integrations/supabase/types";
+import type { Database } from "@/integrations/supabase/database";
 import { resolveHolderDisplayName } from "./holder-display-name";
 
 export interface HolderDisplayNameRead {

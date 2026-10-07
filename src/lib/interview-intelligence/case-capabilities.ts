@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database } from "../../integrations/supabase/types";
+import type { Database } from "../../integrations/supabase/database";
 
 /** Availability for a case the caller may read, never administrative metadata.
  * The database rechecks case authority on every call. Errors must not be

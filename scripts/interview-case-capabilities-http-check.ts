@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { createHmac } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
-import type { Database } from "../src/integrations/supabase/types";
+import type { Database } from "../src/integrations/supabase/database";
 import { readInterviewCaseCapabilities } from "../src/lib/interview-intelligence/case-capabilities";
 const origin = process.env.INTERVIEW_ACCESS_API_URL || "http://127.0.0.1:59133";
 if (!["127.0.0.1", "localhost"].includes(new URL(origin).hostname)) throw Error("Local API only");

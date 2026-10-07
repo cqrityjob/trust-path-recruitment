@@ -56,12 +56,18 @@ import { Disclosure, Eyebrow } from "@/components/employer/interview/InterviewLa
 import {
   getInterviewCase,
   saveInterviewNote,
+  saveSessionProcess,
   setQuestionState,
   setSessionState,
 } from "@/lib/interview-intelligence/runtime.functions";
 import { getInterviewCaseContext } from "@/lib/interview-intelligence/context.functions";
 import { contextOf } from "@/lib/interview-intelligence/context-outcome";
 import type { FollowUpReason } from "@/lib/interview-intelligence/context";
+import { useSessionProcessSave } from "@/lib/interview-intelligence/use-session-process-save";
+import { drainInterviewNoteDraft } from "@/lib/interview-intelligence/note-save-drain";
+import { drainInterviewDrafts } from "@/lib/interview-intelligence/draft-save-drain";
+import { InterviewOpeningDisclosure } from "@/components/employer/interview/InterviewOpeningDisclosure";
+import { ManualControlPoints } from "@/components/employer/interview/ManualControlPoints";
 
 export const Route = createFileRoute(
   "/_authenticated/employer/$employerSlug/interview-intelligence/$caseId/interview",
@@ -108,6 +114,7 @@ function Page() {
   const noteFn = useServerFn(saveInterviewNote);
   const qStateFn = useServerFn(setQuestionState);
   const sStateFn = useServerFn(setSessionState);
+  const processFn = useServerFn(saveSessionProcess);
 
   const q = useQuery({
     queryKey: ["ii", "case", caseId],
@@ -129,7 +136,6 @@ function Page() {
   const [active, setActive] = useState(0);
   const [draft, setDraft] = useState("");
   const [savedAt, setSavedAt] = useState<string | null>(null);
-  const [reflection, setReflection] = useState("");
   const [navOpen, setNavOpen] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [noteError, setNoteError] = useState(false);
@@ -258,6 +264,16 @@ function Page() {
   const d = q.data;
   const session = d?.session ?? null;
   const question = d?.questions[active] ?? null;
+  const { process, flush: flushProcess } = useSessionProcessSave(
+    session,
+    (input) => processFn({ data: input }),
+    session !== null && session.status !== "completed",
+  );
+
+  const reloadProcess = async () => {
+    const fresh = await q.refetch();
+    if (fresh.data?.session) process?.takeStored(fresh.data.session);
+  };
 
   const existingNote =
     session && question ? (session.notes.find((n) => n.questionId === question.id) ?? null) : null;
@@ -344,28 +360,45 @@ function Page() {
     const stored = storedRef.current;
     const sessionId = sessionIdRef.current;
     if (!stored || !sessionId) return true;
-    const body = draftRef.current;
-    if (body === stored.body) return true;
-    // Nothing stored and nothing typed: there is no note to write.
-    if (stored.id === null && body.trim() === "") return true;
-    try {
-      await saveNote.mutateAsync({ sessionId, questionId: stored.questionId, body });
-      return true;
-    } catch {
-      setNoteError(true);
-      return false;
-    }
+    const ok = await drainInterviewNoteDraft({
+      readDraft: () => draftRef.current,
+      readSaved: () => known.current[stored.questionId]?.body ?? stored.body,
+      hasSavedNote: () => Boolean(known.current[stored.questionId]?.id ?? stored.id),
+      isCurrentQuestion: () => storedRef.current?.questionId === stored.questionId,
+      write: (body) => saveNote.mutateAsync({ sessionId, questionId: stored.questionId, body }),
+    });
+    if (!ok) setNoteError(true);
+    return ok;
   };
 
   /** Run an action only if the pending note is safely stored first. */
   const guarded = async (action: () => void | Promise<void>) => {
-    const ok = await flushNote();
+    const ok = await drainInterviewDrafts({
+      flushNote,
+      flushProcess,
+      noteIsDirty: () => {
+        const stored = storedRef.current;
+        if (!stored) return false;
+        const mine = known.current[stored.questionId];
+        const body = draftRef.current;
+        return (
+          body !== (mine?.body ?? stored.body) &&
+          (Boolean(mine?.id ?? stored.id) || body.trim() !== "")
+        );
+      },
+      processIsDirty: () => process?.dirty ?? false,
+    });
     if (!ok) {
       setBlockedNotice(true);
       return;
     }
     setBlockedNotice(false);
-    await action();
+    try {
+      await action();
+    } catch {
+      // The mutation's error state is shown below. Keep drafts and the
+      // current question in place so the interviewer can retry.
+    }
   };
 
   // Autosave. An interview is a live conversation; nobody should have to
@@ -632,7 +665,12 @@ function Page() {
             <button
               type="button"
               className={`${BUTTON} mt-2`}
-              onClick={() => setSState.mutate({ sessionId: session.id, status: "in_progress" })}
+              disabled={setSState.isPending}
+              onClick={() =>
+                void guarded(async () => {
+                  await setSState.mutateAsync({ sessionId: session.id, status: "in_progress" });
+                })
+              }
             >
               {t("iiu.iv.resume")}
             </button>
@@ -653,6 +691,50 @@ function Page() {
                 {t("iiu.iv.qstate.retry")}
               </button>
             </p>
+          </Panel>
+        </div>
+      )}
+
+      {setSState.isError && (
+        <div className="mt-5 max-w-3xl">
+          <Panel tone="governance" role="alert" title={t("iiu.iv.session.savefailed")}>
+            <p>{interviewErrorMessage(setSState.error, t)}</p>
+            <button
+              type="button"
+              className={`${BUTTON} mt-2`}
+              disabled={setSState.isPending}
+              onClick={() =>
+                void guarded(async () => {
+                  if (setSState.variables) await setSState.mutateAsync(setSState.variables);
+                })
+              }
+            >
+              {t("iiu.iv.qstate.retry")}
+            </button>
+          </Panel>
+        </div>
+      )}
+
+      {process?.error != null && (
+        <div className="mt-5 max-w-3xl">
+          <Panel
+            tone="governance"
+            role="alert"
+            title={t(
+              process.conflict ? "iiu.iv.process.conflict.title" : "iiu.iv.process.savefailed",
+            )}
+          >
+            <p>
+              {t(process.conflict ? "iiu.iv.process.conflict.body" : "iiu.iv.process.failed.body")}
+            </p>
+            <button
+              type="button"
+              className={`${BUTTON} mt-2`}
+              disabled={process.pending > 0 || q.isFetching}
+              onClick={() => void (process.conflict ? reloadProcess() : flushProcess())}
+            >
+              {t(process.conflict ? "iiu.iv.note.conflict.reload" : "iiu.iv.note.retry")}
+            </button>
           </Panel>
         </div>
       )}
@@ -732,10 +814,7 @@ function Page() {
                 // Folded: the requirement's name stays in view, its meaning is
                 // one click away, so the note field is not pushed off screen.
                 return (
-                  <Disclosure
-                    className="mt-3"
-                    summary={`${t("iiu.lv.why")}: ${reqName(req)}`}
-                  >
+                  <Disclosure className="mt-3" summary={`${t("iiu.lv.why")}: ${reqName(req)}`}>
                     <p className="max-w-[70ch] text-sm leading-relaxed text-foreground">
                       {reqMeaning(req) || reqName(req)}
                     </p>
@@ -901,6 +980,16 @@ function Page() {
 
               {/* ---- Secondary reading, all of it one click away ---- */}
               <div className="mt-6 space-y-3">
+                {d.plan && (
+                  <Disclosure summary={t("iiu.pp.plan.opening")}>
+                    {d.plan.openingGuidance && (
+                      <p className="mb-3 text-sm leading-relaxed text-foreground">
+                        {d.plan.openingGuidance}
+                      </p>
+                    )}
+                    <InterviewOpeningDisclosure aiUsed={d.plan.aiUsed} />
+                  </Disclosure>
+                )}
                 <Disclosure summary={t("iiu.lv.howto")}>
                   <ol className="list-decimal space-y-1 pl-5 text-sm leading-relaxed text-muted-foreground">
                     <li>{t("iiu.iv.howto.1")}</li>
@@ -972,8 +1061,14 @@ function Page() {
                         type="button"
                         aria-current={session.peaceStage === stage ? "step" : undefined}
                         className={`${BUTTON} ${session.peaceStage === stage ? "border-accent font-semibold" : ""}`}
+                        disabled={setSState.isPending}
                         onClick={() =>
-                          setSState.mutate({ sessionId: session.id, peaceStage: stage })
+                          void guarded(async () => {
+                            await setSState.mutateAsync({
+                              sessionId: session.id,
+                              peaceStage: stage,
+                            });
+                          })
                         }
                       >
                         {uiLabel(PEACE_LABEL, stage, t)}
@@ -1169,6 +1264,17 @@ function Page() {
               </SupportGroup>
             </div>
 
+            <Disclosure
+              className="mt-4 border-t border-border pt-3"
+              summary={t("ri.control.title")}
+            >
+              <ManualControlPoints
+                detail={d}
+                onChanged={refresh}
+                initialQuestionId={question?.id}
+              />
+            </Disclosure>
+
             {/* The governed conduct rows: a sequence and a set of prohibited
                 TECHNIQUES, which is a different list from the prohibited
                 SUBJECTS above. Both are needed -- a permitted subject asked
@@ -1211,6 +1317,26 @@ function Page() {
         </aside>
       </div>
 
+      {completed && (session.processReflection || session.protocolDeviations) && (
+        <Disclosure className="mt-9 max-w-3xl" summary={t("iiu.iv.reflection.title")}>
+          {session.processReflection && (
+            <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">
+              {session.processReflection}
+            </p>
+          )}
+          {session.protocolDeviations && (
+            <div className="mt-3">
+              <h3 className="text-sm font-medium text-foreground">
+                {t("iiu.iv.deviations.title")}
+              </h3>
+              <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-foreground">
+                {session.protocolDeviations}
+              </p>
+            </div>
+          )}
+        </Disclosure>
+      )}
+
       {/* ---- Closing the conversation ----
            Ending the interview is the one lifecycle move on this screen, and
            it is drawn as the primary action only once every question is
@@ -1232,17 +1358,52 @@ function Page() {
           <textarea
             id="reflect"
             rows={3}
-            value={reflection}
-            onChange={(e) => setReflection(e.target.value)}
+            maxLength={4000}
+            disabled={setSState.isPending}
+            value={process?.draft.processReflection ?? ""}
+            onChange={(e) => process?.edit({ processReflection: e.target.value })}
             aria-describedby="reflect-hint"
             className={`${FIELD} max-w-3xl`}
           />
+          <label
+            htmlFor="protocol-deviations"
+            className="mt-4 block text-sm font-medium text-foreground"
+          >
+            {t("iiu.iv.deviations.title")}
+          </label>
+          <p id="deviations-hint" className="mt-0.5 max-w-[70ch] text-xs text-muted-foreground">
+            {t("iiu.iv.deviations.note")}
+          </p>
+          <textarea
+            id="protocol-deviations"
+            rows={3}
+            maxLength={4000}
+            disabled={setSState.isPending}
+            value={process?.draft.protocolDeviations ?? ""}
+            onChange={(e) => process?.edit({ protocolDeviations: e.target.value })}
+            aria-describedby="deviations-hint"
+            className={`${FIELD} max-w-3xl`}
+          />
+          <p role="status" aria-live="polite" className="mt-2 text-xs text-muted-foreground">
+            {t(
+              process?.pending
+                ? "iiu.lv.saving"
+                : process?.error
+                  ? "iiu.iv.process.unsaved"
+                  : process?.dirty
+                    ? "iiu.iv.process.unsaved"
+                    : "iiu.iv.process.saved",
+            )}
+          </p>
           <div className="mt-3 flex flex-wrap gap-2">
             <button
               type="button"
               className={BUTTON}
+              disabled={setSState.isPending}
               onClick={() =>
-                void guarded(() => setSState.mutate({ sessionId: session.id, status: "paused" }))
+                void guarded(async () => {
+                  await setSState.mutateAsync({ sessionId: session.id, status: "paused" });
+                })
               }
             >
               {t("iiu.iv.pause")}
@@ -1250,15 +1411,15 @@ function Page() {
             <button
               type="button"
               className={toCover.length === 0 ? PRIMARY_BUTTON : BUTTON}
+              disabled={setSState.isPending}
               onClick={() =>
-                void guarded(() =>
-                  setSState.mutate({
+                void guarded(async () => {
+                  await setSState.mutateAsync({
                     sessionId: session.id,
                     status: "completed",
                     peaceStage: "evaluation",
-                    processReflection: reflection || undefined,
-                  }),
-                )
+                  });
+                })
               }
             >
               {t("iiu.iv.finish")}

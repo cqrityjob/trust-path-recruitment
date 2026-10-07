@@ -51,7 +51,8 @@ import {
   type ProvenanceRequestRow,
 } from "./provenance";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database, Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
+import type { Database } from "@/integrations/supabase/database";
+import type { Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
 import {
   CREDENTIAL_CODE_MAX_LENGTH,
   clearIncompatible,

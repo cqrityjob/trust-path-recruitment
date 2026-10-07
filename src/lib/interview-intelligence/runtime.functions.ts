@@ -10,6 +10,7 @@
 // provider, and no key is ever shipped to one.
 
 import { readInterviewCaseCapabilities } from "./case-capabilities";
+import { readContentIntegrity, type ContentIntegrity } from "./content-integrity";
 import { createServerFn } from "@tanstack/react-start";
 import { parseReportPayload, type FinalReportReadback, type ReportPreview } from "./final-report";
 import { caseIsInStage, type CaseStage } from "./case-stage";
@@ -214,7 +215,9 @@ export const getInterviewWorkload = createServerFn({ method: "GET" })
     const count = (stage: CaseStage) => cases.filter((c) => caseIsInStage(c.status, stage)).length;
 
     let proposalsAwaitingReview = 0;
-    const openIds = cases.filter((c) => caseIsInStage(c.status, "inEvidenceReview")).map((c) => c.id);
+    const openIds = cases
+      .filter((c) => caseIsInStage(c.status, "inEvidenceReview"))
+      .map((c) => c.id);
     if (openIds.length > 0) {
       const { count: pending } = await db
         .from("scp_interview_evidence_proposals")
@@ -455,6 +458,8 @@ export interface CaseDetail {
   readonly packContentStatus: string | null;
   readonly validationLabel: string | null;
   readonly packContentHash: string | null;
+  readonly contentIntegrity: ContentIntegrity;
+  readonly manualFindingCapabilities: { readonly mayCreate: boolean; readonly mayReview: boolean };
   readonly transcriptConfirmedAt: string | null;
   /** The date after which this case's material is no longer kept, when one has
    *  been set. Null means NOT CONFIGURED, and the surfaces say so rather than
@@ -467,6 +472,11 @@ export interface CaseDetail {
     readonly purposeCode: string;
     readonly origin: string;
     readonly passageCount: number;
+    readonly passages: readonly {
+      readonly id: string;
+      readonly index: number;
+      readonly content: string;
+    }[];
   }[];
   readonly questions: readonly {
     readonly id: string;
@@ -530,6 +540,8 @@ export interface CaseDetail {
   }[];
   readonly plan: {
     readonly id: string;
+    /** Provenance of this saved plan, independent of today's feature switch. */
+    readonly aiUsed: boolean;
     readonly status: string;
     readonly versionNumber: number;
     readonly roleSummary: string | null;
@@ -555,6 +567,9 @@ export interface CaseDetail {
     readonly startedAt: string | null;
     readonly completedAt: string | null;
     readonly interviewerNames: string | null;
+    readonly processReflection: string | null;
+    readonly protocolDeviations: string | null;
+    readonly updatedAt: string;
     readonly questions: readonly {
       readonly questionId: string;
       readonly state: string;
@@ -608,6 +623,16 @@ export interface CaseDetail {
      *  so the assessment screen could not put "Q4 is unclear about who wrote
      *  the report" beside Q4. */
     readonly questionId: string | null;
+    readonly origin: string | null;
+    readonly neutralQuestion: string | null;
+    readonly sourcePassageId: string | null;
+    readonly sourceLabel: string | null;
+    readonly responsibleLabel: string | null;
+    readonly nextAction: string | null;
+    readonly dueOn: string | null;
+    readonly revision: number;
+    readonly humanNote: string | null;
+    readonly updatedAt: string;
   }[];
   readonly assessments: readonly {
     readonly id: string;
@@ -724,7 +749,7 @@ export const getInterviewCase = createServerFn({ method: "GET" })
     const caseRes = await db
       .from("scp_interview_cases")
       .select(
-        "id, employer_id, title, candidate_display_name, application_id, job_id, status, pack_version_id, pack_content_hash, transcript_lawful_basis_confirmed_at, retain_until, scp_interview_pack_versions(content_status, validation_label, scp_interview_packs(name_sv))",
+        "id, employer_id, title, candidate_display_name, application_id, job_id, status, pack_version_id, trust_method_id, pack_content_hash, transcript_lawful_basis_confirmed_at, retain_until, scp_interview_pack_versions(content_status, validation_label, scp_interview_packs(name_sv))",
       )
       .eq("id", caseId)
       .maybeSingle();
@@ -735,6 +760,9 @@ export const getInterviewCase = createServerFn({ method: "GET" })
     if (!caseRes.data) throw new Error("INTERVIEW_CASE_NOT_FOUND");
     const c = caseRes.data;
     const packVersionId = c.pack_version_id as string;
+    // A legacy case without a method pin gets no method rows. A caller's
+    // access to a second case never selects that case's method here.
+    const pinnedMethodIds = c.trust_method_id ? [c.trust_method_id] : [];
 
     const [
       sourcesRes,
@@ -761,13 +789,18 @@ export const getInterviewCase = createServerFn({ method: "GET" })
       competencyRes,
       questionCompetencyRes,
       verificationRuleRes,
+      integrityRes,
+      manualCapabilitiesRes,
     ] = await Promise.all([
       db
         .from("scp_interview_case_sources")
         .select("id, source_kind, label, purpose_code, origin")
         .eq("case_id", caseId)
         .order("created_at"),
-      db.from("scp_interview_source_passages").select("id, source_id"),
+      db
+        .from("scp_interview_source_passages")
+        .select("id, source_id, passage_index, content, scp_interview_case_sources!inner(case_id)")
+        .eq("scp_interview_case_sources.case_id", caseId),
       db
         .from("scp_interview_core_questions")
         .select("id, code, display_order, question_type, prompt_sv")
@@ -796,14 +829,16 @@ export const getInterviewCase = createServerFn({ method: "GET" })
       db
         .from("scp_interview_prep_plans")
         .select(
-          "id, status, version_number, role_summary, candidate_summary, time_plan, opening_guidance, closing_guidance, ai_disclosure, ai_disclosure_en",
+          "id, status, version_number, ai_run_id, role_summary, candidate_summary, time_plan, opening_guidance, closing_guidance, ai_disclosure, ai_disclosure_en",
         )
         .eq("case_id", caseId)
         .order("version_number", { ascending: false })
         .limit(1),
       db
         .from("scp_interview_sessions")
-        .select("id, status, peace_stage, started_at, completed_at, interviewer_names")
+        .select(
+          "id, status, peace_stage, started_at, completed_at, interviewer_names, process_reflection, protocol_deviations, updated_at",
+        )
         .eq("case_id", caseId)
         .order("started_at", { ascending: false })
         .limit(1),
@@ -823,7 +858,9 @@ export const getInterviewCase = createServerFn({ method: "GET" })
         .order("created_at"),
       db
         .from("scp_interview_findings")
-        .select("id, finding_kind, statement, resolution_state, question_id")
+        .select(
+          "id, finding_kind, statement, resolution_state, question_id, origin, neutral_question, source_passage_id, source_label, responsible_label, next_action, due_on, revision, human_note, updated_at",
+        )
         .eq("case_id", caseId)
         .order("created_at"),
       db
@@ -847,19 +884,23 @@ export const getInterviewCase = createServerFn({ method: "GET" })
       db
         .from("scp_interview_method_practices")
         .select("id, peace_stage, practice_kind, statement_sv, statement_en, rationale, claim_id")
+        .in("method_id", pinnedMethodIds)
         .order("display_order"),
       readInterviewCaseCapabilities(db, caseId),
       db
         .from("scp_interview_conduct_steps")
         .select("id, step_key, ordinal, label_sv, label_en, guidance_sv, guidance_en")
+        .in("method_id", pinnedMethodIds)
         .order("ordinal"),
       db
         .from("scp_interview_conduct_prohibitions")
         .select("id, prohibition_key, statement_sv, statement_en")
+        .in("method_id", pinnedMethodIds)
         .order("display_order"),
       db
         .from("scp_interview_conduct_guidance")
         .select("id, trust_stage, surface, guidance_key, statement_sv, statement_en")
+        .in("method_id", pinnedMethodIds)
         .order("display_order"),
       db
         .from("scp_interview_pack_competencies")
@@ -878,6 +919,8 @@ export const getInterviewCase = createServerFn({ method: "GET" })
         )
         .eq("pack_version_id", packVersionId)
         .order("display_order"),
+      db.rpc("scp_iv_case_content_manifest", { _case_id: caseId }),
+      db.rpc("scp_iv_manual_finding_capabilities", { _case_id: caseId }).single(),
     ]);
 
     if (questionsRes.error) throw new Error(questionsRes.error.message);
@@ -907,12 +950,29 @@ export const getInterviewCase = createServerFn({ method: "GET" })
       ["session", sessionRes],
       ["report", reportRes],
       ["blockers", blockersRes],
+      ["sources", sourcesRes],
+      ["source passages", passagesRes],
+      ["plan", planRes],
+      ["method practices", practicesRes],
+      ["conduct", conductRes],
+      ["conduct prohibitions", conductProhibitionsRes],
+      ["conduct guidance", guidanceRes],
+      ["content integrity", integrityRes],
+      ["manual finding capabilities", manualCapabilitiesRes],
     ] as const) {
       if (res.error) throw new Error(`INTERVIEW_READ_FAILED (${what}): ${res.error.message}`);
     }
 
+    const contentIntegrity = readContentIntegrity(integrityRes.data);
+    if (!contentIntegrity || !manualCapabilitiesRes.data)
+      throw new Error("INTERVIEW_READ_FAILED (content contract)");
     const sourceRows = (sourcesRes.data ?? []) as Array<Record<string, unknown>>;
-    const passageRows = (passagesRes.data ?? []) as Array<{ id: string; source_id: string }>;
+    const passageRows = (passagesRes.data ?? []) as Array<{
+      id: string;
+      source_id: string;
+      passage_index: number;
+      content: string;
+    }>;
     const passageCount = new Map<string, number>();
     for (const p of passageRows) {
       passageCount.set(p.source_id, (passageCount.get(p.source_id) ?? 0) + 1);
@@ -945,6 +1005,7 @@ export const getInterviewCase = createServerFn({ method: "GET" })
         .order("display_order");
       plan = {
         id: planRow.id as string,
+        aiUsed: planRow.ai_run_id !== null,
         status: planRow.status as string,
         versionNumber: planRow.version_number as number,
         roleSummary: (planRow.role_summary as string) ?? null,
@@ -997,6 +1058,9 @@ export const getInterviewCase = createServerFn({ method: "GET" })
         // A free-text field, not an array: scp_interview_sessions.interviewer_names
         // is `text`, and scp_iv_start_session takes one string.
         interviewerNames: (sessionRow.interviewer_names as string | null) ?? null,
+        processReflection: sessionRow.process_reflection,
+        protocolDeviations: sessionRow.protocol_deviations,
+        updatedAt: sessionRow.updated_at,
         questions: ((sqRes.data ?? []) as Array<Record<string, unknown>>).map((s) => ({
           questionId: s.question_id as string,
           state: s.state as string,
@@ -1036,6 +1100,11 @@ export const getInterviewCase = createServerFn({ method: "GET" })
       packContentStatus: version?.content_status ?? null,
       validationLabel: version?.validation_label ?? null,
       packContentHash: (c.pack_content_hash as string) ?? null,
+      contentIntegrity,
+      manualFindingCapabilities: {
+        mayCreate: manualCapabilitiesRes.data.may_create,
+        mayReview: manualCapabilitiesRes.data.may_review,
+      },
       transcriptConfirmedAt: (c.transcript_lawful_basis_confirmed_at as string) ?? null,
       // E3. Read so the employer can be shown the same retention answer the
       // CANDIDATE is shown -- including when there is none. It has exactly one
@@ -1053,6 +1122,10 @@ export const getInterviewCase = createServerFn({ method: "GET" })
         purposeCode: s.purpose_code as string,
         origin: s.origin as string,
         passageCount: passageCount.get(s.id as string) ?? 0,
+        passages: passageRows
+          .filter((p) => p.source_id === s.id)
+          .sort((a, b) => a.passage_index - b.passage_index)
+          .map((p) => ({ id: p.id, index: p.passage_index, content: p.content })),
       })),
       questions: questionRows.map((q) => ({
         id: q.id as string,
@@ -1165,6 +1238,16 @@ export const getInterviewCase = createServerFn({ method: "GET" })
         // it, so the assessment screen had no way to put "Q4 is unclear about
         // who wrote the report" next to Q4.
         questionId: (f.question_id as string | null) ?? null,
+        origin: (f.origin as string | null) ?? null,
+        neutralQuestion: (f.neutral_question as string | null) ?? null,
+        sourcePassageId: (f.source_passage_id as string | null) ?? null,
+        sourceLabel: (f.source_label as string | null) ?? null,
+        responsibleLabel: (f.responsible_label as string | null) ?? null,
+        nextAction: (f.next_action as string | null) ?? null,
+        dueOn: (f.due_on as string | null) ?? null,
+        revision: f.revision as number,
+        humanNote: (f.human_note as string | null) ?? null,
+        updatedAt: f.updated_at as string,
       })),
       assessments: ((assessmentsRes.data ?? []) as Array<Record<string, unknown>>).map((a) => ({
         id: a.id as string,
@@ -1902,6 +1985,118 @@ export const setSessionState = createServerFn({ method: "POST" })
     });
     if (error) throw new Error(error.message);
     return { ok: true };
+  });
+
+/** CAS persistence for the interviewer's process record, including clearing it. */
+export const saveSessionProcess = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((d: unknown) =>
+    z
+      .object({
+        sessionId: z.string().uuid(),
+        processReflection: z.string().max(4000),
+        protocolDeviations: z.string().max(4000),
+        expectedUpdatedAt: z.string().datetime({ offset: true }),
+      })
+      .parse(d),
+  )
+  .handler(async ({ context, data }): Promise<{ sessionId: string; updatedAt: string }> => {
+    const { data: saved, error } = await context.supabase
+      .rpc("scp_iv_save_session_process", {
+        _session_id: data.sessionId,
+        _reflection: data.processReflection,
+        _deviations: data.protocolDeviations,
+        _expected_updated_at: data.expectedUpdatedAt,
+      })
+      .single();
+    if (error) throw new Error(error.message);
+    if (!saved) throw new Error("SCP_IV_SESSION_PROCESS_NOT_SAVED");
+    return { sessionId: saved.session_id, updatedAt: saved.updated_at };
+  });
+
+const manualKind = z.enum(["gap", "unclear", "contradiction", "verification"]);
+const followupFields = {
+  responsibleLabel: z.string().trim().max(300).nullable(),
+  nextAction: z.string().trim().min(1).max(2000),
+  dueOn: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .nullable(),
+};
+export const createManualFinding = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((d: unknown) =>
+    z
+      .object({
+        caseId: z.string().uuid(),
+        operationId: z.string().uuid(),
+        kind: manualKind,
+        statement: z.string().trim().min(1).max(3000),
+        neutralQuestion: z.string().trim().min(1).max(3000),
+        questionId: z.string().uuid().nullable(),
+        sourcePassageId: z.string().uuid().nullable(),
+        sourceLabel: z.string().trim().max(1000).nullable(),
+        ...followupFields,
+      })
+      .refine((d) => d.sourcePassageId !== null || Boolean(d.sourceLabel), "SOURCE_REQUIRED")
+      .parse(d),
+  )
+  .handler(async ({ context, data }) => {
+    const { data: saved, error } = await context.supabase
+      .rpc("scp_iv_create_manual_finding", {
+        _case_id: data.caseId,
+        _operation_id: data.operationId,
+        _finding_kind: data.kind,
+        _statement: data.statement,
+        _neutral_question: data.neutralQuestion,
+        _question_id: data.questionId,
+        _source_passage_id: data.sourcePassageId,
+        _source_label: data.sourceLabel,
+        _responsible_label: data.responsibleLabel,
+        _next_action: data.nextAction,
+        _due_on: data.dueOn,
+      })
+      .single();
+    if (error) throw new Error(error.message);
+    if (!saved) throw new Error("SCP_IV_MANUAL_FINDING_NOT_SAVED");
+    return { findingId: saved.finding_id, revision: saved.revision, updatedAt: saved.updated_at };
+  });
+
+export const reviewManualFinding = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((d: unknown) =>
+    z
+      .object({
+        findingId: z.string().uuid(),
+        expectedRevision: z.number().int().positive(),
+        resolutionState: z.enum([
+          "open",
+          "needs_verification",
+          "corrected_by_candidate",
+          "unresolved_difference",
+          "resolved",
+          "not_relevant",
+        ]),
+        humanNote: z.string().trim().min(1).max(3000),
+        ...followupFields,
+      })
+      .parse(d),
+  )
+  .handler(async ({ context, data }) => {
+    const { data: saved, error } = await context.supabase
+      .rpc("scp_iv_review_manual_finding", {
+        _finding_id: data.findingId,
+        _expected_revision: data.expectedRevision,
+        _resolution_state: data.resolutionState,
+        _human_note: data.humanNote,
+        _responsible_label: data.responsibleLabel,
+        _next_action: data.nextAction,
+        _due_on: data.dueOn,
+      })
+      .single();
+    if (error) throw new Error(error.message);
+    if (!saved) throw new Error("SCP_IV_MANUAL_FINDING_NOT_SAVED");
+    return { findingId: saved.finding_id, revision: saved.revision, updatedAt: saved.updated_at };
   });
 
 type ExtractionResult = {

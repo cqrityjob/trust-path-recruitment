@@ -1,3 +1,5 @@
+import { readContentIntegrity } from "./content-integrity";
+
 /**
  * The employer final report — the sequence, and what a readback can say.
  *
@@ -393,6 +395,7 @@ export interface ReportAssessmentMaterial {
 }
 
 export interface ReportPayload {
+  readonly contentIntegrity?: import("./content-integrity").ContentIntegrity | null;
   readonly candidate: string;
   readonly internalTitle: string;
   readonly statusAtReport: string | null;
@@ -428,6 +431,13 @@ export interface ReportPayload {
     readonly kind: string;
     readonly statement: string;
     readonly state: string;
+    readonly origin?: string | null;
+    readonly neutralQuestion?: string | null;
+    readonly sourceLabel?: string | null;
+    readonly responsibleLabel?: string | null;
+    readonly nextAction?: string | null;
+    readonly dueOn?: string | null;
+    readonly humanNote?: string | null;
   }[];
   readonly aiStatement: string | null;
   readonly aiRuns: number;
@@ -464,6 +474,7 @@ export function parseReportPayload(raw: unknown): ReportPayload {
   const ai = obj(p.ai_disclosure);
   const panel = p.panel && typeof p.panel === "object" ? obj(p.panel) : null;
   return {
+    contentIntegrity: readContentIntegrity(p.content_manifest),
     candidate: str(c.candidate) ?? "",
     internalTitle: str(c.title) ?? "",
     statusAtReport: str(c.status_at_report),
@@ -595,6 +606,13 @@ export function parseReportPayload(raw: unknown): ReportPayload {
         kind: str(u.kind) ?? "",
         statement: str(u.statement) ?? "",
         state: str(u.state) ?? "",
+        origin: str(u.origin),
+        neutralQuestion: str(u.neutral_question),
+        sourceLabel: str(u.source_label),
+        responsibleLabel: str(u.responsible_label),
+        nextAction: str(u.next_action),
+        dueOn: str(u.due_on),
+        humanNote: str(u.human_note),
       };
     }),
     aiStatement: str(ai.statement),

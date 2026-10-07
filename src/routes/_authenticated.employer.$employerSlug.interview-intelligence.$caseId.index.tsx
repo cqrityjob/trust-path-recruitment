@@ -1,3 +1,4 @@
+import { isOutstandingFinding } from "@/lib/interview-intelligence/finding-state";
 // The interview overview — the command centre for one candidate interview.
 //
 // This route did not exist. The list linked straight into /prepare, so a
@@ -182,7 +183,7 @@ function Page() {
   // DISTINCT questions, because the card beneath it counts questions. See
   // assessedQuestionCount: two assessors on one question is one question.
   const assessed = assessedQuestionCount(d.assessments);
-  const openFindings = d.findings.filter((f) => f.resolutionState !== "resolved").length;
+  const openFindings = d.findings.filter((f) => isOutstandingFinding(f.resolutionState)).length;
 
   const candidateSources = d.sources.filter((s) => s.kind !== "role_description");
 

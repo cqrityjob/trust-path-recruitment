@@ -48,7 +48,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database } from "@/integrations/supabase/types";
+import type { Database } from "@/integrations/supabase/database";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { getApplicationSubmittedCv } from "@/lib/job-intelligence/applications.functions";
 import {

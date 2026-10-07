@@ -56,6 +56,8 @@ import {
   runInterviewAnalysis,
 } from "@/lib/interview-intelligence/runtime.functions";
 import { singleFlight } from "@/lib/interview-intelligence/single-flight";
+import { isOutstandingFinding } from "@/lib/interview-intelligence/finding-state";
+import { ManualControlPoints } from "@/components/employer/interview/ManualControlPoints";
 
 export const Route = createFileRoute(
   "/_authenticated/employer/$employerSlug/interview-intelligence/$caseId/evidence",
@@ -259,7 +261,7 @@ function Page() {
   const proposalsFor = (id: string) => d.proposals.filter((p) => p.questionId === id);
   const evidenceFor = (id: string) => d.evidence.filter((e) => e.questionId === id);
   const findingsFor = (id: string) =>
-    d.findings.filter((f) => f.questionId === id && f.resolutionState !== "resolved");
+    d.findings.filter((f) => f.questionId === id && isOutstandingFinding(f.resolutionState));
   const pendingFor = (id: string) =>
     proposalsFor(id).filter((p) => p.reviewState === "pending").length;
 
@@ -271,7 +273,7 @@ function Page() {
     (lang === "en" ? c.nameEn : c.nameSv) ?? c.nameSv;
 
   const openVerify = d.findings.filter(
-    (f) => f.findingKind === "verification" && f.resolutionState !== "resolved",
+    (f) => f.findingKind === "verification" && isOutstandingFinding(f.resolutionState),
   );
   const canWork = ["interview_complete", "evidence_review"].includes(d.status);
 
@@ -1103,6 +1105,9 @@ function Page() {
           <div className="min-w-0">{context}</div>
         </div>
       </Section>
+      <div className="mt-8 max-w-3xl">
+        <ManualControlPoints detail={d} onChanged={refresh} initialQuestionId={question?.id} />
+      </div>
     </>,
   );
 }

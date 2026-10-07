@@ -109,3 +109,50 @@ The seed also lets the synthetic governance people sign in
 (`scripts/fixtures/beskt-governance-signin-fixture.sql`), for walking
 `/beskt-governance` and `/admin/beskt-methods`. Every account is
 `@local.test` with the password `LocalJourney!2026`, on loopback only.
+
+## Recruiter Intelligence v0.3 P0
+
+The P0 browser walk is `e2e/interview-recruiter-intelligence-p0.spec.ts`. It
+refuses to run without `E2E_LOCAL_STACK=1` and a loopback `E2E_BASE_URL`.
+After replaying the full migration history (including the P0 foundation),
+apply these fixtures to the same disposable database in order:
+
+1. `scripts/fixtures/interview-journey-fixture.sql`
+2. `scripts/fixtures/interview-regression-prerequisites.sql`
+3. `scripts/fixtures/interview-recruiter-intelligence-p0-fixture.sql`
+
+The regression fixture seeds its final-report prerequisites and the missing
+synthetic candidate identity. It binds each candidate account through the
+actual application before the interview starts; it never attaches an
+application to an already locked report.
+
+Run the walk against the local app; set `E2E_P0_EVIDENCE_DIR` to retain
+synthetic prepare, resume and final-report screenshots:
+
+```sh
+E2E_LOCAL_STACK=1 E2E_BASE_URL=http://127.0.0.1:3000 \
+  E2E_P0_EVIDENCE_DIR=/tmp/cqrity-ri-p0-images \
+  bunx playwright test e2e/interview-recruiter-intelligence-p0.spec.ts \
+  --project=chromium --project=mobile-375 --project=mobile-390
+```
+
+All four role/start/language combinations use the real routes and RPCs.
+They cover sourced manual checkpoints and follow-up, eight preserved core
+questions, reflection and process deviations across immediate pause and
+refresh, network failure and explicit retry, genuine two-tab CAS conflict,
+confirmed evidence, human assessment, preview/finalisation and immutable
+report readback. A separate existing reviewer can read the report and is
+denied finalisation through the direct REST API. They do not validate 100
+applications, AI services, real GoTrue, real Storage, mail or cron.
+
+When restoring a database dump into a new PostgreSQL instance, first apply
+the standard cluster-role bootstrap. Database dumps do not include role
+memberships. In particular, PostgREST's `authenticator` must be a member of
+`anon`, `authenticated` and `service_role`, as
+`supabase/tests/00_bootstrap.sql` specifies. `harness.sql` now fails early
+with `BCP_HARNESS_MISSING_AUTHENTICATOR_ROLES` if those memberships are
+missing; without them the application can wait at “Laddar…” while REST
+requests fail with `permission denied to set role authenticated`. This is
+an isolated-stack bootstrap requirement; no product RLS or function grant
+is changed to make the walk pass. Keep raw Playwright traces local because
+they may include the synthetic session tokens.
