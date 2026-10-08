@@ -8,7 +8,7 @@
   "frontier": [
     {
       "file": "20270307090000_interview_content_snapshot_lock.sql",
-      "hostedState": "pending",
+      "hostedState": "applied",
       "note": "Schema-only release authorised by the owner’s 2026-10-08 live completion request. Permanent use locks and atomic normative content snapshots; old cases are explicitly observed_now and require owner/admin acknowledgement before continuation. No content approval, AI, retention worker/cron or real candidate messaging is activated. App changes follow verified installation in a separate PR.",
       "rollback": "supabase/rollback/20270307090000_interview_content_snapshot_lock_rollback.sql",
       "verify": "Replay full history on disposable PostgreSQL17; run snapshot legacy/direct-service/OLD+NEW/report tests, three connection races and adopted rollback refusal. After official integration compare ledger identity, function bodies, grants, private tables, triggers, snapshot provenance counts and unchanged pre-existing reports. Never replay an installed migration. See docs/release/2026-10-08-interview-content-snapshot.md.",
@@ -49,7 +49,10 @@
           "kind": "table",
           "object": "interview_client_copy_versions"
         }
-      ]
+      ],
+      "hostedVersion": "20270307090000",
+      "hostedName": "interview_content_snapshot_lock",
+      "evidenceSource": "Read-only verification 2026-10-08 after #450 merge c1d154420c4477c56f1fbeeecf7933e0171bf5e1 and official integration. Prior383 identities unchanged;384 ledger.20 function bodies/ACLs,5 private tables,94 triggers,13 constraints equal isolated PostgreSQL17.20 observed_now snapshots,0 operator acknowledgements,0 reports unchanged. See docs/release/2026-10-08-interview-content-snapshot-hosted-verification.json. Application release held pending separately discovered PostgREST14 CAS retry/lock-order fix."
     },
     {
       "file": "20270306090000_recruiter_intelligence_interview_foundation.sql",
