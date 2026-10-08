@@ -451,8 +451,14 @@ try {
   });
   const [stateResponse, processResponse] = await Promise.all([stateRequest, processRequest]);
   const processError = await processResponse.json();
+  // PostgREST14 returns204 for RETURNSvoid. Keep exact status expectations
+  // and report only bounded transport diagnostics, never JWTs/request bodies.
+  console.log(
+    `    CONFLICT overlap statuses state=${stateResponse.status} process=${processResponse.status} code=${processError.code ?? "missing"} elapsedMs=${Date.now() - raceStart}`,
+  );
+  ok((await stateResponse.text()) === "", "actual14 void state RPC returns empty body");
   ok(
-    stateResponse.status === 200 &&
+    stateResponse.status === 204 &&
       processResponse.status === 409 &&
       processError.code === "PT409" &&
       processError.message === "SCP_IV_SESSION_PROCESS_STALE" &&
@@ -493,7 +499,7 @@ try {
         {
           sourceCommit: cp.execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(),
           postgresVersion: sql("SHOW server_version"),
-          postgrestImage: "postgrest/postgrest:v14.15",
+          postgrestImage: "public.ecr.aws/supabase/postgrest:v14.15",
           migrationSha256: crypto
             .createHash("sha256")
             .update(fs.readFileSync(migration))
