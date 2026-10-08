@@ -12,8 +12,17 @@ case "$PGHOST" in 127.0.0.1|localhost) ;; *) fail "Postgres must be loopback";; 
 [ "$PGUSER" = postgres ] || fail "disposable bootstrap requires postgres"
 [ -n "${PGPASSWORD:-}" ] || fail "synthetic disposable PGPASSWORD required"
 for command in psql node bun curl; do command -v "$command" >/dev/null || fail "$command not on PATH"; done
-MODE="${1:-fresh}"
-[ "$MODE" = fresh ] || [ "$MODE" = --reset ] || fail "use no argument or --reset"
+MODE=fresh RUN_MODE=full
+for argument in "$@"; do
+ case "$argument" in
+  fresh) ;;
+  --reset) MODE=--reset ;;
+  --api-only) RUN_MODE=api_only ;;
+  *) fail "use --reset and/or --api-only, or no argument" ;;
+ esac
+done
+DATABASES=(ri_p1_seed_ci_test ri_p1_browser_ci_test ri_p1_api_ci_test)
+[ "$RUN_MODE" != api_only ] || DATABASES=(ri_p1_seed_ci_test ri_p1_api_ci_test)
 REPORT="${RI_P1_REPORT_DIR:-/tmp/cqrity-ri-p1-evidence-$$}"
 [ ! -d "$REPORT" ] || [ -z "$(ls -A "$REPORT")" ] || fail "report directory must be fresh; old images must not be attributed to this run"
 mkdir -p "$REPORT/private" "$REPORT/images"
@@ -34,13 +43,13 @@ cleanup() {
  trap - EXIT
  for pid in "${PIDS[@]-}"; do [ -z "$pid" ] || kill "$pid" 2>/dev/null || true; done
  for container in "${CONTAINERS[@]-}"; do [ -z "$container" ] || docker stop "$container" >/dev/null 2>&1 || true; done
- RI_P1_RESULT="$result" RI_P1_REPORT_DIR="$REPORT" node scripts/local-stack/ri-p1-evidence-manifest.mjs || true
+ RI_P1_RESULT="$result" RI_P1_REPORT_DIR="$REPORT" RI_P1_RUN_MODE="$RUN_MODE" node scripts/local-stack/ri-p1-evidence-manifest.mjs || true
  exit "$result"
 }
 trap cleanup EXIT
 sql() { psql -v ON_ERROR_STOP=1 -q "$@"; }
 marker="ri-p1-evidence-v1"
-for db in ri_p1_seed_ci_test ri_p1_browser_ci_test ri_p1_api_ci_test; do
+for db in "${DATABASES[@]}"; do
  exists="$(psql -tAq -d postgres -c "SELECT 1 FROM pg_database WHERE datname='$db'")"
  if [ "$exists" = 1 ]; then
   [ "$MODE" = --reset ] || fail "$db exists; --reset is required and retains no old DB contents"
@@ -65,7 +74,8 @@ stage pass replay
 stage begin oracle
 sql -d ri_p1_seed_ci_test -f scripts/fixtures/recruiter-intelligence-p1-browser-fixture.sql > "$REPORT/sql-oracle.log" 2>&1
 stage pass oracle
-for db in ri_p1_browser_ci_test ri_p1_api_ci_test; do
+for db in "${DATABASES[@]}"; do
+ [ "$db" != ri_p1_seed_ci_test ] || continue
  sql -d postgres -c "CREATE DATABASE $db TEMPLATE ri_p1_seed_ci_test;"
  sql -d "$db" -c "ALTER DATABASE $db SET bcp.authenticator_password='$AUTH_PASSWORD';"
  node scripts/local-stack/ri-p1-harness.mjs "$db" > "$REPORT/private/$db-harness.sql"
@@ -108,9 +118,11 @@ start_gateway() {
 }
 stage begin gateway
 start_rest ri_p1_api_ci_test "$API_REST" api
-start_rest ri_p1_browser_ci_test "$UI_REST" ui
 start_gateway ri_p1_api_ci_test "$API_REST" "$API_GATEWAY" api
-start_gateway ri_p1_browser_ci_test "$UI_REST" "$UI_GATEWAY" ui
+if [ "$RUN_MODE" = full ]; then
+ start_rest ri_p1_browser_ci_test "$UI_REST" ui
+ start_gateway ri_p1_browser_ci_test "$UI_REST" "$UI_GATEWAY" ui
+fi
 wait_url() {
  local url="$1"
  for attempt in $(seq 1 60); do
@@ -120,12 +132,18 @@ wait_url() {
  fail "local service not ready: $url (see private logs)"
 }
 wait_url "http://127.0.0.1:$API_GATEWAY/rest/v1/"
-wait_url "http://127.0.0.1:$UI_GATEWAY/rest/v1/"
+[ "$RUN_MODE" != full ] || wait_url "http://127.0.0.1:$UI_GATEWAY/rest/v1/"
 stage pass gateway
 stage begin api
 RI_P1_API_URL="http://127.0.0.1:$API_GATEWAY/rest/v1" RI_P1_LOCAL_JWT_SECRET="$LOCAL_JWT_SECRET" \
  node scripts/recruiter-intelligence-p1-api-check.mjs > "$REPORT/http-api.log" 2>&1
 stage pass api
+if [ "$RUN_MODE" = api_only ]; then
+ stage intentional runtime
+ stage intentional browser
+ echo "P1 local SQL/API evidence passed; runtime/browser intentionally not run. Auth/Storage are substitutes."
+ exit 0
+fi
 ANON="$(LOCAL_DB_URL="postgresql://postgres:${PGPASSWORD}@127.0.0.1:${PGPORT}/ri_p1_browser_ci_test" POSTGREST_URL="http://127.0.0.1:$UI_REST" node scripts/local-stack/auth-gateway.mjs --print-anon-key)"
 SERVICE="$(LOCAL_DB_URL="postgresql://postgres:${PGPASSWORD}@127.0.0.1:${PGPORT}/ri_p1_browser_ci_test" POSTGREST_URL="http://127.0.0.1:$UI_REST" node scripts/local-stack/auth-gateway.mjs --print-service-key)"
 export SUPABASE_URL="http://127.0.0.1:$UI_GATEWAY" VITE_SUPABASE_URL="http://127.0.0.1:$UI_GATEWAY"
