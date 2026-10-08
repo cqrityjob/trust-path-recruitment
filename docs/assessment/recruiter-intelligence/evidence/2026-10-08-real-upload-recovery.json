@@ -1,0 +1,129 @@
+{
+  "schemaVersion": 1,
+  "at": "2026-10-08T07:32:08.570Z",
+  "environment": "cqj-ri-real-20261008b: loopback55690/55691",
+  "helperSourceSha": "79db9f87cb3dee2cf7382e116b0472b3df9dc029",
+  "scope": "Actual caller-authenticated GoTrue/Storage/PostgREST and frozen adapter with explicitly labelled client transport faults. No app HTTP/browser/hosted result, no service-role test actor, no schema/grant/worker changes.",
+  "checks": [
+    {
+      "id": "missing-preflight",
+      "at": "2026-10-08T07:32:08.844Z",
+      "attemptFingerprint": "e8746f980be51cc05d1ea1ad344e314b02cac976aa5d7fd3315a444f775b7c04",
+      "fault": "none",
+      "actual": {
+        "outcome": "preflight-rejected",
+        "cleanup": null,
+        "storagePosts": 0,
+        "attachCalls": 0,
+        "deleteCalls": 0,
+        "readbackStatuses": [],
+        "attachActualStatuses": []
+      },
+      "status": "PASS",
+      "setupCleanupConfirmed": true
+    },
+    {
+      "id": "reject-cleanup-confirmed",
+      "at": "2026-10-08T07:32:09.201Z",
+      "attemptFingerprint": "85f1c1df27bb9314891473328696599f3fa5932f480f8216bdf45bb7a9db5d96",
+      "fault": "Actual RPC target rewritten to missing synthetic UUID after genuine preflight; actual SQL P0002; optional client DELETE503",
+      "actual": {
+        "outcome": "not_attached",
+        "cleanup": "confirmed",
+        "storagePosts": 1,
+        "attachCalls": 1,
+        "deleteCalls": 1,
+        "readbackStatuses": [200],
+        "attachActualStatuses": [500]
+      },
+      "status": "PASS",
+      "setupCleanupConfirmed": true
+    },
+    {
+      "id": "reject-cleanup503-pending",
+      "at": "2026-10-08T07:32:09.582Z",
+      "attemptFingerprint": "71c211dba8d01eff2422ef3d7c859a23af7a3137c98c87fe2160f437b1b7efda",
+      "fault": "Actual RPC target rewritten to missing synthetic UUID after genuine preflight; actual SQL P0002; optional client DELETE503",
+      "actual": {
+        "outcome": "not_attached",
+        "cleanup": "pending",
+        "storagePosts": 1,
+        "attachCalls": 1,
+        "deleteCalls": 1,
+        "readbackStatuses": [200],
+        "attachActualStatuses": [500]
+      },
+      "status": "PASS",
+      "setupCleanupConfirmed": true
+    },
+    {
+      "id": "committed-reply-lost",
+      "at": "2026-10-08T07:32:09.900Z",
+      "attemptFingerprint": "f9707b60e9f27c2964d6e159476d8dbac98fdbd5d52219e57ada2dd57117aa0b",
+      "fault": "Actual RPC commit observed then reply discarded; optional bearer removed only for metadata read",
+      "actual": {
+        "outcome": "saved",
+        "cleanup": null,
+        "storagePosts": 1,
+        "attachCalls": 1,
+        "deleteCalls": 0,
+        "readbackStatuses": [200],
+        "attachActualStatuses": [200]
+      },
+      "status": "PASS",
+      "setupCleanupConfirmed": true
+    },
+    {
+      "id": "committed-reply-lost-read-denied",
+      "at": "2026-10-08T07:32:10.367Z",
+      "attemptFingerprint": "52f89942d32bb6bd585d837d7e6fde7418279519886057f1db71b2190f3db1e5",
+      "fault": "Actual RPC commit observed then reply discarded; optional bearer removed only for metadata read",
+      "actual": {
+        "outcome": "outcome_unknown",
+        "cleanup": null,
+        "storagePosts": 1,
+        "attachCalls": 1,
+        "deleteCalls": 0,
+        "readbackStatuses": [401],
+        "attachActualStatuses": [200]
+      },
+      "status": "PASS",
+      "setupCleanupConfirmed": true
+    },
+    {
+      "id": "ordinary-success",
+      "at": "2026-10-08T07:32:10.686Z",
+      "attemptFingerprint": "ddaa9ec2afc3590df327baba1cb187f4ed2cdb6079e6a1f4dec345a7e15e5241",
+      "fault": "none",
+      "actual": {
+        "outcome": "saved",
+        "cleanup": null,
+        "storagePosts": 1,
+        "attachCalls": 1,
+        "deleteCalls": 0,
+        "readbackStatuses": [200],
+        "attachActualStatuses": [200]
+      },
+      "status": "PASS",
+      "setupCleanupConfirmed": true
+    },
+    {
+      "id": "revoked-after-preflight",
+      "at": "2026-10-08T07:32:10.969Z",
+      "attemptFingerprint": "4a4365f6879fc38c1c36f763aaaff416b999b25360747b89ee465681d82c902b",
+      "fault": "Actual global signOut after genuine preflight/upload, before actual metadata RPC",
+      "actual": {
+        "outcome": "outcome_unknown",
+        "cleanup": null,
+        "storagePosts": 1,
+        "attachCalls": 1,
+        "deleteCalls": 0,
+        "readbackStatuses": [],
+        "attachActualStatuses": [403]
+      },
+      "status": "PASS",
+      "setupCleanupConfirmed": true
+    }
+  ],
+  "completedAt": "2026-10-08T07:32:11.152Z"
+}
