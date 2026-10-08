@@ -1,0 +1,11 @@
+{
+  "archiveName": "domain-pg17-250.zip",
+  "archiveBytes": 2577,
+  "archiveSha256": "3491a2abc63601375f4d8687942b1a7652fe7a026c3791eb4e57377d7d301702",
+  "manifestSha256": "296fa8125f6ca8b5c33770fcb67d956379d7cbcd7fb04afadd47f8e20eef4397",
+  "catalogBytes": 4851,
+  "catalogSha256": "5c42f5486b5dc0b9b0f032f046bed67d036f528dba4bdfd91cbb3202c8708d7f",
+  "catalogHashVerified": true,
+  "catalogBodyPublishedHere": false,
+  "scope": "Historical isolated PG17/PostgREST14 fixture-JWT transport; not GoTrue or hosted installation"
+}

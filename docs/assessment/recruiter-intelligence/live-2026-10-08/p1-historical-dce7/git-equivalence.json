@@ -1,0 +1,37 @@
+{
+  "observedAt": "2026-10-08T09:34:22Z",
+  "headSha": "dce7decfaeda8041e1a2e1b490ea24af8506eb20",
+  "checkoutSha": "5a8ba6cf767108d7499d35ff70195a2d81e20eb8",
+  "headTreeSha": "b8cb5e0f23436a5c7a4ab32558fa9a6ae7e7f720",
+  "checkoutTreeSha": "b8cb5e0f23436a5c7a4ab32558fa9a6ae7e7f720",
+  "treesEqual": true,
+  "compare": {
+    "repository_full_name": "cqrityjob/trust-path-recruitment",
+    "base": "dce7decfaeda8041e1a2e1b490ea24af8506eb20",
+    "head": "5a8ba6cf767108d7499d35ff70195a2d81e20eb8",
+    "status": "ahead",
+    "ahead_by": 1,
+    "behind_by": 0,
+    "total_commits": 1,
+    "too_large": null,
+    "base_commit": {
+      "sha": "dce7decfaeda8041e1a2e1b490ea24af8506eb20",
+      "url": "https://api.github.com/repos/cqrityjob/trust-path-recruitment/commits/dce7decfaeda8041e1a2e1b490ea24af8506eb20",
+      "html_url": "https://github.com/cqrityjob/trust-path-recruitment/commit/dce7decfaeda8041e1a2e1b490ea24af8506eb20"
+    },
+    "merge_base_commit": {
+      "sha": "dce7decfaeda8041e1a2e1b490ea24af8506eb20",
+      "url": "https://api.github.com/repos/cqrityjob/trust-path-recruitment/commits/dce7decfaeda8041e1a2e1b490ea24af8506eb20",
+      "html_url": "https://github.com/cqrityjob/trust-path-recruitment/commit/dce7decfaeda8041e1a2e1b490ea24af8506eb20"
+    },
+    "files": []
+  },
+  "source": "Read-only GitHub GET git/commits for each exact SHA and compare endpoint",
+  "forwardCompare": {
+    "headSha": "250623cfb677c931caf70a2354daf774f72f443a",
+    "checkoutSha": "295ba6f107aaa5f432245b11de83616337b1bf0f",
+    "status": "ahead",
+    "aheadBy": 1,
+    "files": []
+  }
+}
