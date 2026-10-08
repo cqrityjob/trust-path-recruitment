@@ -33,6 +33,7 @@ import {
   decisions,
 } from "./recruiter-p1-native-fixture.mjs";
 import { writeNativePublic } from "./recruiter-p1-native-public.mjs";
+import { capturePrivateOutput } from "./recruiter-p1-native-command.mjs";
 
 const root = path.resolve(import.meta.dirname, "..");
 // Evidence code may live on a schema-only branch. Its current SQL has 95
@@ -56,6 +57,87 @@ const valid = {
   RI_P1_NATIVE_DISPOSABLE: "1",
   RI_P1_NATIVE_EVIDENCE_SHA: sha,
 };
+test("machine-readable CLI status keeps real subprocess JSON stdout separate from warning stderr and private", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "p1-native-status-"));
+  try {
+    const stdoutFile = path.join(dir, "stdout.log");
+    const stderrFile = path.join(dir, "stderr.log");
+    const output = capturePrivateOutput(
+      process.execPath,
+      [
+        "-e",
+        'process.stderr.write("Stopped services: [excluded]\\n");process.stdout.write(JSON.stringify({status:"ready"}))',
+      ],
+      { cwd: dir, env: { PATH: process.env.PATH }, stdoutFile, stderrFile },
+    );
+    assert.deepEqual(JSON.parse(output), { status: "ready" });
+    assert.equal(fs.readFileSync(stdoutFile, "utf8"), '{"status":"ready"}');
+    assert.equal(fs.readFileSync(stderrFile, "utf8"), "Stopped services: [excluded]\n");
+    assert.equal(fs.statSync(stdoutFile).mode & 0o777, 0o600);
+    assert.equal(fs.statSync(stderrFile).mode & 0o777, 0o600);
+    assert.throws(() => JSON.parse(fs.readFileSync(stderrFile, "utf8") + output));
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+test("private status subprocess failure and overflow expose only a fixed code, never secret output or native cause", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "p1-native-status-failure-"));
+  try {
+    for (const [index, body] of [
+      'process.stdout.write("private_stdout_canary");process.stderr.write("private_stderr_canary");process.exit(7)',
+      'process.stdout.write("private_stdout_canary".repeat(110000))',
+      'process.stderr.write("private_stderr_canary".repeat(110000))',
+    ].entries()) {
+      const stdoutFile = path.join(dir, `${index}.stdout.log`);
+      const stderrFile = path.join(dir, `${index}.stderr.log`);
+      assert.throws(
+        () =>
+          capturePrivateOutput(process.execPath, ["-e", body], {
+            cwd: dir,
+            env: { PATH: process.env.PATH },
+            stdoutFile,
+            stderrFile,
+          }),
+        (error: Error & { cause?: unknown; stdout?: unknown; stderr?: unknown }) => {
+          assert.equal(error.message, "P1_NATIVE_PRIVATE_STATUS_COMMAND_FAILED");
+          assert.equal(error.cause, undefined);
+          assert.equal(error.stdout, undefined);
+          assert.equal(error.stderr, undefined);
+          assert.doesNotMatch(error.stack ?? "", /private_(?:stdout|stderr)_canary/);
+          return true;
+        },
+      );
+      for (const file of [stdoutFile, stderrFile]) {
+        assert.equal(fs.statSync(file).mode & 0o777, 0o600);
+        assert.ok(fs.statSync(file).size <= 2_000_000);
+      }
+    }
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+test("runner applies stdout separation only to native CLI status; fixed target and private capture bounds remain", () => {
+  const source = fs.readFileSync(path.join(root, "scripts/recruiter-p1-native-run.mjs"), "utf8");
+  assert.equal((source.match(/capturePrivateOutput\(/g) ?? []).length, 1);
+  assert.match(
+    source,
+    /const raw = capturePrivateOutput\([\s\S]*?"supabase",[\s\S]*?\["status", "--workdir", context\.stackRoot, "-o", "json"\]/,
+  );
+  assert.match(source, /stdoutFile: privateFile\("cli-status\.stdout\.log"\)/);
+  assert.match(source, /stderrFile: privateFile\("cli-status\.stderr\.log"\)/);
+  assert.match(
+    source,
+    /status = validateStatus\(readPrivateJson\(privateFile\("status\.json"\)\)\)/,
+  );
+  const helper = fs.readFileSync(
+    path.join(root, "scripts/recruiter-p1-native-command.mjs"),
+    "utf8",
+  );
+  assert.match(helper, /timeout: 60_000/);
+  assert.match(helper, /maxBuffer: MAX_OUTPUT_BYTES/);
+  assert.match(helper, /stdio: \["ignore", "pipe", "pipe"\]/);
+  assert.doesNotMatch(helper, /console\.|throw result\.error|cause:/);
+});
 test("public failure diagnostics retain only fixed operation/status/domain/SQLSTATE without SDK secrets", () => {
   const result = {
     status: 409,

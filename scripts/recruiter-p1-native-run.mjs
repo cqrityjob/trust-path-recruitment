@@ -43,6 +43,7 @@ import {
   BROWSER_HASH,
 } from "./recruiter-p1-native-fixture.mjs";
 import { writeNativePublic } from "./recruiter-p1-native-public.mjs";
+import { capturePrivateOutput } from "./recruiter-p1-native-command.mjs";
 
 const git = (cwd, args) =>
   cp
@@ -336,11 +337,15 @@ try {
       "cli-start",
       { cwd: context.stackRoot },
     );
-    const raw = command(
+    const raw = capturePrivateOutput(
       "supabase",
       ["status", "--workdir", context.stackRoot, "-o", "json"],
-      "cli-status",
-      { cwd: context.stackRoot },
+      {
+        cwd: context.stackRoot,
+        env: process.env,
+        stdoutFile: privateFile("cli-status.stdout.log"),
+        stderrFile: privateFile("cli-status.stderr.log"),
+      },
     );
     writePrivate("status.json", raw);
     status = validateStatus(readPrivateJson(privateFile("status.json")));
