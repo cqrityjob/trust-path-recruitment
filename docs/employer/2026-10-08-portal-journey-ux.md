@@ -12,9 +12,9 @@ faktiskt utförd kontroll; blockerat och inte kört är inte PASS.
 | Leveransens mergade PR:er | #447, #448, #450, #451, #452, #453, #454, #455, #456, #457, #458, #459, #460, #461, #462, alla verifierade i GitHub 16:36 UTC |
 | Main-CI på basen | `CI` run 37808576247 pågick vid avläsningen; native-workflows (`recruiter-p1-native-ci`, `recruiter-real-ci`) PASS på samma commit |
 | Gren | `claude/amazing-clarke-ferjkh`, vanliga framåtriktade commits ovanpå basen; ingen historik omskriven |
-| Sista appkodscommit | `6e175f3f10c37f4b2de7e766b1f1fa740566b483` (sista commit som ändrar `src/`); `8ef0821ba09d0acff6803330eeffafa65114cbfc` är sista commit som ändrar `e2e/`/`scripts/` (fixturen) |
-| Bildcommit | `c2e00223144cd70ee59e707b955deffa3255fbe2` av `github-actions[bot]`: 28 + 28 bilder (sju sidor × sv/en × 1440/375), fotograferade från `8ef0821` (efter) och `8c9b313` (före) med huvudets instrument, i körning 37824421280; paret klarade `employer-portal-evidence:check` före commit |
-| Slut-SHA | PR-huvudet (anges i PR:n): en docs-commit ovanpå bildcommiten. CI på slut-SHA:n kör samma appkod som `6e175f3` och samma svit/fixture som `8ef0821` |
+| Sista appkodscommit | `6e175f3f10c37f4b2de7e766b1f1fa740566b483` (sista commit som ändrar en komponent eller route i `src/`); `9458cdb6` (Astra) formaterar därefter en route med Prettier utan semantisk ändring; `8ef0821b` är sista commit som ändrar fixturen |
+| Bildcommit | `9c28b8d560410137abb8ceadb3fc8c88d4408de0` av `github-actions[bot]`: 28 + 28 bilder (sju sidor × sv/en × 1440/375), fotograferade från `9458cdb6` (efter) och `8c9b3138` (före) med huvudets instrument; PNG-innehållet motsvarar paret i `c2e0022` (fotograferat från `8ef0821`) eftersom `9458cdb6` bara formaterar. Paret klarade `employer-portal-evidence:check` före commit och i `ci.yml` |
+| Slut-SHA | PR-huvudet (anges i PR:n): en docs-commit ovanpå `023cfbbe`, som är Astras merge av bildcommiten och CI-rättningen `a75f7dcf`. Mellan `0b961ff7` och `023cfbbe` ligger bara Astras avgränsade CI-/testrättningar (`5f7d3a39`, `9458cdb6`, `a75f7dcf`), granskade av Claude: ingen kontroll borttagen, ingen produktkomponent ändrad utöver Prettier |
 
 Merge betyder inte att Lovable har synkat eller publicerat; se sista avsnittet.
 
@@ -176,6 +176,9 @@ rör): `src/components/recruitment/CandidateTable.tsx` (oförändrad här, men
 samma regler), `src/i18n/recruitment-copy.ts` (nya `rec.counts.queue.*`,
 `rec.flow.decisionContext`), `e2e/support/public-entry-harness.ts` (funktionsstubbar).
 Den som ändrar samma komponent efter merge integrerar ovanpå; ingen historik skrivs om.
+Astras CI-rättningar på denna gren (`5f7d3a39`, `9458cdb6`, `a75f7dcf`, merge `023cfbbe`)
+är lästa och godkända av Claude; de rör bara guards, negativa kontroller, formatering och
+avbildhämtning i CI.
 
 ## Vilken appversion varje kontroll kör
 
@@ -267,11 +270,19 @@ Lanseringshinder (inte ändrade här, utanför UX-uppdraget):
   behörighetstester.
 - Hosted Auth-fixture/B-matris är fortsatt BLOCKED och fysisk telefon NOT RUN enligt
   Astras r11; detta pass ändrar inte det.
-- `ci.yml`-jobbet "Migration replay, RLS and rollback tests" föll på `322b8dc` efter att
-  alla databasassertioner passerat: `docker: toomanyrequests: Rate exceeded` vid
-  hämtning av `public.ecr.aws/supabase/postgrest:v14.15` (samma orsak som #461:s
-  röda jobb tidigare i dag). Infrastruktur, inte denna PR; jobbet kördes om på
-  slut-SHA:n (se PR:n).
+- `ci.yml`-jobben "Migration replay, RLS and rollback tests" och "Recruiter current
+  schema" föll på `322b8dc`, `0b961ff` och `9458cdb` efter att alla databasassertioner
+  passerat: `docker: toomanyrequests: Rate exceeded` vid hämtning av
+  `public.ecr.aws/supabase/postgrest:v14.15` (samma orsak som #461:s röda jobb tidigare
+  i dag). Infrastruktur, inte denna PR. Astra lade `a75f7dcf`
+  (`scripts/registry-image-retry.mjs`): samma pinnade avbild hämtas högst tre gånger,
+  bara vid registerthrottling, med ändlig väntan; inga databas- eller API-steg
+  återförsöks. Båda jobben gröna på `023cfbbe`.
+- Lintjobbet föll på `0b961ff` i den negativa kontrollen
+  `EL-INTERVIEW-ROW-LOSES-ITS-FILTER` (`employer-lifecycle-controls.ts`): mutationens
+  ankare matchade två ställen efter översiktens nya intervjukortslänkar. Astra
+  preciserade ankaret och gjorde guarden striktare (varje intervjuarbetsrad måste bära
+  sitt eget filter) i `5f7d3a39`; 35/35 kontroller upptäckta. Grönt på `023cfbbe`.
 
 Kan vänta (backlog):
 
