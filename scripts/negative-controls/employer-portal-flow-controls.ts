@@ -19,7 +19,8 @@ const REPORTS = `${R}reports.tsx`;
 const MUTATIONS: Mutation[] = [
   {
     id: "EPF-REVIEW-ROW-OPENS-THE-OLD-STATUS-FILTER",
-    defect: "the next-step row goes back to opening a status filter that is not the stage it counted",
+    defect:
+      "the next-step row goes back to opening a status filter that is not the stage it counted",
     file: OVERVIEW,
     find: '        search: { stage: "review" as const },',
     replace: '        search: { status: "reviewing" as const },',
@@ -38,7 +39,8 @@ const MUTATIONS: Mutation[] = [
   },
   {
     id: "EPF-READY-MEANS-CLOSED",
-    defect: "the ready-to-complete filter shows every closed recruitment, including those with candidates waiting",
+    defect:
+      "the ready-to-complete filter shows every closed recruitment, including those with candidates waiting",
     file: DEFS,
     find: '    case "ready":\n      return isReadyToComplete(phase, unresolved);',
     replace: '    case "ready":\n      return phase === "closed";',
@@ -50,7 +52,8 @@ const MUTATIONS: Mutation[] = [
     defect: "the requirement status badge drops its symbol and relies on colour and text alone",
     file: STATUS,
     find: '      <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />\n      {requirementLabels[lang][status]}\n    </span>\n  );\n}\nexport function ReviewStatusBadge',
-    replace: '      {requirementLabels[lang][status]}\n    </span>\n  );\n}\nexport function ReviewStatusBadge',
+    replace:
+      "      {requirementLabels[lang][status]}\n    </span>\n  );\n}\nexport function ReviewStatusBadge",
     guard: G,
     expect: "the badge must render the icon beside the text label",
   },
@@ -74,7 +77,8 @@ const MUTATIONS: Mutation[] = [
   },
   {
     id: "EPF-REPORTS-LIGHTS-NOTHING",
-    defect: "Rapporter goes back to a section no menu item carries, so the menu lights nothing there",
+    defect:
+      "Rapporter goes back to a section no menu item carries, so the menu lights nothing there",
     file: REPORTS,
     find: '      activeSection="interviewIntelligence"',
     replace: '      activeSection="reports"',

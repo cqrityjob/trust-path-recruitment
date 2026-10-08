@@ -28,16 +28,19 @@ describe("playwright mobile presets", () => {
   test.each([
     ["mobile-375", 375, 812],
     ["mobile-390", 390, 844],
-  ] as const)("%s is an emulated phone, not a narrow desktop", (name: string, width: number, height: number) => {
-    const use = project(name);
-    expect(use.browserName).toBe("chromium");
-    expect(use.isMobile).toBe(true);
-    expect(use.hasTouch).toBe(true);
-    expect(use.deviceScaleFactor).toBe(3);
-    expect(use.viewport).toEqual({ width, height });
-    expect(typeof use.userAgent).toBe("string");
-    expect(String(use.userAgent)).toMatch(/iPhone|Mobile/);
-  });
+  ] as const)(
+    "%s is an emulated phone, not a narrow desktop",
+    (name: string, width: number, height: number) => {
+      const use = project(name);
+      expect(use.browserName).toBe("chromium");
+      expect(use.isMobile).toBe(true);
+      expect(use.hasTouch).toBe(true);
+      expect(use.deviceScaleFactor).toBe(3);
+      expect(use.viewport).toEqual({ width, height });
+      expect(typeof use.userAgent).toBe("string");
+      expect(String(use.userAgent)).toMatch(/iPhone|Mobile/);
+    },
+  );
 
   test("the desktop project is not a phone", () => {
     const use = project("chromium");

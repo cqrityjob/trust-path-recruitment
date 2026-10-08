@@ -115,7 +115,11 @@ function SentinelWayBack({
     "no-print inline-flex min-h-[44px] items-center gap-1.5 text-[13px] font-medium text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
   return (
     <div className="flex flex-wrap gap-x-5">
-      <Link to="/employer/$employerSlug/assessments/participants" params={{ employerSlug }} className={cls}>
+      <Link
+        to="/employer/$employerSlug/assessments/participants"
+        params={{ employerSlug }}
+        className={cls}
+      >
         <ArrowLeft className="h-4 w-4" aria-hidden="true" />
         {t("academy.results.back")}
       </Link>
