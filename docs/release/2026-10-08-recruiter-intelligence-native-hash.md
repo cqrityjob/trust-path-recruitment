@@ -1,0 +1,11 @@
+# P1 source hashing on native Supabase
+
+The recruitment workspace CI on head `1cee57d72d1e77ef084339413d6af3ced621643e` failed its actual list and overview reads with SQLSTATE `42883`: `function public.digest(text, unknown) does not exist`. [Failure job](https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37758314842/job/113248281502). The plain PostgreSQL P1 acceptance environment installed pgcrypto in public; native Supabase can install it in extensions. That earlier passing evidence did not prove namespace independence.
+
+Pending migration `20270308090000` has not been installed in production. A normal new commit changes its single source-version hash call to PostgreSQL's built-in `pg_catalog.sha256(pg_catalog.convert_to(v::text,'UTF8'))`. The input remains the canonical jsonb text, the output remains hex SHA256, and absent originals still return NULL. No extension shim, permission change, source acceptance change, generated type edit or historical report rewrite is introduced.
+
+The existing 93 SQL acceptance checks now execute with pgcrypto relocated outside public in a disposable transaction. Two additional assertions require actual absence of public.digest and independently fixed Unicode source bytes (including an absent-source NULL). Before a fixture is deliberately committed, the original extension namespace is restored and the empty probe schema removed. Failed checks/default mode roll the transaction back. The mandatory database job requires at least 95 assertions. No executed SQL PASS is claimed until exact-head CI runs this change; local Colima remains unavailable.
+
+Release order remains schema first: #455 conflict transport → #452 frozen-content app → #451 requirements schema → #453 integrated requirements app → #457 upload journal schema → #458 recovery app. Migration080 must be officially installed and verified before0909. Actual GoTrue/Storage/browser evidence and published runtime checks remain separate gates.
+
+Sources: [pending migration](../../supabase/migrations/20270308090000_recruiter_intelligence_requirements.sql), [acceptance suite](../../supabase/tests/recruiter_intelligence_p1_test.sql), [mandatory runner](../../scripts/db-test.sh). Existing historical 93-check evidence remains valid for its stated environment and head.

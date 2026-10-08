@@ -15,7 +15,27 @@ type FoundationKeys =
   | "scp_iv_create_manual_finding"
   | "scp_iv_review_manual_finding"
   | "scp_iv_manual_finding_capabilities"
-  | "scp_iv_case_content_manifest";
+  | "scp_iv_case_content_manifest"
+  | "scp_iv_case_frozen_content"
+  | "scp_iv_acknowledge_observed_content"
+  | "scp_iv_content_inventory"
+  | "scp_iv_case_frozen_labels";
+type EvidenceUploadKeys =
+  | "sp_begin_evidence_upload"
+  | "sp_reconcile_evidence_upload"
+  | "sp_list_my_evidence_upload_attempts"
+  | "sp_authorize_evidence_upload_cleanup"
+  | "sp_confirm_evidence_upload_cleanup"
+  | "sp_evidence_upload_storage_writable";
+type RecruitmentIntelligenceKeys =
+  | "rec_ri_get_profile"
+  | "rec_ri_get_review"
+  | "rec_ri_confirm_profile"
+  | "rec_ri_save_review"
+  | "rec_ri_manual_reference"
+  | "rec_ri_transfer_requirements"
+  | "rec_ri_candidate_view"
+  | "rec_ri_overview_counts";
 type FoundationColumns =
   | "origin"
   | "neutral_question"
@@ -59,11 +79,19 @@ export type ContractAssertions = [
     Equal<
       Omit<
         Functions,
-        "bcp_conduct_record_resolution" | "scp_iv_finalise_previewed_report" | FoundationKeys
+        | "bcp_conduct_record_resolution"
+        | "scp_iv_finalise_previewed_report"
+        | FoundationKeys
+        | EvidenceUploadKeys
+        | RecruitmentIntelligenceKeys
       >,
       Omit<
         Generated["public"]["Functions"],
-        "bcp_conduct_record_resolution" | "scp_iv_finalise_previewed_report" | FoundationKeys
+        | "bcp_conduct_record_resolution"
+        | "scp_iv_finalise_previewed_report"
+        | FoundationKeys
+        | EvidenceUploadKeys
+        | RecruitmentIntelligenceKeys
       >
     >
   >,
@@ -85,6 +113,52 @@ export type FoundationAssertions = [
   Assert<Equal<Functions["scp_iv_review_manual_finding"]["Args"]["_due_on"], string | null>>,
   Assert<Equal<Functions["scp_iv_save_session_process"]["Args"]["_expected_updated_at"], string>>,
   Assert<Equal<Database["public"]["Tables"]["scp_interview_findings"]["Row"]["revision"], number>>,
+];
+type ReportPayload = Generated["public"]["Tables"]["scp_interview_reports"]["Row"]["payload"];
+export type SnapshotAssertions = [
+  Assert<Equal<Functions["scp_iv_case_frozen_content"]["Args"], { _case_id: string }>>,
+  Assert<Equal<Functions["scp_iv_case_frozen_content"]["Returns"], ReportPayload>>,
+  Assert<
+    Equal<
+      Functions["scp_iv_acknowledge_observed_content"]["Args"],
+      {
+        _case_id: string;
+        _expected_manifest_hash: string;
+        _note: string;
+      }
+    >
+  >,
+  Assert<Equal<Functions["scp_iv_acknowledge_observed_content"]["Returns"], ReportPayload>>,
+  Assert<Equal<Functions["scp_iv_content_inventory"]["Args"], { _employer_id: string }>>,
+  Assert<
+    Equal<
+      Functions["scp_iv_content_inventory"]["Returns"],
+      {
+        case_id: string;
+        status: string;
+        created_at: string;
+        provenance: string;
+        frozen_at: string;
+        manifest_hash: string;
+        requires_acknowledgement: boolean;
+      }[]
+    >
+  >,
+  Assert<Equal<Functions["scp_iv_case_frozen_labels"]["Args"], { _case_ids: string[] }>>,
+  Assert<
+    Equal<
+      Functions["scp_iv_case_frozen_labels"]["Returns"],
+      {
+        case_id: string;
+        name_sv_at_freeze: string | null;
+        name_en_at_freeze: string | null;
+        content_status_at_freeze: string | null;
+        validation_label_at_freeze: string | null;
+        provenance: string;
+        frozen_at: string;
+      }[]
+    >
+  >,
 ];
 declare const client: SupabaseClient<Database>;
 const resolution = {
@@ -123,6 +197,25 @@ client.rpc("scp_iv_create_manual_finding", {
   _next_action: "Request copy",
   _due_on: null,
 });
+client.rpc("scp_iv_case_frozen_content", { _case_id: "synthetic" });
+client.rpc("scp_iv_acknowledge_observed_content", {
+  _case_id: "synthetic",
+  _expected_manifest_hash: "synthetic",
+  _note: "Reviewed observed content",
+});
+client.rpc("scp_iv_content_inventory", { _employer_id: "synthetic" });
+client.rpc("scp_iv_case_frozen_labels", { _case_ids: ["synthetic"] });
+client.rpc("scp_iv_case_frozen_labels", { _case_ids: [] });
+// @ts-expect-error Frozen case IDs are required, never nullable.
+client.rpc("scp_iv_case_frozen_content", { _case_id: null });
+// @ts-expect-error Acknowledgement always names the exact expected manifest hash.
+client.rpc("scp_iv_acknowledge_observed_content", { _case_id: "synthetic", _note: "Reviewed" });
+// @ts-expect-error Inventory requires its employer UUID argument.
+client.rpc("scp_iv_content_inventory", {});
+// @ts-expect-error Frozen label batching requires an array, never one string.
+client.rpc("scp_iv_case_frozen_labels", { _case_ids: "synthetic" });
+// @ts-expect-error NULL array elements are rejected by the SQL contract.
+client.rpc("scp_iv_case_frozen_labels", { _case_ids: [null] });
 // @ts-expect-error New nullable arguments are also required by their SQL contracts.
 client.rpc("scp_iv_save_session_process", {
   _session_id: "synthetic",
@@ -151,3 +244,70 @@ const invalidDraftId = {
 };
 // @ts-expect-error A nullable UUID is still a string, never a number.
 client.rpc("scp_iv_finalise_previewed_report", invalidDraftId);
+
+export type EvidenceUploadAssertions = [
+  Assert<Equal<Functions["sp_begin_evidence_upload"]["Args"]["_claim_id"], string | null>>,
+  Assert<Equal<Functions["sp_begin_evidence_upload"]["Args"]["_period_id"], string | null>>,
+  Assert<Equal<Functions["sp_begin_evidence_upload"]["Args"]["_attempt_id"], string>>,
+  Assert<Equal<Functions["sp_begin_evidence_upload"]["Args"]["_size_bytes"], number>>,
+  Assert<
+    Equal<
+      Functions["sp_list_my_evidence_upload_attempts"]["Args"],
+      { _claim_id: string | null; _period_id: string | null }
+    >
+  >,
+  Assert<Equal<Functions["sp_evidence_upload_storage_writable"]["Returns"], boolean>>,
+  Assert<Equal<keyof Functions["sp_authorize_evidence_upload_cleanup"]["Args"], "_attempt_id">>,
+];
+client.rpc("sp_begin_evidence_upload", {
+  _attempt_id: "synthetic",
+  _claim_id: "synthetic",
+  _period_id: null,
+  _file_name: "proof.pdf",
+  _mime_type: "application/pdf",
+  _size_bytes: 4,
+  _sha256: "synthetic",
+});
+client.rpc("sp_list_my_evidence_upload_attempts", { _claim_id: null, _period_id: null });
+// @ts-expect-error Target NULL is required; omission has no SQL default.
+client.rpc("sp_list_my_evidence_upload_attempts", { _claim_id: null });
+// @ts-expect-error Own cleanup always requires an opaque UUID, never NULL.
+client.rpc("sp_authorize_evidence_upload_cleanup", { _attempt_id: null });
+export type RecruitmentIntelligenceAssertions = [
+  Assert<
+    Equal<Functions["rec_ri_save_review"]["Args"]["_expected_assignment_version"], number | null>
+  >,
+  Assert<Equal<Functions["rec_ri_candidate_view"]["Args"]["_job_id"], string | null>>,
+  Assert<Equal<Functions["rec_ri_confirm_profile"]["Args"]["_start_date"], string | null>>,
+  Assert<Equal<Functions["rec_ri_save_review"]["Args"]["_responsible_user_id"], string | null>>,
+  Assert<Equal<Functions["rec_ri_save_review"]["Args"]["_confirm"], boolean>>,
+];
+client.rpc("rec_ri_candidate_view", {
+  _employer_id: "synthetic",
+  _job_id: null,
+  _filters: {},
+  _sort: "requirements",
+  _dir: null,
+  _page: 1,
+  _size: 25,
+  _around: null,
+});
+// @ts-expect-error Required nullable job scope is not an optional SQL argument.
+client.rpc("rec_ri_candidate_view", {
+  _employer_id: "synthetic",
+  _filters: {},
+  _sort: "requirements",
+  _dir: null,
+  _page: 1,
+  _size: 25,
+  _around: null,
+});
+const invalidProfileVersion = {
+  _job_id: "synthetic",
+  _expected_version: null,
+  _operation_id: "synthetic",
+  _start_date: null,
+  _rules: [],
+};
+// @ts-expect-error Profile version remains numeric; nullability does not loosen other fields.
+client.rpc("rec_ri_confirm_profile", invalidProfileVersion);

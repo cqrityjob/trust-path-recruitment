@@ -72,6 +72,12 @@ import {
 import { CredentialVersionHistory } from "@/components/security-passport/CredentialVersionHistory";
 import { LifecycleChip, LifecycleNote } from "@/components/security-passport/LifecycleChip";
 import { EvidencePanel } from "@/components/security-passport/live/EvidencePanel";
+import { EvidenceUploadRecoveryPanel } from "@/components/security-passport/live/EvidenceUploadRecoveryPanel";
+import {
+  listMyUploadAttempts,
+  resumeMyUploadAttempt,
+  cleanupMyUploadAttempt,
+} from "@/lib/security-passport/evidence-upload-recovery.functions";
 import { VerificationPanel } from "@/components/security-passport/live/VerificationPanel";
 import type { EmployerSearchState } from "@/components/security-passport/live/EmployerConfirmationPicker";
 import type { PassportCopyKey } from "@/lib/security-passport/i18n";
@@ -109,6 +115,11 @@ function PassportEntryRoute() {
   const loadRequests = useServerFn(listMyVerificationRequests);
   const searchEmployers = useServerFn(searchAttestableEmployers);
   const doUpload = useServerFn(uploadEvidence);
+  const loadUploadAttempts = useServerFn(listMyUploadAttempts);
+  const resumeUploadAttempt = useServerFn(resumeMyUploadAttempt);
+  const cleanupUploadAttempt = useServerFn(cleanupMyUploadAttempt);
+  const [uploadRecoveryPending, setUploadRecoveryPending] = useState(true);
+  const [uploadRecoveryGeneration, setUploadRecoveryGeneration] = useState(0);
   const doOpen = useServerFn(getEvidenceViewUrl);
   const doWithdrawEvidence = useServerFn(withdrawEvidence);
   const doSubmit = useServerFn(submitForVerification);
@@ -605,7 +616,20 @@ function PassportEntryRoute() {
         </div>
       </header>
 
+      <EvidenceUploadRecoveryPanel
+        load={loadUploadAttempts}
+        resume={resumeUploadAttempt}
+        cleanup={cleanupUploadAttempt}
+        key={`${kind}:${entryId}`}
+        claimId={isClaim ? entryId : null}
+        periodId={isClaim ? null : entryId}
+        generation={uploadRecoveryGeneration}
+        onResolved={refresh}
+        onPendingChange={setUploadRecoveryPending}
+      />
       <EvidencePanel
+        key={`${kind}:${entryId}:evidence`}
+        uploadRecoveryPending={uploadRecoveryPending}
         evidence={entryEvidence}
         // A clarification asks the holder for a document and then has to let
         // them attach one. Adding is allowed whenever the database allows it,
@@ -615,16 +639,20 @@ function PassportEntryRoute() {
         canAdd={true}
         canRemove={openRequest === null}
         onUpload={async (file) => {
-          await doUpload({
-            data: {
-              claimId: isClaim ? entryId : null,
-              periodId: isClaim ? null : entryId,
-              fileName: file.fileName,
-              mimeType: file.mimeType,
-              contentBase64: file.contentBase64,
-            },
-          });
-          await refresh();
+          try {
+            await doUpload({
+              data: {
+                claimId: isClaim ? entryId : null,
+                periodId: isClaim ? null : entryId,
+                fileName: file.fileName,
+                mimeType: file.mimeType,
+                contentBase64: file.contentBase64,
+              },
+            });
+          } finally {
+            setUploadRecoveryGeneration((v) => v + 1);
+            await refresh();
+          }
         }}
         onOpen={async (evidenceId) => {
           const { url } = await doOpen({ data: { evidenceId } });

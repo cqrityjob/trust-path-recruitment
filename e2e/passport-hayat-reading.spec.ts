@@ -121,6 +121,7 @@ async function mount(
     assessSavedCredential: { decision: unverifiable, recorded: true },
     ...over,
     listMyEvidence: [],
+    listMyUploadAttempts: [],
     listClaimVersions: [],
     getCredentialPrivateFields: { credentialReference: null, holderNote: null },
   });

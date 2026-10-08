@@ -9,10 +9,12 @@ export function CandidateBackgroundStatus({
   result,
   isLoading,
   savedSourceCount,
+  savedReferenceCount = 0,
 }: {
   result: InterviewContextResult | undefined;
   isLoading: boolean;
   savedSourceCount: number;
+  savedReferenceCount?: number;
 }) {
   const { t } = useT();
   const context = contextOf(result);
@@ -34,7 +36,14 @@ export function CandidateBackgroundStatus({
         <dd className="mt-1 leading-relaxed text-muted-foreground">
           {savedSourceCount > 0
             ? t("iiu.pp.background.saved.available").replace("{n}", String(savedSourceCount))
-            : t("iiu.pp.background.saved.none")}
+            : savedReferenceCount > 0
+              ? t("rec.ri.background.references").replace("{n}", String(savedReferenceCount))
+              : t("iiu.pp.background.saved.none")}
+          {savedSourceCount > 0 && savedReferenceCount > 0 && (
+            <p className="mt-2">
+              {t("rec.ri.background.references").replace("{n}", String(savedReferenceCount))}
+            </p>
+          )}
         </dd>
       </div>
     </dl>

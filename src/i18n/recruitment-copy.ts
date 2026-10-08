@@ -8,6 +8,11 @@
 // Spread into dictionaries.ts, so every key is an ordinary TranslationKey.
 
 export const recruitmentSv = {
+  "rec.ri.savedSources.title": "Sparat underlag i intervjuärendet",
+  "rec.ri.savedSources.body":
+    "Detta är text och valda hänvisningar som sparats i det här ärendet. De är inte bekräftad intervjuevidens. En sparad kopia visar vad som registrerades; kontrollera det aktuella originalet vid ändringar eller återkallad delning.",
+  "rec.ri.savedSources.empty": "Inget underlag har sparats i intervjuärendet.",
+  "rec.ri.savedSources.noReadableText": "Inga läsbara textpassager finns för detta underlag.",
   "rec.lifecycle.title": "Arkivering och gallring",
   "rec.lifecycle.archive": "Arkivera",
   "rec.lifecycle.restore": "Återställ arkivering",
@@ -701,6 +706,12 @@ export const recruitmentSv = {
 } as const;
 
 export const recruitmentEn: { [K in keyof typeof recruitmentSv]: string } = {
+  "rec.ri.savedSources.title": "Saved material in the interview case",
+  "rec.ri.savedSources.body":
+    "This is text and selected references saved in this case. They are not confirmed interview evidence. A saved copy records what was entered; check the current original when it changes or sharing is withdrawn.",
+  "rec.ri.savedSources.empty": "No material has been saved in the interview case.",
+  "rec.ri.savedSources.noReadableText":
+    "No readable text passages are available for this material.",
   "rec.lifecycle.title": "Archiving and retention",
   "rec.lifecycle.archive": "Archive",
   "rec.lifecycle.restore": "Restore from archive",

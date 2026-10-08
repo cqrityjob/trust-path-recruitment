@@ -293,6 +293,7 @@ export async function mount(
     listMyEmployerWorkspaces: [],
     trackV31FunnelEvent: { recorded: false },
     listMyEvidence: [],
+    listMyUploadAttempts: [],
     listClaimVersions: [],
     listMyCredentialDrafts: [],
     listCredentialTypes: [],

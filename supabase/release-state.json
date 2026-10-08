@@ -7,6 +7,59 @@
   "$comment": "RELEASE PARITY STATE. Enforced by scripts/release-parity-check.ts, which runs in CI and before a release. This file records, for every canonical migration at the release frontier, whether it is believed applied on the hosted database, and which database objects it introduces. The guard fails when application code on this branch references an object whose migration is not applied -- the exact class of failure that stopped employers saving jobs during UAT. It NEVER connects to a database, holds no credentials and applies no migration; it compares this repository against itself. Edit it deliberately: every entry is an owner-level statement about production.", 
   "frontier": [
     {
+      "file": "20270309090000_sp_evidence_upload_recovery.sql",
+      "hostedState": "pending",
+      "note": "Additive holder-owned upload intents and fenced recovery; no worker, email, AI or historical orphan backfill. Schema only; consumer must wait for official installation and readback. Preserve numeric installation order:07100000 then08090000 then09090000.",
+      "rollback": "supabase/rollback/20270309090000_sp_evidence_upload_recovery_rollback.sql",
+      "verify": "Mandatory strict full history,41 actual SQL assertions, nonempty-journal rollback refusal; actual GoTrue/Storage bytes, concurrency, own reload/retry and erasure queue proof via isolated real CI. No PASS from stubs. See docs/release/op09-evidence-upload-recovery-contract.md.",
+      "introduces": [
+        {
+          "kind": "table",
+          "object": "sp_evidence_upload_attempts"
+        },
+        {
+          "kind": "function",
+          "object": "sp_evidence_upload_payload"
+        },
+        {
+          "kind": "function",
+          "object": "sp_begin_evidence_upload"
+        },
+        {
+          "kind": "function",
+          "object": "sp_reconcile_evidence_upload"
+        },
+        {
+          "kind": "function",
+          "object": "sp_list_my_evidence_upload_attempts"
+        },
+        {
+          "kind": "function",
+          "object": "sp_authorize_evidence_upload_cleanup"
+        },
+        {
+          "kind": "function",
+          "object": "sp_confirm_evidence_upload_cleanup"
+        },
+        {
+          "kind": "function",
+          "object": "sp_evidence_upload_attachment_guard"
+        },
+        {
+          "kind": "function",
+          "object": "sp_evidence_upload_storage_writable"
+        },
+        {
+          "kind": "function",
+          "object": "sp_evidence_upload_intent_immutable"
+        },
+        {
+          "kind": "function",
+          "object": "sp_evidence_upload_erasure_manifest"
+        }
+      ]
+    },
+    {
       "file": "20270307100000_recruiter_domain_conflict_transport.sql",
       "hostedState": "applied",
       "note": "Forward-only domain conflict transport and consistent interview locks after verified #450 installation. Exact business CAS branches return HTTP409/PT409; genuine PostgreSQL serialization failures unchanged. Preserves existing signatures/defaults/ACL, snapshots/reports and all lifecycle decisions. No application consumers in this schema PR.",
@@ -3523,6 +3576,66 @@
       "rollback": "supabase/rollback/20270214090000_sp_catalogue_research_publish_rollback.sql",
       "verify": "SELECT count(*) FILTER (WHERE is_active), count(*) FROM public.sp_credential_types WHERE code LIKE 'INTL\\_%'; -- expect 154 of 154 active. SELECT count(*) FROM public.sp_approved_credential_catalogue WHERE scope_code='global_professional'; -- expect 154. SELECT count(*) FROM public.sp_credential_types t JOIN public.sp_catalogue_research_records r ON r.credential_code=t.code WHERE r.reconciliation_outcome='added_approved' AND (NOT t.is_active OR t.legal_review_state<>'pending' OR t.allows_no_expiry); -- expect 0. SELECT count(*) FROM public.sp_claims; -- expect unchanged: publication touches no claim. SELECT code, is_active, pilot_state FROM public.sp_market_packs ORDER BY code; -- expect unchanged: publication opens no market.",
       "note": "CERTIFICATION RESEARCH INTEGRATION, PUBLICATION (3 of 3). GENERATED; INTRODUCES NOTHING. Sets is_active=true on exactly the 140 definitions the import added, by explicit code and nothing else, making them SELECTABLE and nothing more: legal_review_state stays pending, allows_no_expiry stays false, no market, grant, claim or trust state changes, and no holder is verified. RELEASE ORDER: apply this only AFTER the application that renders the new credential kinds, the registration search and the request path has been published, because until then the existing wizard would list 140 more entries with raw class and subject codes. Rollback withdraws them from NEW registration and deletes nothing; existing claims stay readable and reviewable. Needs 20270213090000."
+    },
+    {
+      "file": "20270308090000_recruiter_intelligence_requirements.sql",
+      "hostedState": "applied",
+      "hostedVersion": "20270308090000",
+      "hostedName": "recruiter_intelligence_requirements",
+      "evidenceSource": "Read-only verification after #4516039 merge2a468 and official integration installed080. Prior385 ledger unchanged;386 rows.16 full function contracts/ACL,5RLS tables/49columns/12triggers/33constraint definitions/2member-only policies match authoritative source.20snapshots/14locks/ACK0/reports0/case statuses unchanged; all5new tables empty. See docs/release/2026-10-08-recruiter-intelligence-p1-hosted-verification.json.",
+      "note": "P1 schema only, stacked after permanent interview content snapshot. Owner authorises necessary merges/installation after passing checks in the 2026-10-08 live completion request. No AI activation, candidate messaging or retention-worker/cron. Application consumers ship after verified hosted installation.",
+      "rollback": "supabase/rollback/20270308090000_recruiter_intelligence_requirements_rollback.sql",
+      "verify": "Compare isolated PostgreSQL17 function bodies, signatures, search_path, ACLs, profile/decision/review immutability and CAS constraints with hosted read-only observations. Check prior384 ledger identities unchanged, report hashes unchanged, and no client DML or anonymous execute. Run actual100 synthetic DB/API/UI oracle, source withdrawal, changed profile, AI-only rejection and concurrent reviewer/assignment CAS. Record applied only after official integration installation.",
+      "introduces": [
+        {
+          "kind": "function",
+          "object": "rec_ri_get_profile"
+        },
+        {
+          "kind": "function",
+          "object": "rec_ri_confirm_profile"
+        },
+        {
+          "kind": "function",
+          "object": "rec_ri_get_review"
+        },
+        {
+          "kind": "function",
+          "object": "rec_ri_save_review"
+        },
+        {
+          "kind": "function",
+          "object": "rec_ri_candidate_view"
+        },
+        {
+          "kind": "function",
+          "object": "rec_ri_manual_reference"
+        },
+        {
+          "kind": "function",
+          "object": "rec_ri_transfer_requirements"
+        },
+        {
+          "kind": "function",
+          "object": "rec_ri_overview_counts"
+        },
+        {
+          "kind": "table",
+          "object": "rec_requirement_profiles"
+        },
+        {
+          "kind": "table",
+          "object": "rec_requirement_review_heads"
+        },
+        {
+          "kind": "table",
+          "object": "rec_requirement_decisions"
+        },
+        {
+          "kind": "table",
+          "object": "rec_requirement_review_events"
+        }
+      ]
     }
   ], 
   "policyVersion": 2, 

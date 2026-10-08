@@ -24,7 +24,7 @@
 import type { CandidateView } from "./definitions";
 
 /** One recruitment's list: which vacancy, and the view of it. */
-export type ListQuery = { employerId: string; jobId: string; view: CandidateView };
+export type ListQuery = { employerId: string; jobId: string | null; view: CandidateView };
 
 export type ListContext = {
   /** The rows' ids, for a list that was read whole (the applications page). */
@@ -69,7 +69,7 @@ export function readListContext(key: string | undefined): ListContext | null {
     const hasQuery =
       typeof parsed.query === "object" &&
       parsed.query !== null &&
-      typeof parsed.query.jobId === "string" &&
+      (typeof parsed.query.jobId === "string" || parsed.query.jobId === null) &&
       typeof parsed.query.employerId === "string";
     if (!hasIds && !hasQuery) return null;
     // Only same-origin paths, never an absolute URL somebody planted.
@@ -90,6 +90,7 @@ export function recallListKeyFor(applicationId: string, jobId?: string | null): 
     const ctx = readListContext(key);
     if (!ctx) return undefined;
     if (ctx.ids?.includes(applicationId)) return key;
+    if (ctx.query?.jobId === null) return key;
     if (ctx.query && jobId && ctx.query.jobId === jobId) return key;
     return undefined;
   } catch {
