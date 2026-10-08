@@ -6,6 +6,24 @@ Bas: `8c9b3138bcb801ac69aa44b14e9cb592da5ea50a`, med normal merge av
 livscykelkorrigeringen `f74e7901280dc006596a1fcf5a000b4bb1a703ee` och dess
 pending-bokföring `62344fc3032ae04d3fe45491f25cbe799952d0be`.
 
+### Integration efter portalens slut-CI
+
+Den 2026-10-09, svensk tid, integrerades mergad main
+`55db1e3b83ace033450899a93ca0961edde05217` med vanlig merge
+`8dfec6c47e42074d808c30939cebf0c63defce55`. #463:s granskade huvud
+`254005dd655371baa81188026b75ec8758f0c37e` hade 24 körda SUCCESS,
+fyra avsiktliga villkorsskip och inga väntande eller misslyckade jobb.
+Detta återanvänder portalens schemaoberoende kod och registerbegränsade
+image-retry; ingen ny klientfunktion införs i denna schema-gren.
+
+De nya SQL-, rollback-, fixture- och racefilerna är oförändrade från den
+lokalt verifierade kandidaten ovan. De tidigare SQL-resultaten är fortsatt
+lokala versionsbundna bevis, inte en ny full replay eller ett hostedprov.
+Efter integrationen passerade migrationspolicy, normal release-parity,
+release-frontier, SQL-säkerhet och dubblettkontroll. Båda migrationerna är
+fortfarande ärligt `pending`. Full remote CI på PR:s slut-SHA återstår;
+ingen produktionsinstallation eller publicering har utförts.
+
 ## Förändring och kontrakt
 
 [20270310100000](../../../supabase/migrations/20270310100000_recruiter_profile_change_review.sql)
