@@ -66,7 +66,20 @@ export function MaterialLifecycle({
       if (action.startsWith("retry:")) await retry({ data: { erasureId: action.slice(6) } });
       if (action === "archive") {
         await archive({ data: { jobId, applicationId, archive: !archived } });
-        setNotice(t(archived ? "rec.lifecycle.restoredNotice" : "rec.lifecycle.archivedNotice"));
+        // The notice names what was archived: an application leaves the active
+        // lists but stays under Arkiverade and Alla mottagna; a recruitment
+        // shows only under Arkiverade in the recruitment list.
+        setNotice(
+          t(
+            applicationId
+              ? archived
+                ? "rec.lifecycle.restoredNotice"
+                : "rec.lifecycle.archivedNotice"
+              : archived
+                ? "rec.lifecycle.restoredNoticeJob"
+                : "rec.lifecycle.archivedNoticeJob",
+          ),
+        );
       }
       if (action === "preview") setConfirmation(await preview({ data: { jobId, applicationId } }));
       if (action === "erase" && confirmation) {

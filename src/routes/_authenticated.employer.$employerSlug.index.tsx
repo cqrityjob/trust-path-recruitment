@@ -417,6 +417,14 @@ function EmployerOverview({
     isReadyToComplete(r.phase, r.unresolved),
   );
   const newApplicationsTotal = (overview?.recruitments ?? []).reduce((n, r) => n + r.newCount, 0);
+  // The draft row opens the recruitment list under phase=draft, which is the
+  // not-yet-published recruitments (draft, pending review, rejected). The
+  // dashboard's draftJobs counts status=draft only, so the row counts the same
+  // population the list shows; the dashboard count is the fallback until the
+  // overview has answered.
+  const draftRecruitments = overview
+    ? overview.recruitments.filter((r) => r.phase === "draft" && !r.archivedAt).length
+    : null;
   const upcoming = overview?.upcomingInterviews ?? [];
 
   // Counted by the database over every application (rec_job_counts), not
@@ -592,12 +600,13 @@ function EmployerOverview({
     });
   }
 
-  if (data.draftJobs > 0) {
+  const draftCount = draftRecruitments ?? data.draftJobs;
+  if (draftCount > 0) {
     actions.push({
       key: "draft-jobs",
       icon: <Briefcase className="h-4 w-4" />,
-      count: data.draftJobs,
-      text: tp("employer.actions.draftJobs", data.draftJobs),
+      count: draftCount,
+      text: tp("employer.actions.draftJobs", draftCount),
       // The drafts, not the whole list: the list's default view hides nothing
       // a draft needs, but a count that opens more rows than it names is a
       // count the reader has to re-find.
