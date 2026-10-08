@@ -511,6 +511,28 @@ export const table: Record<string, unknown | ((args: Record<string, unknown>) =>
     args.jobId === JOB_UPPSALA ? recruitmentDetail : null,
   getRequirementProfile: (args: Record<string, unknown>) =>
     args.jobId === JOB_UPPSALA ? requirementProfile : null,
+  // The hub's material-lifecycle panel: nothing archived, nothing due.
+  getLifecycleOverview: {
+    months: 24,
+    canSetRetention: true,
+    jobs: jobs.map((j) => ({
+      id: j.id,
+      archivedAt: null,
+      completedAt: j.id === JOB_READY ? "2026-10-01T09:00:00.000Z" : null,
+      state: j.id === JOB_READY ? "completed" : "open",
+      canManage: true,
+      missingDate: false,
+      purgeAt: null,
+    })),
+    applications: UPPSALA_APPLICATIONS.map((c) => ({
+      id: c.applicationId,
+      jobId: c.jobId,
+      archivedAt: c.archivedAt,
+      recruitmentArchivedAt: null,
+      status: c.status,
+    })),
+    erasures: [],
+  },
   listEmployerAssessmentCatalog: [],
   getEmployerWorkforceSummary: { activeEmployees: 12, rolesRepresented: 3, sitesRepresented: 2 },
   listTrainingStatus: [],
