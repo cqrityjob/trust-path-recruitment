@@ -16,6 +16,15 @@ type FoundationKeys =
   | "scp_iv_review_manual_finding"
   | "scp_iv_manual_finding_capabilities"
   | "scp_iv_case_content_manifest";
+type RecruitmentIntelligenceKeys =
+  | "rec_ri_get_profile"
+  | "rec_ri_get_review"
+  | "rec_ri_confirm_profile"
+  | "rec_ri_save_review"
+  | "rec_ri_manual_reference"
+  | "rec_ri_transfer_requirements"
+  | "rec_ri_candidate_view"
+  | "rec_ri_overview_counts";
 type FoundationColumns =
   | "origin"
   | "neutral_question"
@@ -59,11 +68,17 @@ export type ContractAssertions = [
     Equal<
       Omit<
         Functions,
-        "bcp_conduct_record_resolution" | "scp_iv_finalise_previewed_report" | FoundationKeys
+        | "bcp_conduct_record_resolution"
+        | "scp_iv_finalise_previewed_report"
+        | FoundationKeys
+        | RecruitmentIntelligenceKeys
       >,
       Omit<
         Generated["public"]["Functions"],
-        "bcp_conduct_record_resolution" | "scp_iv_finalise_previewed_report" | FoundationKeys
+        | "bcp_conduct_record_resolution"
+        | "scp_iv_finalise_previewed_report"
+        | FoundationKeys
+        | RecruitmentIntelligenceKeys
       >
     >
   >,
@@ -151,3 +166,39 @@ const invalidDraftId = {
 };
 // @ts-expect-error A nullable UUID is still a string, never a number.
 client.rpc("scp_iv_finalise_previewed_report", invalidDraftId);
+
+export type RecruitmentIntelligenceAssertions = [
+  Assert<Equal<Functions["rec_ri_candidate_view"]["Args"]["_job_id"], string | null>>,
+  Assert<Equal<Functions["rec_ri_confirm_profile"]["Args"]["_start_date"], string | null>>,
+  Assert<Equal<Functions["rec_ri_save_review"]["Args"]["_responsible_user_id"], string | null>>,
+  Assert<Equal<Functions["rec_ri_save_review"]["Args"]["_confirm"], boolean>>,
+];
+client.rpc("rec_ri_candidate_view", {
+  _employer_id: "synthetic",
+  _job_id: null,
+  _filters: {},
+  _sort: "requirements",
+  _dir: null,
+  _page: 1,
+  _size: 25,
+  _around: null,
+});
+// @ts-expect-error Required nullable job scope is not an optional SQL argument.
+client.rpc("rec_ri_candidate_view", {
+  _employer_id: "synthetic",
+  _filters: {},
+  _sort: "requirements",
+  _dir: null,
+  _page: 1,
+  _size: 25,
+  _around: null,
+});
+const invalidProfileVersion = {
+  _job_id: "synthetic",
+  _expected_version: null,
+  _operation_id: "synthetic",
+  _start_date: null,
+  _rules: [],
+};
+// @ts-expect-error Profile version remains numeric; nullability does not loosen other fields.
+client.rpc("rec_ri_confirm_profile", invalidProfileVersion);
