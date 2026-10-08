@@ -102,8 +102,11 @@ meddelanden, retention-worker/cron eller AI-kostnader ingår.
 
 ## Installation, klient och återställning
 
-Merge och installation hanteras separat av releaseägaren. Installera schema i
-ordning, verifiera ledger, fulla funktioner/defaults/ägare/ACL/config, privata
+Releaseägaren ansvarar för schema-merge, som enligt den
+[officiella releaseordningen](../../release/2026-10-03-release-order.md#fyra-regler-som-avgör-ordningen)
+utlöser installation via Supabase-integrationen. Denna PR hålls omärgad tills
+installationsbeslutet är fattat. Installera schema i ordning, verifiera ledger,
+fulla funktioner/defaults/ägare/ACL/config, privata
 objekt/guards och tidigare skyddad data genom läsning, och bokför faktisk
 installation innan klienten använder RPC:erna. Klientens profilversionsbindning,
 skäl-/påverkansvisning, källpanel och visningskolumner behöver egna accepterade
