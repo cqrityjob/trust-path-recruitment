@@ -193,6 +193,14 @@ test("target guard accepts only an explicit GitHub-hosted disposable run and the
       /^Error: P1_NATIVE_/,
     );
   assert.throws(() => validateTarget(valid, sha, "b".repeat(40), SCHEMA_SHA), /SHA_MISMATCH/);
+  assert.throws(
+    () => validateTarget(valid, sha, "40e5775de5195050571421827434ec2872a61506", SCHEMA_SHA),
+    /SHA_MISMATCH/,
+  );
+  assert.throws(
+    () => validateTarget(valid, sha, APP_SHA, "1e5988c6f9c7121a0fefd22c0db06f6b573f0ae9"),
+    /SHA_MISMATCH/,
+  );
   assert.throws(() => validateTarget(valid, sha, APP_SHA, "b".repeat(40)), /SHA_MISMATCH/);
   assert.throws(() => validateTarget(valid, sha, APP_SHA, undefined), /SHA_MISMATCH/);
 });
@@ -490,12 +498,23 @@ test("human decisions preserve explicit NO, actual missing sources and checked e
 });
 test("history/count contracts fail closed on missing full schema, skipped or flaky browser evidence", () => {
   const files = fs.readdirSync(path.join(root, "supabase/migrations"));
-  assert.ok(history(files).length >= 387);
-  for (const prefix of ["20270308090000_", "20270309090000_"])
-    assert.throws(
-      () => history(files.filter((name) => !name.startsWith(prefix))),
-      /COMPLETE_HISTORY/,
-    );
+  assert.equal(APP_SHA, "55db1e3b83ace033450899a93ca0961edde05217");
+  assert.equal(SCHEMA_SHA, "8dfec6c47e42074d808c30939cebf0c63defce55");
+  assert.equal(history(files).length, 389);
+  assert.throws(
+    () => history(files.filter((name) => !/^20270310(?:090000|100000)_/.test(name))),
+    /COMPLETE_HISTORY/,
+  );
+  for (const prefix of [
+    "20270308090000_",
+    "20270309090000_",
+    "20270310090000_",
+    "20270310100000_",
+  ]) {
+    const omitted = files.filter((name) => !name.startsWith(prefix));
+    assert.throws(() => history(omitted), /COMPLETE_HISTORY/);
+    assert.throws(() => history([...omitted, "20270311100000_other.sql"]), /COMPLETE_HISTORY/);
+  }
   assert.throws(
     () => history([...files, files.find((name) => name.endsWith(".sql"))]),
     /COMPLETE_HISTORY/,
@@ -511,6 +530,17 @@ test("history/count contracts fail closed on missing full schema, skipped or fla
       () => requireBrowserCounts({ expected: 5, unexpected: 0, flaky: 0, skipped: 0, ...patch }),
       /FIVE_BROWSER/,
     );
+});
+test("workflow checkouts bind the exact389 schema and fresh reviewed app without floating refs", () => {
+  const workflow = fs.readFileSync(
+    path.join(root, ".github/workflows/recruiter-p1-native-ci.yml"),
+    "utf8",
+  );
+  assert.match(workflow, new RegExp(`ref: ${APP_SHA}\\n\\s+path: app\\n`));
+  assert.match(workflow, new RegExp(`ref: ${SCHEMA_SHA}\\n\\s+path: schema\\n`));
+  assert.match(workflow, /fetch-depth: 0/);
+  assert.doesNotMatch(workflow, /ref: (?:main|latest)|continue-on-error:/);
+  assert.match(workflow, /run: node scripts\/recruiter-p1-native-run\.mjs/);
 });
 test("provider login remains enabled while signup/mail/runtime workers remain disabled", () => {
   const auth = CONFIG.split("[auth]")[1].split("[auth.email]")[0];

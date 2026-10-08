@@ -3,8 +3,8 @@ import path from "node:path";
 import cp from "node:child_process";
 import crypto from "node:crypto";
 
-export const SCHEMA_SHA = "1e5988c6f9c7121a0fefd22c0db06f6b573f0ae9";
-export const APP_SHA = "40e5775de5195050571421827434ec2872a61506";
+export const SCHEMA_SHA = "8dfec6c47e42074d808c30939cebf0c63defce55";
+export const APP_SHA = "55db1e3b83ace033450899a93ca0961edde05217";
 export const PROJECT = "cqj-ri-native-op09-20261008";
 export const API = "http://127.0.0.1:55820";
 export const APP = "http://127.0.0.1:35820";
@@ -61,20 +61,14 @@ export function validateTarget(env, evidenceSha, appSha) {
 }
 const git = (cwd, args) =>
   cp.execFileSync("git", args, { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
-export function readContext(env = process.env) {
-  if (!env.GITHUB_WORKSPACE) throw Error("OP09_NATIVE_WORKSPACE_REQUIRED");
-  const context = validateTarget(
-    env,
-    git(env.GITHUB_WORKSPACE, ["rev-parse", "HEAD"]),
-    git(path.join(env.GITHUB_WORKSPACE, "app"), ["rev-parse", "HEAD"]),
-  );
+export function requireSchemaWitness(root, evidenceSha) {
   try {
-    git(context.root, ["merge-base", "--is-ancestor", SCHEMA_SHA, context.evidenceSha]);
-    git(context.root, [
+    git(root, ["merge-base", "--is-ancestor", SCHEMA_SHA, evidenceSha]);
+    git(root, [
       "diff",
       "--exit-code",
       SCHEMA_SHA,
-      context.evidenceSha,
+      evidenceSha,
       "--",
       "supabase/migrations",
       "supabase/config.toml",
@@ -82,6 +76,15 @@ export function readContext(env = process.env) {
   } catch {
     throw Error("OP09_NATIVE_SCHEMA_WITNESS_CHANGED");
   }
+}
+export function readContext(env = process.env) {
+  if (!env.GITHUB_WORKSPACE) throw Error("OP09_NATIVE_WORKSPACE_REQUIRED");
+  const context = validateTarget(
+    env,
+    git(env.GITHUB_WORKSPACE, ["rev-parse", "HEAD"]),
+    git(path.join(env.GITHUB_WORKSPACE, "app"), ["rev-parse", "HEAD"]),
+  );
+  requireSchemaWitness(context.root, context.evidenceSha);
   for (const dir of [context.root, context.appRoot])
     if (git(dir, ["status", "--porcelain", "--untracked-files=no"]))
       throw Error("OP09_NATIVE_TRACKED_FILES_DIRTY");
@@ -120,12 +123,17 @@ export function validateStatus(status) {
 export function history(names) {
   const files = names.filter((n) => n.endsWith(".sql")).sort();
   if (
-    files.length !== 387 ||
+    files.length !== 389 ||
     files.some((n) => !/^\d{14}_.+\.sql$/.test(n)) ||
     new Set(files.map((n) => n.slice(0, 14))).size !== files.length ||
-    ["20270307090000_", "20270307100000_", "20270308090000_", "20270309090000_"].some(
-      (prefix) => !files.some((n) => n.startsWith(prefix)),
-    )
+    [
+      "20270307090000_",
+      "20270307100000_",
+      "20270308090000_",
+      "20270309090000_",
+      "20270310090000_",
+      "20270310100000_",
+    ].some((prefix) => !files.some((n) => n.startsWith(prefix)))
   )
     throw Error("OP09_NATIVE_EXACT_COMPLETE_HISTORY_REQUIRED");
   return files;

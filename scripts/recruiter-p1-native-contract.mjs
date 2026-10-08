@@ -2,8 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 
-export const APP_SHA = "40e5775de5195050571421827434ec2872a61506";
-export const SCHEMA_SHA = "1e5988c6f9c7121a0fefd22c0db06f6b573f0ae9";
+export const APP_SHA = "55db1e3b83ace033450899a93ca0961edde05217";
+export const SCHEMA_SHA = "8dfec6c47e42074d808c30939cebf0c63defce55";
 export const PROJECT = "cqj-ri-native-p1-100";
 export const API = "http://127.0.0.1:55810";
 export const APP = "http://127.0.0.1:35810";
@@ -132,12 +132,17 @@ export function validateStatus(status) {
 export function history(names) {
   const files = names.filter((name) => name.endsWith(".sql")).sort();
   if (
-    files.length < 387 ||
+    files.length !== 389 ||
     files.some((name) => !/^\d{14}_.+\.sql$/.test(name)) ||
     new Set(files.map((name) => name.slice(0, 14))).size !== files.length ||
-    ["20270307090000_", "20270307100000_", "20270308090000_", "20270309090000_"].some(
-      (prefix) => !files.some((f) => f.startsWith(prefix)),
-    )
+    [
+      "20270307090000_",
+      "20270307100000_",
+      "20270308090000_",
+      "20270309090000_",
+      "20270310090000_",
+      "20270310100000_",
+    ].some((prefix) => !files.some((f) => f.startsWith(prefix)))
   )
     throw Error("P1_NATIVE_COMPLETE_HISTORY_REQUIRED");
   return files;
