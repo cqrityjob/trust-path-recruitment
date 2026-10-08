@@ -13,8 +13,8 @@
   ],
   "source": "Supabase connector read-only SQL, explicit project wrygicdfxwjnrugduxnt",
   "projectRef": "wrygicdfxwjnrugduxnt",
-  "readAt": "2026-10-08T12:48:40.583305+00:00",
-  "readBy": "Read-only verification after #4516039 merge2a468 and official integration installed080. Prior385 ledger unchanged;386 rows.16 full function contracts/ACL,5RLS tables/49columns/12triggers/33constraint definitions/2member-only policies match authoritative source.20snapshots/14locks/ACK0/reports0/case statuses unchanged; all5new tables empty. See docs/release/2026-10-08-recruiter-intelligence-p1-hosted-verification.json.",
+  "readAt": "2026-10-08T13:37:19.169282+00:00",
+  "readBy": "Read-only verification after #457 exact1e598 normal merge7f899 and official integration installed0909. Ledger387/prior386 unchanged; all10 full function body/args/default/owner/config/ACL,14columns/11constraint predicates/3policies/3indexes/3triggers match authoritative source. Journal0;20snapshots14locksACK0reports0/statuses unchanged; all16P1 function contracts preserved. Full independent capture/review: docs/release/2026-10-08-op09-hosted-verification.json. No production fixtures or workers.",
   "versions": [
     {
       "version": "20260716153446",
@@ -1549,16 +1549,20 @@
       "name": "recruiter_intelligence_interview_foundation"
     },
     {
-      "name": "interview_content_snapshot_lock",
-      "version": "20270307090000"
+      "version": "20270307090000",
+      "name": "interview_content_snapshot_lock"
     },
     {
-      "name": "recruiter_domain_conflict_transport",
-      "version": "20270307100000"
+      "version": "20270307100000",
+      "name": "recruiter_domain_conflict_transport"
     },
     {
       "version": "20270308090000",
       "name": "recruiter_intelligence_requirements"
+    },
+    {
+      "version": "20270309090000",
+      "name": "sp_evidence_upload_recovery"
     }
   ]
 }
