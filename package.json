@@ -1,11 +1,7 @@
 {
   "private": true,
   "scripts": {
-<<<<<<< HEAD
-    "recruiter-interview-foundation:check": "bun test scripts/interview-process-persistence.test.tsx scripts/recruiter-interview-foundation.test.tsx scripts/manual-control-points.test.tsx scripts/passport-evidence-withdrawal.test.tsx",
-=======
-    "recruiter-interview-foundation:check": "bun test scripts/interview-content-snapshot.test.tsx scripts/interview-process-persistence.test.tsx scripts/recruiter-interview-foundation.test.tsx scripts/manual-control-points.test.tsx",
->>>>>>> ff65c62 (Read frozen interview guidance and require explicit legacy review)
+    "recruiter-interview-foundation:check": "bun test scripts/interview-content-snapshot.test.tsx scripts/interview-process-persistence.test.tsx scripts/recruiter-interview-foundation.test.tsx scripts/manual-control-points.test.tsx scripts/passport-evidence-withdrawal.test.tsx",
     "sentinel:check": "bun run scripts/sentinel-check.ts",
     "sentinel:content": "bun run scripts/sentinel-content.ts",
     "security-work:service-check": "bun run scripts/security-work-service-check.ts",
