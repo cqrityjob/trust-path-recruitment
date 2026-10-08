@@ -12,9 +12,9 @@ faktiskt utförd kontroll; blockerat och inte kört är inte PASS.
 | Leveransens mergade PR:er | #447, #448, #450, #451, #452, #453, #454, #455, #456, #457, #458, #459, #460, #461, #462, alla verifierade i GitHub 16:36 UTC |
 | Main-CI på basen | `CI` run 37808576247 pågick vid avläsningen; native-workflows (`recruiter-p1-native-ci`, `recruiter-real-ci`) PASS på samma commit |
 | Gren | `claude/amazing-clarke-ferjkh`, vanliga framåtriktade commits ovanpå basen; ingen historik omskriven |
-| Sista kodcommit | `2ad7a3d10cd79cdf3477c0d018be49e06c78b5c3` (sista commit som ändrar källkod, tester eller workflows) |
+| Sista appkodscommit | `2ad7a3d10cd79cdf3477c0d018be49e06c78b5c3` (sista commit som ändrar `src/`, `e2e/` eller `scripts/`) |
 | Bildcommit | `06e5a6c9f0f4e74e1ff644d02f47a34e011c4301` av `github-actions[bot]`, fotograferat från `2ad7a3d` (efter) och `e4531c3b` (före) i workflow-körning 37817843842 |
-| Slut-SHA | Docs-commiten ovanpå bildcommiten (anges i PR:n). Den ändrar bara denna fil, så CI på slut-SHA:n kör samma kod som `2ad7a3d` plus bilderna |
+| Slut-SHA | PR-huvudet (anges i PR:n). Ovanpå bildcommiten ligger bara denna fil och en ändring i `employer-portal-ux-evidence.yml` (fotograferingsjobben hoppar över en push som inte ändrar något de fotograferar, så en docs-push inte längre slutar i en bot-commit vars kontroller väntar på godkännande). CI på slut-SHA:n kör samma appkod som `2ad7a3d` |
 
 Merge betyder inte att Lovable har synkat eller publicerat; se sista avsnittet.
 

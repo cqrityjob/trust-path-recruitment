@@ -35,16 +35,58 @@ on:
 permissions:
   contents: read
 
-# One run per branch: a new push supersedes the images an older head would
-# have committed, so the pair in the repository is always the latest head's.
-concurrency:
-  group: employer-portal-ux-evidence-${{ github.head_ref || github.ref }}
-  cancel-in-progress: true
+# Concurrency sits on the photograph jobs, not the workflow: a push that
+# photographs nothing (see `changed` below) must not cancel a pair that is
+# being taken for the previous head.
 
 jobs:
+  # A pull_request path filter is matched against the WHOLE pull request's
+  # diff, not against the commits of the push that fired the event, so this
+  # workflow would run again for every push to a pull request that once
+  # touched a watched path -- including the image commit it pushes itself and
+  # a docs-only push. This job looks at the pushed range instead: the
+  # photograph jobs run when the push changed something they photograph, or
+  # when there is no range to look at (opened, reopened, workflow_dispatch).
+  changed:
+    name: Did this push change what is photographed?
+    runs-on: ubuntu-latest
+    outputs:
+      photograph: ${{ steps.decide.outputs.photograph }}
+    steps:
+      - name: Compare the pushed range
+        id: decide
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          ACTION: ${{ github.event.action }}
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.event.after }}
+        run: |
+          if [ "$EVENT" != "pull_request" ] || [ "$ACTION" != "synchronize" ] || [ -z "$BEFORE" ] || [ -z "$AFTER" ]; then
+            echo "no pushed range to compare ($EVENT/$ACTION): photographing"
+            echo "photograph=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          if ! files=$(gh api --paginate "repos/${GITHUB_REPOSITORY}/compare/${BEFORE}...${AFTER}" --jq '.files[].filename'); then
+            echo "the range could not be compared (rewritten history?): photographing"
+            echo "photograph=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          echo "files in ${BEFORE:0:7}..${AFTER:0:7}:"; printf '  %s\n' $files
+          if printf '%s\n' $files | grep -Eq '^src/components/(employer|recruitment|academy)/|^src/routes/_authenticated\.employer\.|^src/i18n/|^e2e/employer-portal-ux-evidence\.spec\.ts$|^e2e/support/(employer-portal-fixture|public-entry-harness)\.ts$'; then
+            echo "photograph=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "nothing photographed changed in this push: the committed pair still shows this code"
+            echo "photograph=false" >> "$GITHUB_OUTPUT"
+          fi
+
   before:
     name: Before (base commit)
+    needs: changed
+    if: needs.changed.outputs.photograph == 'true'
     runs-on: ubuntu-latest
+    # A new photograph of the same branch supersedes one still being taken.
+    concurrency:
+      group: employer-portal-ux-evidence-before-${{ github.head_ref || github.ref }}
+      cancel-in-progress: true
     steps:
       - name: Checkout the head (for the suite and its fixture)
         uses: actions/checkout@v4
@@ -118,7 +160,12 @@ jobs:
 
   after:
     name: After (head commit)
+    needs: changed
+    if: needs.changed.outputs.photograph == 'true'
     runs-on: ubuntu-latest
+    concurrency:
+      group: employer-portal-ux-evidence-after-${{ github.head_ref || github.ref }}
+      cancel-in-progress: true
     steps:
       # The head itself, not the pull request's merge ref: SOURCE.txt then
       # names the commit the images show.
@@ -183,16 +230,22 @@ jobs:
   # before/after pair sits in the repository next to the change it documents
   # (artifacts/employer-portal-ux/INDEX.md describes them). Same-repository
   # pull requests only: a fork's branch cannot be pushed to with this token.
-  # The commit touches artifacts/ only, which this workflow's path filter does
-  # not watch, so it does not start this workflow again.
+  # The image commit does start this workflow again (the path filter is
+  # matched against the whole pull request), but it changes nothing that is
+  # photographed, so `changed` stops it there.
   publish-images:
     name: Commit the before/after images to the PR branch
     needs: [before, after]
-    # Only a COMPLETE pair is committed: a cancelled or failed photograph job
-    # leaves a partial set, and a partial set committed over a complete one
-    # is worse than none. Artifacts of the failed run remain for diagnosis.
+    # Only a COMPLETE pair is committed: a cancelled, failed or skipped
+    # photograph job leaves a partial set, and a partial set committed over a
+    # complete one is worse than none. Artifacts of the failed run remain for
+    # diagnosis.
     if: needs.before.result == 'success' && needs.after.result == 'success' && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
+    # Pushes to the branch queue behind each other rather than cancel.
+    concurrency:
+      group: employer-portal-ux-evidence-publish-${{ github.head_ref || github.ref }}
+      cancel-in-progress: false
     permissions:
       contents: write
     steps:
