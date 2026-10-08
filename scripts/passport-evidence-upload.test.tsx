@@ -2,7 +2,7 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "../src/integrations/supabase/database";
-import { uploadOwnedEvidence } from "../src/lib/security-passport/evidence-upload-adapter";
+import { uploadOwnedEvidence } from "../src/lib/security-passport/evidence-upload-adapter.functions";
 import {
   evidenceUploadIssue,
   isDefiniteAttachmentRejection,
