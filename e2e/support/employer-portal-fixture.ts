@@ -296,6 +296,10 @@ export const table: Record<string, unknown> = {
   employerVerificationCounts: { open: 0, total: 0 },
   getRecruitmentOverview: recruitmentOverview,
   listRecruitmentCandidatesPage: candidatePage,
+  // Two reads the overview made before this pass and never rendered. Answered
+  // so the same suite photographs the base commit; the head asks for neither.
+  listApplicationsForEmployer: [],
+  listAssignmentsForEmployer: [],
   listAssignmentApplications: {},
   listInterviewCases: {
     cases: [

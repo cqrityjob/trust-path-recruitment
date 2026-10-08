@@ -65,9 +65,12 @@ const AREAS: Area[] = [
   { key: "reports", path: "reports", ready: "[data-testid='reports']", flow: "report" },
 ];
 
+/** The boundary, a planted session, and the refusals to assert empty. The
+ *  session key is observed on the homepage (the harness answers that load's
+ *  own two public reads); no employer page is opened before the session is
+ *  planted, so nothing is asked by a signed-out shell. */
 async function signedIn(page: Page) {
   const refusals = await installBoundary(page, table);
-  await page.goto(`${BASE}/employer/${SLUG}`, { waitUntil: "domcontentloaded" });
   const key = await observeSupabaseStorageKey(page);
   await plantSession(page, key, { display_name: "Rita Rekryterare" });
   return refusals;
