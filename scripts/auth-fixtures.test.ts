@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { inspect } from "node:util";
 import {
   HOSTED_TARGET,
   LOCAL_CONTRACT_TARGET,
@@ -14,7 +15,7 @@ import {
   readHostedCredentials,
   readPrivateJson,
 } from "./auth-fixtures/core.mjs";
-import { adminOnlyFetch } from "./auth-fixtures/admin-adapter.mjs";
+import { adminOnlyFetch, officialAdmin } from "./auth-fixtures/admin-adapter.mjs";
 import { hostedMain, parseHostedArgs } from "./auth-fixtures/hosted.mjs";
 import { parseLocalArgs } from "./auth-fixtures/local-contract.mjs";
 
@@ -414,4 +415,64 @@ describe("outbound request surface", () => {
     ).rejects.toThrow("OUTBOUND_REQUEST_DENIED");
     expect(forwarded).toBe(2);
   });
+
+  for (const failure of ["redirect", "timeout", "unexpected"] as const) {
+    test(`official SDK logs only a fixed redacted ${failure} transport error, never credential/body/cause/stack`, async () => {
+      const keyCanary = "sb_secret_RI_KEY_CANARY_NOT_A_REAL_CREDENTIAL";
+      const passwordCanary = "RI_PASSWORD_CANARY_NOT_A_REAL_PASSWORD";
+      const jwtCanary = "eyJ.RI_JWT_CANARY_NOT_A_REAL_TOKEN.fixture";
+      const id = randomUUID();
+      const captured: unknown[][] = [];
+      const previousFetch = globalThis.fetch;
+      const previousError = console.error;
+      let requests = 0;
+      try {
+        globalThis.fetch = (async (_input: unknown, init?: RequestInit) => {
+          requests++;
+          expect(init?.redirect).toBe("error");
+          expect(init?.signal).toBeInstanceOf(AbortSignal);
+          const message = `${failure}:${keyCanary}:${passwordCanary}:${jwtCanary}`;
+          const error =
+            failure === "timeout"
+              ? new DOMException(message, "TimeoutError")
+              : failure === "redirect"
+                ? new TypeError(message)
+                : { message };
+          throw Object.assign(error, {
+            cause: {
+              headers: { authorization: keyCanary },
+              body: passwordCanary,
+              token: jwtCanary,
+            },
+            stack: `SYNTHETIC_SECRET_STACK:${keyCanary}:${passwordCanary}:${jwtCanary}`,
+          });
+        }) as typeof globalThis.fetch;
+        console.error = (...args: unknown[]) => {
+          captured.push(args);
+        };
+        const admin = await officialAdmin(HOSTED_TARGET, [id], keyCanary);
+        const result = await admin.createUser({
+          id,
+          email: "fixture@ri-sdk-redaction.invalid",
+          password: passwordCanary,
+          email_confirm: true,
+        });
+        expect(requests).toBe(1);
+        expect(result.error?.message).toBe("RI_AUTH_FIXTURE_STOP:AUTH_TRANSPORT_UNAVAILABLE");
+        expect(captured).toHaveLength(1); // Exercised the installed SDK's actual console.error branch.
+        const logged = captured[0][0] as Error;
+        expect(logged.stack).toBeUndefined();
+        expect(logged).not.toHaveProperty("cause");
+        const text = inspect(captured, { depth: 8 });
+        for (const canary of [keyCanary, passwordCanary, jwtCanary, "SYNTHETIC_SECRET_STACK"]) {
+          expect(text).not.toContain(canary);
+          expect(inspect(result.error, { depth: 8 })).not.toContain(canary);
+        }
+        expect(externalCalls).toBe(0);
+      } finally {
+        globalThis.fetch = previousFetch;
+        console.error = previousError;
+      }
+    });
+  }
 });
