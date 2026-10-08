@@ -17,9 +17,11 @@ Historical orphan files created before this journal have no durable intent. This
 
 Required release evidence:
 
-1. Full migration replay plus `supabase/tests/sp_evidence_upload_recovery_test.sql` on disposable PG17 and supported PG14. This uses synthetic Storage metadata and SQL actor/session context, and cannot substitute for GoTrue/physical bytes.
+1. Full migration replay plus `supabase/tests/sp_evidence_upload_recovery_test.sql` on disposable PG17 and supported PG16. This uses synthetic Storage metadata and SQL actor/session context, and cannot substitute for GoTrue/physical bytes.
 2. Actual GoTrue/Storage: own create → upload response loss → reload → explicit resume → exactly one evidence record; cleanup failure → reload → explicit retry → verified absence; renewed own session; other holder/anon/revoked-session direct API denial.
 3. Two simultaneous clients: delayed attach versus cleanup and delayed Storage metadata write versus cleanup, both possible lock orders. Registered bytes must survive; fenced attempts must refuse late writes. Preserve logs without credentials, bearer URLs, raw bytes or tokens.
 4. Swedish/English recovery UI and browser reload; desktop and honestly labelled mobile emulation. No worker, mail, AI or hosted mutation is needed for these isolated checks.
 
 The app release must follow applied-schema proof. An app rollback can leave this private additive schema installed. Schema rollback refuses any nonempty journal (`SP_UPLOAD_ROLLBACK_REQUIRES_EMPTY_JOURNAL`) so a rollback cannot discard unresolved orphan intentions. Do not force-drop pending history to make rollback pass.
+
+Installation order is chronological and schema first: verified07100000 → P1’s08090000 → this09090000 → the recovery application. Do not install09090000 ahead of a lower-numbered pending08090000. This stacked preparation branch must merge fresh main and record the preceding applied states before release. Its current SQL suite remains NOT RUN until exact-head mandatory CI executes it.
