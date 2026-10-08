@@ -27,7 +27,7 @@ import { runControls, type Mutation } from "./runner";
 const PIPELINE = "src/lib/employer-continuity/job-pipeline.ts";
 const STAGE = "src/lib/interview-intelligence/case-stage.ts";
 const JOB_HUB = "src/routes/_authenticated.employer.$employerSlug.jobs.$jobId.index.tsx";
-const APPLICATIONS = "src/routes/_authenticated.employer.$employerSlug.applications.index.tsx";
+const RECRUITMENT_FNS = "src/lib/recruitment/recruitment.functions.ts";
 const OVERVIEW = "src/routes/_authenticated.employer.$employerSlug.index.tsx";
 const II_INDEX =
   "src/routes/_authenticated.employer.$employerSlug.interview-intelligence.index.tsx";
@@ -102,9 +102,9 @@ const MUTATIONS: readonly Mutation[] = [
     id: "EL-ASSESSMENT-FILTER-NOT-APPLIED",
     defect:
       "the applications list accepts the assessment filter and ignores it, so the number and the list disagree",
-    file: APPLICATIONS,
-    find: "      return jobMatches && statusMatches && assessmentMatches && textMatches;",
-    replace: "      return jobMatches && statusMatches && textMatches;",
+    file: RECRUITMENT_FNS,
+    find: "      assessment: view.assessment ?? null,",
+    replace: "      assessment: null,",
     guard: G,
     expect: "and applies it to the rows",
   },
@@ -112,9 +112,9 @@ const MUTATIONS: readonly Mutation[] = [
     id: "EL-FILTER-MATCHES-EVERYTHING-WHILE-UNREAD",
     defect:
       "a filter whose reads have not answered matches every row, so the list shows people who are not being assessed",
-    file: APPLICATIONS,
-    find: '        (openAssessments.read === "ready" && openAssessments.ids.has(r.id));',
-    replace: '        openAssessments.ids.has(r.id) ||\n        openAssessments.read !== "ready";',
+    file: RECRUITMENT_FNS,
+    find: '    if (pageRes.error) throw toCode(pageRes.error, "listRecruitmentCandidatesPage view");',
+    replace: '    if (false) throw toCode(pageRes.error, "listRecruitmentCandidatesPage view");',
     guard: G,
     expect: "a filter whose read has not answered matches nothing rather than everything",
   },
