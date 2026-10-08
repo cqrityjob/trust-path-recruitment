@@ -36,6 +36,16 @@ export function appFixtureSql(source, namespace, reset = false) {
   // Native local fixture DML runs as its disposable database owner. These
   // setup writes are never claimed as authorization/session evidence.
   sql = sql.replace(/^SET LOCAL (?:ROLE|request\.jwt\.claim\.sub).*;\n|^RESET ROLE;\n/gm, "");
+  // Without fabricated JWTs the setup has no platform-admin timestamp
+  // privilege. Let the existing publication trigger stamp now().
+  const publication =
+    "UPDATE public.jobs SET status='published',published_at=now()-interval '1 day',expires_at=now()+interval '30 days'";
+  if (sql.split(publication).length !== 2)
+    throw Error("P1_NATIVE_CANONICAL_PUBLICATION_ANCHOR_CHANGED");
+  sql = sql.replace(
+    publication,
+    "UPDATE public.jobs SET status='published',expires_at=now()+interval '30 days'",
+  );
   const receipt = `INSERT INTO public.recruitment_settings(job_id,employer_id,responsible_user_id,receipt_enabled)
  SELECT job,employer,owner,false FROM fixture UNION ALL SELECT empty_job,employer,owner,false FROM fixture;
 DO $$ BEGIN IF EXISTS(SELECT 1 FROM public.recruitment_settings WHERE employer_id='${EMPLOYER}' AND receipt_enabled)

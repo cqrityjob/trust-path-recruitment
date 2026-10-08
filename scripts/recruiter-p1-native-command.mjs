@@ -37,3 +37,18 @@ export function capturePrivateOutput(name, args, { cwd, env, stdoutFile, stderrF
     if (stderrFd !== undefined) fs.closeSync(stderrFd);
   }
 }
+
+// Raw rows, details, hints, paths and arbitrary SQLSTATEs remain private.
+export function fixtureFailure(raw) {
+  const diagnostic = { operation: "application_fixture" };
+  const match = String(raw).match(/ERROR:\s+(23514|23505|23503|42501):/);
+  if (match) diagnostic.sqlState = match[1];
+  if (String(raw).includes("published_at is a moderation-owned field"))
+    diagnostic.domain = "JOB_PUBLICATION_TIMESTAMP_PROTECTED";
+  return Object.assign(new Error("P1_NATIVE_APP_FIXTURE_FAILED"), { safeDiagnostic: diagnostic });
+}
+
+export function confirmedAuthPredicate(namespace) {
+  if (!/^ri-p1-[a-f0-9]{12}$/.test(namespace)) throw Error("P1_NATIVE_NAMESPACE_REQUIRED");
+  return `email LIKE '${namespace}-%@synthetic.invalid' AND email_confirmed_at IS NOT NULL AND left(encrypted_password,4) IN ('$2a$','$2b$','$2y$')`;
+}

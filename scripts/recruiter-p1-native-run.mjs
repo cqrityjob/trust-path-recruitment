@@ -43,7 +43,11 @@ import {
   BROWSER_HASH,
 } from "./recruiter-p1-native-fixture.mjs";
 import { writeNativePublic } from "./recruiter-p1-native-public.mjs";
-import { capturePrivateOutput } from "./recruiter-p1-native-command.mjs";
+import {
+  capturePrivateOutput,
+  fixtureFailure,
+  confirmedAuthPredicate,
+} from "./recruiter-p1-native-command.mjs";
 
 const git = (cwd, args) =>
   cp
@@ -132,8 +136,10 @@ function command(name, args, label, options = {}) {
     ...options,
   });
   fs.closeSync(fd);
-  if (result.status !== 0)
+  if (result.status !== 0) {
+    if (label === "app-fixture") throw fixtureFailure(fs.readFileSync(file, "utf8"));
     throw Error(`P1_NATIVE_${label.toUpperCase().replaceAll("-", "_")}_FAILED`);
+  }
   return fs.readFileSync(file, "utf8").trim();
 }
 function dbEnv() {
@@ -228,7 +234,7 @@ function safety(expectedSyntheticAi = 0) {
   const data = JSON.parse(
     sql(`SELECT jsonb_build_object(
  'auth', (SELECT count(*) FROM auth.users),
- 'confirmed',(SELECT count(*) FROM auth.users WHERE email LIKE '${namespace}-%@synthetic.invalid' AND email_confirmed_at IS NOT NULL AND encrypted_password ~ '^\\$2[aby]\\$'),
+ 'confirmed',(SELECT count(*) FROM auth.users WHERE ${confirmedAuthPredicate(namespace)}),
  'applications',(SELECT count(*) FROM public.job_applications WHERE employer_id='${EMPLOYER}'),
  'receipt_enabled',(SELECT count(*) FROM public.recruitment_settings WHERE employer_id='${EMPLOYER}' AND receipt_enabled),
  'messages',(SELECT count(*) FROM public.recruitment_messages),
@@ -408,7 +414,12 @@ try {
   });
   await stage("application_fixture_receipts_off", async () => {
     const file = writePrivate("app-fixture.sql", appFixtureSql(canonicalSql, namespace));
-    command("psql", ["-v", "ON_ERROR_STOP=1", "-f", file], "app-fixture", { env: dbEnv() });
+    command(
+      "psql",
+      ["-v", "ON_ERROR_STOP=1", "-v", "VERBOSITY=verbose", "-f", file],
+      "app-fixture",
+      { env: dbEnv() },
+    );
     report.beforeOriginals = safety();
   });
   await stage("storage_80_actual_pdf_bytes", async () => {

@@ -33,7 +33,11 @@ import {
   decisions,
 } from "./recruiter-p1-native-fixture.mjs";
 import { writeNativePublic } from "./recruiter-p1-native-public.mjs";
-import { capturePrivateOutput } from "./recruiter-p1-native-command.mjs";
+import {
+  capturePrivateOutput,
+  fixtureFailure,
+  confirmedAuthPredicate,
+} from "./recruiter-p1-native-command.mjs";
 
 const root = path.resolve(import.meta.dirname, "..");
 // Evidence code may live on a schema-only branch. Its current SQL has 95
@@ -600,4 +604,48 @@ test("public artifact rejects raw credentials, non-PNG/symlink/uncurated files",
       fs.rmSync(dir, { recursive: true });
     }
   }
+});
+
+test("native fixture publication uses the existing trigger timestamp with no impersonation and retains other inputs", () => {
+  for (const reset of [false, true]) {
+    const generated = appFixtureSql(sql, ns, reset);
+    assert.match(
+      generated,
+      /UPDATE public\.jobs SET status='published',expires_at=now\(\)\+interval '30 days'/,
+    );
+    assert.doesNotMatch(generated, /published_at=|request\.jwt|SET LOCAL ROLE|DISABLE TRIGGER/);
+    assert.match(generated, /timestamptz '2026-10-01 00:00:00Z'\+n\*interval '1 minute'/);
+    assert.match(generated, /INSERT INTO public\.job_application_answers/);
+  }
+  const trigger = fs.readFileSync(
+    path.join(root, "supabase/migrations/20270131090000_jobs_publish_window_and_url_scheme.sql"),
+    "utf8",
+  );
+  assert.match(trigger, /NEW\.published_at IS NOT DISTINCT FROM OLD\.published_at/);
+  assert.match(trigger, /NEW\.published_at := now\(\)/);
+  assert.match(trigger, /published_at is a moderation-owned field/);
+});
+test("fixture SQL failure diagnostics never expose arbitrary messages, details, paths or secrets", () => {
+  const e = fixtureFailure(
+    "private_secret_canary ERROR: 23514: published_at is a moderation-owned field\nDETAIL: private_secret_canary",
+  );
+  assert.equal(e.message, "P1_NATIVE_APP_FIXTURE_FAILED");
+  assert.deepEqual(e.safeDiagnostic, {
+    operation: "application_fixture",
+    sqlState: "23514",
+    domain: "JOB_PUBLICATION_TIMESTAMP_PROTECTED",
+  });
+  assert.doesNotMatch(JSON.stringify(e.safeDiagnostic), /private_secret_canary/);
+  assert.deepEqual(
+    fixtureFailure("ERROR: private_secret_canary: Bearer private_secret_canary").safeDiagnostic,
+    { operation: "application_fixture" },
+  );
+});
+test("native bcrypt prefix guard has no SQL regex escaping ambiguity and retains namespace and confirmation", () => {
+  assert.equal(
+    confirmedAuthPredicate(ns),
+    `email LIKE '${ns}-%@synthetic.invalid' AND email_confirmed_at IS NOT NULL AND left(encrypted_password,4) IN ('$2a$','$2b$','$2y$')`,
+  );
+  assert.throws(() => confirmedAuthPredicate("prod' OR true--"), /NAMESPACE_REQUIRED/);
+  assert.doesNotMatch(confirmedAuthPredicate(ns), /\\| ~ /);
 });
