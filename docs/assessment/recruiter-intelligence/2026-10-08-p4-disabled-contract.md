@@ -117,10 +117,12 @@ Integrationsgranskningen fann att draft 1:s två origin-enum och gräns på fyra
 accepterade källslag inte kunde beskriva `candidate_supplement`. Draft 2 har
 en gemensam strikt enum med fem källslag och en ny schema-/kontraktsversion.
 Äldre draft 1-context och utdata avvisas; inget tidigare kvitto omstämplas.
-Kandidatkomplettering får bara citeras mot ett krav som uttryckligen accepterar
-detta källslag, med samma aktuella scope, källversion, hash, läsrätt och
-återkallningskontroller. En kriteriekoppling är fortfarande ett ogranskat
-förslag och intygar inte att ett skallkrav är uppfyllt.
+Kriteriekoppling till en kandidatkomplettering kräver ett krav som uttryckligen
+accepterar detta källslag, med samma aktuella scope, källversion, hash, läsrätt
+och återkallningskontroller. Neutrala klarlägganden kräver ett giltigt krav-ID
+och en giltig källhänvisning men intygar inte att underlaget är accepterat.
+En kriteriekoppling är fortfarande ett ogranskat förslag och intygar inte att
+ett skallkrav är uppfyllt.
 
 Detta är en deklarativ utökning av det avstängda kontraktet. Ingen verklig
 underlagsadapter, kravmotor, kandidatdelning, migration eller behörighet
