@@ -215,7 +215,7 @@ BEGIN
   request:=jsonb_build_object('version',_expected_version,'start',_start_date,'rules',_rules);
   result:=recruiter_intelligence.operation_result(_operation_id,_job_id,'profile',request); IF result IS NOT NULL THEN RETURN result; END IF;
   SELECT coalesce(max(version),0) INTO v FROM public.rec_requirement_profiles WHERE job_id=_job_id;
-  IF v<>_expected_version THEN RAISE EXCEPTION 'RI_STALE_VERSION' USING ERRCODE='check_violation'; END IF;
+  IF v<>_expected_version THEN RAISE EXCEPTION 'RI_STALE_VERSION' USING ERRCODE='PT409'; END IF;
   IF jsonb_array_length(_rules)<>(SELECT count(*) FROM public.recruitment_requirements WHERE job_id=_job_id)
      OR (SELECT count(DISTINCT x->>'requirementId') FROM jsonb_array_elements(_rules)x)<>jsonb_array_length(_rules) THEN RAISE EXCEPTION 'RI_PROFILE_INVALID' USING ERRCODE='check_violation'; END IF;
   FOR r IN SELECT * FROM jsonb_array_elements(_rules) LOOP
@@ -337,12 +337,14 @@ BEGIN
   request:=jsonb_build_object('profile',_profile_id,'revision',_expected_revision,'binding',_binding_token,'decisions',_decisions,'confirm',_confirm,'next',_next_action,'responsible',_responsible_user_id,'assignmentVersion',_expected_assignment_version);
   result:=recruiter_intelligence.operation_result(_operation_id,a.id,'review',request); IF result IS NOT NULL THEN RETURN result; END IF;
   SELECT * INTO p FROM public.rec_requirement_profiles WHERE job_id=a.job_id ORDER BY version DESC LIMIT 1;
-  IF p.id IS NULL OR p.id IS DISTINCT FROM _profile_id THEN RAISE EXCEPTION 'RI_SOURCE_STALE' USING ERRCODE='check_violation'; END IF;
+  IF p.id IS NULL OR p.id IS DISTINCT FROM _profile_id THEN RAISE EXCEPTION 'RI_SOURCE_STALE' USING ERRCODE='PT409'; END IF;
   INSERT INTO public.rec_requirement_review_heads(application_id,employer_id) VALUES(a.id,a.employer_id) ON CONFLICT DO NOTHING;
   SELECT * INTO h FROM public.rec_requirement_review_heads WHERE application_id=a.id FOR UPDATE;
-  IF h.revision<>_expected_revision THEN RAISE EXCEPTION 'RI_STALE_VERSION' USING ERRCODE='check_violation'; END IF;
+  IF h.revision<>_expected_revision THEN RAISE EXCEPTION 'RI_STALE_VERSION' USING ERRCODE='PT409'; END IF;
   current:=recruiter_intelligence.application_state(a.id);
-  IF current->>'bindingToken' IS DISTINCT FROM _binding_token THEN RAISE EXCEPTION 'RI_SOURCE_STALE' USING ERRCODE='check_violation'; END IF;
+  IF current->>'bindingToken' IS DISTINCT FROM _binding_token THEN RAISE EXCEPTION 'RI_SOURCE_STALE' USING ERRCODE='PT409'; END IF;
+  -- Domain CAS conflicts use HTTP409, not PostgreSQL40001: PostgREST14
+  -- retries genuine serialization_failure and must not retry an unchanged draft.
   -- Existing assignment RPCs maintain their own revision. Compare the
   -- caller's observed version before decisions/actions can be persisted,
   -- even when the submitted responsible person appears unchanged. Lock the
@@ -352,7 +354,7 @@ BEGIN
   SELECT * INTO metadata FROM public.recruitment_application_meta WHERE application_id=a.id FOR UPDATE;
   IF (_expected_assignment_version IS NULL AND initialized IS DISTINCT FROM true)
     OR (_expected_assignment_version IS NOT NULL AND (initialized IS TRUE OR metadata.version IS DISTINCT FROM _expected_assignment_version)) THEN
-    RAISE EXCEPTION 'STALE_VERSION' USING ERRCODE='serialization_failure';
+    RAISE EXCEPTION 'STALE_VERSION' USING ERRCODE='PT409';
   END IF;
   IF (SELECT count(DISTINCT x->>'requirementId') FROM jsonb_array_elements(_decisions)x)<>jsonb_array_length(_decisions) THEN RAISE EXCEPTION 'RI_REVIEW_INVALID' USING ERRCODE='check_violation'; END IF;
   IF _responsible_user_id IS NOT NULL AND NOT EXISTS(SELECT 1 FROM public.employer_memberships WHERE employer_id=a.employer_id AND user_id=_responsible_user_id AND status='active') THEN RAISE EXCEPTION 'RESPONSIBLE_NOT_A_MEMBER' USING ERRCODE='check_violation'; END IF;
@@ -360,7 +362,7 @@ BEGIN
     SELECT value INTO r FROM jsonb_array_elements(p.rules) WHERE value->>'requirementId'=d->>'requirementId';
     IF r IS NULL OR coalesce(d->>'state','') NOT IN ('met','not_met','clarify') OR nullif(btrim(d->>'note'),'') IS NULL OR char_length(d->>'note')>3000 OR char_length(d->>'sourceLabel')>500 OR char_length(d->>'sourceReference')>500 OR char_length(d->>'neutralQuestion')>3000 THEN RAISE EXCEPTION 'RI_REVIEW_INVALID' USING ERRCODE='check_violation'; END IF;
     sourceversion:=recruiter_intelligence.source_version(a.id,d->>'sourceKind',d->>'sourceReference');
-    IF d->>'sourceKind' IS NOT NULL AND (NOT(r->'acceptedSources' ? (d->>'sourceKind')) OR sourceversion IS NULL OR sourceversion IS DISTINCT FROM (d->>'sourceVersion')) THEN RAISE EXCEPTION 'RI_SOURCE_STALE' USING ERRCODE='check_violation'; END IF;
+    IF d->>'sourceKind' IS NOT NULL AND (NOT(r->'acceptedSources' ? (d->>'sourceKind')) OR sourceversion IS NULL OR sourceversion IS DISTINCT FROM (d->>'sourceVersion')) THEN RAISE EXCEPTION 'RI_SOURCE_STALE' USING ERRCODE='PT409'; END IF;
     source_case:=NULL;
     IF d->>'sourceKind'='interview_source' THEN
       SELECT s.case_id INTO source_case FROM public.scp_interview_case_sources s WHERE s.id::text=d->>'sourceReference' AND public.scp_iv_can_read_case(s.case_id);
@@ -474,7 +476,7 @@ BEGIN
   request:=jsonb_build_object('case',c.id,'revision',_expected_revision,'binding',_binding_token,'requirements',to_jsonb(_requirement_ids));
   result:=recruiter_intelligence.operation_result(_operation_id,a.id,'transfer',request); IF result IS NOT NULL THEN RETURN result; END IF;
   current:=recruiter_intelligence.application_state(a.id);
-  IF (current->>'revision')::integer IS DISTINCT FROM _expected_revision OR current->>'bindingToken' IS DISTINCT FROM _binding_token THEN RAISE EXCEPTION 'RI_SOURCE_STALE' USING ERRCODE='check_violation'; END IF;
+  IF (current->>'revision')::integer IS DISTINCT FROM _expected_revision OR current->>'bindingToken' IS DISTINCT FROM _binding_token THEN RAISE EXCEPTION 'RI_SOURCE_STALE' USING ERRCODE='PT409'; END IF;
   FOREACH rid IN ARRAY _requirement_ids LOOP
     SELECT value INTO criterion FROM jsonb_array_elements(current->'criteria') WHERE value->>'requirementId'=rid::text;
     IF criterion IS NULL THEN RAISE EXCEPTION 'RI_REVIEW_INVALID' USING ERRCODE='check_violation'; END IF;

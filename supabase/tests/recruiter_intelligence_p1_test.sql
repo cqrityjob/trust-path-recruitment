@@ -5,10 +5,12 @@
 BEGIN;
 CREATE FUNCTION pg_temp.ok(cond boolean,label text) RETURNS void LANGUAGE plpgsql AS $$ BEGIN
  IF cond IS DISTINCT FROM true THEN RAISE EXCEPTION 'ASSERTION FAILED: %',label; END IF; RAISE NOTICE 'ok %',label; END $$;
-CREATE FUNCTION pg_temp.fails(stmt text,needle text,label text) RETURNS void LANGUAGE plpgsql AS $$ DECLARE msg text; BEGIN
- BEGIN EXECUTE stmt; EXCEPTION WHEN OTHERS THEN msg:=SQLERRM; IF position(needle IN msg)=0 THEN RAISE EXCEPTION 'ASSERTION FAILED: % expected %, got %',label,needle,msg; END IF; RAISE NOTICE 'ok %',label; RETURN; END;
+CREATE FUNCTION pg_temp.fails(stmt text,needle text,label text,expected_state text DEFAULT NULL) RETURNS void LANGUAGE plpgsql AS $$ DECLARE msg text; state text; BEGIN
+ BEGIN EXECUTE stmt; EXCEPTION WHEN OTHERS THEN msg:=SQLERRM; state:=SQLSTATE;
+ IF expected_state IS NOT NULL AND (state IS DISTINCT FROM expected_state OR msg IS DISTINCT FROM needle) THEN RAISE EXCEPTION 'ASSERTION FAILED: % expected state/message %/%, got %/%',label,expected_state,needle,state,msg; END IF;
+ IF position(needle IN msg)=0 THEN RAISE EXCEPTION 'ASSERTION FAILED: % expected %, got %',label,needle,msg; END IF; RAISE NOTICE 'ok %',label; RETURN; END;
  RAISE EXCEPTION 'ASSERTION FAILED: % unexpectedly succeeded',label; END $$;
-GRANT EXECUTE ON FUNCTION pg_temp.ok(boolean,text),pg_temp.fails(text,text,text) TO PUBLIC;
+GRANT EXECUTE ON FUNCTION pg_temp.ok(boolean,text),pg_temp.fails(text,text,text,text) TO PUBLIC;
 CREATE TEMP TABLE fixture AS SELECT
  'ee100000-1111-4000-8000-000000000001'::uuid employer,
  'ee100000-0000-4000-8000-000000000001'::uuid owner,
@@ -77,6 +79,16 @@ DO $$ DECLARE s record;v jsonb;confirmed boolean; BEGIN FOR s IN SELECT * FROM s
  PERFORM public.rec_ri_save_review(s.app,(v->>'profileId')::uuid,0,v->>'bindingToken',('ee100000-4444-4000-8000-'||lpad(s.n::text,12,'0'))::uuid,pg_temp.decisions(s.n,v),confirmed,'Kontrollera återstående underlag',CASE WHEN s.n%2=1 THEN (SELECT owner FROM fixture) ELSE (SELECT bob FROM fixture) END,(v->>'assignmentVersion')::integer);
  END LOOP;END $$;
 SELECT pg_temp.ok((public.rec_ri_candidate_view((SELECT employer FROM fixture),(SELECT job FROM fixture),'{"stage":"received"}','requirements',NULL,1,25,NULL)->'intelligenceCounts')@>'{"received":100,"reviewed":27,"remaining":73,"green":40,"yellow":25,"gray":35,"notEstablished":0}', '100 applications: 40 green / 25 yellow / 35 gray, 27 reviewed / 73 remaining');
+-- All public P1 domain-CAS branches must be precise HTTP409 conflicts, never
+-- retryable PostgreSQL serialization_failure. No exception handler rewrites
+-- genuine engine-originated 40001 failures.
+DO $$ DECLARE v jsonb;d jsonb; BEGIN
+ v:=public.rec_ri_get_review((SELECT app FROM seq WHERE n=1));d:=pg_temp.decisions(1,v);
+ PERFORM pg_temp.fails(format('SELECT public.rec_ri_confirm_profile(%L,0,gen_random_uuid(),NULL,%L::jsonb)',(SELECT job FROM fixture),(SELECT body FROM rules)),'RI_STALE_VERSION','profile CAS has exact PT409 domain response','PT409');
+ PERFORM pg_temp.fails(format('SELECT public.rec_ri_save_review(%L,gen_random_uuid(),1,%L,gen_random_uuid(),%L::jsonb,false,NULL,NULL,%L)',v->>'applicationId',v->>'bindingToken',d,v->>'assignmentVersion'),'RI_SOURCE_STALE','replaced profile CAS has exact PT409 domain response','PT409');
+ PERFORM pg_temp.fails(format('SELECT public.rec_ri_save_review(%L,%L,1,%L,gen_random_uuid(),%L::jsonb,false,NULL,NULL,%L)',v->>'applicationId',v->>'profileId','stale-binding',d,v->>'assignmentVersion'),'RI_SOURCE_STALE','source binding CAS has exact PT409 domain response','PT409');
+ PERFORM pg_temp.fails(format('SELECT public.rec_ri_save_review(%L,%L,1,%L,gen_random_uuid(),%L::jsonb,false,NULL,NULL,%L)',v->>'applicationId',v->>'profileId',v->>'bindingToken',jsonb_set(d,'{0,sourceVersion}','"stale-source-version"'::jsonb),v->>'assignmentVersion'),'RI_SOURCE_STALE','selected source CAS has exact PT409 domain response','PT409');
+END $$;
 CREATE TEMP TABLE pages AS SELECT p,public.rec_ri_candidate_view((SELECT employer FROM fixture),(SELECT job FROM fixture),'{"stage":"received"}','requirements',NULL,p,25,NULL) v FROM generate_series(1,4)p;
 GRANT SELECT ON pages TO PUBLIC;
 SELECT pg_temp.ok((SELECT count(*)=100 AND count(DISTINCT r->>'id')=100 FROM pages,jsonb_array_elements(v->'rows')r),'four pages: exactly 100 distinct rows');
@@ -155,8 +167,8 @@ CREATE TEMP TABLE assignment_draft AS SELECT public.rec_ri_get_review((SELECT ap
 GRANT SELECT ON assignment_draft TO PUBLIC;
 SELECT public.rec_set_application_responsible((SELECT app FROM seq WHERE n=1),(SELECT bob FROM fixture),(SELECT (v->>'assignmentVersion')::integer FROM assignment_draft));
 SELECT pg_temp.ok(public.rec_ri_get_review((SELECT app FROM seq WHERE n=1))->>'reviewState'='reviewed','responsible reassignment alone does not stale current requirement review');
-SELECT pg_temp.fails(format('SELECT public.rec_ri_save_review(%L,%L,1,%L,gen_random_uuid(),%L::jsonb,true,%L,%L,%L)',v->>'applicationId',v->>'profileId',v->>'bindingToken',pg_temp.decisions(1,v),'Stale next action',(SELECT owner FROM fixture),v->>'assignmentVersion'),'STALE_VERSION','stale review cannot overwrite newly assigned responsible person') FROM assignment_draft;
-SELECT pg_temp.fails(format('SELECT public.rec_ri_save_review(%L,%L,1,%L,gen_random_uuid(),%L::jsonb,true,%L,%L,%L)',v->>'applicationId',v->>'profileId',v->>'bindingToken',pg_temp.decisions(1,v),'Stale next action',(SELECT bob FROM fixture),v->>'assignmentVersion'),'STALE_VERSION','assignment CAS is checked even if responsible selection now matches') FROM assignment_draft;
+SELECT pg_temp.fails(format('SELECT public.rec_ri_save_review(%L,%L,1,%L,gen_random_uuid(),%L::jsonb,true,%L,%L,%L)',v->>'applicationId',v->>'profileId',v->>'bindingToken',pg_temp.decisions(1,v),'Stale next action',(SELECT owner FROM fixture),v->>'assignmentVersion'),'STALE_VERSION','stale review cannot overwrite newly assigned responsible person','PT409') FROM assignment_draft;
+SELECT pg_temp.fails(format('SELECT public.rec_ri_save_review(%L,%L,1,%L,gen_random_uuid(),%L::jsonb,true,%L,%L,%L)',v->>'applicationId',v->>'profileId',v->>'bindingToken',pg_temp.decisions(1,v),'Stale next action',(SELECT bob FROM fixture),v->>'assignmentVersion'),'STALE_VERSION','assignment CAS is checked even if responsible selection now matches','PT409') FROM assignment_draft;
 SELECT pg_temp.ok((SELECT responsible_user_id=(SELECT bob FROM fixture) FROM public.recruitment_application_meta WHERE application_id=(SELECT app FROM seq WHERE n=1)) AND (SELECT revision=1 AND next_action='Kontrollera återstående underlag' FROM public.rec_requirement_review_heads WHERE application_id=(SELECT app FROM seq WHERE n=1)),'stale assignment requests leave responsible, decisions and next action unchanged');
 RESET ROLE;
 SELECT pg_temp.ok((SELECT count(*)=1 FROM public.rec_requirement_review_events WHERE application_id=(SELECT app FROM seq WHERE n=1)),'failed assignment CAS creates no review event');
@@ -171,7 +183,7 @@ CREATE TEMP TABLE winner AS SELECT public.rec_ri_get_review((SELECT app FROM seq
 GRANT SELECT ON winner TO PUBLIC;
 SELECT pg_temp.ok((SELECT (v->>'revision')::integer=7 FROM winner),'two readers share revision seven');
 DO $$ DECLARE v jsonb:=(SELECT v FROM winner);result jsonb;op uuid:=gen_random_uuid();d jsonb;BEGIN d:=pg_temp.decisions(76,v);result:=public.rec_ri_save_review((v->>'applicationId')::uuid,(v->>'profileId')::uuid,7,v->>'bindingToken',op,d,true,'Verify unreadable document',(SELECT bob FROM fixture),(v->>'assignmentVersion')::integer);PERFORM pg_temp.ok((result->>'revision')::integer=8,'CAS winner is revision eight');PERFORM pg_temp.ok(result=public.rec_ri_save_review((v->>'applicationId')::uuid,(v->>'profileId')::uuid,7,v->>'bindingToken',op,d,true,'Verify unreadable document',(SELECT bob FROM fixture),(v->>'assignmentVersion')::integer),'retry of same operation is idempotent');END $$;
-SELECT pg_temp.fails(format('SELECT public.rec_ri_save_review(%L,%L,7,%L,gen_random_uuid(),%L::jsonb,true,%L,%L,%L)',v->>'applicationId',v->>'profileId',v->>'bindingToken',pg_temp.decisions(76,v),'Overwrite',(SELECT bob FROM fixture),v->>'assignmentVersion'),'RI_STALE_VERSION','CAS stale reader is rejected and draft not applied') FROM winner;
+SELECT pg_temp.fails(format('SELECT public.rec_ri_save_review(%L,%L,7,%L,gen_random_uuid(),%L::jsonb,true,%L,%L,%L)',v->>'applicationId',v->>'profileId',v->>'bindingToken',pg_temp.decisions(76,v),'Overwrite',(SELECT bob FROM fixture),v->>'assignmentVersion'),'RI_STALE_VERSION','CAS stale reader is rejected and draft not applied','PT409') FROM winner;
 SELECT pg_temp.ok((public.rec_ri_candidate_view((SELECT employer FROM fixture),(SELECT job FROM fixture),'{"stage":"received"}','requirements',NULL,1,25,NULL)->'intelligenceCounts')@>'{"received":100,"reviewed":28,"remaining":72,"green":40,"yellow":25,"gray":35}','no double counting after winner/retry/stale loser');
 RESET ROLE;
 ROLLBACK TO concurrent_review;
@@ -186,7 +198,7 @@ DO $$ DECLARE v jsonb;result jsonb;op uuid:=gen_random_uuid();sel uuid[]:=ARRAY[
  PERFORM pg_temp.ok(result=public.rec_ri_transfer_requirements((v->>'applicationId')::uuid,(SELECT case_id FROM handoff),(v->>'revision')::integer,v->>'bindingToken',op,sel),'handoff operation retry is idempotent');
  PERFORM pg_temp.ok(result=public.rec_ri_transfer_requirements((v->>'applicationId')::uuid,(SELECT case_id FROM handoff),(v->>'revision')::integer,v->>'bindingToken',gen_random_uuid(),sel),'repeated same selection with new operation reuses sources');
  PERFORM pg_temp.ok(public.rec_ri_get_review((v->>'applicationId')::uuid)->>'reviewState'='reviewed','handoff itself does not invalidate current human review');
- PERFORM pg_temp.fails(format('SELECT public.rec_ri_transfer_requirements(%L,%L,0,%L,gen_random_uuid(),ARRAY[%L]::uuid[])',v->>'applicationId',(SELECT case_id FROM handoff),v->>'bindingToken',sel[1]),'RI_SOURCE_STALE','stale handoff revision is refused');
+ PERFORM pg_temp.fails(format('SELECT public.rec_ri_transfer_requirements(%L,%L,0,%L,gen_random_uuid(),ARRAY[%L]::uuid[])',v->>'applicationId',(SELECT case_id FROM handoff),v->>'bindingToken',sel[1]),'RI_SOURCE_STALE','stale handoff revision is refused','PT409');
  PERFORM pg_temp.fails(format('SELECT public.rec_ri_transfer_requirements(%L,%L,1,%L,gen_random_uuid(),ARRAY[%L]::uuid[])',(SELECT app FROM seq WHERE n=2),(SELECT case_id FROM handoff),v->>'bindingToken',sel[1]),'RECRUITMENT_NOT_PERMITTED','handoff refuses another application case');
 END $$;
 RESET ROLE;

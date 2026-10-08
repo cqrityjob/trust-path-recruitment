@@ -8,6 +8,9 @@ const runMode = process.env.RI_P1_RUN_MODE ?? "full";
 if (!["full", "api_only"].includes(runMode)) throw new Error("RI_P1_MANIFEST_WRONG_MODE");
 const allowed = [
   "stages.log",
+  "postgres-version.log",
+  "api-postgrest-version.log",
+  "ui-postgrest-version.log",
   "bootstrap.log",
   "replay.log",
   "sql-oracle.log",
@@ -95,6 +98,11 @@ const result = {
   sourceInputCount: inputs.length,
   createdAt: new Date().toISOString(),
   nodeVersion: process.version,
+  serviceVersions: {
+    postgres: log("postgres-version.log").trim() || "not_recorded",
+    apiPostgrest: log("api-postgrest-version.log").trim() || "not_recorded",
+    uiPostgrest: log("ui-postgrest-version.log").trim() || "not_run",
+  },
   exitCode: Number(process.env.RI_P1_RESULT ?? 1),
   verification,
   executedAssertions: {

@@ -19,12 +19,19 @@ function jwt(sub, role = "authenticated") {
   return `${unsigned}.${createHmac("sha256", secret).update(unsigned).digest("base64url")}`;
 }
 async function rpc(name, data, sub = owner, role = "authenticated") {
+  const started = performance.now();
   const response = await fetch(`${base}/rpc/${name}`, {
+    // Bound the proof: a domain40001 retry loop must fail, never hang CI.
+    signal: AbortSignal.timeout(8000),
     method: "POST",
     headers: { Authorization: `Bearer ${jwt(sub, role)}`, "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
-  return { status: response.status, body: await response.json() };
+  return {
+    status: response.status,
+    body: await response.json(),
+    elapsedMs: performance.now() - started,
+  };
 }
 async function read(filters = {}, page = 1, around = null) {
   const res = await rpc("rec_ri_candidate_view", {
@@ -152,10 +159,52 @@ const assignmentCurrent = await rpc("rec_ri_get_review", { _application_id: app(
 ok("actual parallel legacy assignment/new review never overwrites new owner", () => {
   assert.equal(assignmentRace[0].status, 200);
   assert.equal(assignmentCurrent.body.responsibleUserId, "ee100000-0000-4000-8000-000000000002");
-  if (assignmentRace[1].status !== 200)
-    assert.match(assignmentRace[1].body.message, /STALE_VERSION/);
+  if (assignmentRace[1].status !== 200) {
+    assert.equal(assignmentRace[1].status, 409);
+    assert.equal(assignmentRace[1].body.code, "PT409");
+    assert.equal(assignmentRace[1].body.message, "STALE_VERSION");
+  }
   assert.equal(assignmentCurrent.body.reviewState, "reviewed");
 });
+const domainConflicts = [];
+const assertDomainConflict = (result, message) => {
+  assert.equal(result.status, 409, JSON.stringify(result.body));
+  assert.equal(result.body.code, "PT409");
+  assert.equal(result.body.message, message);
+  assert.ok(result.elapsedMs < 8000, "domain conflict must complete without an unbounded retry");
+  domainConflicts.push({
+    status: result.status,
+    code: result.body.code,
+    message,
+    elapsedMs: Math.round(result.elapsedMs * 100) / 100,
+  });
+};
+for (const responsible of [owner, "ee100000-0000-4000-8000-000000000002"]) {
+  const staleAssignment = await rpc("rec_ri_save_review", {
+    _application_id: app(75),
+    _profile_id: assignmentCurrent.body.profile.profileId,
+    _expected_revision: assignmentCurrent.body.revision,
+    _binding_token: assignmentCurrent.body.bindingToken,
+    _operation_id: randomUUID(),
+    _decisions: ad,
+    _confirm: true,
+    _next_action: "Must not persist stale assignment draft",
+    _responsible_user_id: responsible,
+    _expected_assignment_version: av.assignmentVersion,
+  });
+  ok(
+    `deterministic stale assignment ${responsible === owner ? "changed" : "unchanged"} target returns PT409 without retry`,
+    () => assertDomainConflict(staleAssignment, "STALE_VERSION"),
+  );
+}
+const afterStaleAssignment = await rpc("rec_ri_get_review", { _application_id: app(75) });
+ok(
+  "both 409 assignment refusals leave owner, review revision, action and assignment version unchanged",
+  () => {
+    for (const key of ["responsibleUserId", "revision", "nextAction", "assignmentVersion"])
+      assert.deepEqual(afterStaleAssignment.body[key], assignmentCurrent.body[key]);
+  },
+);
 const original = await rpc("rec_ri_get_review", { _application_id: app(76) });
 assert.equal(original.status, 200);
 const v = original.body;
@@ -182,6 +231,43 @@ const payload = {
   _responsible_user_id: owner,
   _expected_assignment_version: v.assignmentVersion,
 };
+const oldProfile = await rpc("rec_ri_confirm_profile", {
+  _job_id: job,
+  _expected_version: 0,
+  _operation_id: randomUUID(),
+  _start_date: null,
+  _rules: v.profile.rules,
+});
+ok("stale profile confirmation returns precise PT409", () =>
+  assertDomainConflict(oldProfile, "RI_STALE_VERSION"),
+);
+const replacedProfile = await rpc("rec_ri_save_review", {
+  ...payload,
+  _profile_id: randomUUID(),
+  _operation_id: randomUUID(),
+});
+ok("replaced profile reference returns precise PT409", () =>
+  assertDomainConflict(replacedProfile, "RI_SOURCE_STALE"),
+);
+const staleBinding = await rpc("rec_ri_save_review", {
+  ...payload,
+  _binding_token: "stale-binding",
+  _operation_id: randomUUID(),
+});
+ok("changed source binding returns precise PT409", () =>
+  assertDomainConflict(staleBinding, "RI_SOURCE_STALE"),
+);
+const changedSource = decisions.map((decision, index) =>
+  index === 0 ? { ...decision, sourceVersion: "stale-original-version" } : decision,
+);
+const staleOriginal = await rpc("rec_ri_save_review", {
+  ...payload,
+  _decisions: changedSource,
+  _operation_id: randomUUID(),
+});
+ok("changed selected original version returns precise PT409", () =>
+  assertDomainConflict(staleOriginal, "RI_SOURCE_STALE"),
+);
 const secondPayload = {
   ...payload,
   _operation_id: randomUUID(),
@@ -192,9 +278,9 @@ const competition = await Promise.all([
   rpc("rec_ri_save_review", secondPayload),
 ]);
 ok("actual simultaneous HTTP review: one CAS winner, one stale refusal", () => {
-  assert.deepEqual(competition.map((r) => r.status).sort(), [200, 400]);
-  const loser = competition.find((r) => r.status === 400);
-  assert.match(loser.body.message, /RI_STALE_VERSION/);
+  assert.deepEqual(competition.map((r) => r.status).sort(), [200, 409]);
+  const loser = competition.find((r) => r.status === 409);
+  assertDomainConflict(loser, "RI_STALE_VERSION");
   assert.equal(competition.find((r) => r.status === 200).body.revision, v.revision + 1);
 });
 const winningIndex = competition.findIndex((r) => r.status === 200);
@@ -207,6 +293,53 @@ ok("winner contributes one reviewed application, never double counts", () => {
   assert.equal(after.intelligenceCounts.reviewed, 28);
   assert.equal(after.intelligenceCounts.received, 100);
 });
+async function originalRows(table, query) {
+  const response = await fetch(`${base}/${table}?${query}`, {
+    headers: { Authorization: `Bearer ${jwt(owner)}` },
+    signal: AbortSignal.timeout(8000),
+  });
+  const body = await response.json();
+  assert.equal(response.status, 200, JSON.stringify(body));
+  return body;
+}
+const [pack] = await originalRows("scp_interview_packs", "select=id&slug=eq.vaktare-se");
+assert.ok(pack);
+const [packVersion] = await originalRows(
+  "scp_interview_pack_versions",
+  `select=id&pack_id=eq.${pack.id}&version_number=eq.1`,
+);
+assert.ok(packVersion);
+const caseCreated = await rpc("scp_iv_create_case", {
+  _employer_id: employer,
+  _title: "Synthetic bounded stale handoff proof",
+  _pack_version_id: packVersion.id,
+  _candidate_display_name: "Synthetic A001",
+  _candidate_user_id: "ee10aaaa-0000-4000-8000-000000000001",
+  _candidate_external_ref: null,
+  _job_id: job,
+  _application_id: app(1),
+});
+assert.equal(caseCreated.status, 200, JSON.stringify(caseCreated.body));
+const handoffReview = await rpc("rec_ri_get_review", { _application_id: app(1) });
+const staleHandoff = await rpc("rec_ri_transfer_requirements", {
+  _application_id: app(1),
+  _case_id: caseCreated.body,
+  _expected_revision: 0,
+  _binding_token: handoffReview.body.bindingToken,
+  _operation_id: randomUUID(),
+  _requirement_ids: [handoffReview.body.criteria[0].requirementId],
+});
+const sourcesAfterStale = await originalRows(
+  "scp_interview_case_sources",
+  `select=id&case_id=eq.${caseCreated.body}`,
+);
+ok(
+  "stale chosen-source handoff returns precise PT409 without copying any preparation source",
+  () => {
+    assertDomainConflict(staleHandoff, "RI_SOURCE_STALE");
+    assert.equal(sourcesAfterStale.length, 0);
+  },
+);
 const profile = await rpc("rec_ri_get_profile", { _job_id: job });
 assert.equal(profile.status, 200);
 const profileV2 = await rpc("rec_ri_confirm_profile", {
@@ -237,6 +370,7 @@ console.log(
       assertions,
       baseline: { received: 100, green: 40, yellow: 25, gray: 35, reviewed: 27, remaining: 73 },
       concurrentStatuses: competition.map((r) => r.status),
+      domainConflicts,
       v2: changed.intelligenceCounts,
     },
     null,
