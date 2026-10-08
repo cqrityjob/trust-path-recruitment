@@ -228,6 +228,7 @@ async function mount(
     listMyEmployerWorkspaces: [],
     trackV31FunnelEvent: { recorded: false },
     listMyEvidence: [],
+    listMyUploadAttempts: [],
     listClaimVersions: [],
     getCredentialPrivateFields: { credentialReference: null, holderNote: null },
     listMyCredentialDrafts: [],

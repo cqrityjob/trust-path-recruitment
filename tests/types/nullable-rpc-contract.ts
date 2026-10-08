@@ -20,6 +20,13 @@ type FoundationKeys =
   | "scp_iv_acknowledge_observed_content"
   | "scp_iv_content_inventory"
   | "scp_iv_case_frozen_labels";
+type EvidenceUploadKeys =
+  | "sp_begin_evidence_upload"
+  | "sp_reconcile_evidence_upload"
+  | "sp_list_my_evidence_upload_attempts"
+  | "sp_authorize_evidence_upload_cleanup"
+  | "sp_confirm_evidence_upload_cleanup"
+  | "sp_evidence_upload_storage_writable";
 type RecruitmentIntelligenceKeys =
   | "rec_ri_get_profile"
   | "rec_ri_get_review"
@@ -75,6 +82,7 @@ export type ContractAssertions = [
         | "bcp_conduct_record_resolution"
         | "scp_iv_finalise_previewed_report"
         | FoundationKeys
+        | EvidenceUploadKeys
         | RecruitmentIntelligenceKeys
       >,
       Omit<
@@ -82,6 +90,7 @@ export type ContractAssertions = [
         | "bcp_conduct_record_resolution"
         | "scp_iv_finalise_previewed_report"
         | FoundationKeys
+        | EvidenceUploadKeys
         | RecruitmentIntelligenceKeys
       >
     >
@@ -236,6 +245,34 @@ const invalidDraftId = {
 // @ts-expect-error A nullable UUID is still a string, never a number.
 client.rpc("scp_iv_finalise_previewed_report", invalidDraftId);
 
+export type EvidenceUploadAssertions = [
+  Assert<Equal<Functions["sp_begin_evidence_upload"]["Args"]["_claim_id"], string | null>>,
+  Assert<Equal<Functions["sp_begin_evidence_upload"]["Args"]["_period_id"], string | null>>,
+  Assert<Equal<Functions["sp_begin_evidence_upload"]["Args"]["_attempt_id"], string>>,
+  Assert<Equal<Functions["sp_begin_evidence_upload"]["Args"]["_size_bytes"], number>>,
+  Assert<
+    Equal<
+      Functions["sp_list_my_evidence_upload_attempts"]["Args"],
+      { _claim_id: string | null; _period_id: string | null }
+    >
+  >,
+  Assert<Equal<Functions["sp_evidence_upload_storage_writable"]["Returns"], boolean>>,
+  Assert<Equal<keyof Functions["sp_authorize_evidence_upload_cleanup"]["Args"], "_attempt_id">>,
+];
+client.rpc("sp_begin_evidence_upload", {
+  _attempt_id: "synthetic",
+  _claim_id: "synthetic",
+  _period_id: null,
+  _file_name: "proof.pdf",
+  _mime_type: "application/pdf",
+  _size_bytes: 4,
+  _sha256: "synthetic",
+});
+client.rpc("sp_list_my_evidence_upload_attempts", { _claim_id: null, _period_id: null });
+// @ts-expect-error Target NULL is required; omission has no SQL default.
+client.rpc("sp_list_my_evidence_upload_attempts", { _claim_id: null });
+// @ts-expect-error Own cleanup always requires an opaque UUID, never NULL.
+client.rpc("sp_authorize_evidence_upload_cleanup", { _attempt_id: null });
 export type RecruitmentIntelligenceAssertions = [
   Assert<
     Equal<Functions["rec_ri_save_review"]["Args"]["_expected_assignment_version"], number | null>

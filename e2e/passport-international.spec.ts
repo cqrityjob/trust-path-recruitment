@@ -107,6 +107,7 @@ async function mount(page: Page, path: string, lang: "sv" | "en" = "en", empty =
     listMyEmployerWorkspaces: [],
     trackV31FunnelEvent: { recorded: false },
     listMyEvidence: [],
+    listMyUploadAttempts: [],
     listClaimVersions: [],
     getCredentialPrivateFields: { credentialReference: null, holderNote: null },
     listMyCredentialDrafts: [],
