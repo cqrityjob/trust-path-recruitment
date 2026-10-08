@@ -53,7 +53,7 @@ jobs:
         run: bunx playwright install --with-deps chromium
       - name: Isolation, source, fault and disclosure guards
         run: |
-          bun test scripts/passport-native-op09.test.ts
+          bun test ./scripts/passport-native-op09.test.ts
           bunx tsc --noEmit --allowJs --checkJs false --skipLibCheck --module preserve --moduleResolution bundler --target ES2022 --types node scripts/passport-native-op09.test.ts scripts/passport-native-op09-browser.config.ts e2e/passport-native-op09.spec.ts
       - name: Complete389 native schema, Auth8, actual44 and browser4
         run: node scripts/passport-native-op09-run.mjs

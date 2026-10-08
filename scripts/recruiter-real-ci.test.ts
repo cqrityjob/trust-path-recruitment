@@ -39,6 +39,105 @@ const env = {
 };
 const read = (name: string) => fs.readFileSync(name, "utf8");
 
+describe("native guard file discovery with separate app dependencies", () => {
+  test("all three workflows select only their exact root guard file; name filters are rejected", () => {
+    for (const [name, workflowFile] of [
+      ["recruiter-real-ci", "recruiter-real-ci.yml"],
+      ["recruiter-p1-native", "recruiter-p1-native-ci.yml"],
+      ["passport-native-op09", "passport-native-op09-ci.yml"],
+    ]) {
+      const workflow = read(`.github/workflows/${workflowFile}`);
+      const command = `bun test ./scripts/${name}.test.ts`;
+      const requireExactFile = (source: string) => {
+        if (!source.includes(command)) throw new Error("NATIVE_ROOT_GUARD_FILE_REQUIRED");
+      };
+      expect(() => requireExactFile(workflow)).not.toThrow();
+      expect(() =>
+        requireExactFile(workflow.replace(command, command.replace("./scripts/", "scripts/"))),
+      ).toThrow("NATIVE_ROOT_GUARD_FILE_REQUIRED");
+    }
+  });
+
+  test("actual Bun discovery refuses a duplicated Playwright tree or obsolete app Git read; precise root path keeps real mobile checks", () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "native-guard-discovery-"));
+    const filename = "native-discovery-probe.test.ts";
+    const rootProbe = path.join(dir, "scripts", filename);
+    const appProbe = path.join(dir, "app/scripts", filename);
+    const installed = path.resolve("node_modules");
+    const helper = path.resolve("scripts/recruiter-real-ci-mobile-preset.ts");
+    // Distinct package paths reproduce CI's two installations. Immutable
+    // installed files are hardlinked, never edited; no install or browser
+    // launch is needed. Removing these owned links leaves originals intact.
+    const linkTree = (from: string, to: string) => {
+      fs.mkdirSync(to, { recursive: true });
+      for (const entry of fs.readdirSync(from, { withFileTypes: true })) {
+        const original = fs.realpathSync(path.join(from, entry.name));
+        const target = path.join(to, entry.name);
+        if (fs.statSync(original).isDirectory()) linkTree(original, target);
+        else fs.linkSync(original, target);
+      }
+    };
+    const run = (argument: string) =>
+      cp.spawnSync(process.execPath, ["--no-env-file", "test", argument], {
+        cwd: dir,
+        env: { PATH: process.env.PATH },
+        encoding: "utf8",
+        timeout: 10000,
+      });
+    const output = (result: ReturnType<typeof run>) => result.stdout + result.stderr;
+    const rootSource = `import {test,expect} from 'bun:test';
+import {devices} from '@playwright/test';
+import {requireNativeMobilePreset} from ${JSON.stringify(helper)};
+test('exact current root real mobile presets',()=>{
+ for(const [name,width] of [['iPhone 13 Mini',375],['iPhone 14',390]]) {
+  const device=requireNativeMobilePreset(devices,name,width);
+  expect(device.isMobile).toBe(true);expect(device.hasTouch).toBe(true);
+  expect(device.deviceScaleFactor).toBe(3);expect(device.viewport.width).toBe(width);
+ }
+});`;
+    try {
+      for (const tree of [dir, path.join(dir, "app")]) {
+        fs.mkdirSync(path.join(tree, "scripts"), { recursive: true });
+        for (const pkg of ["@playwright/test", "playwright", "playwright-core"])
+          linkTree(path.join(installed, pkg), path.join(tree, "node_modules", pkg));
+      }
+      expect(fs.realpathSync(path.join(dir, "node_modules/playwright"))).not.toBe(
+        fs.realpathSync(path.join(dir, "app/node_modules/playwright")),
+      );
+      fs.writeFileSync(rootProbe, rootSource, { mode: 0o600 });
+      fs.writeFileSync(appProbe, rootSource, { mode: 0o600 });
+      const duplicate = run(`scripts/${filename}`);
+      expect(duplicate.status).not.toBe(0);
+      expect(output(duplicate)).toContain("Requiring @playwright/test second time");
+      expect(output(duplicate)).toContain("app/scripts/");
+      const exact = run(`./scripts/${filename}`);
+      expect(exact.status).toBe(0);
+      expect(output(exact)).toContain("1 pass");
+      expect(output(exact)).not.toContain("app/scripts/");
+      // This isolated Git repository intentionally has no historical object.
+      // Only a mistakenly collected obsolete app test would try to read it.
+      cp.execFileSync("git", ["init", "--quiet"], { cwd: dir, stdio: "pipe" });
+      fs.writeFileSync(
+        appProbe,
+        `import {execFileSync} from 'node:child_process';
+execFileSync('git',['show','40e5775de5195050571421827434ec2872a61506:supabase/tests/recruiter_intelligence_p1_test.sql'],{cwd:${JSON.stringify(dir)},stdio:'pipe'});`,
+        { mode: 0o600 },
+      );
+      const legacy = run(`scripts/${filename}`);
+      expect(legacy.status).not.toBe(0);
+      expect(output(legacy)).toContain("40e5775de5195050571421827434ec2872a61506");
+      expect(output(legacy)).toContain("app/scripts/");
+      const withoutLegacyObject = run(`./scripts/${filename}`);
+      expect(withoutLegacyObject.status).toBe(0);
+      expect(output(withoutLegacyObject)).toContain("1 pass");
+      expect(output(withoutLegacyObject)).not.toContain("40e5775de5195050571421827434ec2872a61506");
+      expect(output(withoutLegacyObject)).not.toContain("app/scripts/");
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
 describe("native mobile preset validation", () => {
   test("the installed Playwright presets retain mobile, touch and the intended widths", () => {
     const mini = requireNativeMobilePreset(devices, "iPhone 13 Mini", 375);
