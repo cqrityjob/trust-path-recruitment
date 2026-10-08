@@ -93,6 +93,7 @@ async function openDetailsStep(page: Page, lang: "sv" | "en") {
     listMyEmployerWorkspaces: [],
     trackV31FunnelEvent: { recorded: false },
     listMyEvidence: [],
+    listMyUploadAttempts: [],
     listClaimVersions: [],
     listMyCredentialDrafts: [],
     listCredentialTypes: [],
