@@ -54,6 +54,24 @@ Ny full CI på integrationens aktuella huvud återstår. När de tre nativejobbe
 har passerat med dessa nya pinnar kan deras resultat beskrivas som app55db med
 schema8df; #463:s tidigare nativebevis för app40e ometiketteras inte.
 
+På huvud `06c9641121ce1740adf73d65c244122642128b4c` passerade aktuell
+PostgreSQL 17/PostgREST 14-kontroll och migrationernas replay/RLS/rollback.
+Två nativejobb stoppades däremot i Bun-guardsteget före tjänsternas start;
+[de observerade felen](evidence/2026-10-09-schema-native-discovery-attempt2.json)
+bevaras separat. Ett testsökargument utan `./` upptäckte både rotens nya
+testfil och den utcheckade appens äldre kopia. Det gav dubbel Playwright-start
+respektive en gammal Git-läsning. Native-runners var SKIPPED, och deras
+manifestvalidatorer bevarade följdfelen. Detta är inga nya Auth-/Storage-PASS.
+
+Normal commit `85a68b52fa5abb2e830021ba8aa5318f9e168921` väljer exakt
+`./scripts/<namn>.test.ts` i alla tre workflows. Två nya regressioner
+reproducerar faktisk Bun-upptäckt med två separata installerade Playwright-
+paketträd och en äldre app-testfil, utan install, browser eller tjänsteskrivning.
+Alla tidigare 79 avsedda kontroller finns kvar: [81 prov/241 assertioner PASS](evidence/2026-10-09-schema-native-discovery-local.json),
+scripts-typer, riktad lint, format och diffkontroll PASS. Canonical-adaptrar,
+schema-pinnar, historiska blobkontroller, mobilpresets, SDK-/browser-scenarier,
+runner och manifestgrindar är oförändrade. Ny full CI på slut-SHA återstår.
+
 ## Förändring och kontrakt
 
 [20270310100000](../../../supabase/migrations/20270310100000_recruiter_profile_change_review.sql)
