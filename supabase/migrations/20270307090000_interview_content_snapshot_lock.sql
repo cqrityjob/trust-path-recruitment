@@ -96,11 +96,31 @@ BEGIN
  WHEN 'scp_interview_pack_versions' THEN kind:='pack_version'; _id:=(_row->>'id')::uuid;
  WHEN 'scp_interview_methods' THEN kind:='method'; _id:=(_row->>'id')::uuid;
  WHEN 'scp_interview_pack_competencies','scp_interview_core_questions',
-      'scp_interview_approved_probes','scp_interview_verification_rules','scp_interview_prohibited_areas'
+      'scp_interview_verification_rules','scp_interview_prohibited_areas'
  THEN kind:='pack_version'; _id:=(_row->>'pack_version_id')::uuid;
+ WHEN 'scp_interview_approved_probes'
+ THEN
+  kind:='pack_version'; content_id:=(_row->>'pack_version_id')::uuid;
+  IF content_id IS NULL THEN RAISE EXCEPTION 'SCP_IV_CONTENT_PARENT_UNRESOLVED:probe_pack' USING ERRCODE='check_violation'; END IF;
+  RETURN NEXT;
+  IF _row->>'question_id' IS NOT NULL THEN
+   SELECT q.pack_version_id INTO content_id FROM public.scp_interview_core_questions q WHERE q.id=(_row->>'question_id')::uuid;
+   IF content_id IS NULL THEN RAISE EXCEPTION 'SCP_IV_CONTENT_PARENT_UNRESOLVED:probe_question' USING ERRCODE='check_violation'; END IF;
+   RETURN NEXT;
+  END IF;
+  RETURN;
+ WHEN 'scp_interview_question_competencies'
+ THEN
+  kind:='pack_version';
+  SELECT q.pack_version_id INTO content_id FROM public.scp_interview_core_questions q WHERE q.id=(_row->>'question_id')::uuid;
+  IF content_id IS NULL THEN RAISE EXCEPTION 'SCP_IV_CONTENT_PARENT_UNRESOLVED:map_question' USING ERRCODE='check_violation'; END IF;
+  RETURN NEXT;
+  SELECT c.pack_version_id INTO content_id FROM public.scp_interview_pack_competencies c WHERE c.id=(_row->>'pack_competency_id')::uuid;
+  IF content_id IS NULL THEN RAISE EXCEPTION 'SCP_IV_CONTENT_PARENT_UNRESOLVED:map_competency' USING ERRCODE='check_violation'; END IF;
+  RETURN NEXT; RETURN;
  WHEN 'scp_interview_pack_competency_map'
  THEN kind:='pack_version'; SELECT c.pack_version_id INTO _id FROM public.scp_interview_pack_competencies c WHERE c.id=(_row->>'pack_competency_id')::uuid;
- WHEN 'scp_interview_question_competencies','scp_interview_evidence_dimensions'
+ WHEN 'scp_interview_evidence_dimensions'
  THEN kind:='pack_version'; SELECT q.pack_version_id INTO _id FROM public.scp_interview_core_questions q WHERE q.id=(_row->>'question_id')::uuid;
  WHEN 'scp_interview_rating_anchors'
  THEN

@@ -97,6 +97,10 @@ BEGIN
  PERFORM pg_temp.ok(_out LIKE '23514:%CONTENT_IN_USE%','37 exclusive competency anchor parent is protected');
  _out:=pg_temp.attempt('service_role',NULL,format('INSERT INTO public.scp_interview_rating_anchors SELECT (jsonb_populate_record(NULL::public.scp_interview_rating_anchors,to_jsonb(a)||jsonb_build_object(''id'',gen_random_uuid(),''question_id'',%L::uuid,''pack_competency_id'',%L::uuid))).* FROM public.scp_interview_rating_anchors a WHERE id=%L',_newq,_comp,_anchor));
  PERFORM pg_temp.ok(_out LIKE '23514:%CONTENT_IN_USE%','38 mixed dual anchor cannot omit used competency ownership');
+ _out:=pg_temp.attempt('service_role',NULL,format('INSERT INTO public.scp_interview_question_competencies SELECT (jsonb_populate_record(NULL::public.scp_interview_question_competencies,to_jsonb(m)||jsonb_build_object(''id'',gen_random_uuid(),''question_id'',%L::uuid,''pack_competency_id'',%L::uuid))).* FROM public.scp_interview_question_competencies m LIMIT 1',_newq,_comp));
+ PERFORM pg_temp.ok(_out LIKE '23514:%CONTENT_IN_USE%','39 question map cannot omit used competency parent');
+ _out:=pg_temp.attempt('service_role',NULL,format('INSERT INTO public.scp_interview_approved_probes SELECT (jsonb_populate_record(NULL::public.scp_interview_approved_probes,to_jsonb(p)||jsonb_build_object(''id'',gen_random_uuid(),''pack_version_id'',%L::uuid,''question_id'',%L::uuid))).* FROM public.scp_interview_approved_probes p LIMIT 1',_unused,_q));
+ PERFORM pg_temp.ok(_out LIKE '23514:%CONTENT_IN_USE%','40 probe cannot omit used question parent');
  INSERT INTO public.scp_interview_methods SELECT (jsonb_populate_record(NULL::public.scp_interview_methods,to_jsonb(m)||jsonb_build_object('id',_newmethod,'slug','snapshot-unused-method','version_number',201,'approval_state','draft','approved_at',NULL,'approved_by',NULL))).* FROM public.scp_interview_methods m WHERE id=_method;
  SELECT id INTO _guidance FROM public.scp_interview_conduct_guidance WHERE method_id=_method LIMIT 1;
  _out:=pg_temp.attempt('service_role',NULL,format('UPDATE public.scp_interview_conduct_guidance SET method_id=%L WHERE id=%L',_newmethod,_guidance));
