@@ -46,6 +46,23 @@ export function appFixtureSql(source, namespace, reset = false) {
     publication,
     "UPDATE public.jobs SET status='published',expires_at=now()+interval '30 days'",
   );
+  const phases = [
+    ["CREATE TEMP TABLE fixture", "FIXTURE"],
+    ["INSERT INTO public.user_roles", "ROLES"],
+    ["INSERT INTO public.employers", "ORGANISATION"],
+    ["INSERT INTO public.employer_memberships", "MEMBERSHIPS"],
+    ["INSERT INTO public.jobs(", "JOBS"],
+    ["INSERT INTO public.recruitment_requirements", "REQUIREMENTS"],
+    ["INSERT INTO public.recruitment_questions", "QUESTIONS"],
+    ["UPDATE public.jobs SET status='published'", "PUBLICATION"],
+    ["INSERT INTO public.job_applications(", "APPLICATIONS"],
+    ["INSERT INTO public.job_application_answers", "ANSWERS"],
+    ["UPDATE public.recruitment_application_meta", "ASSIGNMENTS"],
+  ];
+  for (const [anchor, phase] of phases) {
+    if (sql.split(anchor).length !== 2) throw Error("P1_NATIVE_CANONICAL_PHASE_ANCHOR_CHANGED");
+    sql = sql.replace(anchor, `\\echo RI_P1_FIXTURE_PHASE ${phase}\n${anchor}`);
+  }
   const receipt = `INSERT INTO public.recruitment_settings(job_id,employer_id,responsible_user_id,receipt_enabled)
  SELECT job,employer,owner,false FROM fixture UNION ALL SELECT empty_job,employer,owner,false FROM fixture;
 DO $$ BEGIN IF EXISTS(SELECT 1 FROM public.recruitment_settings WHERE employer_id='${EMPLOYER}' AND receipt_enabled)
@@ -53,7 +70,7 @@ DO $$ BEGIN IF EXISTS(SELECT 1 FROM public.recruitment_settings WHERE employer_i
 `;
   sql = sql.replace(
     "INSERT INTO public.job_applications(",
-    receipt + "INSERT INTO public.job_applications(",
+    () => receipt + "INSERT INTO public.job_applications(",
   );
   if (reset) {
     const organisation = span(sql, "INSERT INTO public.user_roles", "INSERT INTO public.jobs(");

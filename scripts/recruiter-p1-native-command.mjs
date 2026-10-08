@@ -41,8 +41,16 @@ export function capturePrivateOutput(name, args, { cwd, env, stdoutFile, stderrF
 // Raw rows, details, hints, paths and arbitrary SQLSTATEs remain private.
 export function fixtureFailure(raw) {
   const diagnostic = { operation: "application_fixture" };
-  const match = String(raw).match(/ERROR:\s+(23514|23505|23503|42501):/);
+  const match = String(raw).match(
+    /(?:ERROR|FATAL):\s+(23514|23505|23503|42501|P0001|42883|42P01|42703|42601|22P02|42P07|28P01):/,
+  );
   if (match) diagnostic.sqlState = match[1];
+  const phases = [
+    ...String(raw).matchAll(
+      /^RI_P1_FIXTURE_PHASE (FIXTURE|ROLES|ORGANISATION|MEMBERSHIPS|JOBS|REQUIREMENTS|QUESTIONS|PUBLICATION|APPLICATIONS|ANSWERS|ASSIGNMENTS)$/gm,
+    ),
+  ];
+  if (phases.length) diagnostic.phase = phases.at(-1)[1];
   if (String(raw).includes("published_at is a moderation-owned field"))
     diagnostic.domain = "JOB_PUBLICATION_TIMESTAMP_PROTECTED";
   return Object.assign(new Error("P1_NATIVE_APP_FIXTURE_FAILED"), { safeDiagnostic: diagnostic });

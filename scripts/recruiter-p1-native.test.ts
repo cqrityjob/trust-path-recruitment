@@ -649,3 +649,37 @@ test("native bcrypt prefix guard has no SQL regex escaping ambiguity and retains
   assert.throws(() => confirmedAuthPredicate("prod' OR true--"), /NAMESPACE_REQUIRED/);
   assert.doesNotMatch(confirmedAuthPredicate(ns), /\\| ~ /);
 });
+
+test("actual generated initial and reset SQL retain every literal dollar-quoted receipt guard", () => {
+  for (const reset of [false, true]) {
+    const generated = appFixtureSql(sql, ns, reset);
+    assert.match(generated, /DO \$\$ BEGIN IF EXISTS\(SELECT 1 FROM public\.recruitment_settings/);
+    assert.match(
+      generated,
+      /THEN RAISE EXCEPTION 'P1_NATIVE_RECEIPTS_MUST_BE_OFF'; END IF; END \$\$;/,
+    );
+    assert.equal((generated.match(/DO \$\$ BEGIN/g) ?? []).length, reset ? 3 : 2);
+    assert.equal((generated.match(/END \$\$;/g) ?? []).length, reset ? 3 : 2);
+    assert.doesNotMatch(generated, /DO \$ BEGIN|END \$;/);
+    assert.ok(
+      generated.indexOf("P1_NATIVE_RECEIPTS_MUST_BE_OFF") <
+        generated.indexOf("INSERT INTO public.job_applications("),
+    );
+  }
+});
+
+test("SQL phase diagnostics accept fixed markers and syntax state while refusing arbitrary raw contents", () => {
+  assert.deepEqual(
+    fixtureFailure(
+      "RI_P1_FIXTURE_PHASE APPLICATIONS\nERROR: 42601: private_secret_canary\nDETAIL: private_secret_canary",
+    ).safeDiagnostic,
+    { operation: "application_fixture", sqlState: "42601", phase: "APPLICATIONS" },
+  );
+  assert.deepEqual(
+    fixtureFailure("RI_P1_FIXTURE_PHASE private_secret_canary\nERROR: private_secret_canary")
+      .safeDiagnostic,
+    { operation: "application_fixture" },
+  );
+  const generated = appFixtureSql(sql, ns);
+  assert.equal((generated.match(/^\\echo RI_P1_FIXTURE_PHASE /gm) ?? []).length, 11);
+});
