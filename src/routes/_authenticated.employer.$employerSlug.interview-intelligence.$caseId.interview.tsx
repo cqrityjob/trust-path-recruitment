@@ -70,6 +70,7 @@ import {
   pendingQuestionNoteBody,
   questionNoteBody,
   mayApplyStoredQuestionNote,
+  reloadQuestionNote,
   type QuestionNoteDraft,
 } from "@/lib/interview-intelligence/question-note-draft";
 import { InterviewOpeningDisclosure } from "@/components/employer/interview/InterviewOpeningDisclosure";
@@ -354,31 +355,29 @@ function Page() {
     const stored = storedRef.current;
     if (!stored) return;
     const requestedEditRevision = noteEditRevision.current;
-    const fresh = await q.refetch();
-    if (!fresh.isSuccess || !fresh.data) {
-      // A failed refetch can still carry cached data. It is not the current
-      // stored version and must not consume the human draft or CAS conflict.
-      setNoteError(true);
-      return;
-    }
-    if (
-      !mayApplyStoredQuestionNote(
-        stored.questionId,
-        storedRef.current?.questionId ?? null,
-        requestedEditRevision,
-        noteEditRevision.current,
-        fresh.isSuccess,
-      )
-    )
-      return;
-    const n = fresh.data?.session?.notes.find((x) => x.questionId === stored.questionId) ?? null;
-    known.current[stored.questionId] = n
-      ? { id: n.id, updatedAt: n.updatedAt, body: n.body }
-      : undefined;
-    setDraft(n?.body ?? "", stored.questionId);
-    setNoteConflict(false);
-    setNoteError(false);
-    setBlockedNotice(false);
+    const result = await reloadQuestionNote({
+      read: () => getFn({ data: { caseId } }),
+      mayApply: () =>
+        mayApplyStoredQuestionNote(
+          stored.questionId,
+          storedRef.current?.questionId ?? null,
+          requestedEditRevision,
+          noteEditRevision.current,
+          true,
+        ),
+      apply: (fresh) => {
+        const n = fresh.session?.notes.find((x) => x.questionId === stored.questionId) ?? null;
+        known.current[stored.questionId] = n
+          ? { id: n.id, updatedAt: n.updatedAt, body: n.body }
+          : undefined;
+        qc.setQueryData(["ii", "case", caseId], fresh);
+        setDraft(n?.body ?? "", stored.questionId);
+        setNoteConflict(false);
+        setNoteError(false);
+        setBlockedNotice(false);
+      },
+    });
+    if (result === "failed") setNoteError(true);
   };
 
   // Mirror into refs so flushNote() always sees the live values.

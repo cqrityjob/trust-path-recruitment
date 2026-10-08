@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { readFileSync } from "node:fs";
+import { QueryClient, QueryObserver } from "@tanstack/react-query";
 import { I18nProvider } from "../src/i18n/context";
 import { CandidateBackgroundStatus } from "../src/components/employer/interview/CandidateBackgroundStatus";
 import { InterviewOpeningDisclosure } from "../src/components/employer/interview/InterviewOpeningDisclosure";
@@ -16,10 +17,69 @@ import {
   pendingQuestionNoteBody,
   questionNoteBody,
   mayApplyStoredQuestionNote,
+  reloadQuestionNote,
   type QuestionNoteDraft,
 } from "../src/lib/interview-intelligence/question-note-draft";
 
 describe("question-bound note draft after reload", () => {
+  test("failed explicit reload keeps the shared case successful and retains the draft/conflict/CAS token", async () => {
+    const key = ["ii", "case", "synthetic-case"];
+    const cached = { note: "Stored old text" };
+    const cache = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    cache.setQueryData(key, cached);
+    const failedRead = async () => {
+      throw Error("Synthetic transport failure");
+    };
+    const oldObserver = new QueryObserver(cache, { queryKey: key, queryFn: failedRead });
+    const oldResult = await oldObserver.refetch();
+    expect(oldResult.isError).toBe(true);
+    expect(oldResult.data).toEqual(cached);
+    // The shared CaseContentBoundary unmounts children on this error state.
+    // The explicit reader must never create it for an unsuccessful reload.
+    cache.setQueryData(key, cached);
+    let draft = "Human draft retained";
+    let conflict = true;
+    let knownVersion = "Observed old CAS version";
+    const result = await reloadQuestionNote({
+      read: failedRead,
+      mayApply: () => true,
+      apply: () => {
+        draft = "Discarded";
+        conflict = false;
+        knownVersion = "Incorrect cached version";
+      },
+    });
+    expect(result).toBe("failed");
+    expect(cache.getQueryState(key)?.status).toBe("success");
+    expect(draft).toBe("Human draft retained");
+    expect(conflict).toBe(true);
+    expect(knownVersion).toBe("Observed old CAS version");
+    oldObserver.destroy();
+    cache.clear();
+  });
+  test("successful explicit read applies only once and a late response cannot consume a newer draft", async () => {
+    const applied: string[] = [];
+    expect(
+      await reloadQuestionNote({
+        read: async () => "Actual new stored text",
+        mayApply: () => true,
+        apply: (body) => {
+          applied.push(body);
+        },
+      }),
+    ).toBe("applied");
+    expect(applied).toEqual(["Actual new stored text"]);
+    expect(
+      await reloadQuestionNote({
+        read: async () => "Late old-question text",
+        mayApply: () => false,
+        apply: (body) => {
+          applied.push(body);
+        },
+      }),
+    ).toBe("superseded");
+    expect(applied).toEqual(["Actual new stored text"]);
+  });
   test("the interview route remounts its draft and known CAS records when the case changes, not when the question changes", () => {
     const route = readFileSync(
       "src/routes/_authenticated.employer.$employerSlug.interview-intelligence.$caseId.interview.tsx",
