@@ -1,0 +1,195 @@
+{
+  "kind": "read_only_current_native_ci_witness_validation",
+  "runId": 37796857513,
+  "jobId": 113378454528,
+  "artifactId": 11559901382,
+  "evidenceSha": "19edc333631ac858bfbf5538686fe47bbbece9c8",
+  "appSha": "40e5775de5195050571421827434ec2872a61506",
+  "schemaSha": "1e5988c6f9c7121a0fefd22c0db06f6b573f0ae9",
+  "result": "PASS",
+  "startedAt": "2026-10-08T15:02:50.232Z",
+  "finishedAt": "2026-10-08T15:07:31.853Z",
+  "zipBytes": 5044644,
+  "zipSha256": "89d6ec6bdaaad26bc345ad8ecaa2c431cca5e34b592baed4c9d57d72e4c0d1ee",
+  "manifestSha256": "ab679c025f01a161a95affb91a6ed47cb35fb3e5ad87009f26608ac54f8cddb5",
+  "migrationBytesCompared": 387,
+  "canonicalSourceBytesCompared": {
+    "sql": "45db1d33d64f1fc1c424f2a22090105694daecdb079cf2eaee5afa277a1f98ce",
+    "api": "b650ce6987192c88404cc65bca63bad4f23983fd711e2af7c89cb3327ae4b3a4",
+    "browser": "3ac000be5fbaf613e11ef8393ce51f0e4f0da0adafee5d69d45173fe25f8988b"
+  },
+  "sourceTrees": {
+    "appSrc": "3d5feca97be01959778173fc3a0f0959fe62355c",
+    "appMigrations": "eecc3229705f2c81f7ee8ff63eae032527bb6a38",
+    "schemaMigrations": "eecc3229705f2c81f7ee8ff63eae032527bb6a38",
+    "schemaConfig": "720daa8eda53adfba26e9ebde29284d7cfcd5931"
+  },
+  "stageCount": 11,
+  "errors": [],
+  "baseline": {
+    "received": 100,
+    "green": 40,
+    "yellow": 25,
+    "gray": 35,
+    "reviewed": 27,
+    "remaining": 73
+  },
+  "profileV2": {
+    "received": 100,
+    "green": 30,
+    "yellow": 35,
+    "gray": 35,
+    "reviewed": 0,
+    "remaining": 100
+  },
+  "sourceRevoked": {
+    "received": 100,
+    "green": 25,
+    "yellow": 35,
+    "gray": 40,
+    "reviewed": 0,
+    "remaining": 100
+  },
+  "replacementDoesNotRestoreOldAcceptance": true,
+  "httpAssertions": 23,
+  "reviewerSessions": [
+    "owner",
+    "bob"
+  ],
+  "concurrentReviewerStatuses": [
+    200,
+    409
+  ],
+  "browser": {
+    "expected": 5,
+    "unexpected": 0,
+    "flaky": 0,
+    "skipped": 0
+  },
+  "browserCases": [
+    {
+      "case": "global_review",
+      "status": "expected",
+      "attempts": 1,
+      "sourceLines": []
+    },
+    {
+      "case": "browser_direct_api",
+      "status": "expected",
+      "attempts": 1,
+      "sourceLines": []
+    },
+    {
+      "case": "explicit_peace_handoff",
+      "status": "expected",
+      "attempts": 1,
+      "sourceLines": []
+    },
+    {
+      "case": "cached_profile_target",
+      "status": "expected",
+      "attempts": 1,
+      "sourceLines": []
+    },
+    {
+      "case": "archive_only",
+      "status": "expected",
+      "attempts": 1,
+      "sourceLines": []
+    }
+  ],
+  "actualAuthUsers": 104,
+  "actualStorageOriginals": 80,
+  "serverSignedOriginalUiReads": 4,
+  "allImagesHashCompared": 10,
+  "imageHashes": [
+    {
+      "path": "images/en-desktop-remaining.png",
+      "bytes": 668749,
+      "sha256": "42d5ae2242126e3b36868b3c976ec3dba82c31078b8ae586bd903f2872275619"
+    },
+    {
+      "path": "images/en-emulated-375-archive-only-received.png",
+      "bytes": 507453,
+      "sha256": "b8c0eb29172e37bc08e0eef4fee0ed0f4e6ec3c37f3532462c3951e1984f6941"
+    },
+    {
+      "path": "images/en-emulated-375-remaining.png",
+      "bytes": 555317,
+      "sha256": "86039f4ac33f9503340514f62bb847c2461cd0cb731de94e44e8850fcba85604"
+    },
+    {
+      "path": "images/sv-desktop-archive-only-received.png",
+      "bytes": 608797,
+      "sha256": "3beb1e2e54cac9d7f6b795598ffff91a52a6424c974b729012f086b52a1d5b90"
+    },
+    {
+      "path": "images/sv-desktop-cached-job-profile-target.png",
+      "bytes": 173547,
+      "sha256": "31a8e0f7a253854cf31448ae00758c79e940825f05b2eebdf955fd5e1d0a5e12"
+    },
+    {
+      "path": "images/sv-desktop-concurrent-explicit-reload.png",
+      "bytes": 662670,
+      "sha256": "8b446c5fabd7755d312f2920a927681e5a347f4f28fdaf587cce0f30c0fe8a1f"
+    },
+    {
+      "path": "images/sv-desktop-explicit-peace-handoff.png",
+      "bytes": 487860,
+      "sha256": "5e81cef47d75e99707dae7c9501fe0fa35e66b2e056f1d38973bcfee7c998ea4"
+    },
+    {
+      "path": "images/sv-desktop-gray-human-reviewed.png",
+      "bytes": 676301,
+      "sha256": "2013a2a79c3bc9a43dd9dd2ee6d9cdabfb9da0dbb0bd24852f19ecbe870a6439"
+    },
+    {
+      "path": "images/sv-desktop-remaining.png",
+      "bytes": 644213,
+      "sha256": "ca8179d13d7cad66262f3f164495bb05cdc6d81fb0993fc1cdce838d69b405a0"
+    },
+    {
+      "path": "images/sv-emulated-375-remaining.png",
+      "bytes": 540456,
+      "sha256": "5e0a369cdcd3f3efbb2d1046cda5b942a7686414bc9571c2c46aca90ad86bf99"
+    }
+  ],
+  "finalSideEffects": {
+    "auth": 104,
+    "sw_ai": 0,
+    "messages": 0,
+    "confirmed": 104,
+    "ai_enabled": false,
+    "applications": 100,
+    "erasure_jobs": 0,
+    "generated_ai": 0,
+    "synthetic_ai": 2,
+    "erasure_queue": 0,
+    "mail_attempts": 0,
+    "receipt_enabled": 0,
+    "cron": 0
+  },
+  "scope": {
+    "auth": "local_admin_createUser_email_confirm_true_fixed_104_ids",
+    "storage": "local_service_role_setup_80_original_pdf_objects_not_candidate_upload_acl",
+    "applicationDml": "disposable_local_postgres_own_fixture_only",
+    "judgment": "signed_in_owner_and_admin_http_rpc",
+    "browser": "real_password_sessions_sv_en_desktop_emulated_mobile_not_physical_phone"
+  },
+  "excluded": [
+    "hosted runtime/CDN",
+    "physical phone",
+    "candidate upload ACL claim",
+    "private keys/passwords/JWTs/raw logs/signed URLs"
+  ],
+  "imagesVisuallyInspected": [
+    "images/sv-desktop-explicit-peace-handoff.png",
+    "images/en-emulated-375-remaining.png"
+  ],
+  "historicalArtifactsModified": false,
+  "localServiceExecution": false,
+  "visualObservations": {
+    "svDesktopHandoff": "Selected R2/version1/reviewer note/neutral question/original reference/next action visible. Saved source distinct from confirmed evidence; six competencies, eight role questions and draft method/content notice visible. At this exact captured frame the separate live application context still says loading, so this image does not prove that panel finished loading.",
+    "enEmulated375": "Received100/reviewed27/remaining73 and green40/yellow25/gray35 visible; remaining filter73/page1of3 and separate requirement/recruitment/human/technical axes visible."
+  }
+}
