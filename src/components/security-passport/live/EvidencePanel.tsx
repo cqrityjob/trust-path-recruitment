@@ -28,10 +28,11 @@
 // document is saved and stays saved. The signed-URL lifetime is unchanged;
 // this is a copy and placement fix, not a weakening of evidence privacy.
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CheckCircle2, FileText, Paperclip, RefreshCw, Trash2 } from "lucide-react";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import type { EvidenceRecord } from "@/lib/security-passport/evidence.functions";
+import { evidenceUploadIssue } from "@/lib/security-passport/evidence-upload";
 import type { WithdrawEvidenceResult } from "@/lib/security-passport/evidence-withdrawal";
 
 const ALLOWED = ["application/pdf", "image/jpeg", "image/png", "image/heic"];
@@ -54,6 +55,7 @@ export interface EvidencePanelProps {
    *  document attached during a clarification is one the reviewer who asked
    *  for it can actually open. */
   readonly canAdd: boolean;
+  readonly uploadRecoveryPending?: boolean;
   /** Whether the holder may WITHDRAW or REPLACE a document. False while any
    *  request is open — the database refuses it, and offering a control that
    *  cannot succeed is worse than not offering it. */
@@ -90,6 +92,7 @@ function formatSize(bytes: number): string {
 export function EvidencePanel({
   evidence,
   canAdd,
+  uploadRecoveryPending,
   canRemove,
   onUpload,
   onOpen,
@@ -102,6 +105,11 @@ export function EvidencePanel({
   /** Set after a successful upload so the holder is told it worked. Cleared on
    *  the next attempt, so a stale success never sits above a fresh failure. */
   const [saved, setSaved] = useState(false);
+  const [uploadNeedsCheck, setUploadNeedsCheck] = useState(false);
+  const needsCheck = uploadNeedsCheck || uploadRecoveryPending === true;
+  useEffect(() => {
+    if (uploadRecoveryPending === false) setUploadNeedsCheck(false);
+  }, [uploadRecoveryPending]);
   /** The name of the file the holder chose, kept for the whole attempt.
    *
    *  "Laddar upp …" and "Dokument uppladdat och sparat." are both true of
@@ -124,6 +132,7 @@ export function EvidencePanel({
   }
 
   async function handleFile(file: File) {
+    if (needsCheck) return;
     setError(null);
     setSaved(false);
     // Named before anything can go wrong, so a refusal below names the file
@@ -144,14 +153,24 @@ export function EvidencePanel({
 
     setBusy("upload");
     const supersedes = replacing;
+    let uploaded = false;
     try {
       const contentBase64 = await readAsBase64(file);
       await onUpload({ fileName: file.name, mimeType: file.type, contentBase64 });
-      if (supersedes) await removeEvidence(supersedes);
+      uploaded = true;
       setSaved(true);
+      if (supersedes) await removeEvidence(supersedes);
     } catch (err) {
       console.error("[passport] evidence upload failed", err);
-      setError(pt("ev.failed"));
+      const issue = evidenceUploadIssue(err);
+      if (uploaded) {
+        setError(pt("ev.replacementUnknown"));
+      } else {
+        setUploadNeedsCheck(issue.key === "ev.uploadUnknown" || issue.key === "ev.uploadPending");
+        setError(
+          `${pt(issue.key)}${issue.reference ? ` ${pt("ev.uploadReference")}: ${issue.reference}` : ""}`,
+        );
+      }
     } finally {
       setBusy(null);
       setReplacing(null);
@@ -225,7 +244,7 @@ export function EvidencePanel({
                     setSaved(false);
                     inputRef.current?.click();
                   }}
-                  disabled={busy !== null}
+                  disabled={busy !== null || needsCheck}
                   className="inline-flex h-9 items-center gap-1.5 rounded-md border border-input px-3 text-sm font-medium text-foreground disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                 >
                   <RefreshCw aria-hidden="true" className="h-3.5 w-3.5" />
@@ -306,7 +325,7 @@ export function EvidencePanel({
         <div className="mt-4">
           <button
             type="button"
-            disabled={busy !== null}
+            disabled={busy !== null || needsCheck}
             onClick={() => inputRef.current?.click()}
             className="inline-flex h-11 cursor-pointer items-center rounded-md border border-input px-4 text-sm font-medium text-foreground focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ring"
           >
@@ -330,7 +349,7 @@ export function EvidencePanel({
             aria-label={pt("ev.add")}
             type="file"
             accept={ALLOWED.join(",")}
-            disabled={busy !== null}
+            disabled={busy !== null || needsCheck}
             aria-describedby="sp-evidence-limits"
             onChange={(e) => {
               const file = e.target.files?.[0];
@@ -367,7 +386,7 @@ export function EvidencePanel({
               for the picker, which on a refused type or an over-size file is
               the same hunt that produced the failure. Arms the same input,
               so there is still exactly one way into this flow. */}
-          {canAdd ? (
+          {canAdd && !needsCheck ? (
             <button
               type="button"
               data-evidence-retry

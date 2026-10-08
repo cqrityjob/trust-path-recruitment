@@ -384,28 +384,52 @@ console.log("employer lifecycle — phases 2 and 3\n");
     "4 · and every card carries this vacancy",
   );
 
-  // The destination must actually accept those parameters.
+  // The shared parser and server RPC now own assessment filtering over the
+  // whole population. A page-local predicate would give incorrect counts.
   const list = codeOnly(read(FILES.applications));
-  ok(list.includes("assessment: z.enum(ASSESSMENT_FILTERS)"), "4 · the list accepts the filter");
-  // Applied in the predicate, not merely declared above it: the control
-  // removed it from the return and this assertion went on passing.
+  const defs = codeOnly(read("src/lib/recruitment/definitions.ts"));
+  const server = codeOnly(read("src/lib/recruitment/recruitment.functions.ts"));
+  const args = server.slice(
+    server.indexOf("function viewArgs("),
+    server.indexOf("const viewRowSchema"),
+  );
+  const page = server.slice(
+    server.indexOf("export const listRecruitmentCandidatesPage"),
+    server.indexOf(
+      "export const",
+      server.indexOf("export const listRecruitmentCandidatesPage") + 12,
+    ),
+  );
   ok(
-    /return jobMatches && statusMatches && assessmentMatches && textMatches;/.test(list),
+    list.includes("validateSearch: applicationListSearch") &&
+      defs.includes('assessment: z.literal("open").optional().catch(undefined)'),
+    "4 · the list accepts the filter",
+  );
+  ok(
+    args.includes("assessment: view.assessment ?? null") &&
+      page.includes(
+        'ctx.supabase.rpc("rec_ri_candidate_view", viewArgs(data.employerId, data.jobId, view, null))',
+      ),
     "4 · and applies it to the rows",
   );
-  // Withheld rather than guessed while the pair of reads is unresolved.
   ok(
-    /openAssessments\.read === "ready" && openAssessments\.ids\.has/.test(list),
+    page.includes(
+      'if (pageRes.error) throw toCode(pageRes.error, "listRecruitmentCandidatesPage view")',
+    ) && list.includes("error={query.isError}"),
     "4 · a filter whose read has not answered matches nothing rather than everything",
   );
-
-  // THE ASSESSMENT FILTER IS A PROCESS FILTER. A value that filtered by what
-  // an assessment FOUND would make the applications list a ranking.
-  const filters = list.slice(
-    list.indexOf("const ASSESSMENT_FILTERS"),
-    list.indexOf("const searchSchema"),
+  const assessment = defs.match(/assessment: ([^\n]+)/)?.[1];
+  ok(
+    assessment === 'z.literal("open").optional().catch(undefined),',
+    "4 · the assessment filter has exactly one, process-only value",
   );
-  ok(/\["open"\]/.test(filters), "4 · the assessment filter has exactly one, process-only value");
+  const sql = read("supabase/migrations/20270308090000_recruiter_intelligence_requirements.sql");
+  ok(
+    sql.includes(
+      "AND (f->>'assessment' IS NULL OR f->>'assessment'<>'open' OR a.assessment_open)",
+    ) && sql.indexOf("filtered AS MATERIALIZED") < sql.indexOf("ranked AS MATERIALIZED"),
+    "4 · assessment filtering precedes server ordering and pagination",
+  );
 
   // And "open" means a process that has not finished, never a verdict.
   const jp = codeOnly(read(FILES.jobPipeline));

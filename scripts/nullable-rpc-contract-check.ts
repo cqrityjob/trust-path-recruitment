@@ -243,6 +243,10 @@ const foundation = [
   ["scp_iv_review_manual_finding", ["_responsible_label", "_due_on"]],
   ["scp_iv_manual_finding_capabilities", []],
   ["scp_iv_case_content_manifest", []],
+  ["scp_iv_case_frozen_content", []],
+  ["scp_iv_acknowledge_observed_content", []],
+  ["scp_iv_content_inventory", []],
+  ["scp_iv_case_frozen_labels", []],
 ] as const;
 ck(
   "4.3 only the reviewed RI foundation functions have additive contracts",
@@ -253,7 +257,24 @@ ck(
       .sort(),
   ) === JSON.stringify(foundation.map(([name]) => name).sort()),
 );
-for (const [name, nullable] of foundation) {
+const uploadRecovery = [
+  ["sp_begin_evidence_upload", ["_claim_id", "_period_id"]],
+  ["sp_reconcile_evidence_upload", []],
+  ["sp_list_my_evidence_upload_attempts", ["_claim_id", "_period_id"]],
+  ["sp_authorize_evidence_upload_cleanup", []],
+  ["sp_confirm_evidence_upload_cleanup", []],
+  ["sp_evidence_upload_storage_writable", []],
+] as const;
+ck(
+  "4.3u only reviewed own-upload functions have additive contracts",
+  JSON.stringify(
+    alias("EvidenceUploadFunctions")
+      ?.getProperties()
+      .map((p) => p.name)
+      .sort(),
+  ) === JSON.stringify(uploadRecovery.map(([name]) => name).sort()),
+);
+for (const [name, nullable] of [...foundation, ...uploadRecovery]) {
   const def = latestDefinition(name);
   const args = field(field(functions, name), "Args");
   const sqlArgs = def?.args
@@ -286,6 +307,89 @@ for (const [name, nullable] of foundation) {
         !(property.flags & ts.SymbolFlags.Optional) &&
         checker.typeToString(type).includes("null") ===
           (nullable as readonly string[]).includes(key),
+    );
+    const declaration = def!.args.split(",").find((v) => v.trim().startsWith(`${key} `));
+    const sqlType = declaration?.trim().split(/\s+/)[1]?.toLowerCase();
+    const reviewedTypes: Record<string, string> = {
+      uuid: "string",
+      text: "string",
+      date: "string",
+      timestamptz: "string",
+      integer: "number",
+      bigint: "number",
+      boolean: "boolean",
+      "uuid[]": "string[]",
+    };
+    const expected = sqlType && reviewedTypes[sqlType];
+    ck(
+      `4.7 ${name}.${key} has its exact reviewed SQL-backed type`,
+      Boolean(expected) &&
+        !!type &&
+        checker.typeToString(type) ===
+          expected + ((nullable as readonly string[]).includes(key) ? " | null" : ""),
+      `SQL ${sqlType ?? "missing"}; expected ${expected ?? "unreviewed"}`,
+    );
+  }
+}
+const recruitmentIntelligence = [
+  ["rec_ri_get_profile", []],
+  ["rec_ri_get_review", []],
+  ["rec_ri_confirm_profile", ["_start_date"]],
+  ["rec_ri_save_review", ["_next_action", "_responsible_user_id", "_expected_assignment_version"]],
+  ["rec_ri_manual_reference", []],
+  ["rec_ri_transfer_requirements", []],
+  ["rec_ri_candidate_view", ["_job_id", "_dir", "_around"]],
+  ["rec_ri_overview_counts", []],
+] as const;
+ck(
+  "4.7 only the reviewed P1 functions have additive contracts",
+  JSON.stringify(
+    alias("RecruitmentIntelligenceFunctions")
+      ?.getProperties()
+      .map((p) => p.name)
+      .sort(),
+  ) === JSON.stringify(recruitmentIntelligence.map(([name]) => name).sort()),
+);
+for (const [name, nullable] of recruitmentIntelligence) {
+  const def = latestDefinition(name);
+  const args = field(field(functions, name), "Args");
+  const sqlArgs = def?.args
+    .split(",")
+    .map((v) => v.trim().split(/\s+/)[0])
+    .sort();
+  ck(
+    `4.8 ${name} arguments match versioned SQL`,
+    JSON.stringify(sqlArgs) ===
+      JSON.stringify(
+        args
+          ?.getProperties()
+          .map((p) => p.name)
+          .sort(),
+      ),
+  );
+  ck(
+    `4.9 ${name} has no defaults or STRICT`,
+    Boolean(def) &&
+      !/\bDEFAULT\b|=/i.test(def!.args) &&
+      !/\bSTRICT\b|RETURNS\s+NULL\s+ON\s+NULL\s+INPUT/i.test(def!.header),
+  );
+  for (const key of sqlArgs ?? []) {
+    const type = field(args, key),
+      property = args?.getProperty(key);
+    const sqlType = def!.args
+      .split(",")
+      .find((v) => v.trim().startsWith(`${key} `))
+      ?.trim()
+      .split(/\s+/)[1];
+    ck(
+      `4.10 ${name}.${key} required and reviewed type`,
+      !!type &&
+        !!property &&
+        !(property.flags & ts.SymbolFlags.Optional) &&
+        (sqlType === "jsonb"
+          ? checker.typeToString(type) === "Json"
+          : checker.typeToString(type).includes("null") ===
+            (nullable as readonly string[]).includes(key)),
     );
   }
 }

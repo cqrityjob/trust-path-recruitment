@@ -19,6 +19,28 @@
 
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import {
+  REQUIREMENT_STATUSES,
+  REVIEW_STATES,
+  type IntelligenceCounts,
+  type RequirementStatus,
+  type RequirementReviewState,
+} from "./requirement-intelligence";
+const intelligenceCountsSchema = z.object({
+  received: z.number(),
+  reviewed: z.number(),
+  remaining: z.number(),
+  green: z.number(),
+  yellow: z.number(),
+  gray: z.number(),
+  notEstablished: z.number(),
+  filtered: z.number(),
+  filteredReviewed: z.number(),
+  filteredRemaining: z.number(),
+  archived: z.number(),
+  withdrawn: z.number(),
+  decided: z.number(),
+});
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import {
   PAGE_SIZE,
@@ -140,6 +162,7 @@ async function readTeam(ctx: Ctx, employerId: string): Promise<TeamMember[]> {
 // ═══════════════════════════════════════════════════════════════════════════
 
 export type RecruitmentSummary = {
+  intelligenceCounts?: IntelligenceCounts;
   archivedAt?: string | null;
   jobId: string;
   titleSv: string | null;
@@ -187,7 +210,11 @@ export type RecruitmentOverview = {
 
 export const getRecruitmentOverview = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ employerId: z.string().uuid(), includeArchived: z.boolean().default(false) }).parse(d))
+  .inputValidator((d: unknown) =>
+    z
+      .object({ employerId: z.string().uuid(), includeArchived: z.boolean().default(false) })
+      .parse(d),
+  )
   .handler(async ({ data, context }): Promise<RecruitmentOverview> => {
     const ctx = context as Ctx;
     const { role } = await requireMember(ctx, data.employerId);
@@ -218,7 +245,7 @@ export const getRecruitmentOverview = createServerFn({ method: "POST" })
         .eq("employer_id", data.employerId),
       // Counted by the database, every application of every vacancy: the
       // overview's numbers are the case page's numbers, with no hidden limit.
-      ctx.supabase.rpc("rec_job_counts", { _employer_id: data.employerId, _job_id: null }),
+      ctx.supabase.rpc("rec_ri_overview_counts", { _employer_id: data.employerId }),
       ctx.supabase
         .from("recruitment_interview_bookings")
         .select(
@@ -245,11 +272,24 @@ export const getRecruitmentOverview = createServerFn({ method: "POST" })
       }
     }
 
+    const intelligenceByJob = new Map(
+      z
+        .array(z.object({ jobId: z.string().uuid(), intelligenceCounts: intelligenceCountsSchema }))
+        .parse(appsRes.data)
+        .map((item) => [item.jobId, item.intelligenceCounts]),
+    );
     const teamNames = new Map(team.map((m) => [m.userId, m.name]));
-    const settings = new Map<string, { responsible: string | null; completion: string; archivedAt: string | null }>(
+    const settings = new Map<
+      string,
+      { responsible: string | null; completion: string; archivedAt: string | null }
+    >(
       (settingsRes.data ?? []).map((s: Loose) => [
         s.job_id,
-        { responsible: s.responsible_user_id ?? null, completion: s.completion_state, archivedAt: s.archived_at ?? null },
+        {
+          responsible: s.responsible_user_id ?? null,
+          completion: s.completion_state,
+          archivedAt: s.archived_at ?? null,
+        },
       ]),
     );
     const countsByJob = new Map<
@@ -257,12 +297,12 @@ export const getRecruitmentOverview = createServerFn({ method: "POST" })
       { total: number; newCount: number; unresolved: number; interviewStage: number }
     >(
       ((appsRes.data ?? []) as Loose[]).map((c) => [
-        c.job_id as string,
+        c.jobId as string,
         {
-          total: Number(c.total),
-          newCount: Number(c.new_count),
-          unresolved: Number(c.unresolved_count),
-          interviewStage: Number(c.interview_count),
+          total: Number(c.counts.total),
+          newCount: Number(c.counts.new),
+          unresolved: Number(c.counts.new + c.counts.review + c.counts.interview),
+          interviewStage: Number(c.counts.interview),
         },
       ]),
     );
@@ -325,6 +365,7 @@ export const getRecruitmentOverview = createServerFn({ method: "POST" })
         now,
       );
       return {
+        intelligenceCounts: intelligenceByJob.get(j.id),
         archivedAt: s?.archivedAt ?? null,
         jobId: j.id,
         titleSv: j.title_sv,
@@ -727,6 +768,13 @@ export const reopenRecruitment = createServerFn({ method: "POST" })
 // ═══════════════════════════════════════════════════════════════════════════
 
 export type CandidateRow = {
+  requirementStatus?: RequirementStatus;
+  reviewState?: RequirementReviewState;
+  analysisState?: "not_used";
+  nextAction?: string | null;
+  reviewRevision?: number;
+  profileVersion?: number;
+  canManage?: boolean;
   applicationId: string;
   jobId: string;
   jobTitle: string | null;
@@ -769,6 +817,7 @@ export type CandidateRow = {
  *  not, so another organisation's candidates cannot appear whatever the
  *  URL says. */
 export type CandidatePage = {
+  intelligenceCounts?: IntelligenceCounts;
   rows: CandidateRow[];
   /** The filtered total, and where this page sits in it. */
   total: number;
@@ -803,44 +852,81 @@ export type CandidateNeighbours = {
 
 /** The arguments of rec_candidate_view for a view, in one place so the page
  *  and the neighbours read the same ordering. */
-function viewArgs(jobId: string, view: CandidateView, around: string | null) {
+function viewArgs(
+  employerId: string,
+  jobId: string | null,
+  view: CandidateView,
+  around: string | null,
+) {
   return {
+    _employer_id: employerId,
     _job_id: jobId,
-    _stage: view.stage ?? "open",
-    _owner: view.owner ?? null,
-    _q: view.q ?? null,
-    _answers: parseAnswerFilter(view.ans).map((f) => ({
-      question_id: f.questionId,
-      value: f.value,
-    })),
-    _sort: view.sort ?? "applied",
+    _filters: {
+      stage: view.stage ?? "open",
+      owner: view.owner ?? null,
+      q: view.q ?? null,
+      job: view.job ?? null,
+      status: view.status ?? null,
+      requirement: view.requirement ?? null,
+      review: view.review ?? null,
+      analysis: view.analysis ?? null,
+      assessment: view.assessment ?? null,
+      answers: parseAnswerFilter(view.ans).map((f) => ({
+        question_id: f.questionId,
+        value: f.value,
+      })),
+    },
+    _sort: view.sort ?? "requirements",
     _dir: view.dir ?? null,
     _page: view.page ?? 1,
     _size: PAGE_SIZE,
     _around: around,
   };
 }
-
-type ViewRow = {
-  application_id: string;
-  applicant_user_id: string;
-  display_name: string | null;
-  status: string;
-  created_at: string;
-  updated_at: string;
-  cv_storage_path: string | null;
-  cv_source: string;
-  responsible_user_id: string | null;
-  first_viewed_at: string | null;
-  meta_version: number | null;
-  next_activity_at: string | null;
-  next_activity_timezone: string | null;
-  next_activity_status: string | null;
-  rank: number;
-  total: number;
-};
-
-const ZERO_COUNTS = { total: 0, new: 0, review: 0, interview: 0, hired: 0, decided: 0 };
+const viewRowSchema = z.object({
+  id: z.string().uuid(),
+  job_id: z.string().uuid(),
+  applicant_user_id: z.string().uuid(),
+  display_name: z.string().nullable(),
+  status: z.string(),
+  created_at: z.string(),
+  updated_at: z.string(),
+  cv_storage_path: z.string().nullable(),
+  cv_source: z.string(),
+  responsible_user_id: z.string().nullable(),
+  first_viewed_at: z.string().nullable(),
+  meta_version: z.number(),
+  next_activity_at: z.string().nullable(),
+  next_activity_timezone: z.string().nullable(),
+  next_activity_status: z.string().nullable(),
+  rank: z.number(),
+  title_sv: z.string().nullable(),
+  title_en: z.string().nullable(),
+  requirement_status: z.enum(REQUIREMENT_STATUSES),
+  review_state: z.enum(REVIEW_STATES),
+  analysis_state: z.literal("not_used"),
+  next_action: z.string().nullable(),
+  review_revision: z.number(),
+  profile_version: z.number(),
+  can_manage: z.boolean(),
+});
+const candidateEnvelopeSchema = z.object({
+  rows: z.array(viewRowSchema),
+  total: z.number(),
+  page: z.number(),
+  pages: z.number(),
+  from: z.number(),
+  to: z.number(),
+  counts: z.object({
+    total: z.number(),
+    new: z.number(),
+    review: z.number(),
+    interview: z.number(),
+    hired: z.number(),
+    decided: z.number(),
+  }),
+  intelligenceCounts: intelligenceCountsSchema,
+});
 
 export const listRecruitmentCandidatesPage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -848,7 +934,7 @@ export const listRecruitmentCandidatesPage = createServerFn({ method: "POST" })
     z
       .object({
         employerId: z.string().uuid(),
-        jobId: z.string().uuid(),
+        jobId: z.string().uuid().nullable(),
         view: candidateViewSchema.default({}),
       })
       .parse(d),
@@ -863,46 +949,31 @@ export const listRecruitmentCandidatesPage = createServerFn({ method: "POST" })
     // this page's rows, each with its rank and the filtered total. Names
     // come with the rows: the function reads them under its own definer
     // rights for exactly the rows the membership rule admits.
-    const [pageRes, countsRes, questionsRes] = await Promise.all([
-      ctx.supabase.rpc("rec_candidate_view", viewArgs(data.jobId, view, null)),
-      ctx.supabase.rpc("rec_job_counts", { _employer_id: data.employerId, _job_id: data.jobId }),
-      ctx.supabase
-        .from("recruitment_questions")
-        .select("id, prompt_sv, prompt_en, answer_kind, position")
-        .eq("job_id", data.jobId)
-        .eq("answer_kind", "yes_no")
-        .order("position"),
+    const [pageRes, questionsRes] = await Promise.all([
+      ctx.supabase.rpc("rec_ri_candidate_view", viewArgs(data.employerId, data.jobId, view, null)),
+      data.jobId
+        ? ctx.supabase
+            .from("recruitment_questions")
+            .select("id, prompt_sv, prompt_en, answer_kind, position")
+            .eq("job_id", data.jobId)
+            .eq("answer_kind", "yes_no")
+            .order("position")
+        : Promise.resolve({ data: [], error: null }),
     ]);
     if (pageRes.error) throw toCode(pageRes.error, "listRecruitmentCandidatesPage view");
-    if (countsRes.error) throw toCode(countsRes.error, "listRecruitmentCandidatesPage counts");
     if (questionsRes.error)
       throw toCode(questionsRes.error, "listRecruitmentCandidatesPage questions");
-    const viewRows = (pageRes.data ?? []) as ViewRow[];
-    const c = ((countsRes.data ?? []) as Loose[])[0];
-    const counts = c
-      ? {
-          total: Number(c.total),
-          new: Number(c.new_count),
-          review: Number(c.review_count),
-          interview: Number(c.interview_count),
-          hired: Number(c.hired_count),
-          decided: Number(c.decided_count),
-        }
-      : ZERO_COUNTS;
+    const envelope = candidateEnvelopeSchema.parse(pageRes.data);
+    const { total, page, pages, from, to, counts, intelligenceCounts } = envelope;
+    const viewRows = envelope.rows;
     const yesNoQuestions = (questionsRes.data ?? []).map((q: Loose) => ({
       id: q.id as string,
       promptSv: (q.prompt_sv as string | null) ?? null,
       promptEn: (q.prompt_en as string | null) ?? null,
     }));
-    const total = viewRows.length > 0 ? Number(viewRows[0].total) : 0;
-    const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-    const from = viewRows.length > 0 ? Number(viewRows[0].rank) : 0;
-    const to = viewRows.length > 0 ? Number(viewRows[viewRows.length - 1].rank) : 0;
-    const page = viewRows.length > 0 ? Math.ceil(from / PAGE_SIZE) : 1;
-    if (viewRows.length === 0) {
-      return { rows: [], total, page, pages, from, to, counts, yesNoQuestions };
-    }
-    const pageIds = viewRows.map((r) => r.application_id);
+    if (viewRows.length === 0)
+      return { rows: [], total, page, pages, from, to, counts, intelligenceCounts, yesNoQuestions };
+    const pageIds = viewRows.map((r) => r.id);
 
     // ── Phase 2: this page's details ──────────────────────────────────
     const [answerRows, notesRows, messageRows, team] = await Promise.all([
@@ -956,13 +1027,20 @@ export const listRecruitmentCandidatesPage = createServerFn({ method: "POST" })
     const teamNames = new Map(team.map((m) => [m.userId, m.name]));
 
     const rows: CandidateRow[] = viewRows.map((r) => {
-      const ans = answers.get(r.application_id);
+      const ans = answers.get(r.id);
       return {
-        applicationId: r.application_id,
-        jobId: data.jobId,
-        jobTitle: null,
-        jobTitleSv: null,
-        jobTitleEn: null,
+        applicationId: r.id,
+        jobId: r.job_id,
+        jobTitle: r.title_sv ?? r.title_en,
+        jobTitleSv: r.title_sv,
+        jobTitleEn: r.title_en,
+        requirementStatus: r.requirement_status,
+        reviewState: r.review_state,
+        analysisState: r.analysis_state,
+        nextAction: r.next_action,
+        reviewRevision: r.review_revision,
+        profileVersion: r.profile_version,
+        canManage: r.can_manage,
         name: r.display_name ?? null,
         status: r.status,
         appliedAt: r.created_at,
@@ -980,12 +1058,12 @@ export const listRecruitmentCandidatesPage = createServerFn({ method: "POST" })
         mandatoryNoCount: ans?.mandatoryNo ?? 0,
         answeredCount: ans?.count ?? 0,
         answers: ans?.byQuestion ?? {},
-        notesCount: notes.get(r.application_id) ?? 0,
-        messagesCount: messages.get(r.application_id) ?? 0,
+        notesCount: notes.get(r.id) ?? 0,
+        messagesCount: messages.get(r.id) ?? 0,
       };
     });
 
-    return { rows, total, page, pages, from, to, counts, yesNoQuestions };
+    return { rows, total, page, pages, from, to, counts, intelligenceCounts, yesNoQuestions };
   });
 
 /** Previous/next for one application in the filtered list it was opened
@@ -998,7 +1076,7 @@ export const getCandidateNeighbours = createServerFn({ method: "POST" })
     z
       .object({
         employerId: z.string().uuid(),
-        jobId: z.string().uuid(),
+        jobId: z.string().uuid().nullable(),
         applicationId: z.string().uuid(),
         view: candidateViewSchema.default({}),
       })
@@ -1007,16 +1085,13 @@ export const getCandidateNeighbours = createServerFn({ method: "POST" })
   .handler(async ({ data, context }): Promise<CandidateNeighbours> => {
     const ctx = context as Ctx;
     await requireMember(ctx, data.employerId);
-    const { data: rows, error } = await ctx.supabase.rpc(
-      "rec_candidate_view",
-      viewArgs(data.jobId, data.view, data.applicationId),
+    const result = await ctx.supabase.rpc(
+      "rec_ri_candidate_view",
+      viewArgs(data.employerId, data.jobId, data.view, data.applicationId),
     );
-    if (error) throw toCode(error, "getCandidateNeighbours");
-    const around = ((rows ?? []) as ViewRow[]).map((r) => ({
-      id: r.application_id,
-      rank: Number(r.rank),
-      total: Number(r.total),
-    }));
+    if (result.error) throw toCode(result.error, "getCandidateNeighbours");
+    const envelope = candidateEnvelopeSchema.parse(result.data);
+    const around = envelope.rows.map((r) => ({ id: r.id, rank: r.rank, total: envelope.total }));
     const self = around.find((r) => r.id === data.applicationId);
     if (!self) return { position: 0, total: 0, previousId: null, nextId: null };
     return {

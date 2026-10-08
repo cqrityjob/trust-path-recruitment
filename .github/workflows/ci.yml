@@ -123,6 +123,13 @@ jobs:
 
       - name: Recruiter Intelligence P0 process persistence and frozen readback
         run: bun run recruiter-interview-foundation:check
+      - name: Recruiter Intelligence P1 source-bound human review and list state
+        run: bun run recruiter-requirements:check
+
+      - name: Upload journal rollback ordering and planted controls
+        run: |
+          bun test scripts/sp-evidence-upload-recovery-ci.test.ts
+          bunx tsc --noEmit --allowJs --checkJs false --skipLibCheck --module preserve --moduleResolution bundler --target ES2022 --types node scripts/sp-evidence-upload-recovery-ci.test.ts
 
       - name: Type-check
         run: bunx tsc --noEmit
@@ -2460,3 +2467,71 @@ jobs:
           name: public-entry-browser-traces
           path: test-results/
           if-no-files-found: ignore
+
+  p1_browser:
+    name: Recruiter Intelligence P1 — full SQL, HTTP and browser proof
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      RI_P1_DISPOSABLE_POSTGRES: 1
+      RI_P1_REPORT_DIR: /tmp/ri-p1-browser-evidence
+      RI_P1_PUBLIC_REPORT_DIR: /tmp/ri-p1-browser-public
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+      - name: Install Chromium and operating-system dependencies
+        run: bunx playwright install --with-deps chromium
+      - name: P1 deterministic checks, runner guards and CI contract
+        run: bun run recruiter-requirements:check
+      - name: Strict history, synthetic 100-case SQL and HTTP oracle, full browser journeys
+        run: bash scripts/local-stack/run-ri-p1-evidence.sh
+      # Private harness/service/app logs and Playwright traces never enter this
+      # publication directory. A token or a changed evidence hash stops upload.
+      - name: Validate and export only public P1 evidence
+        id: public_evidence
+        if: always()
+        run: node scripts/local-stack/ri-p1-ci-artifacts.mjs
+      - name: Public P1 logs and synthetic screenshots
+        if: always() && steps.public_evidence.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: recruiter-intelligence-p1-browser
+          path: |
+            /tmp/ri-p1-browser-public/manifest.json
+            /tmp/ri-p1-browser-public/stages.log
+            /tmp/ri-p1-browser-public/postgres-version.log
+            /tmp/ri-p1-browser-public/api-postgrest-version.log
+            /tmp/ri-p1-browser-public/ui-postgrest-version.log
+            /tmp/ri-p1-browser-public/bootstrap.log
+            /tmp/ri-p1-browser-public/replay.log
+            /tmp/ri-p1-browser-public/sql-oracle.log
+            /tmp/ri-p1-browser-public/http-api.log
+            /tmp/ri-p1-browser-public/runtime.log
+            /tmp/ri-p1-browser-public/browser.log
+            /tmp/ri-p1-browser-public/images/*.png
+          if-no-files-found: error

@@ -389,8 +389,9 @@ const strip = (projection: ProcessProjection, lang: "sv" | "en" = "sv") =>
   // the application and the level; no address field exists on the surface.
   const dialog = codeOnly(read("src/components/recruitment/SendTestDialog.tsx"));
   ok(
-    /sendFn\(\{\s*data:\s*\{\s*employerId,\s*applicationId:\s*recipient\.applicationId,/.test(dialog) &&
-      !/recipientEmail|_recipient_email|type="email"/.test(dialog),
+    /sendFn\(\{\s*data:\s*\{\s*employerId,\s*applicationId:\s*recipient\.applicationId,/.test(
+      dialog,
+    ) && !/recipientEmail|_recipient_email|type="email"/.test(dialog),
     "2 · assessment assignment passes the application, not an address",
   );
   ok(
@@ -706,8 +707,17 @@ const strip = (projection: ProcessProjection, lang: "sv" | "en" = "sv") =>
   );
   ok(keys.length >= 2, "9 · the panel and the chip both key an assessments read");
   ok(new Set(keys).size === 1, "9 · and they key it identically");
+  const applicationList = codeOnly(read(ROUTES.applications));
   ok(
-    codeOnly(read(ROUTES.applications)).includes("employerId={employerId}"),
+    /const workspace = workspaces\.data\?\.find\(\(w\) => w\.employerSlug === employerSlug\)/.test(
+      applicationList,
+    ) &&
+      /if \(workspaces\.isError \|\| !workspace\)/.test(applicationList) &&
+      /<ApplicationsList\s+employerId=\{workspace\.employerId\}/.test(applicationList),
+    "9 · the list resolves the employer from the caller's authorised workspace",
+  );
+  ok(
+    /<CandidateTable\s+employerId=\{props\.employerId\}/.test(applicationList),
     "9 · the list passes the employer the shared key needs",
   );
   // The candidate page's strip reads the SAME key rather than its own.

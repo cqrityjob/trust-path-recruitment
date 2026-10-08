@@ -626,6 +626,7 @@ async function mount(
         return ok(route, []);
 
       // /passport/entry/$kind/$entryId
+      case "listMyUploadAttempts":
       case "listMyEvidence":
         return ok(route, []);
       case "listClaimVersions":

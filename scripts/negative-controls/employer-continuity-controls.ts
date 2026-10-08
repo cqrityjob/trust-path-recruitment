@@ -29,6 +29,7 @@ const STRIP = "src/components/employer/ProcessContinuityStrip.tsx";
 const PANEL = "src/components/academy/ApplicationAssessmentPanel.tsx";
 const APP_ROUTE =
   "src/routes/_authenticated.employer.$employerSlug.applications.$applicationId.tsx";
+const APP_LIST = "src/routes/_authenticated.employer.$employerSlug.applications.index.tsx";
 const II_CASE =
   "src/routes/_authenticated.employer.$employerSlug.interview-intelligence.$caseId.index.tsx";
 const II_INDEX =
@@ -39,6 +40,24 @@ const CONTEXT = "src/lib/interview-intelligence/context.ts";
 const E1 = "employer-process-continuity:check";
 
 const MUTATIONS: readonly Mutation[] = [
+  {
+    id: "E1-LIST-EMPLOYER-NOT-FROM-WORKSPACE",
+    defect: "the organisation list uses a URL slug instead of its authorised workspace employer ID",
+    file: APP_LIST,
+    find: "      employerId={workspace.employerId}",
+    replace: "      employerId={employerSlug}",
+    guard: E1,
+    expect: "9 · the list resolves the employer from the caller's authorised workspace",
+  },
+  {
+    id: "E1-LIST-CHIP-WRONG-EMPLOYER-KEY",
+    defect: "the shared candidate table receives a different employer for its assessment cache key",
+    file: APP_LIST,
+    find: "        employerId={props.employerId}",
+    replace: "        employerId={props.employerSlug}",
+    guard: E1,
+    expect: "9 · the list passes the employer the shared key needs",
+  },
   /* ---- The link itself ------------------------------------------- */
   {
     id: "E1-BATCH-WRONG-APPLICATION",
