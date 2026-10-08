@@ -20,6 +20,7 @@ import {
   prepareNativeStorageClaim,
   storageFailureSummary,
 } from "./recruiter-real-ci-storage-bootstrap.mjs";
+import { browserFailureSummary } from "./recruiter-real-ci-browser-diagnostic.mjs";
 
 const env = {
   CI: "true",
@@ -407,6 +408,219 @@ describe("fresh real-Auth holder setup", () => {
     const runner = read("scripts/recruiter-real-ci-run.mjs");
     expect(runner).toContain("storageFailureSummary(failure.operation");
     expect(runner).toContain("{ storageFailure: error.storageFailure }");
+  });
+});
+
+describe("private browser error to fixed public diagnostic", () => {
+  test("retains exact counts, fixed project/scenario and spec coordinates but excludes every raw error field", () => {
+    const payload = {
+      stats: { expected: 11, unexpected: 1, flaky: 0, skipped: 0 },
+      suites: [
+        {
+          suites: [
+            {
+              specs: [
+                {
+                  title:
+                    "guard standalone sv: AI-off pause, refresh, evidence and immutable report",
+                  file: "/private/path/e2e/recruiter-real-ci-browser.spec.ts",
+                  line: 513,
+                  column: 3,
+                  tests: [
+                    {
+                      projectName: "mobile-375",
+                      results: [
+                        {
+                          status: "failed",
+                          error: {
+                            message:
+                              "Error: expect(locator).toBeVisible() failed\nBearer syntheticForbiddenToken123",
+                            stack:
+                              "Error private\n at /private/path/e2e/recruiter-real-ci-browser.spec.ts:655:17\npassword omitted",
+                          },
+                          attachments: [{ body: "private trace omitted", path: "hidden" }],
+                          stdout: ["private omitted"],
+                        },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+    const result = browserFailureSummary(JSON.stringify(payload));
+    expect(result).toEqual({
+      code: "parsed",
+      stats: payload.stats,
+      failures: [
+        {
+          project: "mobile-375",
+          scenario: "guard-standalone-sv",
+          resultStatus: "failed",
+          category: "assertion",
+          location: {
+            file: "e2e/recruiter-real-ci-browser.spec.ts",
+            line: 655,
+            column: 17,
+          },
+        },
+      ],
+    });
+    for (const forbidden of [
+      "Bearer",
+      "private",
+      "password",
+      "stdout",
+      "attachment",
+      "/private/path",
+    ])
+      expect(JSON.stringify(result)).not.toContain(forbidden);
+    const context = {
+      stackRoot: fs.mkdtempSync(path.join(os.tmpdir(), "browser-diagnostic-private-")),
+      publicRoot: fs.mkdtempSync(path.join(os.tmpdir(), "browser-diagnostic-public-")),
+    };
+    writePublicReport(context, {
+      stages: { browser: "failed" },
+      errors: [
+        {
+          stage: "browser",
+          code: "REAL_CI_BROWSER_PRIMARY_FAILED",
+          browserFailure: result,
+        },
+      ],
+    });
+    expect(validatePublicReport(context.publicRoot).stages.browser).toBe("failed");
+  });
+  test("unknown names/messages, invalid JSON/counts and unrelated source paths cannot be reflected", () => {
+    expect(browserFailureSummary("Bearer syntheticForbiddenToken123")).toEqual({
+      code: "invalid_document",
+      failures: [],
+    });
+    const result = browserFailureSummary(
+      JSON.stringify({
+        stats: {
+          expected: "private token",
+          unexpected: -1,
+          skipped: 101,
+          flaky: 0,
+        },
+        suites: [
+          null,
+          {
+            specs: [
+              null,
+              {
+                title: "private arbitrary title",
+                file: "/private/other.ts",
+                tests: [
+                  null,
+                  {
+                    projectName: "private arbitrary project",
+                    results: [
+                      null,
+                      {
+                        status: "timedOut",
+                        error: {
+                          message: "secret response",
+                          location: {
+                            file: "/private/other.ts",
+                            line: 77,
+                            column: 4,
+                          },
+                        },
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      }),
+    );
+    expect(result).toEqual({
+      code: "parsed",
+      stats: {
+        expected: null,
+        unexpected: null,
+        skipped: null,
+        flaky: 0,
+      },
+      failures: [
+        {
+          project: "unclassified",
+          scenario: "unclassified",
+          resultStatus: "timedOut",
+          category: "test_timeout",
+          location: null,
+        },
+      ],
+    });
+    expect(JSON.stringify(result)).not.toContain("private");
+    expect(JSON.stringify(result)).not.toContain("secret");
+  });
+  test("only failed results are exported, locations are bounded and runner keeps failure gates", () => {
+    const result = browserFailureSummary(
+      JSON.stringify({
+        suites: [
+          {
+            specs: [
+              {
+                title: "two-tab process CAS on real Auth",
+                file: "recruiter-real-ci-browser.spec.ts",
+                line: 471,
+                column: 1,
+                tests: [
+                  {
+                    projectName: "chromium",
+                    results: [
+                      {
+                        status: "passed",
+                        error: { message: "ignored private text" },
+                      },
+                      { status: "skipped" },
+                      {
+                        status: "failed",
+                        error: {
+                          name: "TimeoutError",
+                          location: {
+                            file: "recruiter-real-ci-browser.spec.ts",
+                            line: 2001,
+                            column: 100000,
+                          },
+                        },
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      }),
+    );
+    expect(result.failures).toEqual([
+      {
+        project: "chromium",
+        scenario: "two-tab-process-cas",
+        resultStatus: "failed",
+        category: "operation_timeout",
+        location: {
+          file: "e2e/recruiter-real-ci-browser.spec.ts",
+          line: 471,
+          column: 1,
+        },
+      },
+    ]);
+    const runner = read("scripts/recruiter-real-ci-run.mjs");
+    expect(runner).toContain('name === "browser-primary" || name === "browser-cas"');
+    expect(runner).toContain("error.browserFailure = browserFailureSummary(text)");
+    expect(runner).toContain("throw error;");
+    expect(runner).toContain("requireBrowserCounts(data.stats, expected)");
+    expect(read("scripts/recruiter-real-ci-browser.config.ts")).toContain("retries: 0");
   });
 });
 
