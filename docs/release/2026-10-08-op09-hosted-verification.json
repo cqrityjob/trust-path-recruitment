@@ -1,0 +1,3402 @@
+{
+  "formatVersion": 1,
+  "projectRef": "wrygicdfxwjnrugduxnt",
+  "migration": "20270309090000_sp_evidence_upload_recovery.sql",
+  "migrationSha256": "71910d2b48a70e5084a0b4edd03f99f27bd58a4bc8842fb69dad8895668f6f4e",
+  "headSha": "1e5988c6f9c7121a0fefd22c0db06f6b573f0ae9",
+  "mainBase": "2a4687d7e6ca3886f39a52190bea19b3d54c734e",
+  "mergeSha": "7f899df01a4e8f066f07b58426afacf4382ea0d5",
+  "installation": {
+    "source": "Official Supabase GitHub integration after authorized normal merge; ledger and full catalogue were read independently. No manual replay.",
+    "firstObservedAt": "2026-10-08T13:34:47.607703+00:00"
+  },
+  "readOnly": true,
+  "before": {
+    "locks": {
+      "count": 14,
+      "aggregateMd5": "2ae6acac5fc9c53a295db47df0dfb48b"
+    },
+    "ledger": {
+      "count": 386,
+      "latest": "20270308090000",
+      "versionNameNewlineMd5": "24c276e06c3b92eb631c46999c6ef9a0"
+    },
+    "reports": {
+      "count": 0,
+      "aggregateMd5": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "snapshots": {
+      "count": 20,
+      "aggregateMd5": "d8dccb112f9044502dd0163ad2bb4025"
+    },
+    "caseStates": {
+      "draft": 9,
+      "assessed": 1,
+      "evidence_review": 2,
+      "interview_complete": 3,
+      "interview_in_progress": 5
+    },
+    "observedAt": "2026-10-08T13:27:11.92323+00:00",
+    "acknowledgements": {
+      "count": 0,
+      "aggregateMd5": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "newProfileTableExists": true
+  },
+  "after": {
+    "locks": {
+      "count": 14,
+      "aggregateMd5": "2ae6acac5fc9c53a295db47df0dfb48b"
+    },
+    "ledger": {
+      "count": 387,
+      "latest": "20270309090000",
+      "versionNameNewlineMd5": "06f74289059ecc9175ba98d6563affb0"
+    },
+    "reports": {
+      "count": 0,
+      "aggregateMd5": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "snapshots": {
+      "count": 20,
+      "aggregateMd5": "d8dccb112f9044502dd0163ad2bb4025"
+    },
+    "caseStates": {
+      "draft": 9,
+      "assessed": 1,
+      "evidence_review": 2,
+      "interview_complete": 3,
+      "interview_in_progress": 5
+    },
+    "observedAt": "2026-10-08T13:34:47.607703+00:00",
+    "acknowledgements": {
+      "count": 0,
+      "aggregateMd5": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "newProfileTableExists": true
+  },
+  "ledger": {
+    "count": 387,
+    "latest": "20270309090000",
+    "newRows": [
+      {
+        "name": "sp_evidence_upload_recovery",
+        "version": "20270309090000"
+      }
+    ],
+    "observedAt": "2026-10-08T13:37:19.169282+00:00",
+    "versionNameNewlineMd5": "06f74289059ecc9175ba98d6563affb0",
+    "prior386VersionNameNewlineMd5": "24c276e06c3b92eb631c46999c6ef9a0"
+  },
+  "catalog": {
+    "kind": "actual_catalog_capture_requires_predicate_review",
+    "columns": [
+      {
+        "name": "id",
+        "type": "uuid",
+        "default": null,
+        "notNull": true,
+        "identity": "",
+        "position": 1,
+        "generated": "",
+        "rawColumnACL": null,
+        "matchesExpected": true,
+        "effectivePrivileges": [
+          {
+            "role": "anon",
+            "insert": false,
+            "select": false,
+            "update": false,
+            "references": false
+          },
+          {
+            "role": "authenticated",
+            "insert": false,
+            "select": true,
+            "update": false,
+            "references": false
+          },
+          {
+            "role": "service_role",
+            "insert": false,
+            "select": false,
+            "update": false,
+            "references": false
+          }
+        ]
+      },
+      {
+        "name": "holder_user_id",
+        "type": "uuid",
+        "default": null,
+        "notNull": true,
+        "identity": "",
+        "position": 2,
+        "generated": "",
+        "rawColumnACL": null,
+        "matchesExpected": true,
+        "effectivePrivileges": [
+          {
+            "role": "anon",
+            "insert": false,
+            "select": false,
+            "update": false,
+            "references": false
+          },
+          {
+            "role": "authenticated",
+            "insert": false,
+            "select": true,
+            "update": false,
+            "references": false
+          },
+          {
+            "role": "service_role",
+            "insert": false,
+            "select": false,
+            "update": false,
+            "references": false
+          }
+        ]
+      },
+      {
+        "name": "claim_id",
+        "type": "uuid",
+        "default": null,
+        "notNull": false,
+        "identity": "",
+        "position": 3,
+        "generated": "",
+        "rawColumnACL": null,
+        "matchesExpected": true,
+        "effectivePrivileges": [
+          {
+            "role": "anon",
+            "insert": false,
+            "select": false,
+            "update": false,
+            "references": false
+          },
+          {
+            "role": "authenticated",
+            "insert": false,
+            "select": true,
+            "update": false,
+            "references": false
+          },
+          {
+            "role": "service_role",
+            "insert": false,
+            "select": false,
+            "update": false,
+            "references": false
+          }
+        ]
+      },
+      {
+        "name": "period_id",
+        "type": "uuid",
+        "default": null,
+        "notNull": false,
+        "identity": "",
+        "position": 4,
+        "generated": "",
+        "rawColumnACL": null,
+        "matchesExpected": true,
+        "effectivePrivileges": [
+          {
+            "role": "anon",
+            "insert": false,
+            "select": false,
+            "update": false,
+            "references": false
+          },
+          {
+            "role": "authenticated",
+            "insert": false,
+            "select": true,
+            "update": false,
+            "references": false
+          },
+          {
+            "role": "service_role",
+            "insert": false,
+            "select": false,
+            "update": false,
+            "references": false
+          }
+        ]
+      },
+      {
+        "name": "storage_path",
+        "type": "text",
+        "default": null,
+        "notNull": true,
+        "identity": "",
+        "position": 5,
+        "generated": "",
+        "rawColumnACL": null,
+        "matchesExpected": true,
+        "effectivePrivileges": [
+          {
+            "role": "anon",
+            "insert": false,
+            "select": false,
+            "update": false,
+            "references": false
+          },
+          {
+            "role": "authenticated",
+            "insert": false,
+            "select": true,
+            "update": false,
+            "references": false
+          },
+          {
+            "role": "service_role",
+            "insert": false,
+            "select": false,
+            "update": false,
+            "references": false
+          }
+        ]
+      },
+      {
+        "name": "file_name",
+        "type": "text",
+        "default": null,
+        "notNull": true,
+        "identity": "",
+        "position": 6,
+        "generated": "",
+        "rawColumnACL": null,
+        "matchesExpected": true,
+        "effectivePrivileges": [
+          {
+            "role": "anon",
+            "insert": false,
+            "select": false,
+            "update": false,
+            "references": false
+          },
+          {
+            "role": "authenticated",
+            "insert": false,
+            "select": true,
+            "update": false,
+            "references": false
+          },
+          {
+            "role": "service_role",
+            "insert": false,
+            "select": false,
+            "update": false,
+            "references": false
+          }
+        ]
+      },
+      {
+        "name": "mime_type",
+        "type": "text",
+        "default": null,
+        "notNull": true,
+        "identity": "",
+        "position": 7,
+        "generated": "",
+        "rawColumnACL": null,
+        "matchesExpected": true,
+        "effectivePrivileges": [
+          {
+            "role": "anon",
+            "insert": false,
+            "select": false,
+            "update": false,
+            "references": false
+          },
+          {
+            "role": "authenticated",
+            "insert": false,
+            "select": true,
+            "update": false,
+            "references": false
+          },
+          {
+            "role": "service_role",
+            "insert": false,
+            "select": false,
+            "update": false,
+            "references": false
+          }
+        ]
+      },
+      {
+        "name": "size_bytes",
+        "type": "integer",
+        "default": null,
+        "notNull": true,
+        "identity": "",
+        "position": 8,
+        "generated": "",
+        "rawColumnACL": null,
+        "matchesExpected": true,
+        "effectivePrivileges": [
+          {
+            "role": "anon",
+            "insert": false,
+            "select": false,
+            "update": false,
+            "references": false
+          },
+          {
+            "role": "authenticated",
+            "insert": false,
+            "select": true,
+            "update": false,
+            "references": false
+          },
+          {
+            "role": "service_role",
+            "insert": false,
+            "select": false,
+            "update": false,
+            "references": false
+          }
+        ]
+      },
+      {
+        "name": "sha256",
+        "type": "text",
+        "default": null,
+        "notNull": true,
+        "identity": "",
+        "position": 9,
+        "generated": "",
+        "rawColumnACL": null,
+        "matchesExpected": true,
+        "effectivePrivileges": [
+          {
+            "role": "anon",
+            "insert": false,
+            "select": false,
+            "update": false,
+            "references": false
+          },
+          {
+            "role": "authenticated",
+            "insert": false,
+            "select": true,
+            "update": false,
+            "references": false
+          },
+          {
+            "role": "service_role",
+            "insert": false,
+            "select": false,
+            "update": false,
+            "references": false
+          }
+        ]
+      },
+      {
+        "name": "status",
+        "type": "text",
+        "default": "'prepared'::text",
+        "notNull": true,
+        "identity": "",
+        "position": 10,
+        "generated": "",
+        "rawColumnACL": null,
+        "matchesExpected": true,
+        "effectivePrivileges": [
+          {
+            "role": "anon",
+            "insert": false,
+            "select": false,
+            "update": false,
+            "references": false
+          },
+          {
+            "role": "authenticated",
+            "insert": false,
+            "select": true,
+            "update": false,
+            "references": false
+          },
+          {
+            "role": "service_role",
+            "insert": false,
+            "select": false,
+            "update": false,
+            "references": false
+          }
+        ]
+      },
+      {
+        "name": "evidence_id",
+        "type": "uuid",
+        "default": null,
+        "notNull": false,
+        "identity": "",
+        "position": 11,
+        "generated": "",
+        "rawColumnACL": null,
+        "matchesExpected": true,
+        "effectivePrivileges": [
+          {
+            "role": "anon",
+            "insert": false,
+            "select": false,
+            "update": false,
+            "references": false
+          },
+          {
+            "role": "authenticated",
+            "insert": false,
+            "select": true,
+            "update": false,
+            "references": false
+          },
+          {
+            "role": "service_role",
+            "insert": false,
+            "select": false,
+            "update": false,
+            "references": false
+          }
+        ]
+      },
+      {
+        "name": "revision",
+        "type": "integer",
+        "default": "1",
+        "notNull": true,
+        "identity": "",
+        "position": 12,
+        "generated": "",
+        "rawColumnACL": null,
+        "matchesExpected": true,
+        "effectivePrivileges": [
+          {
+            "role": "anon",
+            "insert": false,
+            "select": false,
+            "update": false,
+            "references": false
+          },
+          {
+            "role": "authenticated",
+            "insert": false,
+            "select": true,
+            "update": false,
+            "references": false
+          },
+          {
+            "role": "service_role",
+            "insert": false,
+            "select": false,
+            "update": false,
+            "references": false
+          }
+        ]
+      },
+      {
+        "name": "created_at",
+        "type": "timestamp with time zone",
+        "default": "clock_timestamp()",
+        "notNull": true,
+        "identity": "",
+        "position": 13,
+        "generated": "",
+        "rawColumnACL": null,
+        "matchesExpected": true,
+        "effectivePrivileges": [
+          {
+            "role": "anon",
+            "insert": false,
+            "select": false,
+            "update": false,
+            "references": false
+          },
+          {
+            "role": "authenticated",
+            "insert": false,
+            "select": true,
+            "update": false,
+            "references": false
+          },
+          {
+            "role": "service_role",
+            "insert": false,
+            "select": false,
+            "update": false,
+            "references": false
+          }
+        ]
+      },
+      {
+        "name": "updated_at",
+        "type": "timestamp with time zone",
+        "default": "clock_timestamp()",
+        "notNull": true,
+        "identity": "",
+        "position": 14,
+        "generated": "",
+        "rawColumnACL": null,
+        "matchesExpected": true,
+        "effectivePrivileges": [
+          {
+            "role": "anon",
+            "insert": false,
+            "select": false,
+            "update": false,
+            "references": false
+          },
+          {
+            "role": "authenticated",
+            "insert": false,
+            "select": true,
+            "update": false,
+            "references": false
+          },
+          {
+            "role": "service_role",
+            "insert": false,
+            "select": false,
+            "update": false,
+            "references": false
+          }
+        ]
+      }
+    ],
+    "indexes": [
+      {
+        "name": "sp_evidence_upload_attempts_pkey",
+        "ready": true,
+        "valid": true,
+        "unique": true,
+        "options": [
+          0
+        ],
+        "primary": true,
+        "keyCount": 1,
+        "predicate": null,
+        "definition": "CREATE UNIQUE INDEX sp_evidence_upload_attempts_pkey ON public.sp_evidence_upload_attempts USING btree (id)",
+        "keyColumns": [
+          "id"
+        ],
+        "expressions": null,
+        "accessMethod": "btree",
+        "attributeCount": 1
+      },
+      {
+        "name": "sp_evidence_upload_attempts_storage_path_key",
+        "ready": true,
+        "valid": true,
+        "unique": true,
+        "options": [
+          0
+        ],
+        "primary": false,
+        "keyCount": 1,
+        "predicate": null,
+        "definition": "CREATE UNIQUE INDEX sp_evidence_upload_attempts_storage_path_key ON public.sp_evidence_upload_attempts USING btree (storage_path)",
+        "keyColumns": [
+          "storage_path"
+        ],
+        "expressions": null,
+        "accessMethod": "btree",
+        "attributeCount": 1
+      },
+      {
+        "name": "sp_evidence_upload_holder_idx",
+        "ready": true,
+        "valid": true,
+        "unique": false,
+        "options": [
+          0,
+          3,
+          0
+        ],
+        "primary": false,
+        "keyCount": 3,
+        "predicate": null,
+        "definition": "CREATE INDEX sp_evidence_upload_holder_idx ON public.sp_evidence_upload_attempts USING btree (holder_user_id, updated_at DESC, id)",
+        "keyColumns": [
+          "holder_user_id",
+          "updated_at",
+          "id"
+        ],
+        "expressions": null,
+        "accessMethod": "btree",
+        "attributeCount": 3
+      }
+    ],
+    "journal": {
+      "acl": "{postgres=arwdDxtm/postgres,authenticated=r/postgres}",
+      "rls": true,
+      "owner": "postgres",
+      "forceRls": false,
+      "relation": "public.sp_evidence_upload_attempts",
+      "persistence": "p",
+      "policyCount": 1,
+      "relationKind": "r"
+    },
+    "policies": [
+      {
+        "name": "sp_evidence_upload_insert_fence",
+        "qual": null,
+        "roles": [
+          "authenticated"
+        ],
+        "table": "objects",
+        "exists": true,
+        "schema": "storage",
+        "command": "a",
+        "withCheck": "((bucket_id <> 'passport-evidence'::text) OR sp_evidence_upload_storage_writable(name))",
+        "permissive": false,
+        "expectedQualDDL": null,
+        "expectedWithCheckDDL": "bucket_id<>'passport-evidence' OR public.sp_evidence_upload_storage_writable(name)",
+        "requiredFunctionDependencies": [
+          {
+            "present": true,
+            "function": "public.sp_evidence_upload_storage_writable(text)"
+          }
+        ],
+        "structureAndDependenciesMatch": true
+      },
+      {
+        "name": "sp_evidence_upload_own_read",
+        "qual": "((holder_user_id = ( SELECT auth.uid() AS uid)) AND sp_passport_session_active())",
+        "roles": [
+          "authenticated"
+        ],
+        "table": "sp_evidence_upload_attempts",
+        "exists": true,
+        "schema": "public",
+        "command": "r",
+        "withCheck": null,
+        "permissive": true,
+        "expectedQualDDL": "holder_user_id = (SELECT auth.uid()) AND public.sp_passport_session_active()",
+        "expectedWithCheckDDL": null,
+        "requiredFunctionDependencies": [
+          {
+            "present": true,
+            "function": "auth.uid()"
+          },
+          {
+            "present": true,
+            "function": "public.sp_passport_session_active()"
+          }
+        ],
+        "structureAndDependenciesMatch": true
+      },
+      {
+        "name": "sp_evidence_upload_update_fence",
+        "qual": "((bucket_id <> 'passport-evidence'::text) OR sp_evidence_upload_storage_writable(name))",
+        "roles": [
+          "authenticated"
+        ],
+        "table": "objects",
+        "exists": true,
+        "schema": "storage",
+        "command": "w",
+        "withCheck": "((bucket_id <> 'passport-evidence'::text) OR sp_evidence_upload_storage_writable(name))",
+        "permissive": false,
+        "expectedQualDDL": "bucket_id<>'passport-evidence' OR public.sp_evidence_upload_storage_writable(name)",
+        "expectedWithCheckDDL": "bucket_id<>'passport-evidence' OR public.sp_evidence_upload_storage_writable(name)",
+        "requiredFunctionDependencies": [
+          {
+            "present": true,
+            "function": "public.sp_evidence_upload_storage_writable(text)"
+          }
+        ],
+        "structureAndDependenciesMatch": true
+      }
+    ],
+    "triggers": [
+      {
+        "name": "sp_evidence_upload_attachment_guard",
+        "qual": null,
+        "type": 23,
+        "table": "sp_evidence",
+        "exists": true,
+        "enabled": "O",
+        "function": "sp_evidence_upload_attachment_guard()",
+        "internal": false,
+        "deferrable": false,
+        "definition": "CREATE TRIGGER sp_evidence_upload_attachment_guard BEFORE INSERT OR UPDATE ON sp_evidence FOR EACH ROW EXECUTE FUNCTION sp_evidence_upload_attachment_guard()",
+        "argumentBytes": 0,
+        "matchesExpected": true,
+        "initiallyDeferred": false
+      },
+      {
+        "name": "sp_evidence_upload_erasure_manifest",
+        "qual": null,
+        "type": 11,
+        "table": "sp_evidence_upload_attempts",
+        "exists": true,
+        "enabled": "O",
+        "function": "sp_evidence_upload_erasure_manifest()",
+        "internal": false,
+        "deferrable": false,
+        "definition": "CREATE TRIGGER sp_evidence_upload_erasure_manifest BEFORE DELETE ON sp_evidence_upload_attempts FOR EACH ROW EXECUTE FUNCTION sp_evidence_upload_erasure_manifest()",
+        "argumentBytes": 0,
+        "matchesExpected": true,
+        "initiallyDeferred": false
+      },
+      {
+        "name": "sp_evidence_upload_intent_immutable",
+        "qual": null,
+        "type": 19,
+        "table": "sp_evidence_upload_attempts",
+        "exists": true,
+        "enabled": "O",
+        "function": "sp_evidence_upload_intent_immutable()",
+        "internal": false,
+        "deferrable": false,
+        "definition": "CREATE TRIGGER sp_evidence_upload_intent_immutable BEFORE UPDATE ON sp_evidence_upload_attempts FOR EACH ROW EXECUTE FUNCTION sp_evidence_upload_intent_immutable()",
+        "argumentBytes": 0,
+        "matchesExpected": true,
+        "initiallyDeferred": false
+      }
+    ],
+    "functions": [
+      {
+        "acl": [
+          {
+            "grantee": "authenticated",
+            "grantor": "postgres",
+            "grantable": false,
+            "privilege": "EXECUTE"
+          },
+          {
+            "grantee": "postgres",
+            "grantor": "postgres",
+            "grantable": false,
+            "privilege": "EXECUTE"
+          }
+        ],
+        "kind": "f",
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "exists": true,
+        "strict": false,
+        "language": "plpgsql",
+        "parallel": "u",
+        "arguments": "_attempt_id uuid",
+        "leakproof": false,
+        "signature": "public.sp_authorize_evidence_upload_cleanup(uuid)",
+        "returnType": "jsonb",
+        "returnsSet": false,
+        "volatility": "v",
+        "actualProsrc": "\nDECLARE _row public.sp_evidence_upload_attempts; _resolved jsonb;\nBEGIN\n -- Reconcile takes the same row lock as every later attachment and Storage\n -- metadata write. A late commit wins before this fence or is refused after.\n _resolved:=public.sp_reconcile_evidence_upload(_attempt_id);\n SELECT * INTO _row FROM public.sp_evidence_upload_attempts WHERE id=_attempt_id AND holder_user_id=auth.uid() FOR UPDATE;\n IF EXISTS(SELECT 1 FROM public.sp_evidence WHERE storage_path=_row.storage_path)\n THEN RETURN _resolved; END IF;\n IF _row.status<>'cleaned' AND _row.status<>'cleanup_pending' THEN\n   UPDATE public.sp_evidence_upload_attempts SET status='cleanup_pending',revision=revision+1,updated_at=clock_timestamp()\n    WHERE id=_row.id RETURNING * INTO _row;\n END IF;\n RETURN public.sp_evidence_upload_payload(_row);\nEND ",
+        "defaultCount": 0,
+        "argumentNames": [
+          "_attempt_id"
+        ],
+        "overloadCount": 1,
+        "matchesExpected": true,
+        "securityDefiner": true,
+        "sourceBodyMatch": true,
+        "effectiveExecute": {
+          "anon": false,
+          "service_role": false,
+          "authenticated": true
+        },
+        "identityArguments": "_attempt_id uuid",
+        "defaultExpressions": null,
+        "sourceBodyMD5Actual": "35011e791eb6c69f3ec5d244bb85ca82",
+        "sourceBodyMD5Expected": "35011e791eb6c69f3ec5d244bb85ca82"
+      },
+      {
+        "acl": [
+          {
+            "grantee": "authenticated",
+            "grantor": "postgres",
+            "grantable": false,
+            "privilege": "EXECUTE"
+          },
+          {
+            "grantee": "postgres",
+            "grantor": "postgres",
+            "grantable": false,
+            "privilege": "EXECUTE"
+          }
+        ],
+        "kind": "f",
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "exists": true,
+        "strict": false,
+        "language": "plpgsql",
+        "parallel": "u",
+        "arguments": "_attempt_id uuid, _claim_id uuid, _period_id uuid, _file_name text, _mime_type text, _size_bytes integer, _sha256 text",
+        "leakproof": false,
+        "signature": "public.sp_begin_evidence_upload(uuid,uuid,uuid,text,text,integer,text)",
+        "returnType": "jsonb",
+        "returnsSet": false,
+        "volatility": "v",
+        "actualProsrc": "\nDECLARE _holder uuid:=auth.uid(); _owner uuid; _path text; _row public.sp_evidence_upload_attempts;\nBEGIN\n IF _holder IS NULL OR auth.role() IS DISTINCT FROM 'authenticated' OR NOT public.sp_passport_session_active()\n THEN RAISE EXCEPTION 'SP_UPLOAD_NOT_AUTHENTICATED' USING ERRCODE='42501'; END IF;\n IF _attempt_id IS NULL OR (_claim_id IS NULL)=(_period_id IS NULL)\n THEN RAISE EXCEPTION 'SP_TARGET_AMBIGUOUS' USING ERRCODE='23514'; END IF;\n IF _mime_type IS NULL OR _mime_type NOT IN ('application/pdf','image/jpeg','image/png','image/heic')\n OR _size_bytes IS NULL OR _size_bytes NOT BETWEEN 1 AND 8388608\n OR _sha256 IS NULL OR _sha256 !~ '^[0-9a-f]{64}$'\n OR _file_name IS NULL OR length(_file_name) NOT BETWEEN 1 AND 300\n THEN RAISE EXCEPTION 'SP_UPLOAD_INVALID_INPUT' USING ERRCODE='23514'; END IF;\n _path:=_holder::text||'/'||_attempt_id::text||'.'||CASE _mime_type WHEN 'application/pdf' THEN 'pdf' WHEN 'image/jpeg' THEN 'jpg' WHEN 'image/png' THEN 'png' ELSE 'heic' END;\n SELECT * INTO _row FROM public.sp_evidence_upload_attempts WHERE id=_attempt_id FOR UPDATE;\n IF NOT FOUND THEN\n   IF _claim_id IS NOT NULL THEN SELECT holder_user_id INTO _owner FROM public.sp_claims WHERE id=_claim_id;\n   ELSE SELECT holder_user_id INTO _owner FROM public.sp_experience_periods WHERE id=_period_id; END IF;\n   IF _owner IS NULL THEN RAISE EXCEPTION 'SP_TARGET_NOT_FOUND' USING ERRCODE='P0002'; END IF;\n   IF _owner<>_holder THEN RAISE EXCEPTION 'SP_NOT_HOLDER' USING ERRCODE='42501'; END IF;\n   INSERT INTO public.sp_evidence_upload_attempts(id,holder_user_id,claim_id,period_id,storage_path,file_name,mime_type,size_bytes,sha256)\n   VALUES(_attempt_id,_holder,_claim_id,_period_id,_path,_file_name,_mime_type,_size_bytes,_sha256)\n   ON CONFLICT (id) DO NOTHING;\n   SELECT * INTO _row FROM public.sp_evidence_upload_attempts WHERE id=_attempt_id FOR UPDATE;\n END IF;\n IF _row.holder_user_id IS DISTINCT FROM _holder THEN RAISE EXCEPTION 'SP_UPLOAD_ATTEMPT_NOT_FOUND' USING ERRCODE='42501'; END IF;\n IF (_row.claim_id,_row.period_id,_row.file_name,_row.mime_type,_row.size_bytes,_row.sha256)\n    IS DISTINCT FROM (_claim_id,_period_id,_file_name,_mime_type,_size_bytes,_sha256)\n THEN RAISE EXCEPTION 'SP_UPLOAD_INTENT_MISMATCH' USING ERRCODE='23514'; END IF;\n RETURN public.sp_evidence_upload_payload(_row);\nEND ",
+        "defaultCount": 0,
+        "argumentNames": [
+          "_attempt_id",
+          "_claim_id",
+          "_period_id",
+          "_file_name",
+          "_mime_type",
+          "_size_bytes",
+          "_sha256"
+        ],
+        "overloadCount": 1,
+        "matchesExpected": true,
+        "securityDefiner": true,
+        "sourceBodyMatch": true,
+        "effectiveExecute": {
+          "anon": false,
+          "service_role": false,
+          "authenticated": true
+        },
+        "identityArguments": "_attempt_id uuid, _claim_id uuid, _period_id uuid, _file_name text, _mime_type text, _size_bytes integer, _sha256 text",
+        "defaultExpressions": null,
+        "sourceBodyMD5Actual": "704aab827f7c0e826d06f4b556534573",
+        "sourceBodyMD5Expected": "704aab827f7c0e826d06f4b556534573"
+      },
+      {
+        "acl": [
+          {
+            "grantee": "authenticated",
+            "grantor": "postgres",
+            "grantable": false,
+            "privilege": "EXECUTE"
+          },
+          {
+            "grantee": "postgres",
+            "grantor": "postgres",
+            "grantable": false,
+            "privilege": "EXECUTE"
+          }
+        ],
+        "kind": "f",
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "exists": true,
+        "strict": false,
+        "language": "plpgsql",
+        "parallel": "u",
+        "arguments": "_attempt_id uuid",
+        "leakproof": false,
+        "signature": "public.sp_confirm_evidence_upload_cleanup(uuid)",
+        "returnType": "jsonb",
+        "returnsSet": false,
+        "volatility": "v",
+        "actualProsrc": "\nDECLARE _row public.sp_evidence_upload_attempts;\nBEGIN\n IF auth.uid() IS NULL OR auth.role() IS DISTINCT FROM 'authenticated' OR NOT public.sp_passport_session_active()\n THEN RAISE EXCEPTION 'SP_UPLOAD_NOT_AUTHENTICATED' USING ERRCODE='42501'; END IF;\n SELECT * INTO _row FROM public.sp_evidence_upload_attempts WHERE id=_attempt_id AND holder_user_id=auth.uid() FOR UPDATE;\n IF NOT FOUND THEN RAISE EXCEPTION 'SP_UPLOAD_ATTEMPT_NOT_FOUND' USING ERRCODE='42501'; END IF;\n IF _row.status NOT IN ('cleanup_pending','cleaned') OR EXISTS(SELECT 1 FROM public.sp_evidence WHERE storage_path=_row.storage_path)\n OR EXISTS(SELECT 1 FROM storage.objects WHERE bucket_id='passport-evidence' AND name=_row.storage_path)\n THEN RAISE EXCEPTION 'SP_UPLOAD_CLEANUP_UNCONFIRMED' USING ERRCODE='23514'; END IF;\n IF _row.status<>'cleaned' THEN\n  UPDATE public.sp_evidence_upload_attempts SET status='cleaned',revision=revision+1,updated_at=clock_timestamp()\n   WHERE id=_row.id RETURNING * INTO _row;\n END IF;\n RETURN public.sp_evidence_upload_payload(_row);\nEND ",
+        "defaultCount": 0,
+        "argumentNames": [
+          "_attempt_id"
+        ],
+        "overloadCount": 1,
+        "matchesExpected": true,
+        "securityDefiner": true,
+        "sourceBodyMatch": true,
+        "effectiveExecute": {
+          "anon": false,
+          "service_role": false,
+          "authenticated": true
+        },
+        "identityArguments": "_attempt_id uuid",
+        "defaultExpressions": null,
+        "sourceBodyMD5Actual": "341df9638d76ae1aee944bf7896d4f4b",
+        "sourceBodyMD5Expected": "341df9638d76ae1aee944bf7896d4f4b"
+      },
+      {
+        "acl": [
+          {
+            "grantee": "postgres",
+            "grantor": "postgres",
+            "grantable": false,
+            "privilege": "EXECUTE"
+          }
+        ],
+        "kind": "f",
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "exists": true,
+        "strict": false,
+        "language": "plpgsql",
+        "parallel": "u",
+        "arguments": "",
+        "leakproof": false,
+        "signature": "public.sp_evidence_upload_attachment_guard()",
+        "returnType": "trigger",
+        "returnsSet": false,
+        "volatility": "v",
+        "actualProsrc": "\nDECLARE _row public.sp_evidence_upload_attempts;\nBEGIN\n IF TG_OP='UPDATE' AND OLD.storage_path IS DISTINCT FROM NEW.storage_path AND EXISTS(\n  SELECT 1 FROM public.sp_evidence_upload_attempts WHERE storage_path=OLD.storage_path)\n THEN RAISE EXCEPTION 'SP_UPLOAD_BOUND_METADATA_IMMUTABLE' USING ERRCODE='23514'; END IF;\n SELECT * INTO _row FROM public.sp_evidence_upload_attempts WHERE storage_path=NEW.storage_path FOR UPDATE;\n IF NOT FOUND THEN RETURN NEW; END IF; -- no backfill or change to legacy evidence\n IF _row.status IN ('cleanup_pending','cleaned') THEN RAISE EXCEPTION 'SP_UPLOAD_CLEANUP_FENCED' USING ERRCODE='23514'; END IF;\n IF TG_OP='INSERT' AND NOT EXISTS(SELECT 1 FROM storage.objects WHERE bucket_id='passport-evidence' AND name=_row.storage_path)\n THEN RAISE EXCEPTION 'SP_UPLOAD_OBJECT_NOT_FOUND' USING ERRCODE='23514'; END IF;\n IF (_row.holder_user_id,_row.claim_id,_row.period_id,_row.file_name,_row.mime_type,_row.size_bytes,_row.sha256)\n IS DISTINCT FROM (NEW.holder_user_id,NEW.claim_id,NEW.period_id,NEW.file_name,NEW.mime_type,NEW.size_bytes,NEW.sha256)\n THEN RAISE EXCEPTION 'SP_UPLOAD_BOUND_METADATA_MISMATCH' USING ERRCODE='23514'; END IF;\n UPDATE public.sp_evidence_upload_attempts SET status='registered',evidence_id=NEW.id,\n  revision=CASE WHEN status='registered' AND evidence_id=NEW.id THEN revision ELSE revision+1 END,\n  updated_at=CASE WHEN status='registered' AND evidence_id=NEW.id THEN updated_at ELSE clock_timestamp() END\n  WHERE id=_row.id;\n RETURN NEW;\nEND ",
+        "defaultCount": 0,
+        "argumentNames": null,
+        "overloadCount": 1,
+        "matchesExpected": true,
+        "securityDefiner": true,
+        "sourceBodyMatch": true,
+        "effectiveExecute": {
+          "anon": false,
+          "service_role": false,
+          "authenticated": false
+        },
+        "identityArguments": "",
+        "defaultExpressions": null,
+        "sourceBodyMD5Actual": "04cf5812199cb2de4ccb562ef90cecd5",
+        "sourceBodyMD5Expected": "04cf5812199cb2de4ccb562ef90cecd5"
+      },
+      {
+        "acl": [
+          {
+            "grantee": "postgres",
+            "grantor": "postgres",
+            "grantable": false,
+            "privilege": "EXECUTE"
+          }
+        ],
+        "kind": "f",
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "exists": true,
+        "strict": false,
+        "language": "plpgsql",
+        "parallel": "u",
+        "arguments": "",
+        "leakproof": false,
+        "signature": "public.sp_evidence_upload_erasure_manifest()",
+        "returnType": "trigger",
+        "returnsSet": false,
+        "volatility": "v",
+        "actualProsrc": "\nBEGIN\n -- Capture the path before ON DELETE CASCADE removes its last journal.\n -- Reuse the existing erasure queue; do not enable or add any worker/cron.\n IF OLD.status<>'cleaned' AND NOT EXISTS(SELECT 1 FROM public.storage_erasure_queue\n  WHERE bucket_id='passport-evidence' AND object_path=OLD.storage_path AND completed_at IS NULL) THEN\n  INSERT INTO public.storage_erasure_queue(bucket_id,object_path,reason,subject_user_id,requested_by)\n  VALUES('passport-evidence',OLD.storage_path,'account_permanently_deleted',OLD.holder_user_id,auth.uid());\n END IF;\n RETURN OLD;\nEND ",
+        "defaultCount": 0,
+        "argumentNames": null,
+        "overloadCount": 1,
+        "matchesExpected": true,
+        "securityDefiner": true,
+        "sourceBodyMatch": true,
+        "effectiveExecute": {
+          "anon": false,
+          "service_role": false,
+          "authenticated": false
+        },
+        "identityArguments": "",
+        "defaultExpressions": null,
+        "sourceBodyMD5Actual": "ecbbc8af0b155704693cdd25acfc2952",
+        "sourceBodyMD5Expected": "ecbbc8af0b155704693cdd25acfc2952"
+      },
+      {
+        "acl": [
+          {
+            "grantee": "postgres",
+            "grantor": "postgres",
+            "grantable": false,
+            "privilege": "EXECUTE"
+          }
+        ],
+        "kind": "f",
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "exists": true,
+        "strict": false,
+        "language": "plpgsql",
+        "parallel": "u",
+        "arguments": "",
+        "leakproof": false,
+        "signature": "public.sp_evidence_upload_intent_immutable()",
+        "returnType": "trigger",
+        "returnsSet": false,
+        "volatility": "v",
+        "actualProsrc": "\nBEGIN\n IF (OLD.id,OLD.holder_user_id,OLD.claim_id,OLD.period_id,OLD.storage_path,OLD.file_name,OLD.mime_type,OLD.size_bytes,OLD.sha256,OLD.created_at)\n IS DISTINCT FROM (NEW.id,NEW.holder_user_id,NEW.claim_id,NEW.period_id,NEW.storage_path,NEW.file_name,NEW.mime_type,NEW.size_bytes,NEW.sha256,NEW.created_at)\n THEN RAISE EXCEPTION 'SP_UPLOAD_INTENT_IMMUTABLE' USING ERRCODE='23514'; END IF;\n IF OLD.status IN ('cleanup_pending','cleaned') AND NEW.status NOT IN ('cleanup_pending','cleaned')\n THEN RAISE EXCEPTION 'SP_UPLOAD_CLEANUP_FENCED' USING ERRCODE='23514'; END IF;\n IF OLD.status='cleaned' AND NEW.status<>'cleaned'\n THEN RAISE EXCEPTION 'SP_UPLOAD_CLEANUP_FENCED' USING ERRCODE='23514'; END IF;\n RETURN NEW;\nEND ",
+        "defaultCount": 0,
+        "argumentNames": null,
+        "overloadCount": 1,
+        "matchesExpected": true,
+        "securityDefiner": true,
+        "sourceBodyMatch": true,
+        "effectiveExecute": {
+          "anon": false,
+          "service_role": false,
+          "authenticated": false
+        },
+        "identityArguments": "",
+        "defaultExpressions": null,
+        "sourceBodyMD5Actual": "749ce49bf55f93b757a4867ded9a9573",
+        "sourceBodyMD5Expected": "749ce49bf55f93b757a4867ded9a9573"
+      },
+      {
+        "acl": [
+          {
+            "grantee": "postgres",
+            "grantor": "postgres",
+            "grantable": false,
+            "privilege": "EXECUTE"
+          }
+        ],
+        "kind": "f",
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "exists": true,
+        "strict": false,
+        "language": "sql",
+        "parallel": "u",
+        "arguments": "_attempt sp_evidence_upload_attempts",
+        "leakproof": false,
+        "signature": "public.sp_evidence_upload_payload(public.sp_evidence_upload_attempts)",
+        "returnType": "jsonb",
+        "returnsSet": false,
+        "volatility": "s",
+        "actualProsrc": "\n SELECT jsonb_build_object('id',_attempt.id,'claimId',_attempt.claim_id,'periodId',_attempt.period_id,\n  'storagePath',_attempt.storage_path,'fileName',_attempt.file_name,'mimeType',_attempt.mime_type,\n  'sizeBytes',_attempt.size_bytes,'sha256',_attempt.sha256,'status',_attempt.status,\n  'revision',_attempt.revision,'createdAt',_attempt.created_at,'updatedAt',_attempt.updated_at,\n  'evidence', (SELECT jsonb_build_object('id',e.id,'claimId',e.claim_id,'periodId',e.period_id,\n    'fileName',e.file_name,'mimeType',e.mime_type,'sizeBytes',e.size_bytes,\n    'uploadedAt',e.uploaded_at,'lifecycleState',e.lifecycle_state)\n    FROM public.sp_evidence e WHERE e.id=_attempt.evidence_id AND e.holder_user_id=_attempt.holder_user_id\n      AND e.storage_path=_attempt.storage_path))\n",
+        "defaultCount": 0,
+        "argumentNames": [
+          "_attempt"
+        ],
+        "overloadCount": 1,
+        "matchesExpected": true,
+        "securityDefiner": true,
+        "sourceBodyMatch": true,
+        "effectiveExecute": {
+          "anon": false,
+          "service_role": false,
+          "authenticated": false
+        },
+        "identityArguments": "_attempt sp_evidence_upload_attempts",
+        "defaultExpressions": null,
+        "sourceBodyMD5Actual": "6b2646e4e9d6603b195e421a05c0ac02",
+        "sourceBodyMD5Expected": "6b2646e4e9d6603b195e421a05c0ac02"
+      },
+      {
+        "acl": [
+          {
+            "grantee": "authenticated",
+            "grantor": "postgres",
+            "grantable": false,
+            "privilege": "EXECUTE"
+          },
+          {
+            "grantee": "postgres",
+            "grantor": "postgres",
+            "grantable": false,
+            "privilege": "EXECUTE"
+          }
+        ],
+        "kind": "f",
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "exists": true,
+        "strict": false,
+        "language": "plpgsql",
+        "parallel": "u",
+        "arguments": "_path text",
+        "leakproof": false,
+        "signature": "public.sp_evidence_upload_storage_writable(text)",
+        "returnType": "boolean",
+        "returnsSet": false,
+        "volatility": "v",
+        "actualProsrc": "\nDECLARE _status text;\nBEGIN\n IF auth.uid() IS NULL OR auth.role() IS DISTINCT FROM 'authenticated' OR NOT public.sp_passport_session_active()\n OR split_part(_path,'/',1) IS DISTINCT FROM auth.uid()::text THEN RETURN false; END IF;\n SELECT status INTO _status FROM public.sp_evidence_upload_attempts\n  WHERE holder_user_id=auth.uid() AND storage_path=_path FOR UPDATE;\n RETURN NOT FOUND OR _status='prepared';\nEND ",
+        "defaultCount": 0,
+        "argumentNames": [
+          "_path"
+        ],
+        "overloadCount": 1,
+        "matchesExpected": true,
+        "securityDefiner": true,
+        "sourceBodyMatch": true,
+        "effectiveExecute": {
+          "anon": false,
+          "service_role": false,
+          "authenticated": true
+        },
+        "identityArguments": "_path text",
+        "defaultExpressions": null,
+        "sourceBodyMD5Actual": "2a89ea61368a61c7f93675ebc8291c62",
+        "sourceBodyMD5Expected": "2a89ea61368a61c7f93675ebc8291c62"
+      },
+      {
+        "acl": [
+          {
+            "grantee": "authenticated",
+            "grantor": "postgres",
+            "grantable": false,
+            "privilege": "EXECUTE"
+          },
+          {
+            "grantee": "postgres",
+            "grantor": "postgres",
+            "grantable": false,
+            "privilege": "EXECUTE"
+          }
+        ],
+        "kind": "f",
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "exists": true,
+        "strict": false,
+        "language": "plpgsql",
+        "parallel": "u",
+        "arguments": "_claim_id uuid, _period_id uuid",
+        "leakproof": false,
+        "signature": "public.sp_list_my_evidence_upload_attempts(uuid,uuid)",
+        "returnType": "jsonb",
+        "returnsSet": false,
+        "volatility": "s",
+        "actualProsrc": "\nBEGIN\n IF auth.uid() IS NULL OR auth.role() IS DISTINCT FROM 'authenticated' OR NOT public.sp_passport_session_active()\n THEN RAISE EXCEPTION 'SP_UPLOAD_NOT_AUTHENTICATED' USING ERRCODE='42501'; END IF;\n IF _claim_id IS NOT NULL AND _period_id IS NOT NULL THEN RAISE EXCEPTION 'SP_TARGET_AMBIGUOUS' USING ERRCODE='23514'; END IF;\n RETURN coalesce((SELECT jsonb_agg(public.sp_evidence_upload_payload(a) ORDER BY a.updated_at DESC,a.id)\n  FROM public.sp_evidence_upload_attempts a WHERE a.holder_user_id=auth.uid()\n    AND (a.status IN ('prepared','cleanup_pending') OR\n      (a.status='registered' AND NOT EXISTS(SELECT 1 FROM public.sp_evidence e WHERE e.storage_path=a.storage_path)))\n    AND (_claim_id IS NULL OR a.claim_id=_claim_id) AND (_period_id IS NULL OR a.period_id=_period_id)), '[]'::jsonb);\nEND ",
+        "defaultCount": 0,
+        "argumentNames": [
+          "_claim_id",
+          "_period_id"
+        ],
+        "overloadCount": 1,
+        "matchesExpected": true,
+        "securityDefiner": true,
+        "sourceBodyMatch": true,
+        "effectiveExecute": {
+          "anon": false,
+          "service_role": false,
+          "authenticated": true
+        },
+        "identityArguments": "_claim_id uuid, _period_id uuid",
+        "defaultExpressions": null,
+        "sourceBodyMD5Actual": "9c5bab8f181e6583b8a91f7d91934971",
+        "sourceBodyMD5Expected": "9c5bab8f181e6583b8a91f7d91934971"
+      },
+      {
+        "acl": [
+          {
+            "grantee": "authenticated",
+            "grantor": "postgres",
+            "grantable": false,
+            "privilege": "EXECUTE"
+          },
+          {
+            "grantee": "postgres",
+            "grantor": "postgres",
+            "grantable": false,
+            "privilege": "EXECUTE"
+          }
+        ],
+        "kind": "f",
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "exists": true,
+        "strict": false,
+        "language": "plpgsql",
+        "parallel": "u",
+        "arguments": "_attempt_id uuid",
+        "leakproof": false,
+        "signature": "public.sp_reconcile_evidence_upload(uuid)",
+        "returnType": "jsonb",
+        "returnsSet": false,
+        "volatility": "v",
+        "actualProsrc": "\nDECLARE _row public.sp_evidence_upload_attempts; _evidence public.sp_evidence;\nBEGIN\n IF auth.uid() IS NULL OR auth.role() IS DISTINCT FROM 'authenticated' OR NOT public.sp_passport_session_active()\n THEN RAISE EXCEPTION 'SP_UPLOAD_NOT_AUTHENTICATED' USING ERRCODE='42501'; END IF;\n SELECT * INTO _row FROM public.sp_evidence_upload_attempts WHERE id=_attempt_id AND holder_user_id=auth.uid() FOR UPDATE;\n IF NOT FOUND THEN RAISE EXCEPTION 'SP_UPLOAD_ATTEMPT_NOT_FOUND' USING ERRCODE='42501'; END IF;\n SELECT * INTO _evidence FROM public.sp_evidence WHERE storage_path=_row.storage_path;\n IF FOUND THEN\n   IF _evidence.holder_user_id<>_row.holder_user_id OR (_evidence.claim_id,_evidence.period_id,_evidence.sha256,_evidence.size_bytes,_evidence.mime_type,_evidence.file_name)\n     IS DISTINCT FROM (_row.claim_id,_row.period_id,_row.sha256,_row.size_bytes,_row.mime_type,_row.file_name)\n   THEN RAISE EXCEPTION 'SP_UPLOAD_BOUND_METADATA_MISMATCH' USING ERRCODE='23514'; END IF;\n   IF _row.status<>'registered' OR _row.evidence_id IS DISTINCT FROM _evidence.id THEN\n     UPDATE public.sp_evidence_upload_attempts SET status='registered',evidence_id=_evidence.id,revision=revision+1,updated_at=clock_timestamp()\n      WHERE id=_row.id RETURNING * INTO _row;\n   END IF;\n END IF;\n RETURN public.sp_evidence_upload_payload(_row);\nEND ",
+        "defaultCount": 0,
+        "argumentNames": [
+          "_attempt_id"
+        ],
+        "overloadCount": 1,
+        "matchesExpected": true,
+        "securityDefiner": true,
+        "sourceBodyMatch": true,
+        "effectiveExecute": {
+          "anon": false,
+          "service_role": false,
+          "authenticated": true
+        },
+        "identityArguments": "_attempt_id uuid",
+        "defaultExpressions": null,
+        "sourceBodyMD5Actual": "5473f2b23b3eae63d9a7236f6321bfd4",
+        "sourceBodyMD5Expected": "5473f2b23b3eae63d9a7236f6321bfd4"
+      }
+    ],
+    "schemaSha": "1e5988c6f9c7121a0fefd22c0db06f6b573f0ae9",
+    "sourceSha": "9c8b8159ce5f350c6ace074c917823599d19ce99",
+    "journalACL": [
+      {
+        "grantee": "authenticated",
+        "grantor": "postgres",
+        "grantable": false,
+        "privilege": "SELECT"
+      },
+      {
+        "grantee": "postgres",
+        "grantor": "postgres",
+        "grantable": false,
+        "privilege": "DELETE"
+      },
+      {
+        "grantee": "postgres",
+        "grantor": "postgres",
+        "grantable": false,
+        "privilege": "INSERT"
+      },
+      {
+        "grantee": "postgres",
+        "grantor": "postgres",
+        "grantable": false,
+        "privilege": "MAINTAIN"
+      },
+      {
+        "grantee": "postgres",
+        "grantor": "postgres",
+        "grantable": false,
+        "privilege": "REFERENCES"
+      },
+      {
+        "grantee": "postgres",
+        "grantor": "postgres",
+        "grantable": false,
+        "privilege": "SELECT"
+      },
+      {
+        "grantee": "postgres",
+        "grantor": "postgres",
+        "grantable": false,
+        "privilege": "TRIGGER"
+      },
+      {
+        "grantee": "postgres",
+        "grantor": "postgres",
+        "grantable": false,
+        "privilege": "TRUNCATE"
+      },
+      {
+        "grantee": "postgres",
+        "grantor": "postgres",
+        "grantable": false,
+        "privilege": "UPDATE"
+      }
+    ],
+    "constraints": [
+      {
+        "kind": "c",
+        "name": "sp_evidence_upload_attempts_check",
+        "columns": [
+          "claim_id",
+          "period_id"
+        ],
+        "matchType": " ",
+        "validated": true,
+        "deferrable": false,
+        "definition": "CHECK ((claim_id IS NULL) <> (period_id IS NULL))",
+        "expression": "((claim_id IS NULL) <> (period_id IS NULL))",
+        "deleteAction": " ",
+        "updateAction": " ",
+        "initiallyDeferred": false,
+        "referencedColumns": [],
+        "referencedRelation": "-"
+      },
+      {
+        "kind": "c",
+        "name": "sp_evidence_upload_attempts_check1",
+        "columns": [
+          "holder_user_id",
+          "id",
+          "mime_type",
+          "storage_path"
+        ],
+        "matchType": " ",
+        "validated": true,
+        "deferrable": false,
+        "definition": "CHECK (storage_path = ((((holder_user_id::text || '/'::text) || id::text) || '.'::text) ||\nCASE mime_type\n    WHEN 'application/pdf'::text THEN 'pdf'::text\n    WHEN 'image/jpeg'::text THEN 'jpg'::text\n    WHEN 'image/png'::text THEN 'png'::text\n    ELSE 'heic'::text\nEND))",
+        "expression": "(storage_path = (((((holder_user_id)::text || '/'::text) || (id)::text) || '.'::text) ||\nCASE mime_type\n    WHEN 'application/pdf'::text THEN 'pdf'::text\n    WHEN 'image/jpeg'::text THEN 'jpg'::text\n    WHEN 'image/png'::text THEN 'png'::text\n    ELSE 'heic'::text\nEND))",
+        "deleteAction": " ",
+        "updateAction": " ",
+        "initiallyDeferred": false,
+        "referencedColumns": [],
+        "referencedRelation": "-"
+      },
+      {
+        "kind": "c",
+        "name": "sp_evidence_upload_attempts_file_name_check",
+        "columns": [
+          "file_name"
+        ],
+        "matchType": " ",
+        "validated": true,
+        "deferrable": false,
+        "definition": "CHECK (length(file_name) >= 1 AND length(file_name) <= 300)",
+        "expression": "((length(file_name) >= 1) AND (length(file_name) <= 300))",
+        "deleteAction": " ",
+        "updateAction": " ",
+        "initiallyDeferred": false,
+        "referencedColumns": [],
+        "referencedRelation": "-"
+      },
+      {
+        "kind": "f",
+        "name": "sp_evidence_upload_attempts_holder_user_id_fkey",
+        "columns": [
+          "holder_user_id"
+        ],
+        "matchType": "s",
+        "validated": true,
+        "deferrable": false,
+        "definition": "FOREIGN KEY (holder_user_id) REFERENCES auth.users(id) ON DELETE CASCADE",
+        "expression": null,
+        "deleteAction": "c",
+        "updateAction": "a",
+        "initiallyDeferred": false,
+        "referencedColumns": [
+          "id"
+        ],
+        "referencedRelation": "auth.users"
+      },
+      {
+        "kind": "c",
+        "name": "sp_evidence_upload_attempts_mime_type_check",
+        "columns": [
+          "mime_type"
+        ],
+        "matchType": " ",
+        "validated": true,
+        "deferrable": false,
+        "definition": "CHECK (mime_type = ANY (ARRAY['application/pdf'::text, 'image/jpeg'::text, 'image/png'::text, 'image/heic'::text]))",
+        "expression": "(mime_type = ANY (ARRAY['application/pdf'::text, 'image/jpeg'::text, 'image/png'::text, 'image/heic'::text]))",
+        "deleteAction": " ",
+        "updateAction": " ",
+        "initiallyDeferred": false,
+        "referencedColumns": [],
+        "referencedRelation": "-"
+      },
+      {
+        "kind": "p",
+        "name": "sp_evidence_upload_attempts_pkey",
+        "columns": [
+          "id"
+        ],
+        "matchType": " ",
+        "validated": true,
+        "deferrable": false,
+        "definition": "PRIMARY KEY (id)",
+        "expression": null,
+        "deleteAction": " ",
+        "updateAction": " ",
+        "initiallyDeferred": false,
+        "referencedColumns": [],
+        "referencedRelation": "-"
+      },
+      {
+        "kind": "c",
+        "name": "sp_evidence_upload_attempts_revision_check",
+        "columns": [
+          "revision"
+        ],
+        "matchType": " ",
+        "validated": true,
+        "deferrable": false,
+        "definition": "CHECK (revision > 0)",
+        "expression": "(revision > 0)",
+        "deleteAction": " ",
+        "updateAction": " ",
+        "initiallyDeferred": false,
+        "referencedColumns": [],
+        "referencedRelation": "-"
+      },
+      {
+        "kind": "c",
+        "name": "sp_evidence_upload_attempts_sha256_check",
+        "columns": [
+          "sha256"
+        ],
+        "matchType": " ",
+        "validated": true,
+        "deferrable": false,
+        "definition": "CHECK (sha256 ~ '^[0-9a-f]{64}$'::text)",
+        "expression": "(sha256 ~ '^[0-9a-f]{64}$'::text)",
+        "deleteAction": " ",
+        "updateAction": " ",
+        "initiallyDeferred": false,
+        "referencedColumns": [],
+        "referencedRelation": "-"
+      },
+      {
+        "kind": "c",
+        "name": "sp_evidence_upload_attempts_size_bytes_check",
+        "columns": [
+          "size_bytes"
+        ],
+        "matchType": " ",
+        "validated": true,
+        "deferrable": false,
+        "definition": "CHECK (size_bytes > 0 AND size_bytes <= 8388608)",
+        "expression": "((size_bytes > 0) AND (size_bytes <= 8388608))",
+        "deleteAction": " ",
+        "updateAction": " ",
+        "initiallyDeferred": false,
+        "referencedColumns": [],
+        "referencedRelation": "-"
+      },
+      {
+        "kind": "c",
+        "name": "sp_evidence_upload_attempts_status_check",
+        "columns": [
+          "status"
+        ],
+        "matchType": " ",
+        "validated": true,
+        "deferrable": false,
+        "definition": "CHECK (status = ANY (ARRAY['prepared'::text, 'registered'::text, 'cleanup_pending'::text, 'cleaned'::text]))",
+        "expression": "(status = ANY (ARRAY['prepared'::text, 'registered'::text, 'cleanup_pending'::text, 'cleaned'::text]))",
+        "deleteAction": " ",
+        "updateAction": " ",
+        "initiallyDeferred": false,
+        "referencedColumns": [],
+        "referencedRelation": "-"
+      },
+      {
+        "kind": "u",
+        "name": "sp_evidence_upload_attempts_storage_path_key",
+        "columns": [
+          "storage_path"
+        ],
+        "matchType": " ",
+        "validated": true,
+        "deferrable": false,
+        "definition": "UNIQUE (storage_path)",
+        "expression": null,
+        "deleteAction": " ",
+        "updateAction": " ",
+        "initiallyDeferred": false,
+        "referencedColumns": [],
+        "referencedRelation": "-"
+      }
+    ],
+    "proofBoundary": "No user RPC executed. Function/column/trigger/journal ACL/known-role parity and index structure are automated. CHECK/policy raw expressions and full index definitions require explicit comparison with expected.json. Zero applies only to the new journal before fixtures.",
+    "serverVersion": "17.6",
+    "migrationSHA256": "71910d2b48a70e5084a0b4edd03f99f27bd58a4bc8842fb69dad8895668f6f4e",
+    "ownerAssumption": "postgres applies the migration; no ALTER OWNER exists in this DDL",
+    "tablePrivileges": [
+      {
+        "role": "anon",
+        "actual": false,
+        "expected": false,
+        "privilege": "DELETE"
+      },
+      {
+        "role": "anon",
+        "actual": false,
+        "expected": false,
+        "privilege": "INSERT"
+      },
+      {
+        "role": "anon",
+        "actual": false,
+        "expected": false,
+        "privilege": "MAINTAIN"
+      },
+      {
+        "role": "anon",
+        "actual": false,
+        "expected": false,
+        "privilege": "REFERENCES"
+      },
+      {
+        "role": "anon",
+        "actual": false,
+        "expected": false,
+        "privilege": "SELECT"
+      },
+      {
+        "role": "anon",
+        "actual": false,
+        "expected": false,
+        "privilege": "TRIGGER"
+      },
+      {
+        "role": "anon",
+        "actual": false,
+        "expected": false,
+        "privilege": "TRUNCATE"
+      },
+      {
+        "role": "anon",
+        "actual": false,
+        "expected": false,
+        "privilege": "UPDATE"
+      },
+      {
+        "role": "authenticated",
+        "actual": false,
+        "expected": false,
+        "privilege": "DELETE"
+      },
+      {
+        "role": "authenticated",
+        "actual": false,
+        "expected": false,
+        "privilege": "INSERT"
+      },
+      {
+        "role": "authenticated",
+        "actual": false,
+        "expected": false,
+        "privilege": "MAINTAIN"
+      },
+      {
+        "role": "authenticated",
+        "actual": false,
+        "expected": false,
+        "privilege": "REFERENCES"
+      },
+      {
+        "role": "authenticated",
+        "actual": true,
+        "expected": true,
+        "privilege": "SELECT"
+      },
+      {
+        "role": "authenticated",
+        "actual": false,
+        "expected": false,
+        "privilege": "TRIGGER"
+      },
+      {
+        "role": "authenticated",
+        "actual": false,
+        "expected": false,
+        "privilege": "TRUNCATE"
+      },
+      {
+        "role": "authenticated",
+        "actual": false,
+        "expected": false,
+        "privilege": "UPDATE"
+      },
+      {
+        "role": "service_role",
+        "actual": false,
+        "expected": false,
+        "privilege": "DELETE"
+      },
+      {
+        "role": "service_role",
+        "actual": false,
+        "expected": false,
+        "privilege": "INSERT"
+      },
+      {
+        "role": "service_role",
+        "actual": false,
+        "expected": false,
+        "privilege": "MAINTAIN"
+      },
+      {
+        "role": "service_role",
+        "actual": false,
+        "expected": false,
+        "privilege": "REFERENCES"
+      },
+      {
+        "role": "service_role",
+        "actual": false,
+        "expected": false,
+        "privilege": "SELECT"
+      },
+      {
+        "role": "service_role",
+        "actual": false,
+        "expected": false,
+        "privilege": "TRIGGER"
+      },
+      {
+        "role": "service_role",
+        "actual": false,
+        "expected": false,
+        "privilege": "TRUNCATE"
+      },
+      {
+        "role": "service_role",
+        "actual": false,
+        "expected": false,
+        "privilege": "UPDATE"
+      }
+    ],
+    "columnFullParity": true,
+    "journalACLParity": true,
+    "triggerFullParity": true,
+    "functionFullParity": true,
+    "journalExpectedACL": [
+      {
+        "grantee": "authenticated",
+        "grantor": "postgres",
+        "grantable": false,
+        "privilege": "SELECT"
+      },
+      {
+        "grantee": "postgres",
+        "grantor": "postgres",
+        "grantable": false,
+        "privilege": "DELETE"
+      },
+      {
+        "grantee": "postgres",
+        "grantor": "postgres",
+        "grantable": false,
+        "privilege": "INSERT"
+      },
+      {
+        "grantee": "postgres",
+        "grantor": "postgres",
+        "grantable": false,
+        "privilege": "MAINTAIN"
+      },
+      {
+        "grantee": "postgres",
+        "grantor": "postgres",
+        "grantable": false,
+        "privilege": "REFERENCES"
+      },
+      {
+        "grantee": "postgres",
+        "grantor": "postgres",
+        "grantable": false,
+        "privilege": "SELECT"
+      },
+      {
+        "grantee": "postgres",
+        "grantor": "postgres",
+        "grantable": false,
+        "privilege": "TRIGGER"
+      },
+      {
+        "grantee": "postgres",
+        "grantor": "postgres",
+        "grantable": false,
+        "privilege": "TRUNCATE"
+      },
+      {
+        "grantee": "postgres",
+        "grantor": "postgres",
+        "grantable": false,
+        "privilege": "UPDATE"
+      }
+    ],
+    "beforeFixtureCounts": {
+      "cleaned": 0,
+      "prepared": 0,
+      "registered": 0,
+      "journal_rows": 0,
+      "cleanup_pending": 0,
+      "newJournalExpectedZero": true
+    },
+    "existingErasureQueue": {
+      "relation": "public.storage_erasure_queue",
+      "totalRows": 11,
+      "pendingRows": 0,
+      "expectedTotalNotAsserted": true
+    },
+    "indexStructureParity": true,
+    "policyStructureParity": true,
+    "expectedConstraintsDDL": [
+      {
+        "ddl": "PRIMARY KEY (id)",
+        "kind": "p",
+        "columns": [
+          "id"
+        ]
+      },
+      {
+        "ddl": "FOREIGN KEY (holder_user_id) REFERENCES auth.users(id) ON DELETE CASCADE",
+        "kind": "f",
+        "columns": [
+          "holder_user_id"
+        ]
+      },
+      {
+        "ddl": "UNIQUE (storage_path)",
+        "kind": "u",
+        "columns": [
+          "storage_path"
+        ]
+      },
+      {
+        "ddl": "length(file_name) BETWEEN 1 AND 300",
+        "kind": "c",
+        "columns": [
+          "file_name"
+        ]
+      },
+      {
+        "ddl": "mime_type IN ('application/pdf','image/jpeg','image/png','image/heic')",
+        "kind": "c",
+        "columns": [
+          "mime_type"
+        ]
+      },
+      {
+        "ddl": "size_bytes > 0 AND size_bytes <= 8388608",
+        "kind": "c",
+        "columns": [
+          "size_bytes"
+        ]
+      },
+      {
+        "ddl": "sha256 ~ '^[0-9a-f]{64}$'",
+        "kind": "c",
+        "columns": [
+          "sha256"
+        ]
+      },
+      {
+        "ddl": "status IN ('prepared','registered','cleanup_pending','cleaned')",
+        "kind": "c",
+        "columns": [
+          "status"
+        ]
+      },
+      {
+        "ddl": "revision > 0",
+        "kind": "c",
+        "columns": [
+          "revision"
+        ]
+      },
+      {
+        "ddl": "(claim_id IS NULL) <> (period_id IS NULL)",
+        "kind": "c",
+        "columns": [
+          "claim_id",
+          "period_id"
+        ]
+      },
+      {
+        "ddl": "storage_path = holder_user_id::text || '/' || id::text || '.' || CASE mime_type WHEN 'application/pdf' THEN 'pdf' WHEN 'image/jpeg' THEN 'jpg' WHEN 'image/png' THEN 'png' ELSE 'heic' END",
+        "kind": "c",
+        "columns": [
+          "holder_user_id",
+          "id",
+          "mime_type",
+          "storage_path"
+        ]
+      }
+    ],
+    "journalStructureParity": true,
+    "knownRolePrivilegesMatch": true,
+    "constraintStructureParity": true,
+    "policyExpressionReviewRequired": true,
+    "constraintExpressionReviewRequired": true
+  },
+  "independentSemanticReview": {
+    "kind": "independent_read_only_semantic_catalog_review",
+    "reviewedAt": "2026-10-08T13:39:42.324017+00:00",
+    "sourceSha": "1e5988c6f9c7121a0fefd22c0db06f6b573f0ae9",
+    "migration": "supabase/migrations/20270309090000_sp_evidence_upload_recovery.sql",
+    "migrationSha256": "71910d2b48a70e5084a0b4edd03f99f27bd58a4bc8842fb69dad8895668f6f4e",
+    "catalogFile": "/private/tmp/ri-live-20261008/op09-hosted-catalog-readback.json",
+    "catalogFileSha256": "c125ab15179ef8c980ed52a974f1f37199f756ee389a6ffe3954b4de308ff7d0",
+    "expectedFile": "/private/tmp/ri-op09-catalog-20261008/expected.json",
+    "expectedFileSha256": "6b26137df6dbc6468d4fc3a8872a36422cc51791305ae0cee224c11fa1f6146b",
+    "result": "GO",
+    "method": "Every full returned CHECK/FK/PK/UNIQUE, policy predicate and index definition was read manually against authoritative source. Independent byte equality of all10 prosrc bodies was recomputed from source, not inferred from capture booleans. Structural counts alone are not predicate proof.",
+    "functions": [
+      {
+        "signature": "public.sp_authorize_evidence_upload_cleanup(uuid)",
+        "prosrcMd5IndependentlyEqual": true,
+        "md5": "35011e791eb6c69f3ec5d244bb85ca82",
+        "fullCapturedContractAndAclMatches": true
+      },
+      {
+        "signature": "public.sp_begin_evidence_upload(uuid,uuid,uuid,text,text,integer,text)",
+        "prosrcMd5IndependentlyEqual": true,
+        "md5": "704aab827f7c0e826d06f4b556534573",
+        "fullCapturedContractAndAclMatches": true
+      },
+      {
+        "signature": "public.sp_confirm_evidence_upload_cleanup(uuid)",
+        "prosrcMd5IndependentlyEqual": true,
+        "md5": "341df9638d76ae1aee944bf7896d4f4b",
+        "fullCapturedContractAndAclMatches": true
+      },
+      {
+        "signature": "public.sp_evidence_upload_attachment_guard()",
+        "prosrcMd5IndependentlyEqual": true,
+        "md5": "04cf5812199cb2de4ccb562ef90cecd5",
+        "fullCapturedContractAndAclMatches": true
+      },
+      {
+        "signature": "public.sp_evidence_upload_erasure_manifest()",
+        "prosrcMd5IndependentlyEqual": true,
+        "md5": "ecbbc8af0b155704693cdd25acfc2952",
+        "fullCapturedContractAndAclMatches": true
+      },
+      {
+        "signature": "public.sp_evidence_upload_intent_immutable()",
+        "prosrcMd5IndependentlyEqual": true,
+        "md5": "749ce49bf55f93b757a4867ded9a9573",
+        "fullCapturedContractAndAclMatches": true
+      },
+      {
+        "signature": "public.sp_evidence_upload_payload(public.sp_evidence_upload_attempts)",
+        "prosrcMd5IndependentlyEqual": true,
+        "md5": "6b2646e4e9d6603b195e421a05c0ac02",
+        "fullCapturedContractAndAclMatches": true
+      },
+      {
+        "signature": "public.sp_evidence_upload_storage_writable(text)",
+        "prosrcMd5IndependentlyEqual": true,
+        "md5": "2a89ea61368a61c7f93675ebc8291c62",
+        "fullCapturedContractAndAclMatches": true
+      },
+      {
+        "signature": "public.sp_list_my_evidence_upload_attempts(uuid,uuid)",
+        "prosrcMd5IndependentlyEqual": true,
+        "md5": "9c5bab8f181e6583b8a91f7d91934971",
+        "fullCapturedContractAndAclMatches": true
+      },
+      {
+        "signature": "public.sp_reconcile_evidence_upload(uuid)",
+        "prosrcMd5IndependentlyEqual": true,
+        "md5": "5473f2b23b3eae63d9a7236f6321bfd4",
+        "fullCapturedContractAndAclMatches": true
+      }
+    ],
+    "constraints": [
+      {
+        "name": "sp_evidence_upload_attempts_pkey",
+        "kind": "p",
+        "actualDefinition": "PRIMARY KEY (id)",
+        "semanticSourceEqual": true,
+        "review": "Primary key contains only id."
+      },
+      {
+        "name": "sp_evidence_upload_attempts_holder_user_id_fkey",
+        "kind": "f",
+        "actualDefinition": "FOREIGN KEY (holder_user_id) REFERENCES auth.users(id) ON DELETE CASCADE",
+        "semanticSourceEqual": true,
+        "review": "holder_user_id references auth.users(id); ON DELETE CASCADE; default NO ACTION update; SIMPLE match."
+      },
+      {
+        "name": "sp_evidence_upload_attempts_storage_path_key",
+        "kind": "u",
+        "actualDefinition": "UNIQUE (storage_path)",
+        "semanticSourceEqual": true,
+        "review": "storage_path is the sole unique key."
+      },
+      {
+        "name": "sp_evidence_upload_attempts_file_name_check",
+        "kind": "c",
+        "actualDefinition": "CHECK (length(file_name) >= 1 AND length(file_name) <= 300)",
+        "semanticSourceEqual": true,
+        "review": "Inclusive length1..300; PostgreSQL BETWEEN expands to >=1 AND <=300."
+      },
+      {
+        "name": "sp_evidence_upload_attempts_mime_type_check",
+        "kind": "c",
+        "actualDefinition": "CHECK (mime_type = ANY (ARRAY['application/pdf'::text, 'image/jpeg'::text, 'image/png'::text, 'image/heic'::text]))",
+        "semanticSourceEqual": true,
+        "review": "Exactly application/pdf,image/jpeg,image/png,image/heic; IN expands to =ANY of the same four text literals."
+      },
+      {
+        "name": "sp_evidence_upload_attempts_size_bytes_check",
+        "kind": "c",
+        "actualDefinition": "CHECK (size_bytes > 0 AND size_bytes <= 8388608)",
+        "semanticSourceEqual": true,
+        "review": "Strictly positive integer and <=8388608."
+      },
+      {
+        "name": "sp_evidence_upload_attempts_sha256_check",
+        "kind": "c",
+        "actualDefinition": "CHECK (sha256 ~ '^[0-9a-f]{64}$'::text)",
+        "semanticSourceEqual": true,
+        "review": "Exactly anchored lowercase hex64 regex ^[0-9a-f]{64}$."
+      },
+      {
+        "name": "sp_evidence_upload_attempts_status_check",
+        "kind": "c",
+        "actualDefinition": "CHECK (status = ANY (ARRAY['prepared'::text, 'registered'::text, 'cleanup_pending'::text, 'cleaned'::text]))",
+        "semanticSourceEqual": true,
+        "review": "Exactly prepared,registered,cleanup_pending,cleaned; same IN/ANY text-array expansion."
+      },
+      {
+        "name": "sp_evidence_upload_attempts_revision_check",
+        "kind": "c",
+        "actualDefinition": "CHECK (revision > 0)",
+        "semanticSourceEqual": true,
+        "review": "Strictly positive revision."
+      },
+      {
+        "name": "sp_evidence_upload_attempts_check",
+        "kind": "c",
+        "actualDefinition": "CHECK ((claim_id IS NULL) <> (period_id IS NULL))",
+        "semanticSourceEqual": true,
+        "review": "Exactly one claim_id/period_id is non-null; boolean inequality of the same null tests."
+      },
+      {
+        "name": "sp_evidence_upload_attempts_check1",
+        "kind": "c",
+        "actualDefinition": "CHECK (storage_path = ((((holder_user_id::text || '/'::text) || id::text) || '.'::text) ||\nCASE mime_type\n    WHEN 'application/pdf'::text THEN 'pdf'::text\n    WHEN 'image/jpeg'::text THEN 'jpg'::text\n    WHEN 'image/png'::text THEN 'png'::text\n    ELSE 'heic'::text\nEND))",
+        "semanticSourceEqual": true,
+        "review": "Storage path equals holder UUID/id UUID plus MIME-selected pdf/jpg/png/heic extension; text casts, parentheses and concatenation nesting are deparser forms of identical source expression."
+      }
+    ],
+    "policies": [
+      {
+        "name": "sp_evidence_upload_insert_fence",
+        "qual": null,
+        "withCheck": "((bucket_id <> 'passport-evidence'::text) OR sp_evidence_upload_storage_writable(name))",
+        "permissive": false,
+        "command": "a",
+        "semanticSourceEqual": true,
+        "review": "Restrictive INSERT WITH CHECK; non-passport-evidence OR same public writable(name) dependency; no USING."
+      },
+      {
+        "name": "sp_evidence_upload_own_read",
+        "qual": "((holder_user_id = ( SELECT auth.uid() AS uid)) AND sp_passport_session_active())",
+        "withCheck": null,
+        "permissive": true,
+        "command": "r",
+        "semanticSourceEqual": true,
+        "review": "SELECT only, permissive holder_user_id=(SELECT auth.uid()) AND live Passport session; scalar-subquery AS uid is deparser alias only."
+      },
+      {
+        "name": "sp_evidence_upload_update_fence",
+        "qual": "((bucket_id <> 'passport-evidence'::text) OR sp_evidence_upload_storage_writable(name))",
+        "withCheck": "((bucket_id <> 'passport-evidence'::text) OR sp_evidence_upload_storage_writable(name))",
+        "permissive": false,
+        "command": "w",
+        "semanticSourceEqual": true,
+        "review": "Restrictive UPDATE with identical old-row USING and new-row WITH CHECK; same public writable(name) dependency."
+      }
+    ],
+    "indexes": [
+      {
+        "name": "sp_evidence_upload_attempts_pkey",
+        "actualDefinition": "CREATE UNIQUE INDEX sp_evidence_upload_attempts_pkey ON public.sp_evidence_upload_attempts USING btree (id)",
+        "semanticSourceEqual": true,
+        "review": "Unique primary btree(id), no predicate/expression/includes."
+      },
+      {
+        "name": "sp_evidence_upload_attempts_storage_path_key",
+        "actualDefinition": "CREATE UNIQUE INDEX sp_evidence_upload_attempts_storage_path_key ON public.sp_evidence_upload_attempts USING btree (storage_path)",
+        "semanticSourceEqual": true,
+        "review": "Unique btree(storage_path), no predicate/expression/includes."
+      },
+      {
+        "name": "sp_evidence_upload_holder_idx",
+        "actualDefinition": "CREATE INDEX sp_evidence_upload_holder_idx ON public.sp_evidence_upload_attempts USING btree (holder_user_id, updated_at DESC, id)",
+        "semanticSourceEqual": true,
+        "review": "Nonunique btree(holder_user_id,updated_at DESC,id); options[0,3,0] reflect default ASC nulls last and DESC nulls first; no predicate/expression/includes."
+      }
+    ],
+    "otherCapturedParities": {
+      "functionFullParity": true,
+      "columnFullParity": true,
+      "journalACLParity": true,
+      "triggerFullParity": true,
+      "indexStructureParity": true,
+      "policyStructureParity": true,
+      "journalStructureParity": true,
+      "knownRolePrivilegesMatch": true,
+      "constraintStructureParity": true
+    },
+    "permissions": {
+      "journalAuthenticatedSelectOnly": true,
+      "noDirectDmlForAnonAuthenticatedServiceRole": true,
+      "all14ColumnPrivilegesMatch": true,
+      "authenticatedFunctions": 6,
+      "ownerOnlyHelpers": 4,
+      "allFunctionSearchPathEmptyQuotedIdentifier": true
+    },
+    "historicalBoundary": {
+      "noExistingFunctionCreateOrReplaceInMigration": true,
+      "noTopLevelBackfillOrCandidateDml": true,
+      "legacyUnjournaledEvidenceGuardReturnsNew": true,
+      "priorAttachmentRpcsNotRedefined": true,
+      "existingStoragePermissivePoliciesNotDroppedOrBroadened": true,
+      "captureDoesNotContainBeforeAfterOldRpcProsrcProof": true
+    },
+    "populationObservation": {
+      "newJournalRows": 0,
+      "existingErasureQueueTotal": 11,
+      "existingErasureQueuePending": 0,
+      "existingQueueEmptyClaim": false
+    },
+    "limits": [
+      "Reviewer performed no hosted query/RPC, DB/service execution or write.",
+      "Protected snapshots/locks and ledger preservation are root independent before/after captures, not established by this catalog-only review.",
+      "This is installed-definition equality, not a new native or published-runtime execution PASS.",
+      "Initial name[]/text[] capture error and corrected cast are query-only history; schema did not change."
+    ]
+  },
+  "preservedP1Functions": {
+    "sourceSha": "6039fbc685cad255aae4a4e39c1035e933af883d",
+    "expectedCount": 16,
+    "foundCount": 16,
+    "unexpected": [],
+    "functions": [
+      {
+        "acl": [
+          {
+            "grantee": "postgres",
+            "grantor": "postgres",
+            "grantable": false,
+            "privilege": "EXECUTE"
+          },
+          {
+            "grantee": "authenticated",
+            "grantor": "postgres",
+            "grantable": false,
+            "privilege": "EXECUTE"
+          }
+        ],
+        "actual": {
+          "name": "rec_ri_candidate_view",
+          "owner": "postgres",
+          "config": [
+            "search_path=public, pg_temp"
+          ],
+          "schema": "public",
+          "strict": false,
+          "returns": "jsonb",
+          "language": "plpgsql",
+          "parallel": "u",
+          "prosrcMd5": "8e829df5c1793b1976a6aec6ccc1cf40",
+          "returnsSet": false,
+          "volatility": "s",
+          "argumentNames": [
+            "_employer_id",
+            "_job_id",
+            "_filters",
+            "_sort",
+            "_dir",
+            "_page",
+            "_size",
+            "_around"
+          ],
+          "argumentTypes": [
+            "uuid",
+            "uuid",
+            "jsonb",
+            "text",
+            "text",
+            "integer",
+            "integer",
+            "uuid"
+          ],
+          "securityDefiner": true,
+          "argumentDefaults": 0
+        },
+        "aclEqual": true,
+        "expected": {
+          "name": "rec_ri_candidate_view",
+          "owner": "postgres",
+          "config": [
+            "search_path=public, pg_temp"
+          ],
+          "schema": "public",
+          "strict": false,
+          "returns": "jsonb",
+          "language": "plpgsql",
+          "parallel": "u",
+          "prosrcMd5": "8e829df5c1793b1976a6aec6ccc1cf40",
+          "returnsSet": false,
+          "sourceLine": 401,
+          "volatility": "s",
+          "argumentNames": [
+            "_employer_id",
+            "_job_id",
+            "_filters",
+            "_sort",
+            "_dir",
+            "_page",
+            "_size",
+            "_around"
+          ],
+          "argumentTypes": [
+            "uuid",
+            "uuid",
+            "jsonb",
+            "text",
+            "text",
+            "integer",
+            "integer",
+            "uuid"
+          ],
+          "securityDefiner": true,
+          "sourceBodyBytes": 8163,
+          "argumentDefaults": 0,
+          "authenticatedExecute": true
+        },
+        "arguments": "_employer_id uuid, _job_id uuid, _filters jsonb, _sort text, _dir text, _page integer, _size integer, _around uuid",
+        "definitionContractEqual": true
+      },
+      {
+        "acl": [
+          {
+            "grantee": "postgres",
+            "grantor": "postgres",
+            "grantable": false,
+            "privilege": "EXECUTE"
+          },
+          {
+            "grantee": "authenticated",
+            "grantor": "postgres",
+            "grantable": false,
+            "privilege": "EXECUTE"
+          }
+        ],
+        "actual": {
+          "name": "rec_ri_confirm_profile",
+          "owner": "postgres",
+          "config": [
+            "search_path=public, pg_temp"
+          ],
+          "schema": "public",
+          "strict": false,
+          "returns": "jsonb",
+          "language": "plpgsql",
+          "parallel": "u",
+          "prosrcMd5": "e9369ee15b52e3defb9d952127e64362",
+          "returnsSet": false,
+          "volatility": "v",
+          "argumentNames": [
+            "_job_id",
+            "_expected_version",
+            "_operation_id",
+            "_start_date",
+            "_rules"
+          ],
+          "argumentTypes": [
+            "uuid",
+            "integer",
+            "uuid",
+            "date",
+            "jsonb"
+          ],
+          "securityDefiner": true,
+          "argumentDefaults": 0
+        },
+        "aclEqual": true,
+        "expected": {
+          "name": "rec_ri_confirm_profile",
+          "owner": "postgres",
+          "config": [
+            "search_path=public, pg_temp"
+          ],
+          "schema": "public",
+          "strict": false,
+          "returns": "jsonb",
+          "language": "plpgsql",
+          "parallel": "u",
+          "prosrcMd5": "e9369ee15b52e3defb9d952127e64362",
+          "returnsSet": false,
+          "sourceLine": 208,
+          "volatility": "v",
+          "argumentNames": [
+            "_job_id",
+            "_expected_version",
+            "_operation_id",
+            "_start_date",
+            "_rules"
+          ],
+          "argumentTypes": [
+            "uuid",
+            "integer",
+            "uuid",
+            "date",
+            "jsonb"
+          ],
+          "securityDefiner": true,
+          "sourceBodyBytes": 3831,
+          "argumentDefaults": 0,
+          "authenticatedExecute": true
+        },
+        "arguments": "_job_id uuid, _expected_version integer, _operation_id uuid, _start_date date, _rules jsonb",
+        "definitionContractEqual": true
+      },
+      {
+        "acl": [
+          {
+            "grantee": "postgres",
+            "grantor": "postgres",
+            "grantable": false,
+            "privilege": "EXECUTE"
+          },
+          {
+            "grantee": "authenticated",
+            "grantor": "postgres",
+            "grantable": false,
+            "privilege": "EXECUTE"
+          }
+        ],
+        "actual": {
+          "name": "rec_ri_get_profile",
+          "owner": "postgres",
+          "config": [
+            "search_path=public, pg_temp"
+          ],
+          "schema": "public",
+          "strict": false,
+          "returns": "jsonb",
+          "language": "plpgsql",
+          "parallel": "u",
+          "prosrcMd5": "d02f5a62b6df14cc9abd56be8c6051f4",
+          "returnsSet": false,
+          "volatility": "s",
+          "argumentNames": [
+            "_job_id"
+          ],
+          "argumentTypes": [
+            "uuid"
+          ],
+          "securityDefiner": true,
+          "argumentDefaults": 0
+        },
+        "aclEqual": true,
+        "expected": {
+          "name": "rec_ri_get_profile",
+          "owner": "postgres",
+          "config": [
+            "search_path=public, pg_temp"
+          ],
+          "schema": "public",
+          "strict": false,
+          "returns": "jsonb",
+          "language": "plpgsql",
+          "parallel": "u",
+          "prosrcMd5": "d02f5a62b6df14cc9abd56be8c6051f4",
+          "returnsSet": false,
+          "sourceLine": 200,
+          "volatility": "s",
+          "argumentNames": [
+            "_job_id"
+          ],
+          "argumentTypes": [
+            "uuid"
+          ],
+          "securityDefiner": true,
+          "sourceBodyBytes": 261,
+          "argumentDefaults": 0,
+          "authenticatedExecute": true
+        },
+        "arguments": "_job_id uuid",
+        "definitionContractEqual": true
+      },
+      {
+        "acl": [
+          {
+            "grantee": "postgres",
+            "grantor": "postgres",
+            "grantable": false,
+            "privilege": "EXECUTE"
+          },
+          {
+            "grantee": "authenticated",
+            "grantor": "postgres",
+            "grantable": false,
+            "privilege": "EXECUTE"
+          }
+        ],
+        "actual": {
+          "name": "rec_ri_get_review",
+          "owner": "postgres",
+          "config": [
+            "search_path=public, pg_temp"
+          ],
+          "schema": "public",
+          "strict": false,
+          "returns": "jsonb",
+          "language": "plpgsql",
+          "parallel": "u",
+          "prosrcMd5": "6297712f71965933028af8ebf0627d5b",
+          "returnsSet": false,
+          "volatility": "s",
+          "argumentNames": [
+            "_application_id"
+          ],
+          "argumentTypes": [
+            "uuid"
+          ],
+          "securityDefiner": true,
+          "argumentDefaults": 0
+        },
+        "aclEqual": true,
+        "expected": {
+          "name": "rec_ri_get_review",
+          "owner": "postgres",
+          "config": [
+            "search_path=public, pg_temp"
+          ],
+          "schema": "public",
+          "strict": false,
+          "returns": "jsonb",
+          "language": "plpgsql",
+          "parallel": "u",
+          "prosrcMd5": "6297712f71965933028af8ebf0627d5b",
+          "returnsSet": false,
+          "sourceLine": 302,
+          "volatility": "s",
+          "argumentNames": [
+            "_application_id"
+          ],
+          "argumentTypes": [
+            "uuid"
+          ],
+          "securityDefiner": true,
+          "sourceBodyBytes": 3202,
+          "argumentDefaults": 0,
+          "authenticatedExecute": true
+        },
+        "arguments": "_application_id uuid",
+        "definitionContractEqual": true
+      },
+      {
+        "acl": [
+          {
+            "grantee": "postgres",
+            "grantor": "postgres",
+            "grantable": false,
+            "privilege": "EXECUTE"
+          },
+          {
+            "grantee": "authenticated",
+            "grantor": "postgres",
+            "grantable": false,
+            "privilege": "EXECUTE"
+          }
+        ],
+        "actual": {
+          "name": "rec_ri_manual_reference",
+          "owner": "postgres",
+          "config": [
+            "search_path=public, pg_temp"
+          ],
+          "schema": "public",
+          "strict": false,
+          "returns": "jsonb",
+          "language": "plpgsql",
+          "parallel": "u",
+          "prosrcMd5": "e5a23f4b27d7e280d7a319f8b628334e",
+          "returnsSet": false,
+          "volatility": "s",
+          "argumentNames": [
+            "_application_id",
+            "_label"
+          ],
+          "argumentTypes": [
+            "uuid",
+            "text"
+          ],
+          "securityDefiner": true,
+          "argumentDefaults": 0
+        },
+        "aclEqual": true,
+        "expected": {
+          "name": "rec_ri_manual_reference",
+          "owner": "postgres",
+          "config": [
+            "search_path=public, pg_temp"
+          ],
+          "schema": "public",
+          "strict": false,
+          "returns": "jsonb",
+          "language": "plpgsql",
+          "parallel": "u",
+          "prosrcMd5": "e5a23f4b27d7e280d7a319f8b628334e",
+          "returnsSet": false,
+          "sourceLine": 455,
+          "volatility": "s",
+          "argumentNames": [
+            "_application_id",
+            "_label"
+          ],
+          "argumentTypes": [
+            "uuid",
+            "text"
+          ],
+          "securityDefiner": true,
+          "sourceBodyBytes": 656,
+          "argumentDefaults": 0,
+          "authenticatedExecute": true
+        },
+        "arguments": "_application_id uuid, _label text",
+        "definitionContractEqual": true
+      },
+      {
+        "acl": [
+          {
+            "grantee": "postgres",
+            "grantor": "postgres",
+            "grantable": false,
+            "privilege": "EXECUTE"
+          },
+          {
+            "grantee": "authenticated",
+            "grantor": "postgres",
+            "grantable": false,
+            "privilege": "EXECUTE"
+          }
+        ],
+        "actual": {
+          "name": "rec_ri_overview_counts",
+          "owner": "postgres",
+          "config": [
+            "search_path=public, pg_temp"
+          ],
+          "schema": "public",
+          "strict": false,
+          "returns": "jsonb",
+          "language": "plpgsql",
+          "parallel": "u",
+          "prosrcMd5": "17f13d9d8749aeacea08355b50c9964e",
+          "returnsSet": false,
+          "volatility": "s",
+          "argumentNames": [
+            "_employer_id"
+          ],
+          "argumentTypes": [
+            "uuid"
+          ],
+          "securityDefiner": true,
+          "argumentDefaults": 0
+        },
+        "aclEqual": true,
+        "expected": {
+          "name": "rec_ri_overview_counts",
+          "owner": "postgres",
+          "config": [
+            "search_path=public, pg_temp"
+          ],
+          "schema": "public",
+          "strict": false,
+          "returns": "jsonb",
+          "language": "plpgsql",
+          "parallel": "u",
+          "prosrcMd5": "17f13d9d8749aeacea08355b50c9964e",
+          "returnsSet": false,
+          "sourceLine": 504,
+          "volatility": "s",
+          "argumentNames": [
+            "_employer_id"
+          ],
+          "argumentTypes": [
+            "uuid"
+          ],
+          "securityDefiner": true,
+          "sourceBodyBytes": 517,
+          "argumentDefaults": 0,
+          "authenticatedExecute": true
+        },
+        "arguments": "_employer_id uuid",
+        "definitionContractEqual": true
+      },
+      {
+        "acl": [
+          {
+            "grantee": "postgres",
+            "grantor": "postgres",
+            "grantable": false,
+            "privilege": "EXECUTE"
+          },
+          {
+            "grantee": "authenticated",
+            "grantor": "postgres",
+            "grantable": false,
+            "privilege": "EXECUTE"
+          }
+        ],
+        "actual": {
+          "name": "rec_ri_save_review",
+          "owner": "postgres",
+          "config": [
+            "search_path=public, pg_temp"
+          ],
+          "schema": "public",
+          "strict": false,
+          "returns": "jsonb",
+          "language": "plpgsql",
+          "parallel": "u",
+          "prosrcMd5": "9b7389333375607586787798bad6abbd",
+          "returnsSet": false,
+          "volatility": "v",
+          "argumentNames": [
+            "_application_id",
+            "_profile_id",
+            "_expected_revision",
+            "_binding_token",
+            "_operation_id",
+            "_decisions",
+            "_confirm",
+            "_next_action",
+            "_responsible_user_id",
+            "_expected_assignment_version"
+          ],
+          "argumentTypes": [
+            "uuid",
+            "uuid",
+            "integer",
+            "text",
+            "uuid",
+            "jsonb",
+            "boolean",
+            "text",
+            "uuid",
+            "integer"
+          ],
+          "securityDefiner": true,
+          "argumentDefaults": 0
+        },
+        "aclEqual": true,
+        "expected": {
+          "name": "rec_ri_save_review",
+          "owner": "postgres",
+          "config": [
+            "search_path=public, pg_temp"
+          ],
+          "schema": "public",
+          "strict": false,
+          "returns": "jsonb",
+          "language": "plpgsql",
+          "parallel": "u",
+          "prosrcMd5": "9b7389333375607586787798bad6abbd",
+          "returnsSet": false,
+          "sourceLine": 327,
+          "volatility": "v",
+          "argumentNames": [
+            "_application_id",
+            "_profile_id",
+            "_expected_revision",
+            "_binding_token",
+            "_operation_id",
+            "_decisions",
+            "_confirm",
+            "_next_action",
+            "_responsible_user_id",
+            "_expected_assignment_version"
+          ],
+          "argumentTypes": [
+            "uuid",
+            "uuid",
+            "integer",
+            "text",
+            "uuid",
+            "jsonb",
+            "boolean",
+            "text",
+            "uuid",
+            "integer"
+          ],
+          "securityDefiner": true,
+          "sourceBodyBytes": 9311,
+          "argumentDefaults": 0,
+          "authenticatedExecute": true
+        },
+        "arguments": "_application_id uuid, _profile_id uuid, _expected_revision integer, _binding_token text, _operation_id uuid, _decisions jsonb, _confirm boolean, _next_action text, _responsible_user_id uuid, _expected_assignment_version integer",
+        "definitionContractEqual": true
+      },
+      {
+        "acl": [
+          {
+            "grantee": "postgres",
+            "grantor": "postgres",
+            "grantable": false,
+            "privilege": "EXECUTE"
+          },
+          {
+            "grantee": "authenticated",
+            "grantor": "postgres",
+            "grantable": false,
+            "privilege": "EXECUTE"
+          }
+        ],
+        "actual": {
+          "name": "rec_ri_transfer_requirements",
+          "owner": "postgres",
+          "config": [
+            "search_path=public, pg_temp"
+          ],
+          "schema": "public",
+          "strict": false,
+          "returns": "jsonb",
+          "language": "plpgsql",
+          "parallel": "u",
+          "prosrcMd5": "e616b554b11c30acf445e17c05d1e525",
+          "returnsSet": false,
+          "volatility": "v",
+          "argumentNames": [
+            "_application_id",
+            "_case_id",
+            "_expected_revision",
+            "_binding_token",
+            "_operation_id",
+            "_requirement_ids"
+          ],
+          "argumentTypes": [
+            "uuid",
+            "uuid",
+            "integer",
+            "text",
+            "uuid",
+            "uuid[]"
+          ],
+          "securityDefiner": true,
+          "argumentDefaults": 0
+        },
+        "aclEqual": true,
+        "expected": {
+          "name": "rec_ri_transfer_requirements",
+          "owner": "postgres",
+          "config": [
+            "search_path=public, pg_temp"
+          ],
+          "schema": "public",
+          "strict": false,
+          "returns": "jsonb",
+          "language": "plpgsql",
+          "parallel": "u",
+          "prosrcMd5": "e616b554b11c30acf445e17c05d1e525",
+          "returnsSet": false,
+          "sourceLine": 465,
+          "volatility": "v",
+          "argumentNames": [
+            "_application_id",
+            "_case_id",
+            "_expected_revision",
+            "_binding_token",
+            "_operation_id",
+            "_requirement_ids"
+          ],
+          "argumentTypes": [
+            "uuid",
+            "uuid",
+            "integer",
+            "text",
+            "uuid",
+            "uuid[]"
+          ],
+          "securityDefiner": true,
+          "sourceBodyBytes": 3890,
+          "argumentDefaults": 0,
+          "authenticatedExecute": true
+        },
+        "arguments": "_application_id uuid, _case_id uuid, _expected_revision integer, _binding_token text, _operation_id uuid, _requirement_ids uuid[]",
+        "definitionContractEqual": true
+      },
+      {
+        "acl": [
+          {
+            "grantee": "postgres",
+            "grantor": "postgres",
+            "grantable": false,
+            "privilege": "EXECUTE"
+          }
+        ],
+        "actual": {
+          "name": "application_state",
+          "owner": "postgres",
+          "config": [
+            "search_path=public, pg_temp"
+          ],
+          "schema": "recruiter_intelligence",
+          "strict": false,
+          "returns": "jsonb",
+          "language": "plpgsql",
+          "parallel": "u",
+          "prosrcMd5": "6d7a133ff315e35830a1b8adb0a48c17",
+          "returnsSet": false,
+          "volatility": "s",
+          "argumentNames": [
+            "_application"
+          ],
+          "argumentTypes": [
+            "uuid"
+          ],
+          "securityDefiner": true,
+          "argumentDefaults": 0
+        },
+        "aclEqual": true,
+        "expected": {
+          "name": "application_state",
+          "owner": "postgres",
+          "config": [
+            "search_path=public, pg_temp"
+          ],
+          "schema": "recruiter_intelligence",
+          "strict": false,
+          "returns": "jsonb",
+          "language": "plpgsql",
+          "parallel": "u",
+          "prosrcMd5": "6d7a133ff315e35830a1b8adb0a48c17",
+          "returnsSet": false,
+          "sourceLine": 282,
+          "volatility": "s",
+          "argumentNames": [
+            "_application"
+          ],
+          "argumentTypes": [
+            "uuid"
+          ],
+          "securityDefiner": true,
+          "sourceBodyBytes": 2506,
+          "argumentDefaults": 0,
+          "authenticatedExecute": false
+        },
+        "arguments": "_application uuid",
+        "definitionContractEqual": true
+      },
+      {
+        "acl": [
+          {
+            "grantee": "postgres",
+            "grantor": "postgres",
+            "grantable": false,
+            "privilege": "EXECUTE"
+          }
+        ],
+        "actual": {
+          "name": "criterion",
+          "owner": "postgres",
+          "config": [
+            "search_path=public, pg_temp"
+          ],
+          "schema": "recruiter_intelligence",
+          "strict": false,
+          "returns": "jsonb",
+          "language": "plpgsql",
+          "parallel": "u",
+          "prosrcMd5": "5025210741b8de192d6d0bab92684015",
+          "returnsSet": false,
+          "volatility": "s",
+          "argumentNames": [
+            "_application",
+            "_profile",
+            "_rule"
+          ],
+          "argumentTypes": [
+            "uuid",
+            "public.rec_requirement_profiles",
+            "jsonb"
+          ],
+          "securityDefiner": true,
+          "argumentDefaults": 0
+        },
+        "aclEqual": true,
+        "expected": {
+          "name": "criterion",
+          "owner": "postgres",
+          "config": [
+            "search_path=public, pg_temp"
+          ],
+          "schema": "recruiter_intelligence",
+          "strict": false,
+          "returns": "jsonb",
+          "language": "plpgsql",
+          "parallel": "u",
+          "prosrcMd5": "5025210741b8de192d6d0bab92684015",
+          "returnsSet": false,
+          "sourceLine": 243,
+          "volatility": "s",
+          "argumentNames": [
+            "_application",
+            "_profile",
+            "_rule"
+          ],
+          "argumentTypes": [
+            "uuid",
+            "public.rec_requirement_profiles",
+            "jsonb"
+          ],
+          "securityDefiner": true,
+          "sourceBodyBytes": 3252,
+          "argumentDefaults": 0,
+          "authenticatedExecute": false
+        },
+        "arguments": "_application uuid, _profile rec_requirement_profiles, _rule jsonb",
+        "definitionContractEqual": true
+      },
+      {
+        "acl": [
+          {
+            "grantee": "postgres",
+            "grantor": "postgres",
+            "grantable": false,
+            "privilege": "EXECUTE"
+          }
+        ],
+        "actual": {
+          "name": "operation_result",
+          "owner": "postgres",
+          "config": [
+            "search_path=public, pg_temp"
+          ],
+          "schema": "recruiter_intelligence",
+          "strict": false,
+          "returns": "jsonb",
+          "language": "plpgsql",
+          "parallel": "u",
+          "prosrcMd5": "bcfdf67952d8e496c24ff5178209035c",
+          "returnsSet": false,
+          "volatility": "s",
+          "argumentNames": [
+            "_id",
+            "_scope",
+            "_kind",
+            "_request"
+          ],
+          "argumentTypes": [
+            "uuid",
+            "uuid",
+            "text",
+            "jsonb"
+          ],
+          "securityDefiner": true,
+          "argumentDefaults": 0
+        },
+        "aclEqual": true,
+        "expected": {
+          "name": "operation_result",
+          "owner": "postgres",
+          "config": [
+            "search_path=public, pg_temp"
+          ],
+          "schema": "recruiter_intelligence",
+          "strict": false,
+          "returns": "jsonb",
+          "language": "plpgsql",
+          "parallel": "u",
+          "prosrcMd5": "bcfdf67952d8e496c24ff5178209035c",
+          "returnsSet": false,
+          "sourceLine": 151,
+          "volatility": "s",
+          "argumentNames": [
+            "_id",
+            "_scope",
+            "_kind",
+            "_request"
+          ],
+          "argumentTypes": [
+            "uuid",
+            "uuid",
+            "text",
+            "jsonb"
+          ],
+          "securityDefiner": true,
+          "sourceBodyBytes": 401,
+          "argumentDefaults": 0,
+          "authenticatedExecute": false
+        },
+        "arguments": "_id uuid, _scope uuid, _kind text, _request jsonb",
+        "definitionContractEqual": true
+      },
+      {
+        "acl": [
+          {
+            "grantee": "postgres",
+            "grantor": "postgres",
+            "grantable": false,
+            "privilege": "EXECUTE"
+          }
+        ],
+        "actual": {
+          "name": "profile_json",
+          "owner": "postgres",
+          "config": [
+            "search_path=public, pg_temp"
+          ],
+          "schema": "recruiter_intelligence",
+          "strict": false,
+          "returns": "jsonb",
+          "language": "sql",
+          "parallel": "u",
+          "prosrcMd5": "4059ea7c21bd6faaaae215f6ebbfe086",
+          "returnsSet": false,
+          "volatility": "s",
+          "argumentNames": [
+            "_job"
+          ],
+          "argumentTypes": [
+            "uuid"
+          ],
+          "securityDefiner": true,
+          "argumentDefaults": 0
+        },
+        "aclEqual": true,
+        "expected": {
+          "name": "profile_json",
+          "owner": "postgres",
+          "config": [
+            "search_path=public, pg_temp"
+          ],
+          "schema": "recruiter_intelligence",
+          "strict": false,
+          "returns": "jsonb",
+          "language": "sql",
+          "parallel": "u",
+          "prosrcMd5": "4059ea7c21bd6faaaae215f6ebbfe086",
+          "returnsSet": false,
+          "sourceLine": 190,
+          "volatility": "s",
+          "argumentNames": [
+            "_job"
+          ],
+          "argumentTypes": [
+            "uuid"
+          ],
+          "securityDefiner": true,
+          "sourceBodyBytes": 938,
+          "argumentDefaults": 0,
+          "authenticatedExecute": false
+        },
+        "arguments": "_job uuid",
+        "definitionContractEqual": true
+      },
+      {
+        "acl": [
+          {
+            "grantee": "postgres",
+            "grantor": "postgres",
+            "grantable": false,
+            "privilege": "EXECUTE"
+          }
+        ],
+        "actual": {
+          "name": "protect_history",
+          "owner": "postgres",
+          "config": [
+            "search_path=public, pg_temp"
+          ],
+          "schema": "recruiter_intelligence",
+          "strict": false,
+          "returns": "trigger",
+          "language": "plpgsql",
+          "parallel": "u",
+          "prosrcMd5": "4a01878cd767eb36f0f0e3e5bc3e5089",
+          "returnsSet": false,
+          "volatility": "v",
+          "argumentNames": [],
+          "argumentTypes": [],
+          "securityDefiner": false,
+          "argumentDefaults": 0
+        },
+        "aclEqual": true,
+        "expected": {
+          "name": "protect_history",
+          "owner": "postgres",
+          "config": [
+            "search_path=public, pg_temp"
+          ],
+          "schema": "recruiter_intelligence",
+          "strict": false,
+          "returns": "trigger",
+          "language": "plpgsql",
+          "parallel": "u",
+          "prosrcMd5": "4a01878cd767eb36f0f0e3e5bc3e5089",
+          "returnsSet": false,
+          "sourceLine": 118,
+          "volatility": "v",
+          "argumentNames": [],
+          "argumentTypes": [],
+          "securityDefiner": false,
+          "sourceBodyBytes": 1226,
+          "argumentDefaults": 0,
+          "authenticatedExecute": false
+        },
+        "arguments": "",
+        "definitionContractEqual": true
+      },
+      {
+        "acl": [
+          {
+            "grantee": "postgres",
+            "grantor": "postgres",
+            "grantable": false,
+            "privilege": "EXECUTE"
+          }
+        ],
+        "actual": {
+          "name": "protect_profile",
+          "owner": "postgres",
+          "config": [
+            "search_path=public, pg_temp"
+          ],
+          "schema": "recruiter_intelligence",
+          "strict": false,
+          "returns": "trigger",
+          "language": "plpgsql",
+          "parallel": "u",
+          "prosrcMd5": "03251223100b174cc9508970f97bacd5",
+          "returnsSet": false,
+          "volatility": "v",
+          "argumentNames": [],
+          "argumentTypes": [],
+          "securityDefiner": false,
+          "argumentDefaults": 0
+        },
+        "aclEqual": true,
+        "expected": {
+          "name": "protect_profile",
+          "owner": "postgres",
+          "config": [
+            "search_path=public, pg_temp"
+          ],
+          "schema": "recruiter_intelligence",
+          "strict": false,
+          "returns": "trigger",
+          "language": "plpgsql",
+          "parallel": "u",
+          "prosrcMd5": "03251223100b174cc9508970f97bacd5",
+          "returnsSet": false,
+          "sourceLine": 88,
+          "volatility": "v",
+          "argumentNames": [],
+          "argumentTypes": [],
+          "securityDefiner": false,
+          "sourceBodyBytes": 566,
+          "argumentDefaults": 0,
+          "authenticatedExecute": false
+        },
+        "arguments": "",
+        "definitionContractEqual": true
+      },
+      {
+        "acl": [
+          {
+            "grantee": "postgres",
+            "grantor": "postgres",
+            "grantable": false,
+            "privilege": "EXECUTE"
+          }
+        ],
+        "actual": {
+          "name": "protect_used_identity",
+          "owner": "postgres",
+          "config": [
+            "search_path=public, pg_temp"
+          ],
+          "schema": "recruiter_intelligence",
+          "strict": false,
+          "returns": "trigger",
+          "language": "plpgsql",
+          "parallel": "u",
+          "prosrcMd5": "7d6c07cf20f06715059f56e001fbcdd4",
+          "returnsSet": false,
+          "volatility": "v",
+          "argumentNames": [],
+          "argumentTypes": [],
+          "securityDefiner": false,
+          "argumentDefaults": 0
+        },
+        "aclEqual": true,
+        "expected": {
+          "name": "protect_used_identity",
+          "owner": "postgres",
+          "config": [
+            "search_path=public, pg_temp"
+          ],
+          "schema": "recruiter_intelligence",
+          "strict": false,
+          "returns": "trigger",
+          "language": "plpgsql",
+          "parallel": "u",
+          "prosrcMd5": "7d6c07cf20f06715059f56e001fbcdd4",
+          "returnsSet": false,
+          "sourceLine": 101,
+          "volatility": "v",
+          "argumentNames": [],
+          "argumentTypes": [],
+          "securityDefiner": false,
+          "sourceBodyBytes": 490,
+          "argumentDefaults": 0,
+          "authenticatedExecute": false
+        },
+        "arguments": "",
+        "definitionContractEqual": true
+      },
+      {
+        "acl": [
+          {
+            "grantee": "postgres",
+            "grantor": "postgres",
+            "grantable": false,
+            "privilege": "EXECUTE"
+          }
+        ],
+        "actual": {
+          "name": "source_version",
+          "owner": "postgres",
+          "config": [
+            "search_path=public, pg_temp"
+          ],
+          "schema": "recruiter_intelligence",
+          "strict": false,
+          "returns": "text",
+          "language": "plpgsql",
+          "parallel": "u",
+          "prosrcMd5": "59f08b5f2e95a6f474d291b440706831",
+          "returnsSet": false,
+          "volatility": "s",
+          "argumentNames": [
+            "_application",
+            "_kind",
+            "_reference"
+          ],
+          "argumentTypes": [
+            "uuid",
+            "text",
+            "text"
+          ],
+          "securityDefiner": true,
+          "argumentDefaults": 0
+        },
+        "aclEqual": true,
+        "expected": {
+          "name": "source_version",
+          "owner": "postgres",
+          "config": [
+            "search_path=public, pg_temp"
+          ],
+          "schema": "recruiter_intelligence",
+          "strict": false,
+          "returns": "text",
+          "language": "plpgsql",
+          "parallel": "u",
+          "prosrcMd5": "59f08b5f2e95a6f474d291b440706831",
+          "returnsSet": false,
+          "sourceLine": 161,
+          "volatility": "s",
+          "argumentNames": [
+            "_application",
+            "_kind",
+            "_reference"
+          ],
+          "argumentTypes": [
+            "uuid",
+            "text",
+            "text"
+          ],
+          "securityDefiner": true,
+          "sourceBodyBytes": 1673,
+          "argumentDefaults": 0,
+          "authenticatedExecute": false
+        },
+        "arguments": "_application uuid, _kind text, _reference text",
+        "definitionContractEqual": true
+      }
+    ]
+  },
+  "preservationAdditional": [
+    {
+      "jsonb_build_object": {
+        "locks": {
+          "count": 14,
+          "baselineEqual": true,
+          "rowJsonNewlineMd5": "2ae6acac5fc9c53a295db47df0dfb48b"
+        },
+        "ledger": {
+          "count": 387,
+          "latest": "20270309090000",
+          "prior385Equal": true,
+          "installed080Equal": false,
+          "versionNameNewlineMd5": "06f74289059ecc9175ba98d6563affb0",
+          "prior385VersionNameNewlineMd5": "528db6f9f07ba4ebeee53d1440b4beaa"
+        },
+        "reports": {
+          "count": 0,
+          "baselineEqual": true,
+          "rowJsonNewlineMd5": "d41d8cd98f00b204e9800998ecf8427e"
+        },
+        "caseRows": {
+          "count": 20,
+          "rowJsonNewlineMd5": "5f7f9933690b1259bb8d597e609dbdc0"
+        },
+        "snapshots": {
+          "count": 20,
+          "caseCreated": 0,
+          "observedNow": 20,
+          "baselineEqual": true,
+          "rowJsonNewlineMd5": "d8dccb112f9044502dd0163ad2bb4025"
+        },
+        "caseStates": {
+          "draft": 9,
+          "assessed": 1,
+          "evidence_review": 2,
+          "interview_complete": 3,
+          "interview_in_progress": 5
+        },
+        "observedAt": "2026-10-08T13:38:41.011674+00:00",
+        "caseStatesEqual": true,
+        "acknowledgements": {
+          "count": 0,
+          "baselineEqual": true,
+          "rowJsonNewlineMd5": "d41d8cd98f00b204e9800998ecf8427e"
+        }
+      }
+    }
+  ],
+  "comparison": {
+    "prior386LedgerUnchanged": true,
+    "only0909Appended": true,
+    "snapshotsEqual": true,
+    "locksEqual": true,
+    "reportsEqual": true,
+    "acknowledgementsEqual": true,
+    "caseStatesEqual": true,
+    "all16P1DefinitionAndACLEqual": true
+  },
+  "exactHeadChecks": {
+    "headSha": "1e5988c6f9c7121a0fefd22c0db06f6b573f0ae9",
+    "coreRun": 37779712501,
+    "core": [
+      {
+        "id": 113319437094,
+        "name": "Recruiter current schema — PostgreSQL 17 and PostgREST 14",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37779712501/job/113319437094"
+      },
+      {
+        "id": 113319437351,
+        "name": "CV browser — the signed-in journey",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37779712501/job/113319437351"
+      },
+      {
+        "id": 113319437383,
+        "name": "Public entry browser — homepage, employers and the employer journey",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37779712501/job/113319437383"
+      },
+      {
+        "id": 113319437387,
+        "name": "Recruiter Intelligence P1 — PostgreSQL 17 and concurrent HTTP API",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37779712501/job/113319437387"
+      },
+      {
+        "id": 113319437481,
+        "name": "Lint, typecheck and deterministic checks",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37779712501/job/113319437481"
+      },
+      {
+        "id": 113319437555,
+        "name": "Migration replay, RLS and rollback tests",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37779712501/job/113319437555"
+      },
+      {
+        "id": 113319437562,
+        "name": "CV export — PDF and ATS proof",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37779712501/job/113319437562"
+      },
+      {
+        "id": 113319437589,
+        "name": "Passport three-market browser — catalogue, cards, pilot access",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37779712501/job/113319437589"
+      }
+    ],
+    "external": [
+      {
+        "id": 37779712418,
+        "name": "E4 employer final report — routed browser evidence",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37779712418"
+      },
+      {
+        "id": 37779712411,
+        "name": "Recruitment workspace — routed browser evidence",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37779712411"
+      },
+      {
+        "id": 37779712407,
+        "name": "Career Center persistence — routed browser evidence",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37779712407"
+      },
+      {
+        "id": 37779712477,
+        "name": "Job ad back navigation — routed browser evidence",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37779712477"
+      },
+      {
+        "id": 37779712483,
+        "name": "Role assessment and TestBank regression",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37779712483"
+      },
+      {
+        "id": 37779712356,
+        "name": "Passport public pilot — real-backend evidence",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37779712356"
+      },
+      {
+        "id": 37779712476,
+        "name": "Security Work browser evidence",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37779712476"
+      }
+    ]
+  },
+  "captureCorrections": [
+    {
+      "kind": "read-only-query-type-correction",
+      "firstErrorSQLSTATE": "42883",
+      "cause": "Prepared capture compared name[] with text[] in policy-role arrays. Explicit pg_get_userbyid(r)::text was added in two capture expressions only; source schema and predicates were unchanged.",
+      "originalQuerySha256": "784c27654e1931e6047b915bc8a1b0a30412edf2e24c01e8a75ce619b58c68ea",
+      "firstError": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"error\":{\"name\":\"HttpException\",\"message\":\"Failed to run sql query: ERROR:  42883: operator does not exist: name[] = text[]\\nLINE 45:  coalesce(p.oid IS NOT NULL AND p.polcmd=(e->>'command')::\\\"char\\\" AND p.polpermissive=(e->>'permissive')::boolean AND ARRAY(SELECT CASE WHEN r=0 THEN 'PUBLIC' ELSE pg_get_userbyid(r) END FROM unnest(p.polroles) r ORDER BY 1)=ARRAY(SELECT jsonb_array_elements_text(e->'roles')) AND (p.polqual IS NULL)=(e->>'qual' IS NULL) AND (p.polwithcheck IS NULL)=(e->>'check' IS NULL)\\n                                                                                                                                                                                                                                        ^\\nHINT:  No operator matches the given name and argument types. You might need to add explicit type casts.\\n\"}}"
+          }
+        ],
+        "structuredContent": {
+          "error_code": "INVALID_ARGUMENT"
+        },
+        "isError": true
+      }
+    },
+    {
+      "kind": "historical-whole-ledger-predicate",
+      "note": "The retained 080 preservation capture reports installed080Equal=false after 0909, because that predicate requires exactly386 rows/latest080. This is expected after the authorized append; the separate actual387 ledger read proves all prior386 identities unchanged. No false predicate is silently changed."
+    }
+  ],
+  "limitations": [
+    "New journal is empty before fixtures. Existing erasure queue11 total/0pending is context, not an empty-queue assertion.",
+    "No hosted Auth/Storage behavioural or published-runtime proof from catalogue reads; no synthetic production users or product RPC calls were made.",
+    "Isolated native old pins have their own evidence; full combined APP40e/schema1e native runs remain pending.",
+    "No candidate messaging, AI activation, retention worker/cron or old orphan backfill.",
+    "New functions were compared fully. No separate before/after fingerprint of every older Passport RPC is claimed; authoritative0909 contains no CREATE OR REPLACE of older RPCs.",
+    "Content approval, English gaps and real phone remain separate."
+  ]
+}
