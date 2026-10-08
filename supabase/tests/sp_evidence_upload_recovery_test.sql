@@ -88,6 +88,9 @@ SELECT pg_temp.ok((SELECT count(*)=0 FROM public.sp_evidence_upload_attempts WHE
 DELETE FROM public.sp_experience_periods WHERE id='a7090000-2000-4000-8000-000000000001';
 SELECT pg_temp.ok((pg_temp.as_actor('a7090000-0000-4000-8000-000000000001',$q$SELECT public.sp_list_my_evidence_upload_attempts(NULL,NULL)$q$)::jsonb) @> '[{"id":"a7090000-3000-4000-8000-000000000002"}]','deleted-target intention still discoverable');
 SELECT pg_temp.ok(pg_temp.as_actor('a7090000-0000-4000-8000-000000000001',$q$SELECT public.sp_list_my_evidence_upload_attempts('a7090000-1000-4000-8000-000000000001','a7090000-2000-4000-8000-000000000001')$q$) LIKE 'err:23514:SP_TARGET_AMBIGUOUS%','ambiguous list refused');
+DELETE FROM public.sp_claims WHERE id='a7090000-1000-4000-8000-000000000001';
+SELECT pg_temp.ok((pg_temp.as_actor('a7090000-0000-4000-8000-000000000001',$q$SELECT public.sp_list_my_evidence_upload_attempts(NULL,NULL)$q$)::jsonb) @> '[{"id":"a7090000-3000-4000-8000-000000000001","status":"registered"}]','registered target deletion also retains orphan recovery');
+SELECT pg_temp.ok((pg_temp.as_actor('a7090000-0000-4000-8000-000000000001',$q$SELECT public.sp_authorize_evidence_upload_cleanup('a7090000-3000-4000-8000-000000000001')$q$)::jsonb)->>'status'='cleanup_pending','removed registered target can be explicitly fenced without changing original intent');
 -- Replayed authenticated JWT with missing live session must fail even though
 -- its sub is the holder; this is SQL only, not a GoTrue logout claim.
 SELECT set_config('request.jwt.claims','{"role":"authenticated","sub":"a7090000-0000-4000-8000-000000000001","session_id":"a7090000-9000-4000-8000-000000000001"}',true);

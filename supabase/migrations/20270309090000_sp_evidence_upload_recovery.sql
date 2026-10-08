@@ -26,8 +26,7 @@ CREATE TABLE public.sp_evidence_upload_attempts (
   CHECK (storage_path = holder_user_id::text || '/' || id::text || '.' ||
     CASE mime_type WHEN 'application/pdf' THEN 'pdf' WHEN 'image/jpeg' THEN 'jpg' WHEN 'image/png' THEN 'png' ELSE 'heic' END)
 );
-CREATE INDEX sp_evidence_upload_holder_open_idx ON public.sp_evidence_upload_attempts(holder_user_id,updated_at DESC,id)
-  WHERE status IN ('prepared','cleanup_pending');
+CREATE INDEX sp_evidence_upload_holder_idx ON public.sp_evidence_upload_attempts(holder_user_id,updated_at DESC,id);
 ALTER TABLE public.sp_evidence_upload_attempts ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.sp_evidence_upload_attempts FROM PUBLIC, anon, authenticated, service_role;
 GRANT SELECT ON public.sp_evidence_upload_attempts TO authenticated;
@@ -114,7 +113,8 @@ BEGIN
  IF _claim_id IS NOT NULL AND _period_id IS NOT NULL THEN RAISE EXCEPTION 'SP_TARGET_AMBIGUOUS' USING ERRCODE='23514'; END IF;
  RETURN coalesce((SELECT jsonb_agg(public.sp_evidence_upload_payload(a) ORDER BY a.updated_at DESC,a.id)
   FROM public.sp_evidence_upload_attempts a WHERE a.holder_user_id=auth.uid()
-    AND a.status IN ('prepared','cleanup_pending')
+    AND (a.status IN ('prepared','cleanup_pending') OR
+      (a.status='registered' AND NOT EXISTS(SELECT 1 FROM public.sp_evidence e WHERE e.storage_path=a.storage_path)))
     AND (_claim_id IS NULL OR a.claim_id=_claim_id) AND (_period_id IS NULL OR a.period_id=_period_id)), '[]'::jsonb);
 END $$;
 REVOKE ALL ON FUNCTION public.sp_list_my_evidence_upload_attempts(uuid,uuid) FROM PUBLIC,anon,service_role;
