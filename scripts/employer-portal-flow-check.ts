@@ -67,8 +67,25 @@ const UI = "src/components/employer/interview/InterviewUi.tsx";
     );
   }
   expect(
-    /aria-current=\{current === "\w+" \? "step" : undefined\}/.test(strip),
-    `${STRIP}: the current station must be marked with aria-current="step".`,
+    /current === step \? \(\s*<span\s+aria-current="step"/.test(strip),
+    `${STRIP}: the current station must be a plain span marked aria-current="step", not a link to the page you are on.`,
+  );
+  expect(
+    /const active = \{ exact: true, includeSearch: true \} as const;/.test(strip) &&
+      (strip.match(/activeOptions=\{active\}/g) ?? []).length === 7,
+    `${STRIP}: every station link must match exactly (search included), so two stations on one route are never both current.`,
+  );
+  expect(
+    /rec\.flow\.lede/.test(strip) && Boolean(sv["rec.flow.lede"]) && Boolean(en["rec.flow.lede"]),
+    `${STRIP}: the strip must say it is the order of work, not a checklist.`,
+  );
+  expect(
+    !/overflow-x-auto|min-w-max/.test(strip),
+    `${STRIP}: the stations wrap on a phone; nothing scrolls sideways.`,
+  );
+  expect(
+    /search=\{\{ phase: "active" as const \}\}/.test(strip),
+    `${STRIP}: Decision & close opens the active recruitments, where decisions are made while a recruitment is still open.`,
   );
   const pages: [string, string | null][] = [
     [OVERVIEW, null],

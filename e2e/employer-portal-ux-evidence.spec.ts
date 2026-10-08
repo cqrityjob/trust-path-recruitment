@@ -29,7 +29,6 @@ import {
   installBoundary,
   observeSupabaseStorageKey,
   plantSession,
-  setLang,
   shot,
 } from "./support/public-entry-harness";
 import { SLUG, table } from "./support/employer-portal-fixture";
@@ -76,6 +75,15 @@ async function signedIn(page: Page) {
   return refusals;
 }
 
+/** The language, set where the app reads it (localStorage) BEFORE the first
+ *  employer page loads. Not the harness's setLang: that reloads the page the
+ *  session was observed on, the homepage, which signed in is the candidate's
+ *  home and asks for the candidate's reads -- none of which this suite
+ *  answers, by design. */
+async function primeLang(page: Page, lang: "sv" | "en") {
+  await page.evaluate((l) => window.localStorage.setItem("cqrityjob.lang", l), lang);
+}
+
 async function open(page: Page, area: Area) {
   await page.goto(`${BASE}/employer/${SLUG}/${area.path}`, { waitUntil: "domcontentloaded" });
   await expect(page.locator(area.ready).first()).toBeVisible({ timeout: 30_000 });
@@ -91,9 +99,10 @@ test.describe("employer portal — one journey", () => {
       if (info.project.name === "chromium") await page.setViewportSize({ width: 1440, height: 900 });
       const refusals = await signedIn(page);
       const width = page.viewportSize()?.width ?? 0;
-      await setLang(page, lang);
+      await primeLang(page, lang);
       for (const area of AREAS) {
         await open(page, area);
+        await expect.poll(() => page.evaluate(() => document.documentElement.lang)).toBe(lang);
         // The shell names the organisation on every page: in the sidebar on
         // a desktop, in the top bar on a phone (where the sidebar is a closed
         // drawer, so the first match in the DOM is hidden by design).
@@ -118,15 +127,15 @@ test.describe("employer portal — one journey", () => {
     test("the flow strip is on every area page and marks the current step", async ({ page }) => {
       test.setTimeout(240_000);
       const refusals = await signedIn(page);
-      await setLang(page, "sv");
+      await primeLang(page, "sv");
       for (const area of AREAS) {
         await open(page, area);
         const strip = page.locator("[data-testid='recruitment-flow']").first();
         await expect(strip, `${area.key} has no flow strip`).toBeVisible();
         await expect(strip).toHaveAttribute("data-current", area.flow);
-        // Seven stations, always, in the same order (the current one also
-        // carries a visually hidden "you are here").
-        const labels = await strip.locator("li a").allInnerTexts();
+        // Seven stations, always, in the same order (the current one is a
+        // plain span with a visually hidden "you are here"; the rest are links).
+        const labels = await strip.locator("li").allInnerTexts();
         const expected = [
           SV["rec.flow.requirements"],
           SV["rec.flow.applications"],
@@ -142,8 +151,12 @@ test.describe("employer portal — one journey", () => {
         await expect(strip.getByText(SV["rec.flow.lede"]!)).toBeVisible();
         // "Decision & close" opens the recruitments where decisions are made.
         await expect(strip.locator("li a").last()).toHaveAttribute("href", /phase=active/);
-        if (area.flow !== "overview") {
-          await expect(strip.locator("a[aria-current='step']")).toHaveText(
+        if (area.flow === "overview") {
+          await expect(strip.locator("li a")).toHaveCount(7);
+          await expect(strip.locator("[aria-current='step']")).toHaveCount(0);
+        } else {
+          await expect(strip.locator("li a")).toHaveCount(6);
+          await expect(strip.locator("[aria-current='step']")).toHaveText(
             new RegExp(SV[`rec.flow.${area.flow}`]!),
           );
         }
@@ -155,7 +168,7 @@ test.describe("employer portal — one journey", () => {
       page,
     }) => {
       const refusals = await signedIn(page);
-      await setLang(page, "sv");
+      await primeLang(page, "sv");
       await open(page, AREAS[0]!);
 
       // The summary numbers say what they cover.
@@ -213,7 +226,7 @@ test.describe("employer portal — one journey", () => {
       const width = page.viewportSize()?.width ?? 0;
       test.skip(width < 768, "the sidebar is a drawer on a phone");
       const refusals = await signedIn(page);
-      await setLang(page, "en");
+      await primeLang(page, "en");
       await open(page, AREAS[0]!);
       const nav = page.locator("aside");
       for (const key of ["jobs", "applications", "assessments", "interviewIntelligence"]) {
@@ -229,7 +242,7 @@ test.describe("employer portal — one journey", () => {
       page,
     }) => {
       const refusals = await signedIn(page);
-      await setLang(page, "sv");
+      await primeLang(page, "sv");
       await page.goto(`${BASE}/employer/${SLUG}/jobs?phase=ready`, {
         waitUntil: "domcontentloaded",
       });

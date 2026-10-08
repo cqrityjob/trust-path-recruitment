@@ -14,9 +14,9 @@
 // later steps are never off-screen.
 import { Link } from "@tanstack/react-router";
 import { ChevronRight } from "lucide-react";
+import type { ReactNode } from "react";
 import { useT } from "@/i18n/context";
 import type { TranslationKey } from "@/i18n/dictionaries";
-import { cn } from "@/lib/utils";
 
 export type RecruitmentFlowStep =
   | "requirements"
@@ -50,18 +50,32 @@ export function RecruitmentFlowStrip({
 }) {
   const { t } = useT();
   const params = { employerSlug };
-  const linkClass = (active: boolean) =>
-    cn(
-      "inline-flex min-h-9 items-center rounded-md px-2 py-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-      active
-        ? "bg-accent/10 text-accent"
-        : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
-    );
   const label = (step: RecruitmentFlowStep) => t(`rec.flow.${step}` as TranslationKey);
   const hint = (step: RecruitmentFlowStep) => t(`rec.flow.hint.${step}` as TranslationKey);
-  const marker = (step: RecruitmentFlowStep) =>
-    step === current ? <span className="sr-only"> ({t("rec.flow.current")})</span> : null;
+  const linkClass =
+    "inline-flex min-h-9 items-center rounded-md px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+  // The router marks a link whose address is the current one; only an exact
+  // match (search included) counts, so the two stations that share a route
+  // with different filters are never both "current".
+  const active = { exact: true, includeSearch: true } as const;
   const sep = <ChevronRight className="h-3 w-3 shrink-0 text-muted-foreground/60" aria-hidden />;
+
+  /** The current station is a plain span with aria-current="step", as the
+   *  recruitment's own step nav does -- a link to the page you are on is not
+   *  a link. Every other station is a link. */
+  const Station = ({ step, link }: { step: RecruitmentFlowStep; link: ReactNode }) =>
+    current === step ? (
+      <span
+        aria-current="step"
+        title={hint(step)}
+        className="inline-flex min-h-9 items-center rounded-md bg-accent/10 px-2 py-1 text-xs font-semibold text-accent"
+      >
+        {label(step)}
+        <span className="sr-only"> ({t("rec.flow.current")})</span>
+      </span>
+    ) : (
+      link
+    );
 
   return (
     <nav
@@ -72,96 +86,124 @@ export function RecruitmentFlowStrip({
     >
       <ol className="flex flex-wrap items-center gap-x-0.5 gap-y-1">
         <li className="flex items-center gap-0.5">
-          <Link
-            to="/employer/$employerSlug/jobs"
-            params={params}
-            className={linkClass(current === "requirements")}
-            title={hint("requirements")}
-            aria-current={current === "requirements" ? "step" : undefined}
-          >
-            {label("requirements")}
-            {marker("requirements")}
-          </Link>
+          <Station
+            step="requirements"
+            link={
+              <Link
+                to="/employer/$employerSlug/jobs"
+                params={params}
+                activeOptions={active}
+                title={hint("requirements")}
+                className={linkClass}
+              >
+                {label("requirements")}
+              </Link>
+            }
+          />
           {sep}
         </li>
         <li className="flex items-center gap-0.5">
-          <Link
-            to="/employer/$employerSlug/applications"
-            params={params}
-            className={linkClass(current === "applications")}
-            title={hint("applications")}
-            aria-current={current === "applications" ? "step" : undefined}
-          >
-            {label("applications")}
-            {marker("applications")}
-          </Link>
+          <Station
+            step="applications"
+            link={
+              <Link
+                to="/employer/$employerSlug/applications"
+                params={params}
+                activeOptions={active}
+                title={hint("applications")}
+                className={linkClass}
+              >
+                {label("applications")}
+              </Link>
+            }
+          />
           {sep}
         </li>
         <li className="flex items-center gap-0.5">
-          <Link
-            to="/employer/$employerSlug/applications"
-            params={params}
-            search={{ stage: "received" as const, review: "remaining" as const }}
-            className={linkClass(current === "review")}
-            title={hint("review")}
-            aria-current={current === "review" ? "step" : undefined}
-          >
-            {label("review")}
-            {marker("review")}
-          </Link>
+          <Station
+            step="review"
+            link={
+              <Link
+                to="/employer/$employerSlug/applications"
+                params={params}
+                search={{ stage: "received" as const, review: "remaining" as const }}
+                activeOptions={active}
+                title={hint("review")}
+                className={linkClass}
+              >
+                {label("review")}
+              </Link>
+            }
+          />
           {sep}
         </li>
         <li className="flex items-center gap-0.5">
-          <Link
-            to="/employer/$employerSlug/assessments"
-            params={params}
-            className={linkClass(current === "tests")}
-            title={hint("tests")}
-            aria-current={current === "tests" ? "step" : undefined}
-          >
-            {label("tests")}
-            {marker("tests")}
-          </Link>
+          <Station
+            step="tests"
+            link={
+              <Link
+                to="/employer/$employerSlug/assessments"
+                params={params}
+                activeOptions={active}
+                title={hint("tests")}
+                className={linkClass}
+              >
+                {label("tests")}
+              </Link>
+            }
+          />
           {sep}
         </li>
         <li className="flex items-center gap-0.5">
-          <Link
-            to="/employer/$employerSlug/interview-intelligence"
-            params={params}
-            className={linkClass(current === "interviews")}
-            title={hint("interviews")}
-            aria-current={current === "interviews" ? "step" : undefined}
-          >
-            {label("interviews")}
-            {marker("interviews")}
-          </Link>
+          <Station
+            step="interviews"
+            link={
+              <Link
+                to="/employer/$employerSlug/interview-intelligence"
+                params={params}
+                activeOptions={active}
+                title={hint("interviews")}
+                className={linkClass}
+              >
+                {label("interviews")}
+              </Link>
+            }
+          />
           {sep}
         </li>
         <li className="flex items-center gap-0.5">
-          <Link
-            to="/employer/$employerSlug/reports"
-            params={params}
-            className={linkClass(current === "report")}
-            title={hint("report")}
-            aria-current={current === "report" ? "step" : undefined}
-          >
-            {label("report")}
-            {marker("report")}
-          </Link>
+          <Station
+            step="report"
+            link={
+              <Link
+                to="/employer/$employerSlug/reports"
+                params={params}
+                activeOptions={active}
+                title={hint("report")}
+                className={linkClass}
+              >
+                {label("report")}
+              </Link>
+            }
+          />
           {sep}
         </li>
         <li className="flex items-center gap-0.5">
-          <Link
-            to="/employer/$employerSlug/jobs"
-            params={params}
-            search={{ phase: "active" as const }}
-            className={linkClass(current === "decision")}
-            title={hint("decision")}
-            aria-current={current === "decision" ? "step" : undefined}
-          >
-            {label("decision")}
-            {marker("decision")}
-          </Link>
+          <Station
+            step="decision"
+            link={
+              <Link
+                to="/employer/$employerSlug/jobs"
+                params={params}
+                search={{ phase: "active" as const }}
+                activeOptions={active}
+                title={hint("decision")}
+                className={linkClass}
+              >
+                {label("decision")}
+              </Link>
+            }
+          />
         </li>
       </ol>
       <p className="mt-1 text-[11px] leading-snug text-muted-foreground">{t("rec.flow.lede")}</p>
