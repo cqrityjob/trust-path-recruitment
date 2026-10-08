@@ -403,6 +403,12 @@ jobs:
       - name: Generative AI gate check
         run: bun run generative-ai-gate:check
 
+      # Offline P4 contract only. No provider, Auth fixture, database or live mode.
+      - name: Recruiter AI hard-disabled contract and synthetic facit
+        run: |
+          bun run recruiter-ai-contract:test
+          bun run recruiter-ai-synthetic:evaluate
+
       # Launch (owner, 2026-10-04): no text a visitor, a candidate or a CV author
       # reads promises AI that version 1 does not offer, the three texts the
       # owner named are held at the owner's wording, and the texts stand only
