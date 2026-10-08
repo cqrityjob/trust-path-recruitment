@@ -12,9 +12,10 @@ export const Route = createFileRoute(
 });
 
 function InterviewContentLayout() {
+  const { employerSlug } = Route.useParams();
   const { caseId } = useParams({ strict: false });
   return caseId ? (
-    <CaseContentBoundary caseId={caseId}>
+    <CaseContentBoundary caseId={caseId} employerSlug={employerSlug}>
       <Outlet />
     </CaseContentBoundary>
   ) : (
