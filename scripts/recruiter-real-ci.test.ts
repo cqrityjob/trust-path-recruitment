@@ -3,6 +3,8 @@ import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
 import cp from "node:child_process";
+import { devices } from "@playwright/test";
+import { requireNativeMobilePreset } from "./recruiter-real-ci-mobile-preset";
 import {
   APP_SHA,
   CONFIG,
@@ -35,6 +37,63 @@ const env = {
   RI_REAL_SCHEMA_SHA: "a".repeat(40),
 };
 const read = (name: string) => fs.readFileSync(name, "utf8");
+
+describe("native mobile preset validation", () => {
+  test("the installed Playwright presets retain mobile, touch and the intended widths", () => {
+    const mini = requireNativeMobilePreset(devices, "iPhone 13 Mini", 375);
+    const phone = requireNativeMobilePreset(devices, "iPhone 14", 390);
+    expect(mini).toBe(devices["iPhone 13 Mini"]);
+    expect(phone).toBe(devices["iPhone 14"]);
+    for (const preset of [mini, phone]) {
+      expect(preset.isMobile).toBe(true);
+      expect(preset.hasTouch).toBe(true);
+      expect(preset.deviceScaleFactor).toBe(3);
+    }
+  });
+
+  test("a missing or incorrectly named preset fails instead of spreading undefined", () => {
+    expect(() => requireNativeMobilePreset({}, "iPhone 13 Mini", 375)).toThrow(
+      "REAL_CI_MOBILE_PRESET_INVALID",
+    );
+    expect(() => requireNativeMobilePreset(devices, "iPhone 13 mini", 375)).toThrow(
+      "REAL_CI_MOBILE_PRESET_INVALID",
+    );
+    expect(() => requireNativeMobilePreset(devices, "Desktop Chrome", 375)).toThrow(
+      "REAL_CI_MOBILE_PRESET_INVALID",
+    );
+  });
+
+  test("lost mobile, touch or viewport settings stop both mobile projects", () => {
+    for (const [name, width] of [
+      ["iPhone 13 Mini", 375],
+      ["iPhone 14", 390],
+    ] as const) {
+      const original = devices[name];
+      for (const preset of [
+        { ...original, isMobile: false },
+        { ...original, hasTouch: false },
+        { ...original, viewport: { ...original.viewport, width: width + 1 } },
+      ]) {
+        expect(() => requireNativeMobilePreset({ [name]: preset }, name, width)).toThrow(
+          "REAL_CI_MOBILE_PRESET_INVALID",
+        );
+      }
+    }
+    expect(() => requireNativeMobilePreset(devices, "iPhone 14", 375)).toThrow(
+      "REAL_CI_MOBILE_PRESET_INVALID",
+    );
+  });
+
+  test("the native config checks both supported presets before reading CI context", () => {
+    const config = read("scripts/recruiter-real-ci-browser.config.ts");
+    expect(config).toContain('requireNativeMobilePreset(devices, "iPhone 13 Mini", 375)');
+    expect(config).toContain('requireNativeMobilePreset(devices, "iPhone 14", 390)');
+    expect(config).toContain("...mobile375");
+    expect(config).toContain("...mobile390");
+    expect(config).not.toContain('...devices["iPhone 13 mini"]');
+    expect(config.indexOf("const mobile390")).toBeLessThan(config.indexOf("readCIContext();"));
+  });
+});
 
 describe("official real Supabase CI target", () => {
   test("the revised application pin is exact and old native evidence cannot stand in for it", () => {
