@@ -1,5 +1,33 @@
 # RI v0.3: de 22 driftprovens faktiska status
 
+## Aktuell tilläggsavläsning r6, 2026-10-08 10:34 UTC
+
+Main/Lovable-synk är `3c1d950593329c390cf209931b27da04d3034410`.
+Hosted frontier är07100000/385 identiteter, verifierad installerad en gång.
+Ny faktisk HTTP-läsning visar publicerad app8860223 och samma publicerade
+source-tree som tidigare. Snapshot-app, P1 och upload-journal är inte publicerade.
+
+| Delprov | Nytt utfört A-bevis | B och återstående omfång |
+| --- | --- | --- |
+| OP01 | Officiell ny native CI-stack,385 strikt replayade migrationer och separata exact app/schema/evidence-pinnar PASS i run4. | Hosted385 katalog/ACL/snapshot-/låshistorik PASS separat. Autentiserad publicerad målmatris väntar. |
+| OP02/03 | Åtta riktiga admin-skapade GoTrue-konton, riktig lösenordsinloggning och separata read/denied-reviewerprov ingår i run4. | Full22 aktör×operation-matris samt medlems-/refresh-/identitetsbyte återstår. |
+| OP09 | Sju faktiska Storage-/metadata-adapterprov PASS: även injicerad DELETE503 pending/orphan och committed-but-unreadable unknown med0 blind DELETE. | Detta bevisar inte beständig journal, reload/resume, cleanupfence eller full app-HTTP-fault-injection. 41SQL/44native journalprov ännu ej PASS. |
+| OP16 | Run4:12 kompletta UI-intervjuer,8frågor/6kompetenser, pause/reload/resume, kontrollpunkter, mänsklig evidens/bedömning och12 rapporter;0flaky/skipped/unexpected. | Ny439-omkörning FAILED i en av primary-resornas slutdelar; utredning och release HOLD. Publicerade meny→lista→rapport→lista-resor väntar. |
+| OP17 | Run4:två verkliga tvåfliksprov PASS; riktig process-CAS HTTP409/PT409/SCP_IV_SESSION_PROCESS_STALE på3,75ms. Äldre40001-loop/deadlock är bevarade historiska FAIL och rättades genom071. | Ny439-körning nådde inte dessa steg. Full concurrency-/finalisering-/metadata-matris i publicerad runtime återstår. |
+| OP21 | Chromium dator samt emulerad375/390 är utfört. | Fysisk iPhone/Safari och Android/Chrome är uttryckligen NOT RUN. |
+| OP22 | Run4:14ärenden/12rapporter, AI/transcriptav och0 meddelanden/mejlförsök/AI/erasure/cron. Egen app/stack stoppad. | Full hosted-svitens före/efter-readback väntar; inga verkliga kandidatutskick, AI-kostnader eller worker/cronstart. |
+| P1 | #460:s native104Auth/80Storage/100facit med23API/5browser är förberett och21lokala kontrakt PASS. | Actual native run37763792868 väntar; historiskt ersatt Auth/Storage-bevis ger inget native/hosted PASS. |
+
+[Fryst run4-manifest, witness och två originalbilder](evidence/2026-10-08-native-supabase-run4/README.md)
+anger evidens16d8, schema250623 och appa68. Ny
+[run37762423210](https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37762423210)
+på439 passerade stack/schema/Auth/Storage men FAILED browser;35av36 kuraterade
+bilder finns, saknad bild är väktare/fristående/sv/emulerad375 rapport. Detta
+räcker inte för att klassificera orsaken som produktfel eller flake. Inga
+tidigare eller senare PASS skrivs om. [Exakta nya releaseankare](2026-10-08-live-release.md#aktuell-avläsning-r6-2026-10-08-1034-utc).
+
+## Historisk r5-matris
+
 Avläsning2026-10-08, arbetsversionLIVE-r5. A betyder riktig isolerad GoTrue/Storage/PostgREST; B betyder faktiskt publicerad runtime på cqrityjob.com. Ett passerat delprov gör inte hela OP-falletPASS. FAIL behåller det ursprungliga negativa utfallet även när en separat rättning testas. NOT RUN anger återstående omfång; BLOCKED anger en konkret extern förutsättning. Alla observationer gäller sina pinnade källor, inte automatiskt senare integrationshuvud.
 
 Senast verifierad publicerad app är `8860223e37cdf648a3438c98133018fcf4587440`, senast HTTP200-läst08:02:52 UTC. Installerad snapshot-schemafrontier är20270307090000/384ledger. Read-only main 09:34 UTC är `8498a1ae0aa973012b32d4957ee7ce32a8735989` efter enbart installationsbokföring #454. Ingen ny hostedinstallation/publicering verifieras av det. Ingen ny apppublicering görs före domänkonflikt-/låsordningsrättningen och dess exakta releasegrind.

@@ -1,6 +1,156 @@
 # Recruiter Intelligence v0.3: liveleverans och verifieringsgränser
 
-Arbetsversion 0.3-LIVE-r5, 2026-10-08. Detta dokument kompletterar det historiska granskningsunderlaget i #449. Statusuppgifter nedan anger faktisk utförd kontroll; pending, blocked och not run är inte PASS. Dokumentet uppdateras när nästa releasegrind passerat.
+Arbetsversion 0.3-LIVE-r6, 2026-10-08. Detta dokument kompletterar det historiska granskningsunderlaget i #449. Statusuppgifter nedan anger faktisk utförd kontroll; pending, blocked och not run är inte PASS. Dokumentet uppdateras när nästa releasegrind passerat.
+
+## Aktuell avläsning r6, 2026-10-08 10:34 UTC
+
+Main är `3c1d950593329c390cf209931b27da04d3034410` efter normal merge av #455.
+Lovable har synkat samma commit och är ready/agentFinished. Faktisk ny HTTP-läsning
+av `www.cqrityjob.com/release-identity.json` gav fortfarande app
+`8860223e37cdf648a3438c98133018fcf4587440`, tree-SHA256
+`0481d12f7f7ad6f7556cd1cff0238d4cc61788f1861d224dd6a5cb72b4039ed5`.
+Synk är därmed verifierad separat från publicering. Produktionsdatabasen har
+385 ledgeridentiteter och frontier `20270307100000`; P1 `20270308090000` och
+upload recovery `20270309090000` är fortfarande **inte installerade**.
+
+### Installerad konflikttransport och historik
+
+#455:s exakta huvud `250623cfb677c931caf70a2354daf774f72f443a` passerade
+samtliga 14 genomförda obligatoriska checks: sju CI-jobb i
+[37754392716](https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37754392716)
+samt Security Work, Role/TestBank, Passport public, job back, recruitment workspace,
+Career Center och E4. Ingen senare commit räknas som detta huvuds CI.
+Normal merge gav ovanstående main. Officiell integration installerade
+`20270307100000` en gång; hosted readback 09:59:39.750315 UTC verifierade:
+
+- Föregående 384 ledgeridentiteter oförändrade, exakt en ny identitet.
+- Tolv funktionsdefinitioner med argument/defaults/owner/ACL/config matchar
+  PG17/PostgREST14-beviset, katalog-SHA256
+  `5c42f5486b5dc0b9b0f032f046bed67d036f528dba4bdfd91cbb3202c8708d7f`.
+- 20 snapshotar, 14 bestående användningslås, 0 legacybekräftelser och alla
+  ärendetillstånd är bytevis lika före/efter. Alla snapshotar är `observed_now`.
+- Produktionsrapporttabellen innehöll 0 rapporter. Detta ger ingen verifiering
+  av bevarandet av redan fylld hosted rapporthistorik; isolerade historikprov
+  redovisas separat.
+- Privat återställningsjournal innehåller de tolv tidigare funktionerna med RLS
+  och utan SELECT för anon/authenticated/service_role.
+
+[Versionsbundet installations-/paritetsbevis](../../release/2026-10-08-recruiter-domain-conflict-hosted-verification.json).
+Metadata-PR #459 innehåller denna redan gjorda installation; den kör inget SQL igen.
+
+### Verkliga tjänsteprov och ny stoppad omkörning
+
+[Native körning 4](evidence/2026-10-08-native-supabase-run4/README.md) är ett
+faktiskt PASS på evidens-SHA `16d8ea8e73bd6c5c644ca5579a33bd3a8cb03ae9`,
+schema `250623cfb677c931caf70a2354daf774f72f443a` och snapshot-app
+`a68f22d799769de32230781bba268632e57e796f`:
+385 strikt replayade migrationer, 8 riktiga admin-skapade GoTrue-konton,
+7 verkliga Storage-/metadata-adapterprov, 12 kompletta intervjuresor och
+2 browserprov med två flikar. Inga flaky/skipped/unexpected. Riktig process-CAS
+gav HTTP409/PT409 på 3,75 ms. Slutläsning: 14 ärenden, 12 rapporter och noll
+AI/meddelanden/mejl/erasure-köer/cron. Alla 36 originalbilders hash/storlek är
+verifierade; två byteidentiska bilder ingår i #449. Engelska bilden visar
+engelskt gränssnitt med svenska rollfrågor och ankare, vilket är en innehållslucka.
+
+Ny evidens-SHA `439c96130a2cdb751c42b27432accda580cd0b5c` innehåller endast
+normal integration av installerad metadata. Dess
+[omkörning 37762423210](https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37762423210)
+har **FAILED i primary browser-steget** efter godkänd stack, 385 migrationer,
+Auth och 7 Storage-prov. Tvåfliks-/CAS-/slutläsningssteg startade inte.
+Felet undersöks; snapshot-appens release är HOLD tills det är utrett.
+Det tidigare PASS ändrar inte denna nya körnings FAIL. Inget av dessa
+isolerade bevis ger PASS för publicerad hosted runtime eller fysisk telefon.
+
+### Exakta pågående huvuden och grindar
+
+| PR | Huvud | Faktisk status vid avläsningen |
+| --- | --- | --- |
+| [#459](https://github.com/cqrityjob/trust-path-recruitment/pull/459) | `58f15a71201b47ee8b1e81526c781048e41b4cdd` | Redan installerad071-metadata. CI37761489081 pågår; ingen ny installation. |
+| [#452](https://github.com/cqrityjob/trust-path-recruitment/pull/452) | `3ab0c492b772c0f5235d0bd5cc18caaf4f64b6e0` | Snapshot-app/legacy-ACK. CI37761984285 pågår; release HOLD enligt nativefelet ovan. SRC är exakt lika med native app-pinnen a68. |
+| [#451](https://github.com/cqrityjob/trust-path-recruitment/pull/451) | `6039fbc685cad255aae4a4e39c1035e933af883d` | Pending080, native hashfix och 95 SQL-assertions. CI37762014757 pågår; 080 ej installerad. |
+| [#453](https://github.com/cqrityjob/trust-path-recruitment/pull/453) | `c8808c2dae6e30d749f331f70d7acaf56b74def7` | Normalt integrerad P1-app med hashfix/metadata; ny slut-CI krävs. SRC är exakt lika med native app-pinnen ac25. |
+| [#456](https://github.com/cqrityjob/trust-path-recruitment/pull/456) | `439c96130a2cdb751c42b27432accda580cd0b5c` | Isolerad riktig tjänste-CI; ny nativekörning FAIL bevaras. Vanlig CI37762423130 pågår. |
+| [#460](https://github.com/cqrityjob/trust-path-recruitment/pull/460) | `b4a27815676c2f0311d7b83007b4433d9de7b534` | Test-only native100: 104 Auth, 80 Storage-original, 23 API-assertions, 5 browserfall. 21 lokala kontrakt/lint/types PASS; faktisk tjänstekörning37763792868 väntar. |
+
+#457:s upload-journal är pending efter080 och #458:s app konsumerar den endast
+efter verifierad installation. 41 SQL-/44 native recovery-prov är förberedda,
+**inte utförda PASS**. Historisk wallet-rollback måste avveckla det nya tomma
+journalschemat efter fulla assertions så att dess policyberoenden inte blir
+kvar i den äldre eran. Den testinfra-rättningen granskas separat.
+
+### Bekräftade rättningar och kvarvarande gränser
+
+P1:s native workspace-CI på äldre `1cee57d` bekräftade HTTP/SQL42883:
+`public.digest(text,unknown)` saknades när pgcrypto installerats i Supabases
+extensions-schema. Den ännu oinstallerade080-migrationen rättades i
+`5cdc82ac872a2f69cc518b8c1a0d782e5a2a3897` till
+`pg_catalog.sha256(pg_catalog.convert_to(v::text,'UTF8'))`. Samma kanoniska
+JSONB-/UTF8-/hex-SHA256-kontrakt behålls. Den gamla93-sviten behålls och två
+nya assertions kräver pgcrypto utanför public samt extern Unicode-hash och
+NULL-kontrakt. Faktisk95-svit/native runtime ska passera före installation.
+[Tekniskt fel- och versionsunderlag](../../release/2026-10-08-recruiter-intelligence-native-hash.md).
+
+Native100:s oberoende granskning rättade testtransportens Bob-vinnarretry,
+kräver faktiskt åter tillgänglig originalkälla med ny icke-tom version och
+exakt0/2 mock-rader före/efter AI-provet. Samtliga gamla23 assertions kvarstår.
+Det är rättningar av bevisets kvalitet, ingen behörighetsförsvagning.
+
+Riktad P1-lintgranskning av `1cee57d`: alla30 nya filer har0 errors/0 warnings;
+22 errors/9 warnings i äldre ändrade filer matchar baseline. ESLint-konfigurationen
+är oförändrad. Mindre kvarvarande UX-skuld: ett grått serverläge kan kräva nästa
+handling även när ett nytt utkast uppfyller alla krav; stängd/arkiverad vy kan
+visa skrivkontroller som korrekt nekas av RPC. Ingen sådan UI-kontroll ger
+nya serverrättigheter.
+
+Bestående användningslås och faktisk snapshotläsning ska vara installerade **och
+publicerade före faktisk användning**; manifestets avvikelsekontroll räcker inte.
+De20 äldre ärendena får inte operatörsbekräftas. Ägarens/admins hash-CAS, notering
+och audit i #452 krävs innan fortsatt arbete. Använd draftinnehåll blir låst;
+godkännande/översättning görs i en ny innehållsversion. Båda rollguiderna är
+fortfarande draft/pilot_hypothesis, review open med0 granskarbeslut;8 frågor/6
+kompetensområden bevaras. Ingen metodvalidering eller full engelsk metod hävdas.
+
+Hosted22-matrisen väntar fortfarande på avgränsad riktig Auth-fixture och
+publicerad kompatibel runtime; fysisk telefon är NOT RUN. Exakt åtkomstväg
+är [Authentication→Users](https://supabase.com/dashboard/project/wrygicdfxwjnrugduxnt/auth/users)
+→ **Add user → Create new user → Auto confirm user → Create user** för den
+privata syntetiska planen, alternativt en privat0600-fil med canonical
+servercredential enligt [wrappern](2026-10-08-hosted-auth-fixture-wrapper.md).
+Inga hemligheter ska lämnas i chatt; inga riktiga kandidatutskick behövs.
+Återställning sker först till kompatibel app med additivt schema/lås/snapshotar/
+rapporter/audit kvar. Använt schema får inte bakåtrullas eller rensas; rätta framåt.
+
+### Tillägg 10:43 UTC: nya utförda och stoppade kontroller
+
+#451:s [faktiska95 SQL-/23 API-bevis](live-2026-10-08/p1-schema-6039/README.md)
+på6039 är nu verifierat: facit40/25/35,27granskade/73återstående,
+V2-profil30/35/35 med0granskade/100återstående, samtidig200/409,
+idempotent retry och stale handoff utan kopia. PG16/17 strict/history passerade
+separat. HelaCI37762014757 väntar fortfarande på återstående obligatoriska jobb.
+Två listade versionsloggar saknas i artifact; fem inkluderade loggars hash/storlek
+matchar exakt. Native Auth/Storage ersätts i detta bevis och browser är not_run.
+
+#460:s första [native100-run37763792868](https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37763792868)
+påb4 stoppade i official_native_stack; serviceVersions är tomma och alla
+schema/Auth/Storage/API/browsersteg är not_run. Artifact11543389023 har SHA256
+`4793c3a52dc4cae82cc2be7acccc6d46625af5e817e38c299707eaccc2cc323e`.
+Bootstrapens status-JSON hanteras separat från stderr i fortsatt utredning;
+detta ger inget påstående om fel i080 eller produktens kravstatus.
+
+#456:s diagnostikhuvud8b781acdae21a67c51e7c250e2ff79de1650fc12 och
+native-run37764736604 kör om efter tillagd strikt saniterad fellokalisering.
+Specs, retries, timeout, app-/schemapinnar och antal är oförändrade.
+[Run5:s ursprungligaFAIL-manifest](evidence/2026-10-08-native-supabase-run5/README.md)
+bevaras byteidentiskt. #452 är fortfarandeHOLD.
+
+#457 har nu exakt huvud4ff99bcbf680858ebc56b408a4557b6d0719ea0c med
+normal metadata-integration och14 planted rollback-controls; #458 har
+219e78e0eeb63ec4fc83913b0a3286983d3887dd med samma produkt-SRC somd611.
+52 upload/recovery-stub-/renderprov samt app-/scripts-typecheck passerar.
+Native44/journal41 är ännu ej utförda PASS. Frontier är385 applied plus080/0909
+pending; ingen0909-installation görs före080.
+
+## Historisk r5-status
 
 Senaste read-only releaseavläsning 09:34 UTC: main är `8498a1ae0aa973012b32d4957ee7ce32a8735989` efter metadata-PR #454. Senast verifierad publicerad app är fortfarande `8860223e37cdf648a3438c98133018fcf4587440` och faktiskt installerad schemafrontier `20270307090000` / 384 ledgeridentiteter. Merge, installerat schema, publicerad app och passerade driftprov anges separat. [R5:s exakta PR-/CI-observationer](#releaseavläsning-r5-2026-10-08-0934-utc) ersätter r4:s då aktuella status; äldre mätningar nedan bevaras som historik.
 

@@ -1,0 +1,12 @@
+begin bootstrap
+pass bootstrap
+begin replay
+pass replay
+begin oracle
+pass oracle
+begin gateway
+pass gateway
+begin api
+pass api
+intentional runtime
+intentional browser
