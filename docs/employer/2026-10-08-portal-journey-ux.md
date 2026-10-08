@@ -12,7 +12,7 @@ faktiskt utförd kontroll; blockerat och inte kört är inte PASS.
 | Leveransens mergade PR:er | #447, #448, #450, #451, #452, #453, #454, #455, #456, #457, #458, #459, #460, #461, #462, alla verifierade i GitHub 16:36 UTC |
 | Main-CI på basen | `CI` run 37808576247 pågick vid avläsningen; native-workflows (`recruiter-p1-native-ci`, `recruiter-real-ci`) PASS på samma commit |
 | Gren | `claude/amazing-clarke-ferjkh`, vanliga framåtriktade commits ovanpå basen; ingen historik omskriven |
-| Slut-SHA | PR-huvudet (se PR:n) |
+| Slut-SHA | PR-huvudet (se PR:n); bildcommits från workflowen är `github-actions[bot]`-commits ovanpå |
 
 Merge betyder inte att Lovable har synkat eller publicerat; se sista avsnittet.
 
@@ -177,8 +177,19 @@ Begränsningar att redovisa separat:
   `recruitment-evidence.yml` och `e4-evidence.yml` på PR:n (Supabase CLI-stack i CI).
   Syntetiska skärmbilder från den stubbade sviten är inte ett substitut och
   rapporteras separat. Hosted verifiering ingår inte.
-- **Före/efter-bilderna** finns som CI-artefakter (`employer-portal-ux-before`/`-after`)
-  tills de hämtats och lagts i `artifacts/employer-portal-ux/`.
+- **Före/efter-bilderna** committas av `employer-portal-ux-evidence.yml` till
+  `artifacts/employer-portal-ux/before/` och `after/` (24 + 24 PNG: sex sidor × sv/en ×
+  1440/375, `SOURCE.txt` anger fotograferad commit). Visuellt granskade i denna session:
+  översikten visar remsan, de tre förklaringsraderna, räknarblockets rubrik/inledning/
+  "Vad räknas här?", symbol + text på de fyra kravstatusknapparna och de två raderna för
+  granskning respektive intervjusteg; ansökningslistan visar remsan med aktuell station
+  och kravstatus med symbol i tabell och mobilkort; rekryteringslistan, Tester,
+  Intervjuer och Rapporter visar remsan under sin rubrik; i 375-bilderna radbryts remsan
+  i tre rader, inget scrollar i sidled, och bildbredden 1125 px bekräftar DPR 3
+  (verklig mobilemulering). Två fynd från granskningen är rättade i samma PR:
+  menybeskrivningarna trunkerades mitt i ordet (radbryts nu till två rader) och
+  rekryteringslistan hette "Jobbannonser" under menyposten "Rekryteringar" (heter nu
+  Rekryteringar). Bilderna från den sista körningen visar dessa två rättningar.
 
 ## Kvarstående: lanseringshinder vs. kan vänta
 
