@@ -21,6 +21,7 @@ BEGIN
  END LOOP;
 END $$;
 DROP FUNCTION public.scp_iv_case_frozen_content(uuid);
+DROP FUNCTION public.scp_iv_case_frozen_labels(uuid[]);
 DROP FUNCTION public.scp_iv_acknowledge_observed_content(uuid,text,text);
 DROP FUNCTION public.scp_iv_content_inventory(uuid);
 DROP FUNCTION scp_private.interview_content_review_gate();

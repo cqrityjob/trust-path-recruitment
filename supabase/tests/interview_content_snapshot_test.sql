@@ -60,6 +60,26 @@ SELECT pg_temp.ok((SELECT count(*)=2 AND bool_and(s.provenance='case_created' AN
 SELECT pg_temp.ok(NOT EXISTS(SELECT 1 FROM scp_private.interview_content_snapshots s JOIN fx ON fx.id=s.case_id,jsonb_array_elements(s.manifest#>'{content,conduct_guidance}') g WHERE fx.label IN('vaktare-se','security-manager-se') AND g->>'method_id'<>s.manifest->>'method_id'),'16 method children match exact pinned method');
 SELECT pg_temp.ok((SELECT manifest->>'manifest_hash'=encode(sha256(convert_to((manifest->'content')::text,'UTF8')),'hex') FROM scp_private.interview_content_snapshots WHERE case_id=(SELECT id FROM fx WHERE label='vaktare-se')),'17 digest covers actual saved content');
 
+-- Bound, caller-scoped compact labels are saved metadata, not current review.
+SELECT pg_temp.ok(NOT has_function_privilege('anon','public.scp_iv_case_frozen_labels(uuid[])','EXECUTE') AND NOT has_function_privilege('service_role','public.scp_iv_case_frozen_labels(uuid[])','EXECUTE'),'43 frozen labels do not widen anonymous or service access');
+SELECT pg_temp.ok(pg_temp.attempt('anon',NULL,'SELECT * FROM public.scp_iv_case_frozen_labels(ARRAY[]::uuid[])') LIKE '42501:%','44 anonymous labels rejected');
+SELECT pg_temp.ok(pg_temp.attempt('authenticated',NULL,'SELECT * FROM public.scp_iv_case_frozen_labels(ARRAY[]::uuid[])') LIKE '42501:%','45 signed caller required for labels');
+SELECT pg_temp.ok(pg_temp.attempt('authenticated','b7070000-0000-4000-8000-000000000001','SELECT * FROM public.scp_iv_case_frozen_labels(NULL)') LIKE '23514:%LABELS_INPUT%','46 null labels input rejected');
+SELECT pg_temp.ok(pg_temp.attempt('authenticated','b7070000-0000-4000-8000-000000000001','SELECT * FROM public.scp_iv_case_frozen_labels(ARRAY[NULL]::uuid[])') LIKE '23514:%LABELS_INPUT%','47 null labels item rejected');
+SELECT pg_temp.ok(pg_temp.attempt('authenticated','b7070000-0000-4000-8000-000000000001',format('SELECT * FROM public.scp_iv_case_frozen_labels(array_fill(%L::uuid,ARRAY[501]))',(SELECT id FROM fx WHERE label='vaktare-se'))) LIKE '23514:%LABELS_INPUT%','48 labels request bounded at five hundred before deduplication');
+SELECT pg_temp.ok(pg_temp.attempt('authenticated','b7070000-0000-4000-8000-000000000001',format('SELECT * FROM public.scp_iv_case_frozen_labels(ARRAY[%L::uuid,''b7070000-9999-4000-8000-000000000001''::uuid])',(SELECT id FROM fx WHERE label='vaktare-se'))) LIKE '42501:%INTERVIEW_CASE_NOT_FOUND%','49 mixed unknown labels fail without leaking existing labels');
+SELECT pg_temp.ok(pg_temp.attempt('authenticated','b7070000-0000-4000-8000-000000000003',format('SELECT * FROM public.scp_iv_case_frozen_labels(ARRAY[%L::uuid])',(SELECT id FROM fx WHERE label='vaktare-se'))) LIKE '42501:%INTERVIEW_CASE_NOT_FOUND%','50 unrelated caller labels rejected');
+DO $$ DECLARE _rows jsonb; _id uuid:=(SELECT id FROM fx WHERE label='vaktare-se');
+BEGIN
+ PERFORM set_config('request.jwt.claim.sub','b7070000-0000-4000-8000-000000000001',true);
+ SET LOCAL ROLE authenticated;
+ PERFORM pg_temp.ok((SELECT count(*)=0 FROM public.scp_iv_case_frozen_labels(ARRAY[]::uuid[])),'51 empty labels input returns zero');
+ PERFORM pg_temp.ok((SELECT count(*)=1 FROM public.scp_iv_case_frozen_labels(ARRAY[_id,_id])),'52 duplicate readable case produces one saved label');
+ SELECT jsonb_agg(to_jsonb(l)) INTO _rows FROM public.scp_iv_case_frozen_labels(ARRAY[_id]) l;
+ RESET ROLE; PERFORM set_config('request.jwt.claim.sub','',true);
+ PERFORM pg_temp.ok((SELECT _rows->0->>'name_sv_at_freeze'=manifest#>>'{content,pack,name_sv}' AND _rows->0->>'name_en_at_freeze'=manifest#>>'{content,pack,name_en}' AND _rows->0->>'content_status_at_freeze'=manifest->>'pack_content_status' AND _rows->0->>'validation_label_at_freeze'=manifest->>'pack_validation_label' AND _rows->0->>'provenance'=provenance AND (_rows->0->>'frozen_at')::timestamptz=frozen_at FROM scp_private.interview_content_snapshots WHERE case_id=_id),'53 labels explicitly represent metadata at freeze');
+END $$;
+
 -- Real direct service writes: every owned table has insert/update/delete guards.
 -- Updating identity is rejected before FK checks, including OLD ownership.
 DO $$ DECLARE _table text;_out text;_id uuid;_n integer:=0;
@@ -128,9 +148,17 @@ SAVEPOINT live_corruption;
 -- rows into the future report. This is test-only, inside a rolled-back savepoint.
 SET LOCAL session_replication_role=replica;
 UPDATE public.scp_interview_core_questions SET prompt_sv='SYNTHETIC LIVE CORRUPTION' WHERE pack_version_id=(SELECT pack_version_id FROM public.scp_interview_cases WHERE id=(SELECT id FROM fx WHERE label='vaktare-se'));
+UPDATE public.scp_interview_packs SET name_sv='SYNTHETIC LIVE LABEL' WHERE id=(SELECT pack_id FROM public.scp_interview_pack_versions WHERE id=(SELECT pack_version_id FROM public.scp_interview_cases WHERE id=(SELECT id FROM fx WHERE label='vaktare-se')));
 SET LOCAL session_replication_role=origin;
 SELECT pg_temp.ok((SELECT jsonb_array_length(public.scp_iv_build_report_basis((SELECT id FROM fx WHERE label='vaktare-se'))->'questions')=8 AND NOT EXISTS(SELECT 1 FROM jsonb_array_elements(public.scp_iv_build_report_basis((SELECT id FROM fx WHERE label='vaktare-se'))->'questions') q WHERE q->>'prompt_sv'='SYNTHETIC LIVE CORRUPTION') AND EXISTS(SELECT 1 FROM jsonb_array_elements(public.scp_iv_build_report_basis((SELECT id FROM fx WHERE label='vaktare-se'))->'questions') q WHERE q->>'prompt_sv'=s.manifest#>>'{content,questions,0,prompt_sv}') FROM scp_private.interview_content_snapshots s WHERE case_id=(SELECT id FROM fx WHERE label='vaktare-se')),'28 report reads saved question copy');
 SELECT pg_temp.ok((SELECT scp_private.interview_frozen_manifest((SELECT id FROM fx WHERE label='vaktare-se'))=manifest FROM scp_private.interview_content_snapshots WHERE case_id=(SELECT id FROM fx WHERE label='vaktare-se')),'29 saved content remains exact despite live corruption');
+DO $$ DECLARE _label text;_id uuid:=(SELECT id FROM fx WHERE label='vaktare-se');
+BEGIN
+ PERFORM set_config('request.jwt.claim.sub','b7070000-0000-4000-8000-000000000001',true); SET LOCAL ROLE authenticated;
+ SELECT name_sv_at_freeze INTO _label FROM public.scp_iv_case_frozen_labels(ARRAY[_id]);
+ RESET ROLE; PERFORM set_config('request.jwt.claim.sub','',true);
+ PERFORM pg_temp.ok(_label<>'SYNTHETIC LIVE LABEL' AND (SELECT _label=manifest#>>'{content,pack,name_sv}' FROM scp_private.interview_content_snapshots WHERE case_id=_id),'54 labels read actual saved copy despite live corruption');
+END $$;
 ROLLBACK TO SAVEPOINT live_corruption;
 INSERT INTO public.scp_content_roles(user_id,role) VALUES('b7070000-0000-4000-8000-000000000001','editor');
 DO $$ DECLARE _pack uuid;_role uuid;_old uuid;_new uuid;_out text;

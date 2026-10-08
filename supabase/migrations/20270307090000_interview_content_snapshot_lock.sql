@@ -342,6 +342,32 @@ $$;
 REVOKE ALL ON FUNCTION public.scp_iv_case_frozen_content(uuid) FROM PUBLIC,anon;
 GRANT EXECUTE ON FUNCTION public.scp_iv_case_frozen_content(uuid) TO authenticated;
 
+-- Compact list projection: the case's frozen labels, never live catalogue
+-- review metadata. New-case eligibility remains the live startable contract.
+CREATE FUNCTION public.scp_iv_case_frozen_labels(_case_ids uuid[])
+RETURNS TABLE(case_id uuid,name_sv_at_freeze text,name_en_at_freeze text,
+ content_status_at_freeze text,validation_label_at_freeze text,provenance text,frozen_at timestamptz)
+LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path=public,pg_temp AS $$
+BEGIN
+ IF auth.uid() IS NULL THEN RAISE EXCEPTION 'INTERVIEW_CASE_NOT_FOUND' USING ERRCODE='insufficient_privilege'; END IF;
+ IF _case_ids IS NULL OR cardinality(_case_ids)>500 OR array_position(_case_ids,NULL) IS NOT NULL THEN
+  RAISE EXCEPTION 'SCP_IV_CONTENT_LABELS_INPUT' USING ERRCODE='check_violation';
+ END IF;
+ IF EXISTS(SELECT 1 FROM unnest(_case_ids) x(id) WHERE NOT public.scp_iv_can_read_case(x.id)) THEN
+  RAISE EXCEPTION 'INTERVIEW_CASE_NOT_FOUND' USING ERRCODE='insufficient_privilege';
+ END IF;
+ IF EXISTS(SELECT 1 FROM unnest(_case_ids) x(id)
+ WHERE NOT EXISTS(SELECT 1 FROM scp_private.interview_content_snapshots s WHERE s.case_id=x.id)) THEN
+  RAISE EXCEPTION 'SCP_IV_CONTENT_SNAPSHOT_MISSING' USING ERRCODE='check_violation';
+ END IF;
+ RETURN QUERY SELECT s.case_id,s.manifest#>>'{content,pack,name_sv}',s.manifest#>>'{content,pack,name_en}',
+ s.manifest->>'pack_content_status',s.manifest->>'pack_validation_label',s.provenance,s.frozen_at
+ FROM scp_private.interview_content_snapshots s WHERE s.case_id=ANY(_case_ids) ORDER BY s.case_id;
+END;
+$$;
+REVOKE ALL ON FUNCTION public.scp_iv_case_frozen_labels(uuid[]) FROM PUBLIC,anon,service_role;
+GRANT EXECUTE ON FUNCTION public.scp_iv_case_frozen_labels(uuid[]) TO authenticated;
+
 DO $$ DECLARE _check text;
 BEGIN
  SELECT pg_get_constraintdef(oid) INTO _check FROM pg_constraint
