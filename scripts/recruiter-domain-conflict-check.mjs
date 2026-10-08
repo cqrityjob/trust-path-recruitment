@@ -474,6 +474,42 @@ try {
     ) === "0",
     "actual14 no continuing stale request",
   );
+  // Export only catalog metadata from the current schema, before historical
+  // rollback removes the patch. No fixture data, tokens or temporary logs.
+  if (process.env.RI_CONFLICT_ARTIFACT_DIR) {
+    const dir = path.resolve(process.env.RI_CONFLICT_ARTIFACT_DIR);
+    if (!dir.startsWith(path.resolve("artifacts") + path.sep))
+      throw Error("CONFLICT_ARTIFACT_PATH_REFUSED");
+    fs.mkdirSync(dir, { recursive: true });
+    const selector = fs.readFileSync(
+      "supabase/tests/recruiter_domain_conflict_catalog.sql",
+      "utf8",
+    );
+    const catalogText = sql(selector);
+    fs.writeFileSync(path.join(dir, "current-catalog.txt"), catalogText + "\n");
+    fs.writeFileSync(
+      path.join(dir, "manifest.json"),
+      JSON.stringify(
+        {
+          sourceCommit: cp.execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(),
+          postgresVersion: sql("SHOW server_version"),
+          postgrestImage: "postgrest/postgrest:v14.15",
+          migrationSha256: crypto
+            .createHash("sha256")
+            .update(fs.readFileSync(migration))
+            .digest("hex"),
+          catalogSha256: crypto
+            .createHash("sha256")
+            .update(catalogText + "\n")
+            .digest("hex"),
+          checks,
+          scope: "ephemeral PostgreSQL/PostgREST transport; fixture JWT, not GoTrue",
+        },
+        null,
+        2,
+      ) + "\n",
+    );
+  }
   console.log(
     `    ok  CONFLICT ${checks.length} bounded runner assertions; original historical tests remain unchanged`,
   );
