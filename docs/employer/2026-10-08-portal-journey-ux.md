@@ -12,7 +12,9 @@ faktiskt utförd kontroll; blockerat och inte kört är inte PASS.
 | Leveransens mergade PR:er | #447, #448, #450, #451, #452, #453, #454, #455, #456, #457, #458, #459, #460, #461, #462, alla verifierade i GitHub 16:36 UTC |
 | Main-CI på basen | `CI` run 37808576247 pågick vid avläsningen; native-workflows (`recruiter-p1-native-ci`, `recruiter-real-ci`) PASS på samma commit |
 | Gren | `claude/amazing-clarke-ferjkh`, vanliga framåtriktade commits ovanpå basen; ingen historik omskriven |
-| Slut-SHA | PR-huvudet (se PR:n); bildcommits från workflowen är `github-actions[bot]`-commits ovanpå |
+| Sista kodcommit | `2ad7a3d10cd79cdf3477c0d018be49e06c78b5c3` (sista commit som ändrar källkod, tester eller workflows) |
+| Bildcommit | `06e5a6c9f0f4e74e1ff644d02f47a34e011c4301` av `github-actions[bot]`, fotograferat från `2ad7a3d` (efter) och `e4531c3b` (före) i workflow-körning 37817843842 |
+| Slut-SHA | Docs-commiten ovanpå bildcommiten (anges i PR:n). Den ändrar bara denna fil, så CI på slut-SHA:n kör samma kod som `2ad7a3d` plus bilderna |
 
 Merge betyder inte att Lovable har synkat eller publicerat; se sista avsnittet.
 
@@ -189,7 +191,11 @@ Begränsningar att redovisa separat:
   (verklig mobilemulering). Två fynd från granskningen är rättade i samma PR:
   menybeskrivningarna trunkerades mitt i ordet (radbryts nu till två rader) och
   rekryteringslistan hette "Jobbannonser" under menyposten "Rekryteringar" (heter nu
-  Rekryteringar). Bilderna från den sista körningen visar dessa två rättningar.
+  Rekryteringar). Bilderna i `06e5a6c` (fotograferade från `2ad7a3d`) visar dessa två
+  rättningar och är det par som gäller. Två tidigare bot-commits (`b887c64`, `ed6bf49`)
+  skrev in ofullständiga uppsättningar från körningar som avbrutits av concurrency-regeln;
+  workflowen committar sedan `2ad7a3d` bara när båda fotograferingsjobben lyckats, och
+  `06e5a6c` skriver över de ofullständiga manifesten med 24 + 24 bilder.
 
 ## Kvarstående: lanseringshinder vs. kan vänta
 
