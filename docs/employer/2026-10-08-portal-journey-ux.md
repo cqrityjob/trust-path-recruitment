@@ -8,13 +8,13 @@ faktiskt utförd kontroll; blockerat och inte kört är inte PASS.
 
 | Del | Värde |
 | --- | --- |
-| Verifierad bas-main | `e4531c3b8abac440c9a98ed0f4182106d5b31106` (efter normal merge av #453, #458, #456, #460, #461; endast docs-PR #449 var öppen) |
+| Verifierad bas-main | `e4531c3b8abac440c9a98ed0f4182106d5b31106` vid start (efter normal merge av #453, #458, #456, #460, #461). Därefter `8c9b3138bcb801ac69aa44b14e9cb592da5ea50a` (merge av docs-PR #449) inmergad i grenen med vanlig merge-commit `18181d8`; PR:ns bas och före-bilderna är nu `8c9b313` |
 | Leveransens mergade PR:er | #447, #448, #450, #451, #452, #453, #454, #455, #456, #457, #458, #459, #460, #461, #462, alla verifierade i GitHub 16:36 UTC |
 | Main-CI på basen | `CI` run 37808576247 pågick vid avläsningen; native-workflows (`recruiter-p1-native-ci`, `recruiter-real-ci`) PASS på samma commit |
 | Gren | `claude/amazing-clarke-ferjkh`, vanliga framåtriktade commits ovanpå basen; ingen historik omskriven |
-| Sista appkodscommit | `2ad7a3d10cd79cdf3477c0d018be49e06c78b5c3` (sista commit som ändrar `src/`, `e2e/` eller `scripts/`) |
-| Bildcommit | `172bd8a` av `github-actions[bot]`, fotograferat från `0cda304` (efter, samma appkod som `2ad7a3d`) och `e4531c3b` (före). Den ändrar bara `SOURCE.txt`/`manifest.json`: PNG-filerna är byte-identiska med `06e5a6c`, som fotograferades från `2ad7a3d` i körning 37817843842 |
-| Slut-SHA | PR-huvudet (anges i PR:n). Ovanpå bildcommiten ligger bara denna fil och en ändring i `employer-portal-ux-evidence.yml` (fotograferingsjobben hoppar över en push som inte ändrar något de fotograferar, så en docs-push inte längre slutar i en bot-commit vars kontroller väntar på godkännande). CI på slut-SHA:n kör samma appkod som `2ad7a3d` |
+| Sista appkodscommit | `6e175f3f10c37f4b2de7e766b1f1fa740566b483` (sista commit som ändrar `src/`); `8ef0821ba09d0acff6803330eeffafa65114cbfc` är sista commit som ändrar `e2e/`/`scripts/` (fixturen) |
+| Bildcommit | `c2e00223144cd70ee59e707b955deffa3255fbe2` av `github-actions[bot]`: 28 + 28 bilder (sju sidor × sv/en × 1440/375), fotograferade från `8ef0821` (efter) och `8c9b313` (före) med huvudets instrument, i körning 37824421280; paret klarade `employer-portal-evidence:check` före commit |
+| Slut-SHA | PR-huvudet (anges i PR:n): en docs-commit ovanpå bildcommiten. CI på slut-SHA:n kör samma appkod som `6e175f3` och samma svit/fixture som `8ef0821` |
 
 Merge betyder inte att Lovable har synkat eller publicerat; se sista avsnittet.
 
@@ -249,11 +249,14 @@ Begränsningar att redovisa separat:
   (verklig mobilemulering). Två fynd från granskningen är rättade i samma PR:
   menybeskrivningarna trunkerades mitt i ordet (radbryts nu till två rader) och
   rekryteringslistan hette "Jobbannonser" under menyposten "Rekryteringar" (heter nu
-  Rekryteringar). Bilderna i `06e5a6c`/`172bd8a` (fotograferade från `2ad7a3d` respektive
-  `0cda304`, byte-identiska PNG) visar dessa två rättningar och är det par som gäller. Två tidigare bot-commits (`b887c64`, `ed6bf49`)
-  skrev in ofullständiga uppsättningar från körningar som avbrutits av concurrency-regeln;
-  workflowen committar sedan `2ad7a3d` bara när båda fotograferingsjobben lyckats, och
-  `06e5a6c` skriver över de ofullständiga manifesten med 24 + 24 bilder.
+  Rekryteringar). Paret i `c2e0022` (fotograferat från `8ef0821`) visar dessa två
+  rättningar och runda 2: översiktens kö "Att granska nu" före den historiska
+  täckningen (5 = 1 + 1 + 2 + 1), kravprofilens numrerade steg med hjälptexter och
+  "Tekniska detaljer" (före-bilden visar den platta blanketten med råa krav-ID),
+  och före-bilderna i 375 tagna med samma mobilemulering som efter-bilderna
+  (1125 px bred, DPR 3). Tidigare bot-commits (`b887c64`, `ed6bf49`, `06e5a6c`,
+  `172bd8a`, `f4cb8d5`) är ersatta; workflowen committar bara kompletta par som
+  klarat kontrollen.
 
 ## Kvarstående: lanseringshinder vs. kan vänta
 
@@ -264,6 +267,11 @@ Lanseringshinder (inte ändrade här, utanför UX-uppdraget):
   behörighetstester.
 - Hosted Auth-fixture/B-matris är fortsatt BLOCKED och fysisk telefon NOT RUN enligt
   Astras r11; detta pass ändrar inte det.
+- `ci.yml`-jobbet "Migration replay, RLS and rollback tests" föll på `322b8dc` efter att
+  alla databasassertioner passerat: `docker: toomanyrequests: Rate exceeded` vid
+  hämtning av `public.ecr.aws/supabase/postgrest:v14.15` (samma orsak som #461:s
+  röda jobb tidigare i dag). Infrastruktur, inte denna PR; jobbet kördes om på
+  slut-SHA:n (se PR:n).
 
 Kan vänta (backlog):
 
