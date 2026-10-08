@@ -8,7 +8,7 @@
   "frontier": [
     {
       "file": "20270307100000_recruiter_domain_conflict_transport.sql",
-      "hostedState": "pending",
+      "hostedState": "applied",
       "note": "Forward-only domain conflict transport and consistent interview locks after verified #450 installation. Exact business CAS branches return HTTP409/PT409; genuine PostgreSQL serialization failures unchanged. Preserves existing signatures/defaults/ACL, snapshots/reports and all lifecycle decisions. No application consumers in this schema PR.",
       "rollback": "supabase/rollback/20270307100000_recruiter_domain_conflict_transport_rollback.sql",
       "verify": "Mandatory full-history PG17 replay, foundation/snapshot/current domain suites, prior deadlock negative control, forward session/finding concurrency, actual PostgREST14 bounded conflicts, genuine engine40001, exact rollback/reapply and read-only12function catalog parity. Fresh real GoTrue/Storage browser checks are separate mandatory release evidence. See docs/release/2026-10-08-recruiter-domain-conflict-transport.md.",
@@ -65,7 +65,10 @@
           "kind": "table",
           "object": "interview_conflict_prior_functions"
         }
-      ]
+      ],
+      "hostedVersion": "20270307100000",
+      "hostedName": "recruiter_domain_conflict_transport",
+      "evidenceSource": "Read-only verification2026-10-08 after#455 normal merge3c1d950593329c390cf209931b27da04d3034410 and official integration:385ledger,prior384identities unchanged;12function definitions/defaults/owner/ACL/config equal exact-head PG17/PostgREST14 replay.20snapshot governance unchanged,19bodyMD5 unchanged and acknowledge new full definition matches.20snapshots14locks0ACK0reports and caseStates unchanged. Actual native Auth/Storage/browser and publication gates remain separate. See docs/release/2026-10-08-recruiter-domain-conflict-hosted-verification.json."
     },
     {
       "file": "20270307090000_interview_content_snapshot_lock.sql",
