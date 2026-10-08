@@ -13,8 +13,8 @@
   ],
   "source": "Supabase connector read-only SQL, explicit project wrygicdfxwjnrugduxnt",
   "projectRef": "wrygicdfxwjnrugduxnt",
-  "readAt": "2026-10-08T09:59:39.750315+00:00",
-  "readBy": "Read-only verification2026-10-08 after#455 normal merge3c1d950593329c390cf209931b27da04d3034410 and official integration:385ledger,prior384identities unchanged;12function definitions/defaults/owner/ACL/config equal exact-head PG17/PostgREST14 replay.20snapshot governance unchanged,19bodyMD5 unchanged and acknowledge new full definition matches.20snapshots14locks0ACK0reports and caseStates unchanged. Actual native Auth/Storage/browser and publication gates remain separate. See docs/release/2026-10-08-recruiter-domain-conflict-hosted-verification.json.",
+  "readAt": "2026-10-08T12:48:40.583305+00:00",
+  "readBy": "Read-only verification after #4516039 merge2a468 and official integration installed080. Prior385 ledger unchanged;386 rows.16 full function contracts/ACL,5RLS tables/49columns/12triggers/33constraint definitions/2member-only policies match authoritative source.20snapshots/14locks/ACK0/reports0/case statuses unchanged; all5new tables empty. See docs/release/2026-10-08-recruiter-intelligence-p1-hosted-verification.json.",
   "versions": [
     {
       "version": "20260716153446",
@@ -1555,6 +1555,10 @@
     {
       "name": "recruiter_domain_conflict_transport",
       "version": "20270307100000"
+    },
+    {
+      "version": "20270308090000",
+      "name": "recruiter_intelligence_requirements"
     }
   ]
 }

@@ -3579,7 +3579,10 @@
     },
     {
       "file": "20270308090000_recruiter_intelligence_requirements.sql",
-      "hostedState": "pending",
+      "hostedState": "applied",
+      "hostedVersion": "20270308090000",
+      "hostedName": "recruiter_intelligence_requirements",
+      "evidenceSource": "Read-only verification after #4516039 merge2a468 and official integration installed080. Prior385 ledger unchanged;386 rows.16 full function contracts/ACL,5RLS tables/49columns/12triggers/33constraint definitions/2member-only policies match authoritative source.20snapshots/14locks/ACK0/reports0/case statuses unchanged; all5new tables empty. See docs/release/2026-10-08-recruiter-intelligence-p1-hosted-verification.json.",
       "note": "P1 schema only, stacked after permanent interview content snapshot. Owner authorises necessary merges/installation after passing checks in the 2026-10-08 live completion request. No AI activation, candidate messaging or retention-worker/cron. Application consumers ship after verified hosted installation.",
       "rollback": "supabase/rollback/20270308090000_recruiter_intelligence_requirements_rollback.sql",
       "verify": "Compare isolated PostgreSQL17 function bodies, signatures, search_path, ACLs, profile/decision/review immutability and CAS constraints with hosted read-only observations. Check prior384 ledger identities unchanged, report hashes unchanged, and no client DML or anonymous execute. Run actual100 synthetic DB/API/UI oracle, source withdrawal, changed profile, AI-only rejection and concurrent reviewer/assignment CAS. Record applied only after official integration installation.",

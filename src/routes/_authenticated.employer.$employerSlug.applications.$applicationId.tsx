@@ -51,6 +51,8 @@ import { SendTestDialog } from "@/components/recruitment/SendTestDialog";
 // the platform does not make.
 
 import { PrepareInterviewButton } from "@/components/library/PrepareInterviewButton";
+import { RequirementReviewPanel } from "@/components/recruitment/RequirementReviewPanel";
+import { openApplicationOriginalCv } from "@/lib/recruitment/requirement-review-draft";
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -238,9 +240,7 @@ function Candidate360({
   }, [applicationId]);
 
   function refreshRecruitment() {
-    void qc.invalidateQueries({ queryKey: recruitmentKey });
-    void qc.invalidateQueries({ queryKey: ["employer", employerId, "candidates"] });
-    void qc.invalidateQueries({ queryKey: ["employer", employerId, "recruitment-overview"] });
+    void qc.invalidateQueries({ queryKey: ["employer", employerId] });
   }
 
   const query = useQuery({
@@ -256,14 +256,15 @@ function Candidate360({
   useEffect(() => {
     const key = listParam ?? recallListKeyFor(applicationId, listJobId);
     setListKey(key);
-    setListCtx(readListContext(key));
-  }, [listParam, applicationId, listJobId]);
+    const stored = readListContext(key);
+    setListCtx(stored?.query && stored.query.employerId !== employerId ? null : stored);
+  }, [listParam, applicationId, listJobId, employerId]);
 
   // Where this candidate sits in that list, from the server's own ordering.
   // Asked only for a paged recruitment list; a whole-read list (the
   // applications page) answers from the ids it stored.
   const neighboursFn = useServerFn(getCandidateNeighbours);
-  const listQuery = listCtx?.query ?? null;
+  const listQuery = listCtx?.query?.employerId === employerId ? listCtx.query : null;
   const neighboursQuery = useQuery({
     queryKey: ["employer", employerId, "candidates", "neighbours", applicationId, listQuery],
     queryFn: () =>
@@ -727,7 +728,13 @@ function Candidate360({
           {" · "}
           {t("employer.candidate.appliedOn")} {formatDate(c.appliedAt, lang)}
         </p>
-        {c.jobId && <MaterialLifecycle employerId={employerId} jobId={c.jobId} applicationId={applicationId} />}
+        {c.jobId && (
+          <MaterialLifecycle
+            employerId={employerId}
+            jobId={c.jobId}
+            applicationId={applicationId}
+          />
+        )}
         <div className="mt-3 flex flex-wrap items-center gap-2">
           {/* Stage and decision in the one vocabulary every recruitment list
               uses, as text with an icon. */}
@@ -970,7 +977,7 @@ function Candidate360({
                 <p className="mt-1 text-xs text-muted-foreground">
                   {t("employer.candidate.cv.snapshotNote")}
                 </p>
-                <div className="mt-3">
+                <div id="candidate-original-cv" className="mt-3">
                   {/* Dated by the day the database last VERIFIED these facts
                       against the candidate's records, which is the moment of
                       submission -- never by today. This copy is a historical
@@ -988,6 +995,29 @@ function Candidate360({
           </div>
         )}
       </section>
+
+      {rw && (
+        <RequirementReviewPanel
+          employerId={employerId}
+          employerSlug={employerSlug}
+          applicationId={applicationId}
+          team={rw.team}
+          cases={interviewCases}
+          onOpenCv={() =>
+            openApplicationOriginalCv(
+              { hasUploadedCv: c.hasCv, submittedSource: submittedCv?.source ?? null },
+              {
+                openFile: onDownloadCv,
+                openSnapshot: async () => {
+                  const original = document.getElementById("candidate-original-cv");
+                  if (!original) throw new Error("ORIGINAL_CV_UNAVAILABLE");
+                  original.scrollIntoView({ block: "start" });
+                },
+              },
+            )
+          }
+        />
+      )}
 
       {/* ── The assessment step ─────────────────────────────────────── */}
       {/*  The same governed panel the applications list carries: it passes the

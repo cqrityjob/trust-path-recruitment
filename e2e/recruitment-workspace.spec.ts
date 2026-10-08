@@ -253,7 +253,12 @@ test.describe("recruitment case", () => {
     await open(page, casePath(BIG, "?step=applications&stage=all"));
     // The header count, the chip and the pager all say 5 050 -- a number the
     // old read, capped at 5 000, could never have shown.
-    await expect(page.getByText("5050 ansökningar")).toBeVisible();
+    await expect(
+      page.locator("main header").getByText("5050 ansökningar", { exact: true }),
+    ).toBeVisible();
+    await expect(stepNav(page).locator("[aria-current=step]")).toContainText(
+      /Ansökningar\s*\(5050\)/,
+    );
     await expect(pager(page)).toContainText("Visar 1–25 av 5050");
     await expect(pager(page)).toContainText("Sida 1 av 202");
     await expect(nameLinks(page).first()).toHaveText("Sökande 5050");

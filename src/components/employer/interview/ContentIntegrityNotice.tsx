@@ -9,10 +9,20 @@ export function ContentIntegrityNotice({
   readonly frozen?: boolean;
 }) {
   const { t } = useT();
+  const snapshotProvenance =
+    integrity.observation === "frozen_case_content" ? integrity.freezeProvenance : undefined;
+  const contentDescription =
+    snapshotProvenance === "case_created"
+      ? "ri.snapshot.created"
+      : snapshotProvenance === "observed_now"
+        ? "ri.snapshot.observed"
+        : frozen
+          ? "ri.content.frozen"
+          : "ri.content.current";
   return (
     <details className="mt-4 rounded-lg border border-border p-3 text-sm">
       <summary className="cursor-pointer font-medium">{t("ri.content.title")}</summary>
-      <p className="mt-2">{t(frozen ? "ri.content.frozen" : "ri.content.current")}</p>
+      <p className="mt-2">{t(contentDescription)}</p>
       <p className="mt-2" role={integrity.packHashMatches ? undefined : "status"}>
         {t(integrity.packHashMatches ? "ri.content.match" : "ri.content.mismatch")}
       </p>

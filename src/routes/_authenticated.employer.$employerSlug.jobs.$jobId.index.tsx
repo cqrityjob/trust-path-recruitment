@@ -87,6 +87,9 @@ import {
 } from "@/lib/job-intelligence/employer-jobs.functions";
 import type { ApplicationStatus } from "@/lib/job-intelligence/applications.functions";
 import { z } from "zod";
+import { RequirementProfilePanel } from "@/components/recruitment/RequirementProfilePanel";
+import { getRequirementProfile } from "@/lib/recruitment/requirement-intelligence.functions";
+import { RecruiterCounts } from "@/components/recruitment/RecruiterStatus";
 import { CandidateTable } from "@/components/recruitment/CandidateTable";
 import { PhaseBadge } from "@/components/recruitment/RecruitmentStatus";
 import { ProcessStepNav } from "@/components/recruitment/ProcessStepNav";
@@ -168,6 +171,7 @@ function JobHubRoute() {
     <JobsPage employerSlug={employerSlug} wide>
       {(ws) => (
         <JobHub
+          key={jobId}
           employerId={ws.employerId}
           employerSlug={employerSlug}
           employerName={ws.employerName}
@@ -195,6 +199,11 @@ function JobHub({
   const search = Route.useSearch();
   const candidateView: CandidateView = compactView({
     q: search.q,
+    requirement: search.requirement,
+    review: search.review,
+    analysis: search.analysis,
+    assessment: search.assessment,
+    status: search.status,
     stage: search.stage,
     owner: search.owner,
     ans: search.ans,
@@ -203,6 +212,7 @@ function JobHub({
     page: search.page,
   });
   const recruitmentFn = useServerFn(getRecruitment);
+  const profileFn = useServerFn(getRequirementProfile);
   const { t, tp, lang } = useT();
   const qc = useQueryClient();
   const navigate = useNavigate();
@@ -312,6 +322,10 @@ function JobHub({
     queryFn: () => recruitmentFn({ data: { employerId, jobId } }),
   });
   const recruitment = recruitmentQuery.data ?? null;
+  const profileQuery = useQuery({
+    queryKey: ["employer", employerId, "requirement-profile", jobId],
+    queryFn: () => profileFn({ data: { employerId, jobId } }),
+  });
 
   // Step 5 lists who is still undecided, by name. One page of them, with the
   // full count, so a long list does not have to be loaded to be counted.
@@ -436,10 +450,14 @@ function JobHub({
   );
   const total = counts?.total ?? 0;
   const unresolvedCount = counts ? counts.total - counts.decided : 0;
+  const receivedCount = page?.intelligenceCounts?.received ?? counts?.total ?? 0;
   const stepInput: StepInput = {
     requirementsCount: recruitment?.requirements.length ?? 0,
     questionsCount: recruitment?.questions.length ?? 0,
     hasRequirementsText: Boolean(job.requirements_sv?.trim() || job.requirements_en?.trim()),
+    requirementProfileConfirmed: Boolean(
+      profileQuery.data?.profileId && profileQuery.data.confirmedAt,
+    ),
     advertReady:
       Boolean(job.title_sv?.trim() || job.title_en?.trim()) &&
       Boolean(job.description_sv?.trim() || job.description_en?.trim()),
@@ -597,7 +615,7 @@ function JobHub({
             <Plain>
               {counts ? (
                 <span className="tabular-nums">
-                  {counts.total} {tp("rec.case.applicationsCount", counts.total)}
+                  {receivedCount} {tp("rec.case.applicationsCount", receivedCount)}
                 </span>
               ) : applicationsRead === "failed" ? (
                 <span className="text-amber-800 dark:text-amber-200">
@@ -654,7 +672,7 @@ function JobHub({
           active={step}
           employerSlug={employerSlug}
           jobId={jobId}
-          counts={counts ? { applications: counts.total } : undefined}
+          counts={counts ? { applications: receivedCount } : undefined}
         />
       </div>
 
@@ -723,6 +741,7 @@ function JobHub({
               editHref={null}
             />
           )}
+          <RequirementProfilePanel employerId={employerId} jobId={jobId} />
           {pick(job.requirements_sv, job.requirements_en) && (
             <div className="mt-5">
               <h3 className="text-sm font-semibold text-foreground">
@@ -1012,7 +1031,7 @@ function JobHub({
                   {t("continuity.next.retry")}
                 </button>
               </div>
-            ) : counts && counts.total === 0 ? (
+            ) : page?.intelligenceCounts?.received === 0 ? (
               <p className="rounded-lg border border-dashed border-border px-4 py-6 text-sm text-muted-foreground">
                 {status === "published"
                   ? t("employer.jobHub.candidates.emptyPublished")
@@ -1052,6 +1071,17 @@ function JobHub({
       {!view && step === "closing" && (
         <section className="pt-5" aria-labelledby="case-closing">
           {panelHeading("case-closing", "rec.step.closing", "rec.case.closingLede")}
+          {page?.intelligenceCounts && (
+            <RecruiterCounts
+              counts={page.intelligenceCounts}
+              scopeLabel={
+                lang === "sv"
+                  ? "Rekryteringens samtliga mottagna ansökningar"
+                  : "All applications received for this recruitment"
+              }
+              onView={(next) => go({ step: "applications", ...next })}
+            />
+          )}
           <div className="mt-4">
             <RecruitmentSettings
               employerId={employerId}

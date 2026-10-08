@@ -154,11 +154,23 @@ export function matchesPhaseFilter(
 // a candidate and back, and so the candidate view can rebuild the SAME ordered
 // list to offer previous and next.
 
-export const STAGE_FILTERS = ["new", "review", "interview", "open", "decided", "all", "archived"] as const;
+export const STAGE_FILTERS = [
+  "new",
+  "review",
+  "interview",
+  "open",
+  "decided",
+  "all",
+  "archived",
+  "received",
+] as const;
 export type StageFilter = (typeof STAGE_FILTERS)[number];
 
-export const CANDIDATE_SORTS = ["applied", "name", "stage", "activity"] as const;
+export const CANDIDATE_SORTS = ["requirements", "applied", "name", "stage", "activity"] as const;
 export type CandidateSort = (typeof CANDIDATE_SORTS)[number];
+
+export const REQUIREMENT_FILTERS = ["green", "yellow", "gray", "not_established"] as const;
+export const REVIEW_FILTERS = ["remaining", "reviewed", "pending", "stale"] as const;
 
 export const PAGE_SIZE = 25;
 
@@ -187,10 +199,19 @@ export function serializeAnswerFilter(filters: readonly AnswerFilter[]): string 
 }
 
 export const candidateViewSchema = z.object({
+  job: z.string().uuid().optional().catch(undefined),
+  status: z
+    .enum(["submitted", "reviewing", "interview", "hired", "rejected", "withdrawn"])
+    .optional()
+    .catch(undefined),
   q: z.string().trim().max(100).optional().catch(undefined),
   stage: z.enum(STAGE_FILTERS).optional().catch(undefined),
   owner: z.string().max(40).optional().catch(undefined),
   ans: z.string().max(400).optional().catch(undefined),
+  requirement: z.enum(REQUIREMENT_FILTERS).optional().catch(undefined),
+  review: z.enum(REVIEW_FILTERS).optional().catch(undefined),
+  analysis: z.literal("not_used").optional().catch(undefined),
+  assessment: z.literal("open").optional().catch(undefined),
   sort: z.enum(CANDIDATE_SORTS).optional().catch(undefined),
   dir: z.enum(["asc", "desc"]).optional().catch(undefined),
   page: z.coerce.number().int().min(1).max(10000).optional().catch(undefined),
@@ -201,11 +222,17 @@ export type CandidateView = z.infer<typeof candidateViewSchema>;
  *  readable query string and an unfiltered list has none. */
 export function compactView(view: CandidateView): CandidateView {
   const out: CandidateView = {};
+  if (view.job) out.job = view.job;
+  if (view.status) out.status = view.status;
   if (view.q) out.q = view.q;
   if (view.stage && view.stage !== "open") out.stage = view.stage;
   if (view.owner) out.owner = view.owner;
   if (view.ans) out.ans = view.ans;
-  if (view.sort && view.sort !== "applied") out.sort = view.sort;
+  if (view.requirement) out.requirement = view.requirement;
+  if (view.review) out.review = view.review;
+  if (view.analysis) out.analysis = view.analysis;
+  if (view.assessment) out.assessment = view.assessment;
+  if (view.sort && view.sort !== "requirements") out.sort = view.sort;
   if (view.dir) out.dir = view.dir;
   if (view.page && view.page > 1) out.page = view.page;
   return out;
@@ -243,6 +270,9 @@ export type StepInput = {
   questionsCount: number;
   /** Free-text requirements on the advert itself. */
   hasRequirementsText: boolean;
+  /** Current P1 profile confirmation, when the caller has loaded it. Legacy
+   * callers retain advert readiness; the live requirement tab uses this gate. */
+  requirementProfileConfirmed?: boolean;
   /** Title and description present, the advert's own readiness. */
   advertReady: boolean;
   phase: RecruitmentPhase;
@@ -251,7 +281,9 @@ export type StepInput = {
 };
 
 export function stepStatesOf(i: StepInput): Record<RecruitmentStep, StepState> {
-  const requirementsDone = i.requirementsCount > 0 || i.questionsCount > 0 || i.hasRequirementsText;
+  const requirementsDone =
+    i.requirementProfileConfirmed ??
+    (i.requirementsCount > 0 || i.questionsCount > 0 || i.hasRequirementsText);
   const advertDone = i.advertReady;
   const publishingDone = i.phase !== "draft";
   const closed = i.phase === "completed" || i.phase === "cancelled";

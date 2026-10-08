@@ -316,6 +316,7 @@ export function repliesFor(f: HomeFixture): Record<string, Reply> {
       report: null,
     }),
     getMyPassport: ok(passportSnapshot(f)),
+    listMyUploadAttempts: ok([]),
     listMyEntries:
       i.identity.state === "ready"
         ? ok({
