@@ -34,6 +34,21 @@ export const ACTORS = ["owner", "bob", "member", "outsider"]
   );
 export const sha256 = (value) => crypto.createHash("sha256").update(value).digest("hex");
 
+export function requireReplacementSource(before, replacement) {
+  const oldVersion = before?.availableSources?.find((s) => s.kind === "application_cv")?.version;
+  const newVersion = replacement?.availableSources?.find(
+    (s) => s.kind === "application_cv",
+  )?.version;
+  if (
+    typeof oldVersion !== "string" ||
+    !oldVersion ||
+    typeof newVersion !== "string" ||
+    !newVersion
+  )
+    throw Error("P1_NATIVE_REPLACEMENT_SOURCE_REQUIRED");
+  if (oldVersion === newVersion) throw Error("P1_NATIVE_REPLACEMENT_SOURCE_VERSION_REUSED");
+}
+
 // Only fixed operation names and bounded protocol/domain codes may reach the
 // public manifest. SDK messages/details/hints/causes/stacks stay private.
 export function failure(operation, result) {

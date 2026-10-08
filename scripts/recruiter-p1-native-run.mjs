@@ -28,6 +28,7 @@ import {
   readPrivateJson,
   history,
   requireBrowserCounts,
+  requireReplacementSource,
   failure,
 } from "./recruiter-p1-native-contract.mjs";
 import {
@@ -222,7 +223,7 @@ function counts(actual, expected) {
   for (const [key, value] of Object.entries(expected))
     if (actual[key] !== value) throw Error("P1_NATIVE_ORACLE_MISMATCH");
 }
-function safety() {
+function safety(expectedSyntheticAi = 0) {
   const data = JSON.parse(
     sql(`SELECT jsonb_build_object(
  'auth', (SELECT count(*) FROM auth.users),
@@ -246,6 +247,7 @@ function safety() {
     data.auth !== 104 ||
     data.confirmed !== 104 ||
     data.applications !== 100 ||
+    data.synthetic_ai !== expectedSyntheticAi ||
     data.ai_enabled ||
     [
       "receipt_enabled",
@@ -494,11 +496,7 @@ try {
         throw Error("P1_NATIVE_REPLACEMENT_BYTES_FAILED");
     }
     const replacement = await rpc("rec_ri_get_review", { _application_id: appId(1) });
-    if (
-      replacement.availableSources.find((s) => s.kind === "application_cv")?.version ===
-      before.availableSources.find((s) => s.kind === "application_cv")?.version
-    )
-      throw Error("P1_NATIVE_REPLACEMENT_SOURCE_VERSION_REUSED");
+    requireReplacementSource(before, replacement);
     counts((await view()).intelligenceCounts, { green: 25, yellow: 35, gray: 40, reviewed: 0 });
     report.replacementDoesNotRestoreOldAcceptance = true;
   });
@@ -559,7 +557,7 @@ try {
       missingOriginalMetDenied: true,
       generatedAi: 0,
     };
-    report.afterApi = safety();
+    report.afterApi = safety(2);
   });
   await stage("owned_job_cascade_fresh_browser_baseline", async () => {
     const before = sql(
@@ -654,7 +652,7 @@ try {
     );
     report.browser = requireBrowserCounts(JSON.parse(result).stats);
     report.serverSignedOriginalUiReads = 4;
-    report.finalSafety = safety();
+    report.finalSafety = safety(2);
   });
   report.kind = "executed-native-p1-100-v1";
 } catch {

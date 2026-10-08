@@ -184,6 +184,10 @@ async function rpc(name,data,sub=owner,role="authenticated") {
         'rpc("rec_ri_save_review", secondPayload, bob)',
       )
       .replace(
+        'rpc("rec_ri_save_review", winningIndex === 0 ? payload : secondPayload)',
+        'rpc("rec_ri_save_review", winningIndex === 0 ? payload : secondPayload, winningIndex === 0 ? owner : bob)',
+      )
+      .replace(
         "headers: { Authorization: `Bearer ${jwt(owner)}` },",
         "headers: { apikey: connection.anonKey, Authorization: `Bearer ${jwt(owner)}` },",
       )

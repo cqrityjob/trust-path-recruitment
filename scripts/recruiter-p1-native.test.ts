@@ -21,6 +21,7 @@ import {
   readPrivateJson,
   history,
   requireBrowserCounts,
+  requireReplacementSource,
   failure,
 } from "./recruiter-p1-native-contract.mjs";
 import {
@@ -34,15 +35,16 @@ import {
 import { writeNativePublic } from "./recruiter-p1-native-public.mjs";
 
 const root = path.resolve(import.meta.dirname, "..");
-const sql = fs.readFileSync(
-  path.join(root, "supabase/tests/recruiter_intelligence_p1_test.sql"),
-  "utf8",
-);
-const api = fs.readFileSync(
-  path.join(root, "scripts/recruiter-intelligence-p1-api-check.mjs"),
-  "utf8",
-);
-const browser = fs.readFileSync(path.join(root, "e2e/recruiter-intelligence-p1.spec.ts"), "utf8");
+// Evidence code may live on a schema-only branch. Its current SQL has 95
+// assertions; the canonical 100-data/API/browser contract remains pinned to
+// the separately reviewed application. Read immutable blobs, never a mutable
+// checkout or fallback fixture. CI checks out that exact application in app/.
+const canonicalRoot = fs.existsSync(path.join(root, "app/.git")) ? path.join(root, "app") : root;
+const canonical = (file: string) =>
+  execFileSync("git", ["show", `${APP_SHA}:${file}`], { cwd: canonicalRoot, encoding: "utf8" });
+const sql = canonical("supabase/tests/recruiter_intelligence_p1_test.sql");
+const api = canonical("scripts/recruiter-intelligence-p1-api-check.mjs");
+const browser = canonical("e2e/recruiter-intelligence-p1.spec.ts");
 const ns = "ri-p1-123456abcdef";
 const sha = "a".repeat(40);
 const valid = {
@@ -295,12 +297,73 @@ test("native API reuses all 23 canonical assertions; only auth transport and sec
       'rpc("rec_ri_save_review", secondPayload)',
     )
     .replace(
+      'rpc("rec_ri_save_review", winningIndex === 0 ? payload : secondPayload, winningIndex === 0 ? owner : bob)',
+      'rpc("rec_ri_save_review", winningIndex === 0 ? payload : secondPayload)',
+    )
+    .replace(
       "headers: { apikey: connection.anonKey, Authorization: `Bearer ${jwt(owner)}` },",
       "headers: { Authorization: `Bearer ${jwt(owner)}` },",
     )
     .replace('"executed-native-gotrue-postgrest-api"', '"executed-local-postgrest-api"');
   assert.equal(restoredTail, api.slice(api.indexOf("async function read(")));
   assert.throws(() => nativeApiSource(api + "\n"), /CANONICAL_SOURCE_CHANGED/);
+});
+test("a winning operation is retried by its original real reviewer for either race outcome", async () => {
+  const adapted = nativeApiSource(api);
+  const line = adapted.split("\n").find((value) => value.startsWith("const retry = await rpc("));
+  assert.ok(line);
+  const payload = { operation: "owner-operation" };
+  const secondPayload = { operation: "bob-operation" };
+  for (const winningIndex of [0, 1]) {
+    const calls: unknown[][] = [];
+    const invoke = new Function(
+      "rpc",
+      "winningIndex",
+      "payload",
+      "secondPayload",
+      "owner",
+      "bob",
+      `return (async () => { ${line} return retry; })();`,
+    );
+    await invoke(
+      (...args: unknown[]) => {
+        calls.push(args);
+      },
+      winningIndex,
+      payload,
+      secondPayload,
+      "owner",
+      "bob",
+    );
+    assert.deepEqual(calls, [
+      [
+        "rec_ri_save_review",
+        winningIndex === 0 ? payload : secondPayload,
+        winningIndex === 0 ? "owner" : "bob",
+      ],
+    ]);
+  }
+});
+test("replacement requires an actually available CV with two nonempty and different source versions", () => {
+  const source = (version: unknown) => ({
+    availableSources: [{ kind: "application_cv", version }],
+  });
+  requireReplacementSource(source("old"), source("new"));
+  for (const invalid of [undefined, null, "", 1]) {
+    assert.throws(
+      () => requireReplacementSource(source("old"), source(invalid)),
+      /SOURCE_REQUIRED/,
+    );
+    assert.throws(
+      () => requireReplacementSource(source(invalid), source("new")),
+      /SOURCE_REQUIRED/,
+    );
+  }
+  assert.throws(
+    () => requireReplacementSource(source("old"), { availableSources: [] }),
+    /SOURCE_REQUIRED/,
+  );
+  assert.throws(() => requireReplacementSource(source("old"), source("old")), /VERSION_REUSED/);
 });
 test("native browser retains five original tests and adds real PDF-byte opening in all four locale/viewport journeys", () => {
   const adapted = nativeBrowserSource(browser);

@@ -6,6 +6,17 @@ och syntetisk Storage-metadata. Ingen tidigare kontroll ändras eller räknas
 om till native-bevis. Ingen produktionsskrivning, publicering eller fysisk
 telefonprovning har utförts.
 
+Integrationsuppföljning: `.github/workflows/recruiter-p1-native-ci.yml` kör
+sviten i en ny GitHub-hostad runner med separata fasta app-/schema-checkouts.
+Oberoende granskning fann en testtransportlucka: vinnande Bobs idempotenta
+återförsök måste använda Bob, inte owner. Rättningen behåller samtliga 23
+assertions och provar båda raceutfallen. Kontraktstest läser app-pinnens
+oföränderliga Git-blobs även när testkoden ligger på en schemaförst-gren.
+Återskapad originalkälla måste faktiskt finnas med icke-tom ny version, och
+sidoeffektskontrollen kräver exakt 0 mock-rader före AI-provet samt 2 efter.
+21 riktade kontraktstest, riktad lint och separat test/config-typecheck har
+passerat lokalt utan externa anrop. Det är fortfarande inget tjänste-PASS.
+
 ## Versionskontrakt och primärkällor
 
 Appen checkas ut separat i `app/` på exakt
