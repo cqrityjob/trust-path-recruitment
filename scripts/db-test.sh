@@ -224,6 +224,23 @@ SENTINEL_OUT="$(psql_q -d "$TEST_DB" -f supabase/tests/sentinel_test.sql 2>&1)" 
 echo "    ok  35 Sentinel pilot assertions passed"
 # STRICT-REPLAY-CONTRACT END
 
+# P1 runs against the fully migrated schema (including permanent case content
+# snapshots) before historical-era rollback tests. Its synthetic fixture rolls
+# back; stand down only the EMPTY additive schema, keeping old assertions exact.
+echo "==> Running Recruiter Intelligence P1 authoritative 100-application oracle"
+set +e
+RI_P1_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/recruiter_intelligence_p1_test.sql 2>&1)"
+RI_P1_RC=$?
+set -e
+RI_P1_PASSED="$(echo "$RI_P1_OUT" | grep -c "NOTICE:  ok " || true)"
+if [ "$RI_P1_RC" -ne 0 ] || [ "$RI_P1_PASSED" -lt 95 ]; then
+  echo "$RI_P1_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "Recruiter Intelligence authoritative requirements"
+else
+  echo "    ok  ${RI_P1_PASSED} actual P1 counts, sources, CAS, access and handoff assertions"
+fi
+psql_q -d "$TEST_DB" -f supabase/rollback/20270308090000_recruiter_intelligence_requirements_rollback.sql >/dev/null
+
 # Full-current-schema conflicts must be tested before historical rollback.
 # The independent clone runs PT409 foundation/snapshot/SQL checks, reproduces
 # the old deadlock, verifies real PostgREST14 and witnesses exact rollback.
