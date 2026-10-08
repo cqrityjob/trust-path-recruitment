@@ -54,6 +54,11 @@ import {
 } from "@/components/employer/interview/InterviewLayout";
 import { CaseSetupStrip } from "@/components/library/CaseSetupStrip";
 import { InterviewContextPanel } from "@/components/employer/interview/InterviewContextPanel";
+import { CandidateBackgroundStatus } from "@/components/employer/interview/CandidateBackgroundStatus";
+import { InterviewOpeningDisclosure } from "@/components/employer/interview/InterviewOpeningDisclosure";
+import { ManualControlPoints } from "@/components/employer/interview/ManualControlPoints";
+import { ContentIntegrityNotice } from "@/components/employer/interview/ContentIntegrityNotice";
+import { isOutstandingFinding } from "@/lib/interview-intelligence/finding-state";
 import { getInterviewCaseContext } from "@/lib/interview-intelligence/context.functions";
 import { ContextUnavailable } from "@/components/employer/interview/InterviewContextOutcome";
 import { contextIsUsable, contextOf } from "@/lib/interview-intelligence/context-outcome";
@@ -295,7 +300,7 @@ function Page() {
   const canPlan = d.status === "sources_ready" || (d.status === "draft" && d.sources.length > 0);
 
   const items = d.plan?.items ?? [];
-  const openFindings = d.findings.filter((f) => f.resolutionState !== "resolved");
+  const openFindings = d.findings.filter((f) => isOutstandingFinding(f.resolutionState));
   // Two buckets a recruiter acts on differently: one is asked about in the
   // room, the other is checked afterwards against a document. Conflating them
   // is how a certificate ends up being "verified" by a conversation.
@@ -840,8 +845,14 @@ function Page() {
                 title={t("iiu.pp.background.title")}
                 description={t("iiu.pp.background.body")}
               >
+                <CandidateBackgroundStatus
+                  result={contextQ.data}
+                  isLoading={contextQ.isLoading}
+                  savedSourceCount={candidateSources.length}
+                />
+                <Eyebrow>{t("iiu.pp.background.summary.title")}</Eyebrow>
                 {d.plan?.candidateSummary || backgroundItems.length > 0 ? (
-                  <div className="space-y-3">
+                  <div className="mt-2 space-y-3">
                     {d.plan?.candidateSummary && (
                       <Surface>
                         <p className="text-sm leading-relaxed text-foreground">
@@ -868,7 +879,9 @@ function Page() {
                     )}
                   </div>
                 ) : (
-                  <Nothing>{t("iiu.pp.background.none")}</Nothing>
+                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                    {t("iiu.pp.background.none")}
+                  </p>
                 )}
 
                 {candidateSources.length > 0 && (
@@ -883,6 +896,10 @@ function Page() {
                   </ul>
                 )}
               </Section>
+
+              <Rule />
+
+              <ManualControlPoints detail={d} onChanged={refresh} />
 
               <Rule />
 
@@ -907,41 +924,41 @@ function Page() {
                   <summary className="inline-flex min-h-[44px] cursor-pointer items-center text-sm font-medium text-accent underline-offset-2 hover:underline">
                     {t("iiu.pp.guide.show").replace("{n}", String(d.questions.length))}
                   </summary>
-                <ol className="mt-2 divide-y divide-border border-y border-border">
-                  {d.questions.map((qq) => {
-                    const req = primaryRequirement(qq.competencyCodes[0]);
-                    const also = qq.competencyCodes
-                      .slice(1)
-                      .map((code) => primaryRequirement(code))
-                      .filter((c): c is NonNullable<typeof c> => c !== null);
-                    return (
-                      <li key={qq.id} className="flex gap-3.5 py-3.5">
-                        <span
-                          aria-hidden="true"
-                          className="mt-0.5 inline-flex h-6 w-8 shrink-0 items-center justify-center rounded-md border border-border bg-muted/40 font-mono text-[11px] font-semibold text-muted-foreground"
-                        >
-                          {qq.code}
-                        </span>
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium leading-relaxed text-foreground">
-                            {qq.promptSv}
-                          </p>
-                          {req && (
-                            <p className="mt-1 flex flex-wrap items-baseline gap-x-1.5 text-xs leading-relaxed text-muted-foreground">
-                              <span className="font-semibold">{t("iiu.pp.areas.why")}:</span>
-                              <span className="text-foreground">{reqName(req)}</span>
-                              {also.map((c) => (
-                                <span key={c.id} className="text-muted-foreground">
-                                  · {reqName(c)}
-                                </span>
-                              ))}
+                  <ol className="mt-2 divide-y divide-border border-y border-border">
+                    {d.questions.map((qq) => {
+                      const req = primaryRequirement(qq.competencyCodes[0]);
+                      const also = qq.competencyCodes
+                        .slice(1)
+                        .map((code) => primaryRequirement(code))
+                        .filter((c): c is NonNullable<typeof c> => c !== null);
+                      return (
+                        <li key={qq.id} className="flex gap-3.5 py-3.5">
+                          <span
+                            aria-hidden="true"
+                            className="mt-0.5 inline-flex h-6 w-8 shrink-0 items-center justify-center rounded-md border border-border bg-muted/40 font-mono text-[11px] font-semibold text-muted-foreground"
+                          >
+                            {qq.code}
+                          </span>
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium leading-relaxed text-foreground">
+                              {qq.promptSv}
                             </p>
-                          )}
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ol>
+                            {req && (
+                              <p className="mt-1 flex flex-wrap items-baseline gap-x-1.5 text-xs leading-relaxed text-muted-foreground">
+                                <span className="font-semibold">{t("iiu.pp.areas.why")}:</span>
+                                <span className="text-foreground">{reqName(req)}</span>
+                                {also.map((c) => (
+                                  <span key={c.id} className="text-muted-foreground">
+                                    · {reqName(c)}
+                                  </span>
+                                ))}
+                              </p>
+                            )}
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ol>
                 </details>
               </Section>
 
@@ -1108,6 +1125,7 @@ function Page() {
                   button in it, and with it on it is the disclosure of what
                   it wrote. */}
               <RailPanel id="s-about" title={t("iiu.pp.about.title")}>
+                <ContentIntegrityNotice integrity={d.contentIntegrity} />
                 {!d.aiAvailable && (
                   <p className="text-xs leading-relaxed text-muted-foreground">
                     <span className="font-medium text-foreground">
@@ -1116,13 +1134,9 @@ function Page() {
                     {t("iiu.pp.aidisabled.body")}
                   </p>
                 )}
-                {d.aiAvailable && d.plan && (
+                {d.plan && (
                   <div className="mt-3">
-                    <Eyebrow>{t("iiu.pp.airole.short")}</Eyebrow>
-                    <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                      {(lang === "en" ? d.plan.aiDisclosureEn : d.plan.aiDisclosure) ??
-                        d.plan.aiDisclosure}
-                    </p>
+                    <InterviewOpeningDisclosure aiUsed={d.plan.aiUsed} />
                   </div>
                 )}
                 {/* The method's own stage, its responsibilities and its

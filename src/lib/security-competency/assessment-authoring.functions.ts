@@ -3,7 +3,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database } from "@/integrations/supabase/types";
+import type { Database } from "@/integrations/supabase/database";
 type Context = { supabase: SupabaseClient<Database>; userId: string };
 async function assertAuthor(context: Context) {
   const { data, error } = await context.supabase.rpc("scp_can_author", {

@@ -8154,7 +8154,21 @@ export const dictionaries = {
     "iiu.pp.background.title": "Kandidatens bakgrund",
     "iiu.pp.background.body":
       "Uppgifter som kandidaten själv har lämnat. Ingenting här är kontrollerat, och listan säger inget om hur väl personen passar.",
-    "iiu.pp.background.none": "Ingen kandidatinformation är kopplad till ärendet ännu.",
+    "iiu.pp.background.none":
+      "Ingen skriven bakgrundssammanfattning finns i intervjuplanen. Det betyder inte att ansökningsuppgifter saknas.",
+    "iiu.pp.background.summary.title": "Sammanfattning i intervjuplanen",
+    "iiu.pp.background.live.title": "Underlag från ansökan",
+    "iiu.pp.background.live.loading": "Ansökningskopplingen kontrolleras.",
+    "iiu.pp.background.live.available":
+      "Tillgängliga ansökningsuppgifter visas ovanför och läses från ansökan. De har inte automatiskt lagts till i intervjuärendet.",
+    "iiu.pp.background.live.standalone": "Intervjun är fristående och har ingen kopplad ansökan.",
+    "iiu.pp.background.live.unavailable":
+      "Ansökningsuppgifterna kunde inte läsas. Se lässtatusen ovanför; det är inte ett besked om att uppgifter saknas.",
+    "iiu.pp.background.saved.title": "Uttryckligen tillagt kandidatunderlag",
+    "iiu.pp.background.saved.available":
+      "{n} källor finns sparade i intervjuärendet. Källorna visas nedan.",
+    "iiu.pp.background.saved.none":
+      "Inget CV eller ansökningssvar har uttryckligen lagts till som källa i intervjuärendet.",
     "iiu.pp.background.tag": "Uppgivet av kandidaten",
     "iiu.pp.areas.title": "Intervjuguide för rollen",
     "iiu.pp.areas.body":
@@ -8444,6 +8458,80 @@ export const dictionaries = {
     "iiu.pp.approved.body": "Planen är den aktiva. Intervjun kan startas.",
     "iiu.pp.s3.title": "3. Genomför intervjun",
     "iiu.pp.manual.title": "Planera samtalet",
+    "ri.control.title": "Klarlägganden och kontrollpunkter",
+    "ri.control.body":
+      "Registrera en sakfråga, en neutral fråga och nästa handling. En kontrollpunkt ändrar inte kandidatens bedömning eller rekryteringssteg och skickar inget meddelande.",
+    "ri.control.none": "Inga manuella kontrollpunkter har registrerats.",
+    "ri.control.count": "{open} öppna · {total} manuella kontrollpunkter totalt",
+    "ri.control.add": "Lägg till kontrollpunkt",
+    "ri.control.kind": "Typ av sakfråga",
+    "ri.control.kind.gap": "Uppgift saknas",
+    "ri.control.kind.unclear": "Uppgift behöver klarläggas",
+    "ri.control.kind.contradiction": "Uppgifter skiljer sig",
+    "ri.control.kind.verification": "Kontroll mot annan källa",
+    "ri.control.statement": "Vad behöver klarläggas eller kontrolleras?",
+    "ri.control.question": "Neutral fråga",
+    "ri.control.core-question": "Koppling till kärnfråga (frivillig)",
+    "ri.control.core-question.none": "Ingen kärnfråga vald",
+    "ri.control.source": "Källreferens",
+    "ri.control.source.select": "Välj en sparad originalpassage",
+    "ri.control.source.reference": "Ange en källreferens utan sparad passage",
+    "ri.control.source.passage": "Passage {n}",
+    "ri.control.source.unavailable": "Källreferensen kunde inte läsas",
+    "ri.control.source.hint":
+      "En källreferens beskriver var uppgiften finns. Referenstexten kopierar inte originalunderlaget till ärendet. En vald sparad passage visas ovanför.",
+    "ri.control.responsible": "Ansvarig (om utsedd)",
+    "ri.control.unassigned": "Ansvarig är inte utsedd",
+    "ri.control.next": "Nästa handling",
+    "ri.control.due": "Följ upp senast (om känt)",
+    "ri.control.state.open": "Öppen",
+    "ri.control.state.needs_verification": "Behöver kontroll mot annan källa",
+    "ri.control.state.corrected_by_candidate": "Sakrättelse från kandidaten dokumenterad",
+    "ri.control.state.unresolved_difference": "Skillnaden är inte klarlagd",
+    "ri.control.state.resolved": "Hanterad",
+    "ri.control.state.not_relevant": "Inte relevant för denna intervju",
+    "ri.control.review.status": "Status efter mänsklig uppföljning",
+    "ri.control.review.note": "Dokumenterad uppföljning och skäl",
+    "ri.control.review.save": "Spara uppföljning",
+    "ri.control.review.saved": "Uppföljningen är sparad",
+    "ri.control.created": "Kontrollpunkten är sparad",
+    "ri.control.saving": "Sparar …",
+    "ri.control.draft": "Ändringarna i uppföljningen är inte sparade ännu",
+    "ri.control.readonly":
+      "Du kan läsa kontrollpunkterna. En behörig person behöver registrera och följa upp ändringar.",
+    "ri.control.retry":
+      "Utkastet står kvar. Försök spara samma utkast igen för att återförsöka utan dubblett.",
+    "ri.control.conflict":
+      "Kontrollpunkten har ändrats någon annanstans. Ditt utkast står kvar och har inte skrivits över. Kopiera din text innan du läser in den sparade versionen.",
+    "ri.control.reload": "Läs in sparad kontrollpunkt",
+    "ri.control.refresh.failed":
+      "Ändringen är sparad men listan kunde inte uppdateras. Läs in ärendet igen för att se den sparade versionen.",
+    "ri.content.title": "Innehållets version och granskning",
+    "ri.content.current":
+      "Manifestet observerar innehållet som är kopplat till ärendet nu. Det fryser inte intervjuns innehåll vid start.",
+    "ri.content.frozen":
+      "Manifestet sparades vid fastställandet av rapporten. Det bevisar inte att innehållet var fryst när intervjun startade.",
+    "ri.content.match": "Rollguidens lagrade hash stämmer med innehållet.",
+    "ri.content.mismatch":
+      "Rollguidens lagrade hash stämmer inte med innehållet. Detta behöver granskas före pilot.",
+    "ri.content.boundary":
+      "En matchande hash visar innehållets identitet. Den innebär inte innehållsgodkännande eller metodvalidering.",
+    "ri.content.pack": "Rollguidens innehållsstatus",
+    "ri.content.method": "Metodens godkännandestatus",
+    "ri.content.followup": "Nästa handling",
+    "ri.content.responsible": "Ansvarig",
+    "ri.content.question": "Neutral fråga",
+    "ri.content.source": "Källreferens",
+    "ri.content.due": "Följ upp senast",
+    "ri.content.review": "Mänsklig granskning",
+    "iiu.opening.preparation.title": "Hur intervjuplanen förbereddes",
+    "iiu.opening.preparation.manual":
+      "Den här intervjuplanen förbereddes manuellt. AI användes inte till planen. Människor väljer bedömningsunderlag, bedömer och fattar beslut.",
+    "iiu.opening.preparation.ai":
+      "AI användes för att förbereda den här intervjuplanen. Människor granskar förslagen, väljer bedömningsunderlag, bedömer och fattar beslut.",
+    "iiu.opening.recording.title": "Inspelning och transkribering",
+    "iiu.opening.recording.body":
+      "Ingen inspelning eller transkribering startas i den här vyn. Förklara separat eventuell användning av andra inspelnings- eller transkriberingsverktyg och vilka villkor som gäller.",
     "iiu.pp.manual.default.opening":
       "Hälsa välkommen, presentera er och berätta om syftet, hur länge samtalet tar och att ni antecknar. Förklara att alla kandidater får samma frågor.",
     "iiu.pp.manual.default.timeplan":
@@ -8882,6 +8970,18 @@ export const dictionaries = {
     "iiu.iv.qstate.failed": "Frågans status kunde inte sparas.",
     "iiu.iv.qstate.retry": "Försök igen",
     "iiu.iv.reflection.title": "Din egen reflektion",
+    "iiu.iv.deviations.title": "Avvikelser från intervjuupplägget",
+    "iiu.iv.deviations.note":
+      "Beskriv vad du ändrade, varför och vilken uppföljning som behövs. Det gäller intervjuarens arbetssätt och är inget omdöme om kandidaten.",
+    "iiu.iv.process.saved": "Reflektion och avvikelser är sparade",
+    "iiu.iv.process.unsaved": "Reflektion eller avvikelser är inte sparade ännu",
+    "iiu.iv.process.savefailed": "Reflektion och avvikelser kunde inte sparas",
+    "iiu.iv.process.failed.body":
+      "Texten står kvar här. Nästa åtgärd stoppas tills den har sparats. Försök igen.",
+    "iiu.iv.process.conflict.title": "Intervjuärendet har ändrats i en annan flik",
+    "iiu.iv.process.conflict.body":
+      "Din reflektion och dina avvikelser har inte skrivits över eller sparats. Kopiera först din text om du vill behålla den och läs sedan in den sparade versionen för att fortsätta.",
+    "iiu.iv.session.savefailed": "Intervjuns status kunde inte sparas",
     "iiu.iv.pause": "Pausa",
     "iiu.ev.reviewfailed": "Granskningen kunde inte sparas",
     "iiu.ev.aioriginal": "AI:ts ursprungliga formulering",
@@ -16871,7 +16971,22 @@ export const dictionaries = {
     "iiu.pp.background.title": "Candidate background",
     "iiu.pp.background.body":
       "Information the candidate supplied. None of it has been checked, and the list says nothing about how well the person fits.",
-    "iiu.pp.background.none": "No candidate information is attached to this case yet.",
+    "iiu.pp.background.none":
+      "There is no written background summary in the interview plan. This does not mean that application information is missing.",
+    "iiu.pp.background.summary.title": "Summary in the interview plan",
+    "iiu.pp.background.live.title": "Material from the application",
+    "iiu.pp.background.live.loading": "The application link is being checked.",
+    "iiu.pp.background.live.available":
+      "Available application information is shown above and read from the application. It has not automatically been added to the interview case.",
+    "iiu.pp.background.live.standalone":
+      "This is a standalone interview without a linked application.",
+    "iiu.pp.background.live.unavailable":
+      "Application information could not be read. See the read status above; this does not mean that information is missing.",
+    "iiu.pp.background.saved.title": "Explicitly added candidate material",
+    "iiu.pp.background.saved.available":
+      "{n} sources are saved in the interview case. The sources are shown below.",
+    "iiu.pp.background.saved.none":
+      "No CV or application answers have explicitly been added as a source in the interview case.",
     "iiu.pp.background.tag": "Stated by the candidate",
     "iiu.pp.areas.title": "Interview guide for the role",
     "iiu.pp.areas.body":
@@ -17166,6 +17281,80 @@ export const dictionaries = {
     "iiu.pp.approved.body": "This plan is now active. The interview can be started.",
     "iiu.pp.s3.title": "3. Conduct the interview",
     "iiu.pp.manual.title": "Plan the conversation",
+    "ri.control.title": "Clarifications and checkpoints",
+    "ri.control.body":
+      "Record a factual issue, a neutral question and the next action. A checkpoint does not change the candidate's assessment or recruitment stage and sends no message.",
+    "ri.control.none": "No manual checkpoints have been recorded.",
+    "ri.control.count": "{open} open · {total} manual checkpoints in total",
+    "ri.control.add": "Add checkpoint",
+    "ri.control.kind": "Type of factual issue",
+    "ri.control.kind.gap": "Information is missing",
+    "ri.control.kind.unclear": "Information needs clarification",
+    "ri.control.kind.contradiction": "Information differs",
+    "ri.control.kind.verification": "Check against another source",
+    "ri.control.statement": "What needs clarification or checking?",
+    "ri.control.question": "Neutral question",
+    "ri.control.core-question": "Linked core question (optional)",
+    "ri.control.core-question.none": "No core question selected",
+    "ri.control.source": "Source reference",
+    "ri.control.source.select": "Select a saved original passage",
+    "ri.control.source.reference": "Enter a source reference without a saved passage",
+    "ri.control.source.passage": "Passage {n}",
+    "ri.control.source.unavailable": "The source reference could not be read",
+    "ri.control.source.hint":
+      "A source reference describes where the information is found. Reference text does not copy original material into the case. A selected saved passage is shown above.",
+    "ri.control.responsible": "Responsible person (if assigned)",
+    "ri.control.unassigned": "No responsible person assigned",
+    "ri.control.next": "Next action",
+    "ri.control.due": "Follow up by (if known)",
+    "ri.control.state.open": "Open",
+    "ri.control.state.needs_verification": "Needs checking against another source",
+    "ri.control.state.corrected_by_candidate": "Candidate's factual correction documented",
+    "ri.control.state.unresolved_difference": "Difference not clarified",
+    "ri.control.state.resolved": "Handled",
+    "ri.control.state.not_relevant": "Not relevant to this interview",
+    "ri.control.review.status": "Status after human follow-up",
+    "ri.control.review.note": "Documented follow-up and reasons",
+    "ri.control.review.save": "Save follow-up",
+    "ri.control.review.saved": "Follow-up is saved",
+    "ri.control.created": "Checkpoint is saved",
+    "ri.control.saving": "Saving …",
+    "ri.control.draft": "Follow-up changes are not saved yet",
+    "ri.control.readonly":
+      "You can read checkpoints. An authorised person needs to record and follow up changes.",
+    "ri.control.retry":
+      "Your draft remains here. Save the same draft again to retry without a duplicate.",
+    "ri.control.conflict":
+      "The checkpoint changed elsewhere. Your draft remains here and has not been overwritten. Copy your text before loading the stored version.",
+    "ri.control.reload": "Load saved checkpoint",
+    "ri.control.refresh.failed":
+      "The change is saved but the list could not be refreshed. Reload the case to see the saved version.",
+    "ri.content.title": "Content version and review",
+    "ri.content.current":
+      "The manifest observes the content currently pinned to this case. It does not freeze interview content at the start.",
+    "ri.content.frozen":
+      "The manifest was saved when the report was finalized. It does not prove that content was frozen when the interview started.",
+    "ri.content.match": "The role guide’s stored hash matches its content.",
+    "ri.content.mismatch":
+      "The role guide’s stored hash does not match its content. Review is required before pilot.",
+    "ri.content.boundary":
+      "A matching hash identifies content. It does not approve content or validate the method.",
+    "ri.content.pack": "Role guide content status",
+    "ri.content.method": "Method approval status",
+    "ri.content.followup": "Next action",
+    "ri.content.responsible": "Responsible",
+    "ri.content.question": "Neutral question",
+    "ri.content.source": "Source reference",
+    "ri.content.due": "Follow up by",
+    "ri.content.review": "Human review",
+    "iiu.opening.preparation.title": "How the interview plan was prepared",
+    "iiu.opening.preparation.manual":
+      "This interview plan was prepared manually. AI was not used for the plan. People select assessment material, assess it and make decisions.",
+    "iiu.opening.preparation.ai":
+      "AI was used to prepare this interview plan. People review the proposals, select assessment material, assess it and make decisions.",
+    "iiu.opening.recording.title": "Recording and transcription",
+    "iiu.opening.recording.body":
+      "No recording or transcription is started in this view. Explain any use of other recording or transcription tools separately, including the terms that apply.",
     "iiu.pp.manual.default.opening":
       "Welcome the candidate, introduce yourselves and explain the purpose, how long it takes and that you take notes. Explain that every candidate gets the same questions.",
     "iiu.pp.manual.default.timeplan":
@@ -17596,6 +17785,18 @@ export const dictionaries = {
     "iiu.iv.qstate.failed": "The question status could not be saved.",
     "iiu.iv.qstate.retry": "Try again",
     "iiu.iv.reflection.title": "Your own reflection",
+    "iiu.iv.deviations.title": "Changes to the interview plan",
+    "iiu.iv.deviations.note":
+      "Describe what you changed, why and any follow-up needed. This concerns the interviewer's conduct and is not a judgement about the candidate.",
+    "iiu.iv.process.saved": "Reflection and changes are saved",
+    "iiu.iv.process.unsaved": "Reflection or changes are not saved yet",
+    "iiu.iv.process.savefailed": "Reflection and changes could not be saved",
+    "iiu.iv.process.failed.body":
+      "Your text remains here. The next action is blocked until it is saved. Try again.",
+    "iiu.iv.process.conflict.title": "The interview case changed in another tab",
+    "iiu.iv.process.conflict.body":
+      "Your reflection and changes have not been overwritten or saved. Copy your text first if you want to keep it, then load the stored version to continue.",
+    "iiu.iv.session.savefailed": "The interview status could not be saved",
     "iiu.iv.pause": "Pause",
     "iiu.ev.reviewfailed": "The review could not be saved",
     "iiu.ev.aioriginal": "The AI's original wording",

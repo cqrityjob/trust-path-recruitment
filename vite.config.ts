@@ -6,6 +6,7 @@
 // You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 import { hayatOcrAssets } from "./scripts/vite/hayat-ocr-assets";
+import { releaseIdentityAsset } from "./scripts/vite/release-identity";
 
 // ── WHY mcpPlugin() IS GONE ────────────────────────────────────────────
 //
@@ -29,7 +30,7 @@ import { hayatOcrAssets } from "./scripts/vite/hayat-ocr-assets";
 export default defineConfig({
   // HAYAT reads documents in the browser; its OCR engine is served from this
   // origin instead of a public CDN. See scripts/vite/hayat-ocr-assets.ts.
-  plugins: [hayatOcrAssets()],
+  plugins: [hayatOcrAssets(), releaseIdentityAsset()],
   tanstackStart: {
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
     // nitro/vite builds from this

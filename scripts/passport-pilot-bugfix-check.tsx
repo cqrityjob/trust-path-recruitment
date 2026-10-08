@@ -241,6 +241,7 @@ console.log("\nDEFECT 3 -- the holder could not tell whether the document was sa
           mimeType: "application/pdf",
           sizeBytes: 12345,
           uploadedAt: "2026-09-01T10:00:00Z",
+          lifecycleState: "active",
         } as never,
       ]}
       canAdd
@@ -319,10 +320,7 @@ console.log("\nEmsoms #9 -- upload feedback is complete, and never implies verif
     /const \[selectedName, setSelectedName\] = useState/.test(panel) &&
       /setSelectedName\(file\.name\)/.test(panel),
   );
-  ck(
-    "it is shown while the upload is in flight",
-    /data-evidence-uploading-file/.test(panel),
-  );
+  ck("it is shown while the upload is in flight", /data-evidence-uploading-file/.test(panel));
   ck("and on the success confirmation", /data-evidence-saved-file/.test(panel));
   ck("and on the failure message", /data-evidence-error-file/.test(panel));
 
@@ -333,7 +331,10 @@ console.log("\nEmsoms #9 -- upload feedback is complete, and never implies verif
     /role="status"[\s\S]{0,200}data-evidence-saved/.test(panel) ||
       /data-evidence-saved[\s\S]{0,200}role="status"/.test(panel),
   );
-  ck("failure is announced as an alert", /role="alert"[\s\S]{0,120}data-evidence-error/.test(panel));
+  ck(
+    "failure is announced as an alert",
+    /role="alert"[\s\S]{0,120}data-evidence-error/.test(panel),
+  );
 
   // 3 · A REAL RETRY, not a sentence telling the holder to try again.
   ck("a retry control exists", /data-evidence-retry/.test(panel));

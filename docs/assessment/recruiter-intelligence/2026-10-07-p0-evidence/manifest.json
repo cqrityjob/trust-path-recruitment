@@ -1,0 +1,97 @@
+{
+  "tested_code_sha": "a088229e52834363fc0a9e4cbef7375ebfb0fd20",
+  "main_base_sha": "7fb66dcdaf22b7e0aec31b95c0cd4f220b0b873d",
+  "spec": "e2e/interview-recruiter-intelligence-p0.spec.ts",
+  "result": {
+    "passed": 12,
+    "failed": 0,
+    "exit_code": 0,
+    "duration": "6.1m"
+  },
+  "engine": {
+    "chromium": "149.0.7827.55",
+    "postgresql": "16.15",
+    "postgrest": "16.2"
+  },
+  "viewports": {
+    "chromium": "1280x720",
+    "mobile-375": "375x812",
+    "mobile-390": "390x844"
+  },
+  "local_backend": {
+    "database": "scp_ci_test",
+    "postgres_port": 55487,
+    "postgrest_port": 55488,
+    "auth_gateway_port": 55489,
+    "application_port": 3128
+  },
+  "final_readback": {
+    "ai_enabled": false,
+    "transcript_enabled": false,
+    "p0_ai_runs": 0,
+    "reported_cases": 12,
+    "reports": 12
+  },
+  "process_vs_evidence": {
+    "process": "Reflection and deviations B are retained in the completed session, not in the current report basis.",
+    "evidence": "Note B is explicitly confirmed as assessment material before appearing in the immutable report."
+  },
+  "substitutions": [
+    "GoTrue: repository auth-gateway.mjs with synthetic password/JWT identities",
+    "Storage: in-memory local gateway substitution"
+  ],
+  "limitations": [
+    "Mobile uses Chromium device emulation, not WebKit or physical iOS",
+    "Active question position returns to Q1 after refresh; notes/statuses are stored",
+    "Does not verify 100 applications or P1-P4 scope",
+    "Does not verify hosted writes, real GoTrue/Storage/email or AI services"
+  ],
+  "files": [
+    {
+      "file": "desktop-manager-application-sv-prepare.png",
+      "sha256": "047f9c554bfee87c398e2d7e993e17b5ceb40a8db772425fc2eca97a6eee0702",
+      "bytes": 560510
+    },
+    {
+      "file": "desktop-guard-standalone-sv-resumed.png",
+      "sha256": "27c36375f5078f415b5207432a63496ee3198f968355736609f2cd504d0cf04e",
+      "bytes": 357114
+    },
+    {
+      "file": "desktop-manager-application-sv-report.png",
+      "sha256": "99f4c38eee059c3455400268f92bc46dad3c499127b8ccaa57350a1c53bdec7f",
+      "bytes": 749344
+    },
+    {
+      "file": "mobile-375-guard-standalone-sv-resumed.png",
+      "sha256": "00f69d176b5a1d176bc6236bf82ce323c2a73febc7b176b23d4da85f76af01cb",
+      "bytes": 254985
+    },
+    {
+      "file": "mobile-390-guard-application-en-prepare.png",
+      "sha256": "f7fa66de8406e4e96a4fab47f865a7e9e49b0ec6bb0bb48cd7569cda6425312f",
+      "bytes": 1908107
+    },
+    {
+      "file": "mobile-390-guard-application-en-report.png",
+      "sha256": "b9962ab9f3201ae35bf51507f4bd27ce5743448a53f789feda221f2f736bc744",
+      "bytes": 2821470
+    },
+    {
+      "file": "browser-final.log",
+      "sha256": "55715b96281db2e567bea4455772c3d2deafd76f375f312cb3ff75d825b64740",
+      "bytes": 2065
+    },
+    {
+      "file": "database-final-readback.log",
+      "sha256": "d7d3fe90dba5f2b5fed89381929fbe69a7fca7c5b6a736d5a767afda83bdf1b0",
+      "bytes": 717
+    },
+    {
+      "file": "database-suite-summary.log",
+      "sha256": "01805c85553073336303d236fd109efeb4d13b2a88ad908f5119d4ec2accccac",
+      "bytes": 4637
+    }
+  ],
+  "schema_code_sha": "3b41ca827407feb2a65d05be5ffc67bc09a95c51"
+}

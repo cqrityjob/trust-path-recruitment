@@ -25,6 +25,7 @@
 // panel's concluded prose where there is one. Disagreement is stated.
 
 import { useT } from "@/i18n/context";
+import { ContentIntegrityNotice } from "./ContentIntegrityNotice";
 import type { TranslationKey } from "@/i18n/dictionaries";
 import {
   actorLabel,
@@ -404,6 +405,27 @@ export function FinalReportDocument({
                   {u.kind}
                 </span>
                 <span className="text-foreground">{u.statement}</span>
+                {u.origin === "human" && (
+                  <dl className="mt-2 space-y-1 text-muted-foreground">
+                    {(
+                      [
+                        ["ri.content.question", u.neutralQuestion],
+                        ["ri.content.source", u.sourceLabel],
+                        ["ri.content.responsible", u.responsibleLabel],
+                        ["ri.content.followup", u.nextAction],
+                        ["ri.content.due", u.dueOn],
+                        ["ri.content.review", u.humanNote],
+                      ] as const
+                    ).map(([key, value]) =>
+                      value ? (
+                        <div key={key}>
+                          <dt className="inline font-medium">{t(key)}: </dt>
+                          <dd className="inline whitespace-pre-line">{value}</dd>
+                        </div>
+                      ) : null,
+                    )}
+                  </dl>
+                )}
               </li>
             ))}
           </ul>
@@ -412,6 +434,9 @@ export function FinalReportDocument({
 
       {/* ---- The boundary, and the AI's role ----
            The employment decision is a stated boundary, never a control. */}
+      {payload.contentIntegrity && (
+        <ContentIntegrityNotice integrity={payload.contentIntegrity} frozen />
+      )}
       <section aria-labelledby="d-decision" className="mt-9 border-t border-border pt-6">
         <h3 id="d-decision" className="text-base font-semibold text-foreground">
           {t("iiu.rp.s.decision")}

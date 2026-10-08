@@ -1,3 +1,4 @@
+import { isOutstandingFinding } from "@/lib/interview-intelligence/finding-state";
 // The post-interview summary: the state of play, then the material.
 //
 // This screen is no longer a stage of the recruiter's journey. The material
@@ -99,7 +100,7 @@ function Page() {
   const covered = d.competencies.filter((c) => coveredCodes.has(c.code));
   const missing = d.competencies.filter((c) => !coveredCodes.has(c.code));
 
-  const open = d.findings.filter((f) => f.resolutionState !== "resolved");
+  const open = d.findings.filter((f) => isOutstandingFinding(f.resolutionState));
   const verify = open.filter((f) => f.findingKind === "verification");
   const followUp = open.filter((f) => f.findingKind !== "verification");
   const comments = (d.session?.notes ?? []).filter(

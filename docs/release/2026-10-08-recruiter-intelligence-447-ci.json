@@ -1,0 +1,104 @@
+{
+  "headSha": "82564cc3ad390f0a378d8a8ef4376dbbc31fae12",
+  "reviewedAt": "2026-10-08",
+  "checks": [
+    {
+      "name": "CV browser — the signed-in journey",
+      "status": "completed",
+      "conclusion": "success",
+      "headSha": "82564cc3ad390f0a378d8a8ef4376dbbc31fae12",
+      "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37677287715/job/112984347990"
+    },
+    {
+      "name": "Public entry browser — homepage, employers and the employer journey",
+      "status": "completed",
+      "conclusion": "success",
+      "headSha": "82564cc3ad390f0a378d8a8ef4376dbbc31fae12",
+      "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37677287715/job/112984347987"
+    },
+    {
+      "name": "CV export — PDF and ATS proof",
+      "status": "completed",
+      "conclusion": "success",
+      "headSha": "82564cc3ad390f0a378d8a8ef4376dbbc31fae12",
+      "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37677287715/job/112984347836"
+    },
+    {
+      "name": "Lint, typecheck and deterministic checks",
+      "status": "completed",
+      "conclusion": "success",
+      "headSha": "82564cc3ad390f0a378d8a8ef4376dbbc31fae12",
+      "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37677287715/job/112984347795"
+    },
+    {
+      "name": "Passport three-market browser — catalogue, cards, pilot access",
+      "status": "completed",
+      "conclusion": "success",
+      "headSha": "82564cc3ad390f0a378d8a8ef4376dbbc31fae12",
+      "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37677287715/job/112984347531"
+    },
+    {
+      "name": "Migration replay, RLS and rollback tests",
+      "status": "completed",
+      "conclusion": "success",
+      "headSha": "82564cc3ad390f0a378d8a8ef4376dbbc31fae12",
+      "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37677287715/job/112984347463"
+    },
+    {
+      "name": "Passport public pilot browser evidence (isolated local stack)",
+      "status": "completed",
+      "conclusion": "success",
+      "headSha": "82564cc3ad390f0a378d8a8ef4376dbbc31fae12",
+      "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37677287673/job/112984007498"
+    },
+    {
+      "name": "Recruitment workspace browser evidence (isolated local stack)",
+      "status": "completed",
+      "conclusion": "success",
+      "headSha": "82564cc3ad390f0a378d8a8ef4376dbbc31fae12",
+      "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37677287800/job/112983941644"
+    },
+    {
+      "name": "E4 routed browser evidence (isolated local stack)",
+      "status": "completed",
+      "conclusion": "success",
+      "headSha": "82564cc3ad390f0a378d8a8ef4376dbbc31fae12",
+      "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37677287749/job/112983941474"
+    },
+    {
+      "name": "browser",
+      "status": "completed",
+      "conclusion": "success",
+      "headSha": "82564cc3ad390f0a378d8a8ef4376dbbc31fae12",
+      "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37677287744/job/112983941463"
+    },
+    {
+      "name": "Career Center persistence browser evidence (isolated local stack)",
+      "status": "completed",
+      "conclusion": "success",
+      "headSha": "82564cc3ad390f0a378d8a8ef4376dbbc31fae12",
+      "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37677287735/job/112983941314"
+    },
+    {
+      "name": "Assigned officer/manager reports and TestBank (isolated desktop/mobile)",
+      "status": "completed",
+      "conclusion": "success",
+      "headSha": "82564cc3ad390f0a378d8a8ef4376dbbc31fae12",
+      "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37677287746/job/112983941159"
+    },
+    {
+      "name": "Job ad back navigation browser evidence (isolated local stack)",
+      "status": "completed",
+      "conclusion": "success",
+      "headSha": "82564cc3ad390f0a378d8a8ef4376dbbc31fae12",
+      "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37677287696/job/112983941086"
+    },
+    {
+      "name": "Supabase Preview",
+      "status": "completed",
+      "conclusion": "skipped",
+      "headSha": "82564cc3ad390f0a378d8a8ef4376dbbc31fae12",
+      "url": "https://github.com/cqrityjob/trust-path-recruitment/runs/112983917318"
+    }
+  ]
+}

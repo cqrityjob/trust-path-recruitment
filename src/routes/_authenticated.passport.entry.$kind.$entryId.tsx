@@ -633,8 +633,9 @@ function PassportEntryRoute() {
           window.open(url, "_blank", "noopener,noreferrer");
         }}
         onWithdraw={async (evidenceId) => {
-          await doWithdrawEvidence({ data: { evidenceId } });
+          const result = await doWithdrawEvidence({ data: { evidenceId } });
           await refresh();
+          return result;
         }}
       />
 
@@ -681,7 +682,7 @@ function PassportEntryRoute() {
         rejectedRequest={rejectedRequest}
         requests={entryRequests}
         decisions={entryDecisions}
-        hasEvidence={entryEvidence.length > 0}
+        hasEvidence={entryEvidence.some((item) => item.lifecycleState === "active")}
         canAskEmployer={!isClaim}
         employerSearch={employerSearch}
         onEmployerSearch={(q) => runEmployerSearch(q)}

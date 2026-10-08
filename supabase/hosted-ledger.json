@@ -13,8 +13,8 @@
   ],
   "source": "Supabase connector read-only SQL, explicit project wrygicdfxwjnrugduxnt",
   "projectRef": "wrygicdfxwjnrugduxnt",
-  "readAt": "2026-10-06 21:26:51.60513+00",
-  "readBy": "Read-only verification after #444 merge and official integration: prior 381 identities unchanged, retention migration appended. See docs/release/2026-10-06-application-retention-hosted-verification.json.",
+  "readAt": "2026-10-08 05:20:28.716426+00",
+  "readBy": "Read-only verification 2026-10-08 after #447 merge and official integration: prior 382 identities unchanged; P0 foundation appended. Seven function bodies, report builder, 11 columns, constraints, triggers and ACLs match isolated PostgreSQL 17 replay. See docs/release/2026-10-08-recruiter-intelligence-foundation-hosted-verification.json.",
   "versions": [
     {
       "version": "20260716153446",
@@ -1533,16 +1533,20 @@
       "name": "sp_united_states_jurisdiction_and_destinations"
     },
     {
-      "name": "sp_open_abu_dhabi_public_pilot",
-      "version": "20270220090000"
+      "version": "20270220090000",
+      "name": "sp_open_abu_dhabi_public_pilot"
     },
     {
-      "name": "sentinel_abstract_reasoning",
-      "version": "20270301090000"
+      "version": "20270301090000",
+      "name": "sentinel_abstract_reasoning"
     },
     {
-      "name": "application_retention_lifecycle",
-      "version": "20270305090000"
+      "version": "20270305090000",
+      "name": "application_retention_lifecycle"
+    },
+    {
+      "version": "20270306090000",
+      "name": "recruiter_intelligence_interview_foundation"
     }
   ]
 }

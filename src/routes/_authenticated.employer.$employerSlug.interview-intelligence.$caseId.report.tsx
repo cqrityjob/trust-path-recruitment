@@ -1,3 +1,4 @@
+import { isOutstandingFinding } from "@/lib/interview-intelligence/finding-state";
 // The Candidate Interview Report: a document an employer can keep in the
 // recruitment record, and — underneath it, collapsed — everything an auditor
 // needs to prove how it was made.
@@ -266,9 +267,7 @@ function Page() {
   const progress: ReportProgress = {
     requirementCount: d.questions.length,
     assessedCount: new Set(d.assessments.map((a) => a.questionId)).size,
-    outstandingCount: d.findings.filter((f) =>
-      ["open", "needs_verification", "unresolved_difference"].includes(f.resolutionState),
-    ).length,
+    outstandingCount: d.findings.filter((f) => isOutstandingFinding(f.resolutionState)).length,
     blockerCount: d.blockers.length,
     isFinal,
     canFinalise,

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database } from "../src/integrations/supabase/types";
+import type { Database } from "../src/integrations/supabase/database";
 import { readInterviewCaseCapabilities } from "../src/lib/interview-intelligence/case-capabilities";
 
 const caseId = "e5a10000-3333-4000-8000-000000000001";

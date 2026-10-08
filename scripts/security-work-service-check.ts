@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { createClient } from "@supabase/supabase-js";
-import type { Database } from "../src/integrations/supabase/types";
+import type { Database } from "../src/integrations/supabase/database";
 import * as service from "../src/lib/security-work/services";
 import * as input from "../src/lib/security-work/inputs";
 import type { SWErrorCode } from "../src/lib/security-work/types";

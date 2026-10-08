@@ -10,6 +10,24 @@ type Assert<T extends true> = T;
 type Functions = Database["public"]["Functions"];
 type Bcp = Functions["bcp_conduct_record_resolution"]["Args"];
 type Finalise = Functions["scp_iv_finalise_previewed_report"]["Args"];
+type FoundationKeys =
+  | "scp_iv_save_session_process"
+  | "scp_iv_create_manual_finding"
+  | "scp_iv_review_manual_finding"
+  | "scp_iv_manual_finding_capabilities"
+  | "scp_iv_case_content_manifest";
+type FoundationColumns =
+  | "origin"
+  | "neutral_question"
+  | "source_label"
+  | "responsible_label"
+  | "next_action"
+  | "due_on"
+  | "created_by"
+  | "operation_id"
+  | "creation_request_hash"
+  | "revision"
+  | "updated_at";
 export type ContractAssertions = [
   Assert<Equal<Bcp["_agreed_statement"], string | null>>,
   Assert<Equal<Bcp["_divergent_statement"], string | null>>,
@@ -18,14 +36,34 @@ export type ContractAssertions = [
   Assert<Equal<Bcp["_expected_revision"], number>>,
   Assert<Equal<Finalise["_case_id"], string>>,
   Assert<Equal<Finalise["_expected_basis_hash"], string>>,
-  Assert<Equal<Database["public"]["Tables"], Generated["public"]["Tables"]>>,
+  Assert<
+    Equal<
+      Omit<Database["public"]["Tables"], "scp_interview_findings">,
+      Omit<Generated["public"]["Tables"], "scp_interview_findings">
+    >
+  >,
+  Assert<
+    Equal<
+      Omit<Database["public"]["Tables"]["scp_interview_findings"], "Row">,
+      Omit<Generated["public"]["Tables"]["scp_interview_findings"], "Row">
+    >
+  >,
+  Assert<
+    Equal<
+      Omit<Database["public"]["Tables"]["scp_interview_findings"]["Row"], FoundationColumns>,
+      Omit<Generated["public"]["Tables"]["scp_interview_findings"]["Row"], FoundationColumns>
+    >
+  >,
   Assert<Equal<Database["public"]["Views"], Generated["public"]["Views"]>>,
   Assert<
     Equal<
-      Omit<Functions, "bcp_conduct_record_resolution" | "scp_iv_finalise_previewed_report">,
+      Omit<
+        Functions,
+        "bcp_conduct_record_resolution" | "scp_iv_finalise_previewed_report" | FoundationKeys
+      >,
       Omit<
         Generated["public"]["Functions"],
-        "bcp_conduct_record_resolution" | "scp_iv_finalise_previewed_report"
+        "bcp_conduct_record_resolution" | "scp_iv_finalise_previewed_report" | FoundationKeys
       >
     >
   >,
@@ -38,6 +76,15 @@ export type ContractAssertions = [
       Generated["public"]["Functions"]["scp_iv_finalise_previewed_report"]["Returns"]
     >
   >,
+];
+export type FoundationAssertions = [
+  Assert<Equal<Functions["scp_iv_create_manual_finding"]["Args"]["_question_id"], string | null>>,
+  Assert<
+    Equal<Functions["scp_iv_create_manual_finding"]["Args"]["_source_passage_id"], string | null>
+  >,
+  Assert<Equal<Functions["scp_iv_review_manual_finding"]["Args"]["_due_on"], string | null>>,
+  Assert<Equal<Functions["scp_iv_save_session_process"]["Args"]["_expected_updated_at"], string>>,
+  Assert<Equal<Database["public"]["Tables"]["scp_interview_findings"]["Row"]["revision"], number>>,
 ];
 declare const client: SupabaseClient<Database>;
 const resolution = {
@@ -62,6 +109,25 @@ client.rpc("scp_iv_finalise_previewed_report", {
   _case_id: "synthetic",
   _expected_basis_hash: "synthetic",
   _draft_run_id: null,
+});
+client.rpc("scp_iv_create_manual_finding", {
+  _case_id: "synthetic",
+  _operation_id: "synthetic",
+  _finding_kind: "gap",
+  _statement: "Missing document",
+  _neutral_question: "Which document applies?",
+  _question_id: null,
+  _source_passage_id: null,
+  _source_label: "Application",
+  _responsible_label: null,
+  _next_action: "Request copy",
+  _due_on: null,
+});
+// @ts-expect-error New nullable arguments are also required by their SQL contracts.
+client.rpc("scp_iv_save_session_process", {
+  _session_id: "synthetic",
+  _reflection: null,
+  _expected_updated_at: "synthetic",
 });
 // @ts-expect-error Nullable is not optional: both statement arguments must be supplied.
 client.rpc("bcp_conduct_record_resolution", { ...resolution, _agreed_statement: null });
