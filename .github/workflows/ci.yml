@@ -126,6 +126,11 @@ jobs:
       - name: Recruiter Intelligence P1 source-bound human review and list state
         run: bun run recruiter-requirements:check
 
+      - name: Upload journal rollback ordering and planted controls
+        run: |
+          bun test scripts/sp-evidence-upload-recovery-ci.test.ts
+          bunx tsc --noEmit --allowJs --checkJs false --skipLibCheck --module preserve --moduleResolution bundler --target ES2022 --types node scripts/sp-evidence-upload-recovery-ci.test.ts
+
       - name: Type-check
         run: bunx tsc --noEmit
 

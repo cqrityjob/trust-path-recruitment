@@ -7,6 +7,62 @@
   "$comment": "RELEASE PARITY STATE. Enforced by scripts/release-parity-check.ts, which runs in CI and before a release. This file records, for every canonical migration at the release frontier, whether it is believed applied on the hosted database, and which database objects it introduces. The guard fails when application code on this branch references an object whose migration is not applied -- the exact class of failure that stopped employers saving jobs during UAT. It NEVER connects to a database, holds no credentials and applies no migration; it compares this repository against itself. Edit it deliberately: every entry is an owner-level statement about production.", 
   "frontier": [
     {
+      "file": "20270309090000_sp_evidence_upload_recovery.sql",
+      "hostedState": "applied",
+      "note": "Additive holder-owned upload intents and fenced recovery; no worker, email, AI or historical orphan backfill. Schema only; consumer must wait for official installation and readback. Preserve numeric installation order:07100000 then08090000 then09090000.",
+      "rollback": "supabase/rollback/20270309090000_sp_evidence_upload_recovery_rollback.sql",
+      "verify": "Mandatory strict full history,41 actual SQL assertions, nonempty-journal rollback refusal; actual GoTrue/Storage bytes, concurrency, own reload/retry and erasure queue proof via isolated real CI. No PASS from stubs. See docs/release/op09-evidence-upload-recovery-contract.md.",
+      "introduces": [
+        {
+          "kind": "table",
+          "object": "sp_evidence_upload_attempts"
+        },
+        {
+          "kind": "function",
+          "object": "sp_evidence_upload_payload"
+        },
+        {
+          "kind": "function",
+          "object": "sp_begin_evidence_upload"
+        },
+        {
+          "kind": "function",
+          "object": "sp_reconcile_evidence_upload"
+        },
+        {
+          "kind": "function",
+          "object": "sp_list_my_evidence_upload_attempts"
+        },
+        {
+          "kind": "function",
+          "object": "sp_authorize_evidence_upload_cleanup"
+        },
+        {
+          "kind": "function",
+          "object": "sp_confirm_evidence_upload_cleanup"
+        },
+        {
+          "kind": "function",
+          "object": "sp_evidence_upload_attachment_guard"
+        },
+        {
+          "kind": "function",
+          "object": "sp_evidence_upload_storage_writable"
+        },
+        {
+          "kind": "function",
+          "object": "sp_evidence_upload_intent_immutable"
+        },
+        {
+          "kind": "function",
+          "object": "sp_evidence_upload_erasure_manifest"
+        }
+      ],
+      "hostedVersion": "20270309090000",
+      "hostedName": "sp_evidence_upload_recovery",
+      "evidenceSource": "Read-only verification after #457 exact1e598 normal merge7f899 and official integration installed0909. Ledger387/prior386 unchanged; all10 full function body/args/default/owner/config/ACL,14columns/11constraint predicates/3policies/3indexes/3triggers match authoritative source. Journal0;20snapshots14locksACK0reports0/statuses unchanged; all16P1 function contracts preserved. Full independent capture/review: docs/release/2026-10-08-op09-hosted-verification.json. No production fixtures or workers."
+    },
+    {
       "file": "20270307100000_recruiter_domain_conflict_transport.sql",
       "hostedState": "applied",
       "note": "Forward-only domain conflict transport and consistent interview locks after verified #450 installation. Exact business CAS branches return HTTP409/PT409; genuine PostgreSQL serialization failures unchanged. Preserves existing signatures/defaults/ACL, snapshots/reports and all lifecycle decisions. No application consumers in this schema PR.",
