@@ -148,17 +148,32 @@ SELECT pg_temp.ok((SELECT process_reflection IS NULL AND protocol_deviations IS 
 
 SELECT pg_temp.ok(pg_temp.try_as('b6030000-0000-4000-8000-000000000004',format('SELECT public.scp_iv_case_content_manifest(%L)',(SELECT id FROM fx WHERE label='case'))) LIKE '42501:%','P0.37 unrelated colleague cannot fetch manifest');
 SELECT pg_temp.ok(pg_temp.try_as('b6030000-0000-4000-8000-000000000003',format('SELECT public.scp_iv_case_content_manifest(%L)',(SELECT id FROM fx WHERE label='case')))='ok','P0.38 creator manifest read succeeds');
-CREATE TEMP TABLE manifest AS SELECT scp_private.interview_content_manifest((SELECT id FROM fx WHERE label='case')) AS payload;
+CREATE FUNCTION pg_temp.case_manifest(_case uuid) RETURNS jsonb LANGUAGE plpgsql AS $$
+BEGIN
+ IF to_regprocedure('scp_private.interview_frozen_manifest(uuid)') IS NOT NULL THEN
+  RETURN scp_private.interview_frozen_manifest(_case);
+ END IF;
+ RETURN scp_private.interview_content_manifest(_case);
+END $$;
+CREATE TEMP TABLE manifest AS SELECT pg_temp.case_manifest((SELECT id FROM fx WHERE label='case')) AS payload;
 SELECT pg_temp.ok((SELECT jsonb_array_length(payload#>'{content,questions}')=8 AND jsonb_array_length(payload#>'{content,competencies}')=6
  AND payload->>'content_hash_algorithm'='sha256-jsonb-v1' AND length(payload->>'manifest_hash')=64 FROM manifest),'P0.39 complete baseline with separate digest');
 SELECT pg_temp.ok(NOT EXISTS(SELECT 1 FROM manifest,jsonb_array_elements(payload#>'{content,conduct_guidance}') g
  WHERE g->>'method_id'<>payload->>'method_id'),'P0.40 every method child is case-pinned');
-SELECT pg_temp.ok((SELECT scp_private.interview_content_manifest((SELECT id FROM fx WHERE label='case'))=payload FROM manifest),'P0.41 repeat read is deterministic');
+SELECT pg_temp.ok((SELECT pg_temp.case_manifest((SELECT id FROM fx WHERE label='case'))=payload FROM manifest),'P0.41 repeat read is deterministic');
 SAVEPOINT translation_change;
-UPDATE public.scp_interview_rating_anchors SET anchor_en=coalesce(anchor_en,'')||' Synthetic translation amendment'
+DO $$ DECLARE _message text;
+BEGIN
+ BEGIN UPDATE public.scp_interview_rating_anchors SET anchor_en=coalesce(anchor_en,'')||' Synthetic translation amendment'
  WHERE id=(SELECT (a->>'id')::uuid FROM manifest,jsonb_array_elements(payload#>'{content,anchors}') a LIMIT 1);
-SELECT pg_temp.ok((SELECT scp_private.interview_content_manifest((SELECT id FROM fx WHERE label='case'))->>'manifest_hash'<>payload->>'manifest_hash'
- AND public.scp_interview_pack_content_hash((SELECT id FROM fx WHERE label='pack'))=payload->>'recomputed_pack_hash' FROM manifest),'P0.42 separate manifest detects language change omitted by legacy hash');
+ EXCEPTION WHEN OTHERS THEN _message:=SQLERRM; END;
+ IF to_regprocedure('scp_private.interview_frozen_manifest(uuid)') IS NOT NULL THEN
+  PERFORM pg_temp.ok(_message LIKE 'SCP_IV_CONTENT_IN_USE:%','P0.42 used language content is permanently protected');
+ ELSE
+  PERFORM pg_temp.ok((SELECT scp_private.interview_content_manifest((SELECT id FROM fx WHERE label='case'))->>'manifest_hash'<>payload->>'manifest_hash'
+  AND public.scp_interview_pack_content_hash((SELECT id FROM fx WHERE label='pack'))=payload->>'recomputed_pack_hash' FROM manifest),'P0.42 separate manifest detects language change omitted by legacy hash');
+ END IF;
+END $$;
 ROLLBACK TO SAVEPOINT translation_change;
 CREATE TEMP TABLE report_basis AS SELECT public.scp_iv_build_report_basis((SELECT id FROM fx WHERE label='case')) AS payload;
 SELECT pg_temp.ok((SELECT payload#>>'{ai_disclosure,statement}' LIKE 'Inget AI-stöd%' FROM report_basis),'P0.43 AI-off future report disclosure is truthful');
@@ -208,11 +223,21 @@ BEGIN
  PERFORM pg_temp.ok(_message LIKE '%SCP_IV_REPORT_IMMUTABLE%','P0.53 final payload is immutable even for table owner');
 END $$;
 SAVEPOINT later_method_text;
-UPDATE public.scp_interview_conduct_guidance SET statement_en=statement_en||' Synthetic later method text.'
+DO $$ DECLARE _message text;
+BEGIN
+ BEGIN UPDATE public.scp_interview_conduct_guidance SET statement_en=statement_en||' Synthetic later method text.'
  WHERE id=(SELECT (g->>'id')::uuid FROM manifest,jsonb_array_elements(payload#>'{content,conduct_guidance}') g LIMIT 1);
-SELECT pg_temp.ok((SELECT scp_private.interview_content_manifest((SELECT id FROM fx WHERE label='case'))->>'manifest_hash'
- <>r.payload#>>'{content_manifest,manifest_hash}' AND r.payload=f.payload AND r.content_hash=f.content_hash
- FROM public.scp_interview_reports r CROSS JOIN frozen_report f WHERE r.id=(SELECT id FROM fx WHERE label='report')),'P0.54 later method text does not rewrite stored manifest');
+ EXCEPTION WHEN OTHERS THEN _message:=SQLERRM; END;
+ IF to_regprocedure('scp_private.interview_frozen_manifest(uuid)') IS NOT NULL THEN
+  PERFORM pg_temp.ok(_message LIKE 'SCP_IV_CONTENT_IN_USE:%' AND (SELECT r.payload=f.payload AND r.content_hash=f.content_hash
+  FROM public.scp_interview_reports r CROSS JOIN frozen_report f WHERE r.id=(SELECT id FROM fx WHERE label='report')),
+  'P0.54 used method copy protected and final report unchanged');
+ ELSE
+  PERFORM pg_temp.ok((SELECT scp_private.interview_content_manifest((SELECT id FROM fx WHERE label='case'))->>'manifest_hash'
+  <>r.payload#>>'{content_manifest,manifest_hash}' AND r.payload=f.payload AND r.content_hash=f.content_hash
+  FROM public.scp_interview_reports r CROSS JOIN frozen_report f WHERE r.id=(SELECT id FROM fx WHERE label='report')),'P0.54 later method text does not rewrite stored manifest');
+ END IF;
+END $$;
 ROLLBACK TO SAVEPOINT later_method_text;
 
 SAVEPOINT capability_recovery;
