@@ -1,0 +1,20 @@
+{
+  "evidenceSha": "3ac421c6a41edab6e0d9fe05f5c2e5ab42073dff",
+  "appSha": "c52bd0ff50b243a40d52b424998f5f253795817b",
+  "schemaSha": "6039fbc685cad255aae4a4e39c1035e933af883d",
+  "runId": 37773504814,
+  "jobId": 113298573278,
+  "artifactId": 11548837172,
+  "zipSha256": "789c550aa8348676b8e0cc51f218ef52603267593689e528e56665a3f7c2f9d9",
+  "originalManifestSha256": "5cf4a46770de8391372bfa97e0230ec90afe9850b4a6e39209d60ff3ec98c8bc",
+  "verifiedMigrationHashes": 386,
+  "verifiedImageHashes": 9,
+  "copiedImages": [
+    "images/sv-desktop-gray-human-reviewed.png",
+    "images/en-emulated-375-remaining.png"
+  ],
+  "actualResult": "FAILED",
+  "preciseBrowserException": "not_exported",
+  "failedStage": "actual_password_browser_five_cases",
+  "laterLocatorCorrection": "static_source_mismatch_confirmed_not_recovered_exception"
+}
