@@ -119,10 +119,11 @@ const MUTATIONS: readonly Mutation[] = [
   {
     id: "JB-NC-CV-CHIP-DOWNLOADS-NON-FILE",
     defect:
-      "a CQrityjob CV's chip is a download button again, which can only answer CV_IS_NOT_A_FILE",
-    file: "src/routes/_authenticated.employer.$employerSlug.applications.index.tsx",
-    find: '(r.cvSource === "cqrityjob_cv" ? (',
-    replace: '(r.cvSource === "never" ? (',
+      "opening a CQrityjob CV dispatches the file download again, which can only answer CV_IS_NOT_A_FILE",
+    file: "src/lib/recruitment/requirement-review-draft.ts",
+    find: "  if (original.hasUploadedCv) return actions.openFile();",
+    replace:
+      '  if (original.hasUploadedCv || original.submittedSource === "cqrityjob_cv") return actions.openFile();',
     guard: GUARD,
     expect: "a CQrityjob CV opens the application; only a file offers a download",
   },
