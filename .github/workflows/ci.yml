@@ -1888,6 +1888,82 @@ jobs:
       - name: Migration replay + database assertions + rollback verification
         run: bash scripts/db-test.sh
 
+  # Add the production major version without replacing the historical PG16 gate.
+  database_pg17:
+    name: Recruiter current schema — PostgreSQL 17 and PostgREST 14
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      # Report every failing suite in one run instead of stopping at the first.
+      # The suites run as one long sequence and the job still fails on any
+      # failure -- this only changes how much of the picture a single run gives
+      # a reviewer. Without it the later suites (the whole Security Passport
+      # set among them) stay invisible while an earlier suite is red.
+      DB_TEST_CONTINUE_ON_SUITE_FAILURE: 1
+      RI_CONFLICT_ARTIFACT_DIR: artifacts/recruiter-domain-conflict-pg17
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      # GitHub's ubuntu-latest runner already ships the PostgreSQL client.
+      # Avoid apt-get here: external package-index/network stalls can block the
+      # entire database gate before any migration test has even started.
+      - name: Verify PostgreSQL client
+        run: |
+          command -v psql >/dev/null 2>&1 || { echo "psql is missing from the runner" >&2; exit 1; }
+          command -v pg_isready >/dev/null 2>&1 || { echo "pg_isready is missing from the runner" >&2; exit 1; }
+          psql --version
+          pg_isready --version
+
+      - name: Wait for PostgreSQL
+        run: |
+          for i in $(seq 1 30); do
+            pg_isready -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" && exit 0
+            sleep 2
+          done
+          echo "PostgreSQL did not become ready in time" >&2
+          exit 1
+
+      # Replays every active migration in order under the STRICT replay
+      # contract — every file must apply cleanly, there is no expected-failure
+      # allowlist — then runs the full assertion-suite sequence and the
+      # rollback verification, failing the job on any migration failure, any
+      # assertion failure or a shortfall in assertion count.
+      - name: Migration replay + database assertions + rollback verification
+        run: bash scripts/db-test.sh
+
+      - name: Upload exact current-schema catalog
+        uses: actions/upload-artifact@v4
+        with:
+          name: recruiter-domain-conflict-pg17-${{ github.event.pull_request.head.sha || github.sha }}
+          path: artifacts/recruiter-domain-conflict-pg17/
+          if-no-files-found: error
+
   # ═══════════════════════════════════════════════════════════════════════
   # The exported CV, as an employer's system actually reads it.
   # ═══════════════════════════════════════════════════════════════════════
