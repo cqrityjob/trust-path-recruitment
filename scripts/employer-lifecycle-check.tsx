@@ -481,14 +481,27 @@ console.log("employer lifecycle — phases 2 and 3\n");
       `5 · the ${stage} row lands on those interviews`,
     );
   }
-  // Every interview destination in the work list carries a stage. Counted
-  // rather than pattern-matched on absence: four rows, four stages.
+  // Each work-list action must carry its own filter. Other cards can link to
+  // the same stage, so counting filters across the whole overview is not proof
+  // that these four actions still open the cases their numbers counted.
   {
-    const interviewLinks = [
-      ...overview.matchAll(/to: "\/employer\/\$employerSlug\/interview-intelligence"/g),
-    ].length;
-    const stagedLinks = [...overview.matchAll(/stage: "[a-zA-Z]+" as const/g)].length;
-    ok(interviewLinks > 0 && stagedLinks >= 4, "5 · every interview work-list row carries a stage");
+    const rows = [
+      ["interview-plans-to-approve", "awaitingPlanApproval"],
+      ["interviews-ready", "readyToInterview"],
+      ["interview-evidence-to-review", "inEvidenceReview"],
+      ["interview-reports-to-finalise", "awaitingReport"],
+    ] as const;
+    const everyRowIsFiltered = rows.every(([key, stage]) => {
+      const matches = [
+        ...overview.matchAll(new RegExp(`key: "${key}",[\\s\\S]*?\\n\\s*\\}\\);`, "g")),
+      ];
+      return (
+        matches.length === 1 &&
+        matches[0][0].includes('to: "/employer/$employerSlug/interview-intelligence"') &&
+        matches[0][0].includes(`search: { stage: "${stage}" as const }`)
+      );
+    });
+    ok(everyRowIsFiltered, "5 · every interview work-list row carries a stage");
   }
 
   // Behaviour: the stages partition the work, and `active` excludes a

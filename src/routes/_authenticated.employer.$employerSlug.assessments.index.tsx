@@ -24,6 +24,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
 import { AcademyPage } from "@/components/academy/AcademyWorkspace";
 import { AcademyOverview } from "@/components/academy/AcademyOverview";
+import { RecruitmentFlowStrip } from "@/components/employer/RecruitmentFlowStrip";
 
 export const Route = createFileRoute("/_authenticated/employer/$employerSlug/assessments/")({
   ssr: false,
@@ -35,7 +36,12 @@ function EmployerAssessmentsPage() {
   const { employerSlug } = Route.useParams();
   return (
     <AcademyPage employerSlug={employerSlug}>
-      {(ws) => <AcademyOverview employerId={ws.employerId} employerSlug={ws.employerSlug} />}
+      {(ws) => (
+        <>
+          <RecruitmentFlowStrip employerSlug={ws.employerSlug} current="tests" className="mb-4" />
+          <AcademyOverview employerId={ws.employerId} employerSlug={ws.employerSlug} />
+        </>
+      )}
     </AcademyPage>
   );
 }

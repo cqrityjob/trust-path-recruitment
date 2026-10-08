@@ -166,7 +166,7 @@ const REQUIRED_ACTIONS: { key: string; to: string; search: RegExp | null }[] = [
   {
     key: "awaiting-next-step",
     to: "/employer/$employerSlug/applications",
-    search: /status:\s*"reviewing"/,
+    search: /stage:\s*"review"/,
   },
 ];
 

@@ -109,6 +109,12 @@ pw.shots.mjs
 # a reviewer can read what each screen SAYS; INDEX.md names the synthetic
 # fixture and what every capture is evidence of.
 !/artifacts/recruitment-workspace/
+# artifacts/employer-portal-ux/: the employer portal before and after the
+# 2026-10-08 UX pass, photographed by employer-portal-ux-evidence.yml on the
+# same synthetic fixture (INDEX.md names the fixture, the languages and the
+# widths). The workflow commits the images here; failure screenshots and
+# traces stay in test-results/ and are never committed.
+!/artifacts/employer-portal-ux/
 
 # The Varbi-shaped recruitment case walk (dashboard -> case -> five steps ->
 # paged candidate table -> booking -> candidate review -> decision & close,

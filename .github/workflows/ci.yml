@@ -76,6 +76,30 @@ jobs:
             /tmp/ri-p1-schema-evidence/http-api.log
           if-no-files-found: ignore
 
+  # The committed before/after image pair of the employer portal is complete
+  # and shows the code under review. A job of its own, so a red here reads as
+  # "the pair is stale or incomplete" and never as a failed build. On a pull
+  # request it is RED by design on the push that changes a photographed path,
+  # until employer-portal-ux-evidence.yml commits the fresh pair; the head a
+  # reviewer reads is the one where it is green. Its planted controls run in
+  # negative-controls:all.
+  employer-portal-evidence:
+    name: Employer portal before/after pair — complete and current
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+      - name: Check the committed pair
+        env:
+          EVIDENCE_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          EVIDENCE_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          GH_TOKEN: ${{ github.token }}
+        run: bun run employer-portal-evidence:check
+
   verify:
     name: Lint, typecheck and deterministic checks
     runs-on: ubuntu-latest
@@ -130,6 +154,9 @@ jobs:
         run: |
           bun test scripts/sp-evidence-upload-recovery-ci.test.ts
           bunx tsc --noEmit --allowJs --checkJs false --skipLibCheck --module preserve --moduleResolution bundler --target ES2022 --types node scripts/sp-evidence-upload-recovery-ci.test.ts
+
+      - name: Bounded public-registry pull retry controls
+        run: bun test scripts/registry-image-retry.test.mjs
 
       - name: Type-check
         run: bunx tsc --noEmit
@@ -1287,6 +1314,27 @@ jobs:
       - name: Recruitment workspace check
         run: bun run recruitment-workspace:check
 
+      # The employer portal as one journey (UX pass 2026-10-08): the flow strip
+      # on every area page, overview rows that open exactly what they counted,
+      # requirement status as text and symbol, the menu's one-line purposes,
+      # and context that survives the trip into a candidate, a result or an
+      # interview case. Its planted controls run in `negative-controls:all`.
+      - name: Employer portal flow check
+        run: bun run employer-portal-flow:check
+
+      # The shared Playwright config's phone projects are phones: the preset
+      # names resolve, and isMobile/hasTouch/deviceScaleFactor are set. The
+      # name "iPhone 13 mini" (lower-case m) was never a device, and the
+      # 375px project ran as a narrow desktop window until this pinned it.
+      - name: Playwright mobile presets
+        run: bun test scripts/playwright-mobile-presets.test.ts
+
+      # The evidence fixture's counts obey the server's rules (status groups
+      # partition the population, reviewed + remaining = received, the
+      # "selected list" numbers describe the list returned for the view).
+      - name: Employer portal evidence fixture invariants
+        run: bun test scripts/employer-portal-fixture.test.ts
+
       # E3: the context an interview inherits, and what the CANDIDATE is told.
       #
       # The bridge already read the application, the advert and the assessment.
@@ -2391,6 +2439,17 @@ jobs:
       - name: Public entry browser suites
         run: bun run e2e:public-entry
 
+      # The employer portal as one journey, photographed: overview,
+      # recruitments, applications, tests, interviews and reports, in Swedish
+      # and English, on a 1440px desktop and a 375px phone, on the stubbed
+      # backend. The before/after pair is produced by
+      # employer-portal-ux-evidence.yml; this run is the head's own proof.
+      - name: Employer portal journey — evidence and behaviour
+        env:
+          E2E_BASE_URL: http://localhost:3100
+          PUBLIC_ENTRY_EVIDENCE_DIR: artifacts/employer-portal-ux/after
+        run: bun run e2e:employer-portal-ux
+
       # The signed-in header on a PC (owner bug report 2026-09-26): the seven
       # destinations in the bar at every width a Windows PC at 125%/150%
       # display scaling produces, no overflow, and a compact sheet that
@@ -2454,7 +2513,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: public-entry-browser-evidence
-          path: artifacts/public-entry-browser/
+          path: |
+            artifacts/public-entry-browser/
+            artifacts/employer-portal-ux/
           # `error` rather than `warn`: the harness creates the directory and
           # an empty manifest at module load, so "no files" means the suites
           # never started, which is a real failure and not merely a red run.

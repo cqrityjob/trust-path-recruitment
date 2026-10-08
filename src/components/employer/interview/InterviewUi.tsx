@@ -1311,6 +1311,7 @@ export function CaseHeader({
   status,
   action,
   compact = false,
+  applicationLink,
 }: {
   candidate: string;
   role: string;
@@ -1320,7 +1321,20 @@ export function CaseHeader({
   /** The interview's focused mode: one line, so the question and the notes
    *  fit a laptop screen together. */
   compact?: boolean;
+  /** The application this case belongs to, when it has one. Rendered as one
+   *  link under the role on every case screen, so the candidate's context is
+   *  never more than a click away -- the case overview and the report used
+   *  to be the only two screens that offered it. A standalone case renders
+   *  nothing here. */
+  applicationLink?: { employerSlug: string; applicationId: string | null };
 }) {
+  const link =
+    applicationLink?.applicationId != null ? (
+      <CaseApplicationLink
+        employerSlug={applicationLink.employerSlug}
+        applicationId={applicationLink.applicationId}
+      />
+    ) : null;
   if (compact) {
     return (
       <header className="flex flex-wrap items-center justify-between gap-3">
@@ -1328,6 +1342,7 @@ export function CaseHeader({
           <h1 className="text-lg font-semibold tracking-tight text-foreground">{candidate}</h1>
           <span className="text-sm text-muted-foreground">{role}</span>
           <CaseStatusChip status={status} />
+          {link}
         </div>
         {action && <div className="shrink-0">{action}</div>}
       </header>
@@ -1340,11 +1355,32 @@ export function CaseHeader({
           {candidate}
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">{role}</p>
-        <div className="mt-2.5">
+        <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1">
           <CaseStatusChip status={status} />
+          {link}
         </div>
       </div>
       {action && <div className="shrink-0">{action}</div>}
     </header>
+  );
+}
+
+function CaseApplicationLink({
+  employerSlug,
+  applicationId,
+}: {
+  employerSlug: string;
+  applicationId: string;
+}) {
+  const { t } = useT();
+  return (
+    <Link
+      to="/employer/$employerSlug/applications/$applicationId"
+      params={{ employerSlug, applicationId }}
+      data-testid="case-application-link"
+      className="inline-flex min-h-9 items-center text-sm font-medium text-accent underline-offset-2 hover:underline"
+    >
+      {t("continuity.backToApplication")}
+    </Link>
   );
 }

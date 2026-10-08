@@ -19,6 +19,7 @@ import type { TranslationKey } from "@/i18n/dictionaries";
 import { cn } from "@/lib/utils";
 import {
   RECRUITMENT_STEPS,
+  type CandidateView,
   type RecruitmentStep,
   type StepState,
 } from "@/lib/recruitment/definitions";
@@ -37,6 +38,7 @@ export function ProcessStepNav({
   employerSlug,
   jobId,
   counts,
+  preserve,
 }: {
   /** What the data says about each step. */
   states: Record<RecruitmentStep, StepState>;
@@ -47,6 +49,10 @@ export function ProcessStepNav({
   jobId: string;
   /** A number beside a step, where one means something (applications). */
   counts?: Partial<Record<RecruitmentStep, number>>;
+  /** The candidate list's current filters, sort and page. Carried on every
+   *  step link so a recruiter who looks at the advert and comes back to
+   *  Ansökningar finds the same list, not the default one. */
+  preserve?: CandidateView;
 }) {
   const { t } = useT();
   const activeRef = useRef<HTMLSpanElement>(null);
@@ -113,7 +119,7 @@ export function ProcessStepNav({
                 <Link
                   to="/employer/$employerSlug/jobs/$jobId"
                   params={{ employerSlug, jobId }}
-                  search={{ step }}
+                  search={{ ...preserve, step }}
                   className={cn(
                     base,
                     "border-transparent text-muted-foreground hover:border-border hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent",

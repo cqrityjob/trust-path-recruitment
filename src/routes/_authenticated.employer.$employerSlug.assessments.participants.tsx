@@ -786,6 +786,7 @@ function CandidateCard({
           <Link
             to="/employer/$employerSlug/assessments/reviews/$attemptId"
             params={{ employerSlug, attemptId: row.attemptId }}
+            search={applicationId ? { application: applicationId } : {}}
             className="inline-flex h-11 items-center gap-1.5 rounded-[10px] bg-accent px-5 text-sm font-semibold text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             <ClipboardCheck className="h-4 w-4" aria-hidden="true" />

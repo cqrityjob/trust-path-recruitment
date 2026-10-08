@@ -673,6 +673,7 @@ function JobHub({
           employerSlug={employerSlug}
           jobId={jobId}
           counts={counts ? { applications: receivedCount } : undefined}
+          preserve={candidateView}
         />
       </div>
 
