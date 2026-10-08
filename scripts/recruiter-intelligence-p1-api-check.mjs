@@ -115,6 +115,47 @@ ok("member write, outsider read, anonymous RPC denied by direct API", () => {
   for (const r of denied) assert.ok(r.status >= 400);
   assert.match(denied[0].body.message, /RECRUITMENT_NOT_PERMITTED/);
 });
+const assignmentOld = await rpc("rec_ri_get_review", { _application_id: app(75) });
+assert.equal(assignmentOld.status, 200);
+const av = assignmentOld.body;
+const ad = av.criteria.map((c) => ({
+  requirementId: c.requirementId,
+  state: c.state,
+  sourceKind: c.source?.kind ?? null,
+  sourceReference: c.source?.reference ?? null,
+  sourceVersion: c.source?.version ?? null,
+  sourceLabel: c.source?.label ?? null,
+  validUntil: c.validUntil,
+  note: c.note ?? "Synthetic assigned review",
+  neutralQuestion: c.neutralQuestion,
+}));
+const assignmentRace = await Promise.all([
+  rpc("rec_set_application_responsible", {
+    _application_id: app(75),
+    _user_id: "ee100000-0000-4000-8000-000000000002",
+    _expected_version: av.assignmentVersion,
+  }),
+  rpc("rec_ri_save_review", {
+    _application_id: app(75),
+    _profile_id: av.profile.profileId,
+    _expected_revision: av.revision,
+    _binding_token: av.bindingToken,
+    _operation_id: randomUUID(),
+    _decisions: ad,
+    _confirm: true,
+    _next_action: "Concurrent human follow-up",
+    _responsible_user_id: owner,
+    _expected_assignment_version: av.assignmentVersion,
+  }),
+]);
+const assignmentCurrent = await rpc("rec_ri_get_review", { _application_id: app(75) });
+ok("actual parallel legacy assignment/new review never overwrites new owner", () => {
+  assert.equal(assignmentRace[0].status, 200);
+  assert.equal(assignmentCurrent.body.responsibleUserId, "ee100000-0000-4000-8000-000000000002");
+  if (assignmentRace[1].status !== 200)
+    assert.match(assignmentRace[1].body.message, /STALE_VERSION/);
+  assert.equal(assignmentCurrent.body.reviewState, "reviewed");
+});
 const original = await rpc("rec_ri_get_review", { _application_id: app(76) });
 assert.equal(original.status, 200);
 const v = original.body;
@@ -139,6 +180,7 @@ const payload = {
   _confirm: true,
   _next_action: "Verify unreadable original",
   _responsible_user_id: owner,
+  _expected_assignment_version: v.assignmentVersion,
 };
 const secondPayload = {
   ...payload,
