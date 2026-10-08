@@ -1,0 +1,79 @@
+name: Passport native OP09 recovery evidence
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main, "codex/**"]
+  push:
+    branches: ["codex/ri-op09-native-recovery-ci"]
+permissions:
+  contents: read
+concurrency:
+  group: passport-native-op09-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  op09_native:
+    name: Actual GoTrue Storage44 and four routed reload recovery journeys
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      RI_OP09_NATIVE_DISPOSABLE: "1"
+      RI_OP09_NATIVE_EVIDENCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - name: Exact reviewed schema descendant and separate evidence code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Exact pending recovery application
+        uses: actions/checkout@v4
+        with:
+          ref: a5dd89ebee2c30f4d2ff18df7117d07e2bb125d2
+          path: app
+          persist-credentials: false
+      - uses: supabase/setup-cli@v3
+        with:
+          version: 2.111.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+      - name: Native strict replay client
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y postgresql-client
+      - name: Frozen evidence and application dependencies
+        run: |
+          bun install --frozen-lockfile
+          cd app
+          bun install --frozen-lockfile
+      - name: Chromium dependencies
+        run: bunx playwright install --with-deps chromium
+      - name: Isolation, source, fault and disclosure guards
+        run: |
+          bun test scripts/passport-native-op09.test.ts
+          bunx tsc --noEmit --allowJs --checkJs false --skipLibCheck --module preserve --moduleResolution bundler --target ES2022 --types node scripts/passport-native-op09.test.ts scripts/passport-native-op09-browser.config.ts e2e/passport-native-op09.spec.ts
+      - name: Complete387 native schema, Auth8, actual44 and browser4
+        run: node scripts/passport-native-op09-run.mjs
+      - name: Validate sanitized public evidence
+        id: public_evidence
+        if: always()
+        run: |
+          node --input-type=module -e '
+            import fs from "node:fs";
+            const m=JSON.parse(fs.readFileSync("op09-native-public/manifest.json","utf8"));
+            if(!["PASS","FAILED"].includes(m.result)||m.evidenceSha!==process.env.RI_OP09_NATIVE_EVIDENCE_SHA)throw Error("OP09_NATIVE_PUBLIC_MANIFEST_REQUIRED");
+            if(/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+|Bearer\s|"(?:password|access_token|refresh_token|SERVICE_ROLE_KEY|DB_URL)"\s*:/.test(JSON.stringify(m)))throw Error("OP09_NATIVE_PUBLIC_SECRET_REFUSED");
+          '
+      - name: OP09 evidence kept separate from P0 and native100 artifacts
+        if: always() && steps.public_evidence.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: passport-native-op09-evidence
+          path: |
+            op09-native-public/manifest.json
+            op09-native-public/images/*.png
+          if-no-files-found: error
+          retention-days: 7
