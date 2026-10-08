@@ -85,6 +85,15 @@ const MUTATIONS: Mutation[] = [
     guard: G,
     expect: "Rapporter is a view over the interview cases and keeps Intervjuer lit",
   },
+  {
+    id: "EPF-SAVE-ERROR-REQUIRES-NEW-FROZEN-COPY",
+    defect: "the save error introduces a key absent from older immutable interview snapshots",
+    file: `${R}interview-intelligence.$caseId.interview.tsx`,
+    find: '                : process?.error\n                  ? "iiu.iv.process.savefailed"',
+    replace: '                : process?.error\n                  ? "iiu.iv.process.saveFailed"',
+    guard: G,
+    expect: "the closing panel must distinguish save failure with the existing frozen SV/EN key",
+  },
 ];
 
 runControls("employer-portal-flow", MUTATIONS);

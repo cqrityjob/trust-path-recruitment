@@ -366,10 +366,12 @@ const UI = "src/components/employer/interview/InterviewUi.tsx";
     `${CANDIDATE}: inert decision buttons on a completed recruitment need their reason beside them.`,
   );
   expect(
-    /process\?\.error\s*\?\s*"iiu\.iv\.process\.saveFailed"/.test(
+    /process\?\.error\s*\?\s*"iiu\.iv\.process\.savefailed"/.test(
       code(`${R}interview-intelligence.$caseId.interview.tsx`),
-    ) && Boolean(sv["iiu.iv.process.saveFailed"]),
-    "the closing panel must tell a failed save apart from an unsaved draft.",
+    ) &&
+      Boolean(sv["iiu.iv.process.savefailed"]) &&
+      Boolean(en["iiu.iv.process.savefailed"]),
+    "the closing panel must distinguish save failure with the existing frozen SV/EN key, without requiring new case copy.",
   );
 }
 

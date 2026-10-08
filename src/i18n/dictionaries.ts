@@ -9015,8 +9015,6 @@ export const dictionaries = {
       "Beskriv vad du ändrade, varför och vilken uppföljning som behövs. Det gäller intervjuarens arbetssätt och är inget omdöme om kandidaten.",
     "iiu.iv.process.saved": "Reflektion och avvikelser är sparade",
     "iiu.iv.process.unsaved": "Reflektion eller avvikelser är inte sparade ännu",
-    "iiu.iv.process.saveFailed":
-      "Senaste ändringen kunde inte sparas. Texten finns kvar i fältet; försök igen.",
     "iiu.iv.process.savefailed": "Reflektion och avvikelser kunde inte sparas",
     "iiu.iv.process.failed.body":
       "Texten står kvar här. Nästa åtgärd stoppas tills den har sparats. Försök igen.",
@@ -17872,8 +17870,6 @@ export const dictionaries = {
       "Describe what you changed, why and any follow-up needed. This concerns the interviewer's conduct and is not a judgement about the candidate.",
     "iiu.iv.process.saved": "Reflection and changes are saved",
     "iiu.iv.process.unsaved": "Reflection or changes are not saved yet",
-    "iiu.iv.process.saveFailed":
-      "The latest change could not be saved. The text stays in the field; try again.",
     "iiu.iv.process.savefailed": "Reflection and changes could not be saved",
     "iiu.iv.process.failed.body":
       "Your text remains here. The next action is blocked until it is saved. Try again.",
