@@ -224,6 +224,15 @@ SENTINEL_OUT="$(psql_q -d "$TEST_DB" -f supabase/tests/sentinel_test.sql 2>&1)" 
 echo "    ok  35 Sentinel pilot assertions passed"
 # STRICT-REPLAY-CONTRACT END
 
+# Full-current-schema conflicts must be tested before historical rollback.
+# The independent clone runs PT409 foundation/snapshot/SQL checks, reproduces
+# the old deadlock, verifies real PostgREST14 and witnesses exact rollback.
+# Restore ONLY this forward patch on the empty main DB so all original40001
+# historical assertions below remain meaningful and unchanged.
+echo "==> Running domain-conflict transport, concurrency and actual PostgREST14"
+TEST_DB="$TEST_DB" bun scripts/recruiter-domain-conflict-check.mjs
+psql_q -d "$TEST_DB" -f supabase/rollback/20270307100000_recruiter_domain_conflict_transport_rollback.sql >/dev/null
+
 # ---------------------------------------------------------------------------
 # Recruiter Intelligence v0.3 P0 needs the complete current interview runtime.
 # Run immediately after the full replay, before historical rollback proofs
