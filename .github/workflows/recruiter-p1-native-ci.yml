@@ -1,0 +1,93 @@
+name: Recruiter P1 native 100-application evidence
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main, "codex/**"]
+  push:
+    branches: [main, "codex/ri-p1-native-100-ci"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: recruiter-p1-native-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  p1_native:
+    name: 104 GoTrue accounts, 80 Storage originals and 100 applications
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    env:
+      RI_P1_NATIVE_DISPOSABLE: "1"
+      RI_P1_NATIVE_EVIDENCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - name: Exact current evidence code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Exact reviewed P1 application
+        uses: actions/checkout@v4
+        with:
+          ref: 40e5775de5195050571421827434ec2872a61506
+          path: app
+          persist-credentials: false
+      - name: Exact reviewed schema including native hash fix
+        uses: actions/checkout@v4
+        with:
+          ref: 1e5988c6f9c7121a0fefd22c0db06f6b573f0ae9
+          path: schema
+          persist-credentials: false
+          sparse-checkout: |
+            supabase
+      # setup-cli installs its own Bun; restore the reviewed runtimes after it.
+      - uses: supabase/setup-cli@v3
+        with:
+          version: 2.111.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+      - name: PostgreSQL client for strict complete history
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y postgresql-client
+      - name: Frozen evidence dependencies
+        run: bun install --frozen-lockfile
+      - name: Frozen reviewed application dependencies
+        working-directory: app
+        run: bun install --frozen-lockfile
+      - name: Chromium and operating-system dependencies
+        run: bunx playwright install --with-deps chromium
+      - name: Native isolation, canonical source and publication guards
+        run: |
+          bun test scripts/recruiter-p1-native.test.ts
+          bunx tsc --noEmit --allowJs --checkJs false --skipLibCheck --module preserve --moduleResolution bundler --target ES2022 --types node scripts/recruiter-p1-native.test.ts scripts/recruiter-p1-native-browser.config.ts
+      - name: Strict schema, actual Auth and Storage, 23 API assertions and five browser cases
+        run: node scripts/recruiter-p1-native-run.mjs
+      - name: Validate redacted manifest and original synthetic PNG only
+        id: public_evidence
+        if: always()
+        run: |
+          node --input-type=module -e '
+            import fs from "node:fs";
+            const p="p1-native-public/manifest.json";
+            const m=JSON.parse(fs.readFileSync(p,"utf8"));
+            if(!["PASS","FAILED"].includes(m.result)||m.evidenceSha!==process.env.RI_P1_NATIVE_EVIDENCE_SHA)throw Error("P1_NATIVE_PUBLIC_MANIFEST_REQUIRED");
+            if(/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+|Bearer\s|"(?:password|access_token|refresh_token|SERVICE_ROLE_KEY|DB_URL)"\s*:/.test(JSON.stringify(m)))throw Error("P1_NATIVE_PUBLIC_SECRET_REFUSED");
+          '
+      - name: Redacted native P1 evidence
+        if: always() && steps.public_evidence.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: recruiter-p1-native-100-evidence
+          path: |
+            p1-native-public/manifest.json
+            p1-native-public/images/*.png
+          if-no-files-found: error
+          retention-days: 7
