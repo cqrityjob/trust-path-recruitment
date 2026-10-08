@@ -20,7 +20,10 @@ import {
   prepareNativeStorageClaim,
   storageFailureSummary,
 } from "./recruiter-real-ci-storage-bootstrap.mjs";
-import { browserFailureSummary } from "./recruiter-real-ci-browser-diagnostic.mjs";
+import {
+  browserFailureSummary,
+  requireNativeNoteReadback,
+} from "./recruiter-real-ci-browser-diagnostic.mjs";
 
 const env = {
   CI: "true",
@@ -620,6 +623,124 @@ describe("private browser error to fixed public diagnostic", () => {
     expect(runner).toContain("error.browserFailure = browserFailureSummary(text)");
     expect(runner).toContain("throw error;");
     expect(runner).toContain("requireBrowserCounts(data.stats, expected)");
+    expect(read("scripts/recruiter-real-ci-browser.config.ts")).toContain("retries: 0");
+  });
+});
+
+describe("native question-note identity and safe diagnostics", () => {
+  const fixture = (phase = "paused") => ({
+    phase,
+    sessions: [{ status: phase === "paused" ? "paused" : "completed" }],
+    cases: [{ status: phase === "paused" ? "interview_in_progress" : "interview_complete" }],
+    questions: Array.from({ length: 8 }, (_, i) => ({
+      id: `synthetic-${i + 1}`,
+      code: `Q${i + 1}`,
+    })),
+    notes: Array.from({ length: 8 }, (_, i) => ({
+      question_id: `synthetic-${i + 1}`,
+      body: `Q${i + 1}: private original`,
+    })),
+    markers: Object.fromEntries(Array.from({ length: 8 }, (_, i) => [`Q${i + 1}`, `Q${i + 1}:`])),
+  });
+  test("all eight nonblank markers must belong to their own governed question IDs", () => {
+    for (const phase of ["paused", "completed", "evidence"])
+      expect(requireNativeNoteReadback(fixture(phase))).toEqual({
+        phase,
+        nonemptyQuestionNotes: 8,
+      });
+    const missing = fixture();
+    missing.notes.splice(1, 1);
+    expect(() => requireNativeNoteReadback(missing)).toThrow(
+      "REAL_CI_NOTE_READBACK_PAUSED_Q2_MISSING",
+    );
+    const blank = fixture();
+    blank.notes[3].body = " \n";
+    expect(() => requireNativeNoteReadback(blank)).toThrow("REAL_CI_NOTE_READBACK_PAUSED_Q4_BLANK");
+    const misplaced = fixture();
+    [misplaced.notes[1].body, misplaced.notes[2].body] = [
+      misplaced.notes[2].body,
+      misplaced.notes[1].body,
+    ];
+    expect(() => requireNativeNoteReadback(misplaced)).toThrow(
+      "REAL_CI_NOTE_READBACK_PAUSED_Q2_MARKER",
+    );
+    const duplicate = fixture();
+    duplicate.notes.push({ ...duplicate.notes[7] });
+    expect(() => requireNativeNoteReadback(duplicate)).toThrow(
+      "REAL_CI_NOTE_READBACK_PAUSED_Q8_DUPLICATE",
+    );
+  });
+  test("own-session and case lifecycle are checked without leaking input values", () => {
+    const session = fixture("completed");
+    session.sessions[0].status = "private wrong value";
+    expect(() => requireNativeNoteReadback(session)).toThrow(
+      "REAL_CI_NOTE_READBACK_COMPLETED_SESSION_STATE",
+    );
+    const cases = fixture("completed");
+    cases.cases[0].status = "assessed";
+    expect(() => requireNativeNoteReadback(cases)).toThrow(
+      "REAL_CI_NOTE_READBACK_COMPLETED_CASE_STATE",
+    );
+    const questions = fixture();
+    questions.questions[7].code = "private wrong code";
+    expect(() => requireNativeNoteReadback(questions)).toThrow(
+      "REAL_CI_NOTE_READBACK_PAUSED_QUESTION_MAP",
+    );
+    const evidence = fixture("evidence");
+    evidence.cases[0].status = "evidence_review";
+    expect(requireNativeNoteReadback(evidence).nonemptyQuestionNotes).toBe(8);
+  });
+  test("only exact allowlisted note probe codes are published, never arbitrary suffixes or private text", () => {
+    const report = (message: string) =>
+      JSON.stringify({
+        suites: [
+          {
+            specs: [
+              {
+                title: "guard standalone sv: test",
+                tests: [
+                  {
+                    projectName: "mobile-375",
+                    results: [{ status: "failed", error: { message } }],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+    const allowed = browserFailureSummary(report("Error: REAL_CI_NOTE_READBACK_PAUSED_Q2_MISSING"));
+    expect(allowed.failures[0]).toMatchObject({
+      category: "note_readback",
+      probeCode: "REAL_CI_NOTE_READBACK_PAUSED_Q2_MISSING",
+    });
+    expect(
+      browserFailureSummary(report("REAL_CI_EVIDENCE_Q2_NOTE_VISIBLE")).failures[0],
+    ).toMatchObject({
+      category: "evidence_readback",
+      probeCode: "REAL_CI_EVIDENCE_Q2_NOTE_VISIBLE",
+    });
+    for (const message of [
+      "REAL_CI_NOTE_READBACK_PAUSED_Q9_MISSING",
+      "REAL_CI_NOTE_READBACK_PAUSED_Q2_MISSING Bearer private-token",
+      "REAL_CI_NOTE_READBACK_PAUSED_Q2_MISSING\nprivate note text",
+      "REAL_CI_NOTE_READBACK_PRIVATE_Q2_MISSING",
+      "REAL_CI_EVIDENCE_Q9_USE_VISIBLE",
+      "REAL_CI_EVIDENCE_Q2_USE_VISIBLE\nprivate note text",
+    ]) {
+      const publicResult = browserFailureSummary(report(message));
+      expect(publicResult.failures[0]).not.toHaveProperty("probeCode");
+      expect(JSON.stringify(publicResult)).not.toContain("private");
+      expect(JSON.stringify(publicResult)).not.toContain("Bearer");
+    }
+    const spec = read("e2e/recruiter-real-ci-browser.spec.ts");
+    expect(spec).toContain("select=question_id,body");
+    expect(spec).toContain('toHaveAttribute("aria-current", "true")');
+    expect(spec).toContain(
+      'page.getByRole("article", { name: /^Bekräftat underlag$|^Confirmed material$/ })',
+    );
+    expect(spec).toContain('markers, "paused")');
+    expect(spec).toContain('markers, "completed")');
     expect(read("scripts/recruiter-real-ci-browser.config.ts")).toContain("retries: 0");
   });
 });

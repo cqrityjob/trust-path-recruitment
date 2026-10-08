@@ -10,6 +10,7 @@ import { mkdir } from "node:fs/promises";
 import { readFileSync, statSync, writeFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { APP_SHA, readCIContext } from "../scripts/recruiter-real-ci-contract.mjs";
+import { requireNativeNoteReadback } from "../scripts/recruiter-real-ci-browser-diagnostic.mjs";
 
 const BASE = process.env.E2E_BASE_URL ?? "";
 test.skip(process.env.E2E_LOCAL_STACK !== "1", "Requires the disposable synthetic local stack.");
@@ -219,6 +220,55 @@ async function frozenContent(page: Page, caseId: string) {
   return snapshot.manifest;
 }
 
+const questionDrainMarker =
+  "P0 Q1 snapshot B typed while A is pending; concrete responsibility, action and result.";
+const completionDrainMarker =
+  "P0 mixed save note B typed during process save: responsibility, action and result.";
+
+async function readOwnQuestionNotes(
+  page: Page,
+  caseId: string,
+  questions: { id: string; code: string }[],
+  markers: Record<string, string>,
+  phase: "paused" | "completed" | "evidence",
+) {
+  const api = await localSession(page);
+  const headers = {
+    apikey: status.PUBLISHABLE_KEY ?? status.ANON_KEY,
+    Authorization: `Bearer ${api.token}`,
+  };
+  const read = async (path: string) => {
+    const response = await page.request.get(`${api.issuer}/rest/v1/${path}`, { headers });
+    if (response.status() !== 200) throw Error(`REAL_CI_NOTE_READBACK_${phase.toUpperCase()}_HTTP`);
+    return response.json();
+  };
+  const sessions = await read(`scp_interview_sessions?case_id=eq.${caseId}&select=id,status`);
+  const cases = await read(`scp_interview_cases?id=eq.${caseId}&select=status`);
+  if (!Array.isArray(sessions) || sessions.length !== 1)
+    throw Error(`REAL_CI_NOTE_READBACK_${phase.toUpperCase()}_SESSION_COUNT`);
+  const notes = await read(
+    `scp_interview_session_notes?session_id=eq.${sessions[0].id}&select=question_id,body`,
+  );
+  const result = requireNativeNoteReadback({ phase, sessions, cases, questions, notes, markers });
+  // Only fixed success labels/counts enter the private journey recorder;
+  // neither original note bodies nor source/case/question IDs are exported.
+  record({ kind: "actual_own_auth_question_note_readback", ...result });
+}
+
+async function evidenceProbe(
+  question: number,
+  reason: "SELECTION" | "NOTE_VISIBLE" | "USE_VISIBLE" | "CONFIRMED_EXCERPT",
+  assertion: () => Promise<void>,
+) {
+  try {
+    await assertion();
+  } catch {
+    // Keep every assertion/time bound, but expose only a fixed question/stage
+    // code instead of locator details or material from the private UI error.
+    throw Error(`REAL_CI_EVIDENCE_Q${question}_${reason}`);
+  }
+}
+
 async function completionDrainsNewerText(page: Page, caseId: string) {
   let release!: () => void;
   const hold = new Promise<void>((resolve) => {
@@ -240,8 +290,7 @@ async function completionDrainsNewerText(page: Page, caseId: string) {
   const a = "P0 completion snapshot A held on network";
   const b = "P0 completion snapshot B typed while A is pending must be stored";
   const deviations = "P0 completion deviation B must drain before completion";
-  const noteB =
-    "P0 mixed save note B typed during process save: responsibility, action and result.";
+  const noteB = completionDrainMarker;
   await page.locator("#reflect").fill(a);
   // Do not await a navigation/action result: this click starts the guarded
   // flush, then the human keeps typing while its first RPC is held.
@@ -322,8 +371,7 @@ async function questionChangeDrainsNewerText(page: Page) {
   await page.locator("#note").fill("P0 Q1 snapshot A held before changing question");
   await page.getByRole("button", { name: /^Nästa$|^Next$/ }).click();
   await requested;
-  const b =
-    "P0 Q1 snapshot B typed while A is pending; concrete responsibility, action and result.";
+  const b = questionDrainMarker;
   await page.locator("#note").fill(b);
   release();
   await expect(page.locator("main")).toContainText(/(Fråga|Question) 2 (av|of) 8/, {
@@ -594,18 +642,20 @@ for (const scenario of scenarios) {
     if (scenario.lang === "en")
       await expect(page.locator("main")).toContainText(/guide's own language.*never translated/i);
     const prompts = new Set<string>();
+    const markers: Record<string, string> = {};
     for (let i = 1; i <= 8; i++) {
       await expect(page.locator("main")).toContainText(
         new RegExp(`(Fråga|Question) ${i} (av|of) 8`),
       );
       prompts.add(await page.locator("main h2").first().innerText());
-      await page
-        .locator("#note")
-        .fill(
-          `Syntetiskt svar Q${i}: eget ansvar, konkret handling och ${i <= 6 ? "beskrivet resultat" : "hypotetiskt resonemang; inte faktisk erfarenhet"}.`,
-        );
+      const answer = `Syntetiskt svar Q${i}: eget ansvar, konkret handling och ${i <= 6 ? "beskrivet resultat" : "hypotetiskt resonemang; inte faktisk erfarenhet"}.`;
+      markers[`Q${i}`] = `Syntetiskt svar Q${i}:`;
+      await page.locator("#note").fill(answer);
       await page.getByRole("button", { name: /Markera som genomgången|Mark as covered/ }).click();
       await expect(page.locator("main")).toContainText(/Besvarad|Answered/, { timeout: 30_000 });
+      // Covered is optimistic question state, not a note-save receipt.
+      // Check the draft now; actual persisted Q-ID/marker checks follow Pause.
+      await expect(page.locator("#note")).toHaveValue(answer);
       if (
         process.env.RI_REAL_STRESS === "1" &&
         i === 1 &&
@@ -613,6 +663,7 @@ for (const scenario of scenarios) {
         scenario.start === "standalone"
       ) {
         await questionChangeDrainsNewerText(page);
+        markers.Q1 = questionDrainMarker;
       } else if (i < 8) {
         await page.getByRole("button", { name: /^Nästa$|^Next$/ }).click();
       }
@@ -629,6 +680,7 @@ for (const scenario of scenarios) {
     await page.reload();
     await expect(page.locator("#reflect")).toHaveValue(reflection, { timeout: 30_000 });
     await expect(page.locator("#protocol-deviations")).toHaveValue(deviation);
+    await readOwnQuestionNotes(page, caseId, manifest.content.questions, markers, "paused");
     expect(await frozenContent(page, caseId)).toEqual(manifest);
     await page.getByRole("button", { name: /Återuppta|Resume/ }).click();
     await expect(page.locator("main")).toContainText(/Intervju pågår|Interview in progress/);
@@ -648,6 +700,7 @@ for (const scenario of scenarios) {
       scenario.start === "standalone"
     ) {
       mixedNote = await completionDrainsNewerText(page, caseId);
+      markers.Q8 = completionDrainMarker;
     } else {
       await page.getByRole("button", { name: /Avsluta intervjun|End the interview/ }).click();
     }
@@ -655,6 +708,7 @@ for (const scenario of scenarios) {
       /Intervjun är genomförd|The interview is completed/,
       { timeout: 30_000 },
     );
+    await readOwnQuestionNotes(page, caseId, manifest.content.questions, markers, "completed");
     await page
       .getByRole("link", { name: /Gå till bedömning|Go to assessment/ })
       .first()
@@ -670,15 +724,26 @@ for (const scenario of scenarios) {
     await expect(questionButtons).toHaveCount(8, { timeout: 30_000 });
     for (let i = 0; i < 8; i++) {
       await questionButtons.nth(i).click();
+      await evidenceProbe(i + 1, "SELECTION", () =>
+        expect(questionButtons.nth(i)).toHaveAttribute("aria-current", "true"),
+      );
+      await evidenceProbe(i + 1, "NOTE_VISIBLE", () =>
+        expect(
+          page.getByRole("article", { name: /^Dina intervjuanteckningar$|^Your interview notes$/ }),
+        ).toContainText(markers[`Q${i + 1}`]),
+      );
       const use = page
         .getByRole("button", { name: /Använd som bedömningsunderlag|Use as assessment material/ })
         .first();
-      await expect(use).toBeVisible({ timeout: 30_000 });
+      await evidenceProbe(i + 1, "USE_VISIBLE", () => expect(use).toBeVisible({ timeout: 30_000 }));
       await use.click();
-      await expect(page.locator("main")).toContainText(/Bekräftat underlag|Confirmed material/, {
-        timeout: 30_000,
-      });
+      await evidenceProbe(i + 1, "CONFIRMED_EXCERPT", () =>
+        expect(
+          page.getByRole("article", { name: /^Bekräftat underlag$|^Confirmed material$/ }),
+        ).toContainText(markers[`Q${i + 1}`], { timeout: 30_000 }),
+      );
     }
+    await readOwnQuestionNotes(page, caseId, manifest.content.questions, markers, "evidence");
     await page
       .getByRole("link", { name: /Gör din bedömning|Make your assessment/ })
       .first()
