@@ -28,7 +28,7 @@ describe("playwright mobile presets", () => {
   test.each([
     ["mobile-375", 375, 812],
     ["mobile-390", 390, 844],
-  ])("%s is an emulated phone, not a narrow desktop", (name, width, height) => {
+  ] as const)("%s is an emulated phone, not a narrow desktop", (name: string, width: number, height: number) => {
     const use = project(name);
     expect(use.browserName).toBe("chromium");
     expect(use.isMobile).toBe(true);

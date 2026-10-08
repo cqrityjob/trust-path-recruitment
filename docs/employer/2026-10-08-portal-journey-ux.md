@@ -38,6 +38,15 @@ Intervjuer → Rapport → Beslut & avslut**. Varje station är en länk till de
 arbetet görs; den aktuella stationen markeras visuellt och med `aria-current="step"`.
 Översikten är kartan och markerar ingen station.
 
+Remsan beskriver ordningen i arbetet, inte en checklista: raden under den säger att
+tester och intervjuer används när rekryteringen behöver dem och att beslut och
+avslut görs i respektive rekrytering. Markeringen gäller sidan läsaren står på,
+aldrig en viss kandidats steg. Varje station bär en förklarande `title`.
+"Beslut & avslut" öppnar de pågående rekryteringarna (`phase=active`), eftersom
+besked ges i ansökningarna och avslutet i rekryteringens sista steg även när
+rekryteringen fortfarande är öppen. På telefon radbryts stationerna i stället för
+att scrollas i sidled, så inget nästa steg hamnar utanför skärmen.
+
 ## Översikten: vad siffrorna omfattar
 
 Två populationer av samma ansökningar visas på sidan, och de förklaras nu var för sig:
@@ -93,7 +102,10 @@ Avslut och stängda ansökningar:
   ändå (`APPLICATION_NOT_OPEN`).
 - Felkopian för `APPLICATION_NOT_OPEN` gäller nu alla åtgärder, inte bara bokningar.
 - Arkiverad ansökan/rekrytering sägs ut på sidan (`archived-state`), och arkivering
-  och återställning får skilda notiser.
+  och återställning får skilda notiser. Texterna motsvarar listornas faktiska
+  beteende: en arkiverad ansökan lämnar de aktiva listorna och antalet nya
+  ansökningar men visas under Arkiverade och Alla mottagna; en arkiverad rekrytering
+  visas bara under Arkiverade i rekryteringslistan.
 - Inerta beslutsknappar på en avslutad rekrytering får sin orsak bredvid sig.
 - Avslutsrutan i intervjun skiljer "kunde inte sparas" från "inte sparad ännu".
 
@@ -104,6 +116,25 @@ Bevarat: Sentinel-layouten, avslutsrutan, autosparningen, "Till mina tester",
 RPC-typöverlagringen i `src/integrations/supabase/database.ts`, metodpaket, frågor,
 kompetensområden och poängregler. Inga serverbehörigheter, RPC:er eller migrationer
 ändras; inga räknares innebörd ändras.
+
+## Vilken appversion varje kontroll kör
+
+| Kontroll | Appversion | Täcker UX-ändringarna? |
+| --- | --- | --- |
+| `ci.yml` (lint/typecheck/deterministiska guards inkl. `employer-portal-flow:check` och `playwright-mobile-presets`, `verify`, `public-entry-browser` med `e2e:employer-portal-ux`, P1-jobben, migrationsreplay) | PR-huvudet | Ja |
+| `recruitment-evidence.yml` (Supabase CLI-stack, riktig Auth/PostgREST, `e2e/recruitment-workspace.spec.ts`) | PR-huvudet | Ja: tre nya inloggade tester för stegnavigeringens bevarade vy, återlänken till kandidatlistan, översiktens förklaringar, flödesremsan och `phase=ready`, utöver de befintliga 15+ |
+| `e4-evidence.yml` (slutrapporten, riktig stack) | PR-huvudet | Regression på rapportsidan (CaseHeader-länk) |
+| `employer-portal-ux-evidence.yml` | bas `e4531c3b` (före) och PR-huvudet (efter) | Ja: syntetiska bilder, sv/en, 1440 och emulerad 375 |
+| `recruiter-p1-native-ci.yml`, `recruiter-real-ci.yml`, `passport-native-op09-ci.yml` | pinnad app `40e5775d…` | **Nej.** Tidigare versionsbevis för Astras leverans; verifierar inte denna PR:s kod |
+
+Mobila kontroller är emulering (Chromium med iPhone 13 Mini-/iPhone 14-metrik), inte
+fysiska telefoner. Fram till denna PR var `mobile-375` i `playwright.config.ts` ett
+smalt skrivbordsfönster: `devices["iPhone 13 mini"]` (litet m) är inget
+Playwright-preset, så spridningen var tom. Presetet löses nu via
+`requireNativeMobilePreset("iPhone 13 Mini")`, `isMobile`, `hasTouch` och
+`deviceScaleFactor: 3` är utskrivna, och `scripts/playwright-mobile-presets.test.ts`
+pinnar det i CI. Alla `mobile-375`/`mobile-390`-körningar på PR:n är därmed de första
+med verklig mobilemulering i den delade konfigurationen.
 
 ## Tester och verifiering
 
@@ -130,6 +161,7 @@ Utfört lokalt (containern saknar delar av `node_modules`, se nedan):
 | `employer-portal-flow:check` | PASS |
 | `negative-controls:employer-portal-flow` | 7/7 upptäckta, träd rent |
 | `bun test scripts/recruiter-intelligence-ui.test.tsx` | 8 pass, 0 fail (RecruiterCounts/badges med nya symboler och förklaring) |
+| `bun test scripts/playwright-mobile-presets.test.ts` | 4 pass, 0 fail |
 | `library-structure`, `interview-ux-contract`, `employer-report-access`, `candidate-app-navigation`, `job-board-launch`, `employer-lifecycle`, `employer-process-continuity`, `recruitment-assessment-ux`, `emma-uat`, `passport-employer-verification`, `interview-pack-contract` | PASS |
 | Partiell `tsc --noEmit` (TypeScript finns lokalt, routerpaket saknas) | inga fel i ändrade filer utöver "cannot find module"-brus; alla nya i18n-nycklar typkontrollerade |
 | `recruitment-workspace:check`, `employer-access-lifecycle:check`, `send-test-dialog:check`, `recruiter-intelligence-review.test.tsx`, `interview-background-references.test.tsx` | INTE KÖRBARA lokalt (`@tanstack/*` saknas); körs i CI |
