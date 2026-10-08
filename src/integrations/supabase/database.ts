@@ -8,6 +8,38 @@ type RequiredNullable<Args, Keys extends keyof Args> = Omit<Args, Keys> & {
   [Key in Keys]-?: Exclude<Args[Key], undefined> | null;
 };
 type FoundationFunctions = {
+  scp_iv_case_frozen_labels: {
+    Args: { _case_ids: string[] };
+    Returns: {
+      case_id: string;
+      name_sv_at_freeze: string | null;
+      name_en_at_freeze: string | null;
+      content_status_at_freeze: string | null;
+      validation_label_at_freeze: string | null;
+      provenance: string;
+      frozen_at: string;
+    }[];
+  };
+  scp_iv_case_frozen_content: {
+    Args: { _case_id: string };
+    Returns: GeneratedDatabase["public"]["Tables"]["scp_interview_reports"]["Row"]["payload"];
+  };
+  scp_iv_acknowledge_observed_content: {
+    Args: { _case_id: string; _expected_manifest_hash: string; _note: string };
+    Returns: GeneratedDatabase["public"]["Tables"]["scp_interview_reports"]["Row"]["payload"];
+  };
+  scp_iv_content_inventory: {
+    Args: { _employer_id: string };
+    Returns: {
+      case_id: string;
+      status: string;
+      created_at: string;
+      provenance: string;
+      frozen_at: string;
+      manifest_hash: string;
+      requires_acknowledgement: boolean;
+    }[];
+  };
   // Schema-first RI v0.3 P0. Handwritten contracts live beside the existing
   // nullable overlay so a generator refresh cannot erase required NULLs.
   scp_iv_save_session_process: {

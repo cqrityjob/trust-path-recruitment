@@ -1063,6 +1063,16 @@ const sv = {
   "ev.tooLarge": "Filen är för stor. Högst 8 MB.",
   "ev.badType": "Filtypen stöds inte. Använd PDF, JPG, PNG eller HEIC.",
   "ev.failed": "Uppladdningen misslyckades. Försök igen.",
+  "ev.uploadNotAttached":
+    "Dokumentet kunde inte kopplas till meriten. Den okopplade uppladdningen har tagits bort. Försök igen.",
+  "ev.uploadPending":
+    "Dokumentet kunde inte kopplas till meriten. Radering av den uppladdade filen är inte bekräftad. Spara uppladdningsreferensen och kontakta support innan du laddar upp filen igen.",
+  "ev.uploadUnknown":
+    "Utfallet av uppladdningen kunde inte bekräftas. Dokumentet kan redan vara sparat. Öppna eller uppdatera meriten och kontrollera underlagen innan du laddar upp filen igen. Kontakta support om utfallet fortfarande är oklart.",
+  "ev.uploadReference": "Uppladdningsreferens",
+  "ev.replacementUnknown":
+    "Det nya dokumentet är sparat. Återkallningen av det tidigare dokumentet kunde inte bekräftas. Uppdatera meriten och kontrollera båda dokumentens status.",
+
   "ev.view": "Öppna",
   "ev.opening": "Öppnar …",
   // The defect: this sentence sat under the document list, on its own, right
@@ -3469,6 +3479,16 @@ const en: Record<PassportCopyKey, string> = {
   "ev.tooLarge": "That file is too large. 8 MB maximum.",
   "ev.badType": "That file type is not supported. Use PDF, JPG, PNG or HEIC.",
   "ev.failed": "The upload failed. Please try again.",
+  "ev.uploadNotAttached":
+    "The document could not be attached to the credential. The unattached upload was removed. Please try again.",
+  "ev.uploadPending":
+    "The document could not be attached to the credential. Deletion of the uploaded file is not confirmed. Keep the upload reference and contact support before uploading the file again.",
+  "ev.uploadUnknown":
+    "The upload outcome could not be confirmed. The document may already be saved. Open or reload the credential and check its documents before uploading the file again. Contact support if the outcome remains unclear.",
+  "ev.uploadReference": "Upload reference",
+  "ev.replacementUnknown":
+    "The new document is saved. Withdrawal of the earlier document could not be confirmed. Reload the credential and check the status of both documents.",
+
   "ev.view": "Open",
   "ev.opening": "Opening …",
   "ev.saved": "Document uploaded and saved.",
