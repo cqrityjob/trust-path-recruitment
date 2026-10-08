@@ -2,7 +2,7 @@
   "private": true,
   "scripts": {
     "recruiter-requirements:check": "bun test scripts/recruiter-intelligence-review.test.tsx scripts/recruiter-intelligence-ui.test.tsx scripts/interview-background-references.test.tsx scripts/recruiter-intelligence-runner.test.ts scripts/recruiter-intelligence-ci.test.ts",
-    "recruiter-interview-foundation:check": "bun test scripts/interview-content-snapshot.test.tsx scripts/interview-process-persistence.test.tsx scripts/recruiter-interview-foundation.test.tsx scripts/manual-control-points.test.tsx scripts/passport-evidence-withdrawal.test.tsx scripts/passport-evidence-upload.test.tsx",
+    "recruiter-interview-foundation:check": "bun test scripts/interview-content-snapshot.test.tsx scripts/interview-process-persistence.test.tsx scripts/recruiter-interview-foundation.test.tsx scripts/manual-control-points.test.tsx scripts/passport-evidence-withdrawal.test.tsx scripts/passport-evidence-upload.test.tsx && bun run scripts/interview-case-boundary-check.tsx",
     "sentinel:check": "bun run scripts/sentinel-check.ts",
     "sentinel:content": "bun run scripts/sentinel-content.ts",
     "security-work:service-check": "bun run scripts/security-work-service-check.ts",

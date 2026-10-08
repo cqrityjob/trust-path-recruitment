@@ -2,25 +2,44 @@ import { useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { InterviewCopyProvider, useT } from "@/i18n/context";
+import { EmployerAppShell } from "@/components/employer/EmployerAppShell";
+import { EmployerAccessDenied } from "@/components/employer/EmployerAccessDenied";
+import { useEmployerWorkspace } from "@/lib/job-intelligence/use-employer-workspace";
 import {
   acknowledgeObservedInterviewContent,
   getInterviewCase,
   type CaseDetail,
 } from "@/lib/interview-intelligence/runtime.functions";
-import { State } from "./InterviewUi";
+import { State, interviewErrorMessage } from "./InterviewUi";
 
 /** The read boundary is shared by every employer case screen. Old cases stay
  * readable, but continuation needs the named owner/admin's explicit review. */
-export function CaseContentBoundary({ caseId, children }: { caseId: string; children: ReactNode }) {
+export function CaseContentBoundary({
+  caseId,
+  employerSlug,
+  children,
+}: {
+  caseId: string;
+  employerSlug: string;
+  children: ReactNode;
+}) {
   const getCase = useServerFn(getInterviewCase);
   const query = useQuery({
     queryKey: ["ii", "case", caseId],
     queryFn: () => getCase({ data: { caseId } }),
     retry: false,
   });
-  if (query.isPending) return <State kind="loading" />;
-  if (query.isError || !query.data?.contentSnapshot)
-    return <State kind="error" message={query.error?.message} />;
+  if (query.isPending) return <CaseReadState employerSlug={employerSlug} kind="loading" />;
+  if (query.isError || !query.data?.contentSnapshot) {
+    const denied = query.isError && query.error.message.includes("NOT_FOUND");
+    return (
+      <CaseReadState
+        employerSlug={employerSlug}
+        kind={denied ? "denied" : "error"}
+        error={denied ? undefined : query.error}
+      />
+    );
+  }
   const detail = query.data;
   const snapshot = detail.contentSnapshot!;
   const needsReview =
@@ -30,6 +49,42 @@ export function CaseContentBoundary({ caseId, children }: { caseId: string; chil
       <SnapshotNotice detail={detail} />
       {needsReview ? <ObservedContentReview detail={detail} /> : children}
     </InterviewCopyProvider>
+  );
+}
+
+/** The parent read boundary must preserve the same workspace shell and denied
+ * state as its child pages. It never renders case children after a failed read. */
+function CaseReadState({
+  employerSlug,
+  kind,
+  error,
+}: {
+  employerSlug: string;
+  kind: "loading" | "denied" | "error";
+  error?: Error | null;
+}) {
+  const workspace = useEmployerWorkspace(employerSlug);
+  const { t } = useT();
+  if (workspace.isLoading)
+    return (
+      <div className="mx-auto max-w-2xl px-4 py-16">
+        <State kind="loading" />
+      </div>
+    );
+  if (workspace.isError || !workspace.workspace)
+    return <EmployerAccessDenied workspaces={workspace.workspaces} />;
+  const current = workspace.workspace;
+  return (
+    <EmployerAppShell
+      employerSlug={current.employerSlug}
+      employerName={current.employerName}
+      role={current.role}
+      status={current.employerStatus}
+      activeSection="interviewIntelligence"
+      hasMultipleWorkspaces={workspace.hasMultipleWorkspaces}
+    >
+      <State kind={kind} message={error ? interviewErrorMessage(error, t) : undefined} />
+    </EmployerAppShell>
   );
 }
 
