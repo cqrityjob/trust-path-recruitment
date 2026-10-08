@@ -56,6 +56,7 @@ test("native target refuses workstations, hosted/inherited credentials and wrong
   ])
     assert.throws(() => validateTarget({ ...valid, ...mutation }, evidence, APP_SHA));
   assert.throws(() => validateTarget(valid, evidence, SCHEMA_SHA));
+  assert.throws(() => validateTarget(valid, evidence, "cce2c8a238522d51396b52697d25bc9d54a8a8bd"));
   assert.throws(() => validateTarget(valid, evidence, "a5dd89ebee2c30f4d2ff18df7117d07e2bb125d2"));
 });
 test("native service target/key roles and exact387 history fail closed", () => {

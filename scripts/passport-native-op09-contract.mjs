@@ -3,8 +3,8 @@ import path from "node:path";
 import cp from "node:child_process";
 import crypto from "node:crypto";
 
-export const SCHEMA_SHA = "9c8b8159ce5f350c6ace074c917823599d19ce99";
-export const APP_SHA = "cce2c8a238522d51396b52697d25bc9d54a8a8bd";
+export const SCHEMA_SHA = "1e5988c6f9c7121a0fefd22c0db06f6b573f0ae9";
+export const APP_SHA = "40e5775de5195050571421827434ec2872a61506";
 export const PROJECT = "cqj-ri-native-op09-20261008";
 export const API = "http://127.0.0.1:55820";
 export const APP = "http://127.0.0.1:35820";

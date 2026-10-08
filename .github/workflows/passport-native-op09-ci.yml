@@ -28,7 +28,7 @@ jobs:
       - name: Exact pending recovery application
         uses: actions/checkout@v4
         with:
-          ref: cce2c8a238522d51396b52697d25bc9d54a8a8bd
+          ref: 40e5775de5195050571421827434ec2872a61506
           path: app
           persist-credentials: false
       - uses: supabase/setup-cli@v3
