@@ -144,5 +144,21 @@
     "First local new source guard misclassified Array.from as a client table adapter; corrected narrow intrinsic exemption and real adapter negative controls",
     "An earlier all-guards command included an absent OP09 filename and executed only70 tests across2 files; final explicit three-file command executed84 across3",
     "Original9dc job113579235631 FAILED EPE anchor0 at23:04:02UTC; preserved separately, not relabeled"
-  ]
+  ],
+  "independentRootReview": {
+    "sourceCommit": "5d253e6223a120f5de7a2ff23232f458301950fd",
+    "codeReview": "GO",
+    "guardTests": 84,
+    "bunExpectCalls": 241,
+    "files": 3,
+    "failed": 0,
+    "cleanTree": true,
+    "nativeAuthHttpExecuted": false,
+    "log": {
+      "localBasename": "ri-native-six-rpc-independent-complete.log",
+      "bytes": 10785,
+      "sha256": "a7e0a9789b482088af72df2444414667e518c389f214b136af5c65af38b7ef91"
+    },
+    "firstPartialCommand": "wrong third filename collected70 tests across2files; partial scope, not84-test PASS"
+  }
 }
