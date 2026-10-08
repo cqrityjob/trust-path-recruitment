@@ -237,6 +237,64 @@ RESET ROLE;
 SELECT pg_temp.ok(NOT (SELECT ai_enabled OR transcript_enabled FROM public.scp_interview_ai_config WHERE id),'AI and transcript switches stay off; historical synthetic proposal rows do not execute AI');
 ROLLBACK TO ai_isolation;
 
+SAVEPOINT private_note_provenance;
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub='ee100000-0000-4000-8000-000000000001';
+CREATE TEMP TABLE origins(app uuid,case_id uuid,source_id uuid);
+GRANT SELECT ON origins TO PUBLIC;
+-- No-event synthetic fixture permits dependency-cascade coverage without
+-- disabling the inherited append-only legacy case-event guard. Normal
+-- RPC-created case deletion remains refused by that guard.
+RESET ROLE;
+DO $$ DECLARE fixture_n integer;a uuid;c uuid;s uuid;v jsonb;src jsonb;rid uuid;BEGIN
+ FOR fixture_n IN SELECT unnest(ARRAY[1,41]) LOOP
+  SELECT app INTO a FROM seq WHERE seq.n=fixture_n;
+  INSERT INTO public.scp_interview_cases(employer_id,job_id,application_id,candidate_user_id,candidate_display_name,pack_version_id,role_version_id,title,created_by)
+   SELECT f.employer,f.job,a,(SELECT uid FROM seq WHERE seq.n=fixture_n),'Synthetic private-note candidate',v.id,v.role_version_id,'Private human note provenance',f.owner FROM fixture f,public.scp_interview_pack_versions v JOIN public.scp_interview_packs p ON p.id=v.pack_id WHERE p.slug='vaktare-se' AND v.version_number=1 RETURNING id INTO c;
+  INSERT INTO public.scp_interview_case_sources(case_id,source_kind,label,content_text,purpose_code,lawful_basis_note,provided_by)
+   VALUES(c,'candidate_cv','Private synthetic original','Synthetic original expiry 2027-11-01','recruitment','Synthetic test only',(SELECT owner FROM fixture)) RETURNING id INTO s;
+  INSERT INTO origins VALUES(a,c,s);
+ END LOOP;
+END $$;
+SET LOCAL ROLE authenticated;
+-- Boolean fallback can be public while the associated human text remains
+-- private. This confirmed version explicitly accepts either kind for R1.
+SELECT public.rec_ri_confirm_profile((SELECT job FROM fixture),1,gen_random_uuid(),'2026-11-01',(SELECT jsonb_agg(CASE WHEN r->>'requirementId'='10000000-0000-4000-8000-000000000001' THEN r||'{"acceptedSources":["application_answer","interview_source"]}'::jsonb ELSE r END) FROM rules,jsonb_array_elements(body)r));
+DO $$ DECLARE o record;v jsonb;src jsonb;rid uuid;BEGIN FOR o IN SELECT * FROM origins LOOP
+ v:=public.rec_ri_get_review(o.app);SELECT value INTO src FROM jsonb_array_elements(v->'availableSources')WHERE value->>'reference'=o.source_id::text;
+ rid:=CASE WHEN o.app=(SELECT app FROM seq WHERE n=41) THEN '10000000-0000-4000-8000-000000000001'::uuid ELSE '10000000-0000-4000-8000-000000000002'::uuid END;
+ PERFORM public.rec_ri_save_review(o.app,(v->>'profileId')::uuid,(v->>'revision')::integer,v->>'bindingToken',gen_random_uuid(),jsonb_build_array(jsonb_build_object('requirementId',rid,'state','clarify','sourceKind','interview_source','sourceReference',o.source_id,'sourceVersion',src->>'version','sourceLabel','Private synthetic original','validUntil',NULL,'note','Private human note','neutralQuestion','Private neutral question')),false,'Public next action',(SELECT owner FROM fixture),(v->>'assignmentVersion')::integer);
+ END LOOP;END $$;
+SET LOCAL request.jwt.claim.sub='ee100000-0000-4000-8000-000000000003';
+SELECT pg_temp.ok(EXISTS(SELECT 1 FROM jsonb_array_elements(public.rec_ri_get_review((SELECT app FROM seq WHERE n=41))->'criteria')c WHERE c->>'requirementId'='10000000-0000-4000-8000-000000000001' AND c->>'state'='not_met' AND c#>>'{source,kind}'='application_answer' AND c#>>'{source,answerBool}'='false' AND c->'note'='null'::jsonb AND c->'neutralQuestion'='null'::jsonb),'public explicit-NO fallback preserves original answer but hides private human text');
+SELECT pg_temp.ok(NOT EXISTS(SELECT 1 FROM jsonb_array_elements(public.rec_ri_get_review((SELECT app FROM seq WHERE n=41))->'criteria')c WHERE c ? '_human_source_case_id'),'public review never exposes internal opaque provenance');
+SET LOCAL request.jwt.claim.sub='ee100000-0000-4000-8000-000000000001';
+SELECT public.scp_iv_erase_source((SELECT source_id FROM origins WHERE app=(SELECT app FROM seq WHERE n=1)),'Synthetic private original erasure');
+SET LOCAL request.jwt.claim.sub='ee100000-0000-4000-8000-000000000003';
+SELECT pg_temp.ok(EXISTS(SELECT 1 FROM jsonb_array_elements(public.rec_ri_get_review((SELECT app FROM seq WHERE n=1))->'criteria')c WHERE c->>'requirementId'='10000000-0000-4000-8000-000000000002' AND c->'source'='null'::jsonb AND c->'note'='null'::jsonb AND c->'neutralQuestion'='null'::jsonb),'erased original source does not publish retained private human text');
+RESET ROLE;
+UPDATE public.employer_memberships SET role='admin' WHERE user_id=(SELECT member FROM fixture) AND employer_id=(SELECT employer FROM fixture);
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.ok(EXISTS(SELECT 1 FROM jsonb_array_elements(public.rec_ri_get_review((SELECT app FROM seq WHERE n=41))->'criteria')c WHERE c->>'requirementId'='10000000-0000-4000-8000-000000000001' AND c->>'note'='Private human note'),'current case permission allows private human text even with public fallback');
+RESET ROLE;
+UPDATE public.employer_memberships SET role='member' WHERE user_id=(SELECT member FROM fixture) AND employer_id=(SELECT employer FROM fixture);
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.ok(EXISTS(SELECT 1 FROM jsonb_array_elements(public.rec_ri_get_review((SELECT app FROM seq WHERE n=41))->'criteria')c WHERE c->>'requirementId'='10000000-0000-4000-8000-000000000001' AND c->'note'='null'::jsonb AND c->'neutralQuestion'='null'::jsonb),'revoked case permission immediately redacts private human text');
+RESET ROLE;
+DELETE FROM public.scp_interview_case_sources WHERE id=(SELECT source_id FROM origins WHERE app=(SELECT app FROM seq WHERE n=1));
+DELETE FROM public.scp_interview_cases WHERE id=(SELECT case_id FROM origins WHERE app=(SELECT app FROM seq WHERE n=41));
+SELECT pg_temp.ok((SELECT count(*)=2 AND bool_and(d.source_case_id=o.case_id) FROM public.rec_requirement_decisions d JOIN origins o ON o.app=d.application_id WHERE d.profile_id=(SELECT id FROM public.rec_requirement_profiles WHERE job_id=(SELECT job FROM fixture) ORDER BY version DESC LIMIT 1) AND d.source_kind='interview_source'),'deleting source and case preserves opaque human-text provenance without FK loss');
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub='ee100000-0000-4000-8000-000000000003';
+SELECT pg_temp.ok(NOT EXISTS(SELECT 1 FROM origins o,jsonb_array_elements(public.rec_ri_get_review(o.app)->'criteria')c WHERE c->>'note'='Private human note' OR c->>'neutralQuestion'='Private neutral question'),'deleted original case cannot make historical private text readable');
+SET LOCAL request.jwt.claim.sub='ee100000-0000-4000-8000-000000000001';
+CREATE TEMP TABLE origin_target AS SELECT public.scp_iv_create_case((SELECT employer FROM fixture),'Transfer target after original case erasure',(SELECT v.id FROM public.scp_interview_pack_versions v JOIN public.scp_interview_packs p ON p.id=v.pack_id WHERE p.slug='vaktare-se' AND v.version_number=1),'Synthetic A041',(SELECT uid FROM seq WHERE n=41),NULL,(SELECT job FROM fixture),(SELECT app FROM seq WHERE n=41)) case_id;
+GRANT SELECT ON origin_target TO PUBLIC;
+SELECT pg_temp.fails(format('SELECT public.rec_ri_transfer_requirements(%L,%L,%L,%L,gen_random_uuid(),ARRAY[%L]::uuid[])',v->>'applicationId',(SELECT case_id FROM origin_target),v->>'revision',v->>'bindingToken','10000000-0000-4000-8000-000000000001'),'RECRUITMENT_NOT_PERMITTED','handoff refuses erased private origin even when current explicit-NO source is public') FROM (SELECT public.rec_ri_get_review((SELECT app FROM seq WHERE n=41))v)x;
+RESET ROLE;
+SELECT pg_temp.ok(NOT EXISTS(SELECT 1 FROM public.scp_interview_case_sources WHERE case_id=(SELECT case_id FROM origin_target)),'refused private-origin handoff writes no preparation source');
+ROLLBACK TO private_note_provenance;
+
 SAVEPOINT immutable_history;
 -- Exercise alternate writes as the table owner, not only through RLS.
 SELECT pg_temp.fails(format('UPDATE public.rec_requirement_profiles SET confirmed_by=NULL WHERE job_id=%L',(SELECT job FROM fixture)),'RI_PROFILE_IMMUTABLE','direct actor-null cannot disguise a profile edit as user erasure');
