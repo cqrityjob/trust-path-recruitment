@@ -3,6 +3,15 @@
 -- after every destructive scenario is rolled back to its savepoint.
 \set ON_ERROR_STOP on
 BEGIN;
+-- Native Supabase installs pgcrypto outside public. Run this entire acceptance
+-- suite with that placement, then restore the original namespace before KEEP.
+CREATE SCHEMA ri_p1_crypto_probe;
+CREATE TEMP TABLE ri_p1_crypto_original ON COMMIT DROP AS
+ SELECT n.nspname FROM pg_extension e JOIN pg_namespace n ON n.oid=e.extnamespace WHERE e.extname='pgcrypto';
+DO $$ BEGIN
+ IF (SELECT count(*) FROM ri_p1_crypto_original)<>1 THEN RAISE EXCEPTION 'RI_P1_PGCRYPTO_REQUIRED'; END IF;
+ ALTER EXTENSION pgcrypto SET SCHEMA ri_p1_crypto_probe;
+END $$;
 CREATE FUNCTION pg_temp.ok(cond boolean,label text) RETURNS void LANGUAGE plpgsql AS $$ BEGIN
  IF cond IS DISTINCT FROM true THEN RAISE EXCEPTION 'ASSERTION FAILED: %',label; END IF; RAISE NOTICE 'ok %',label; END $$;
 CREATE FUNCTION pg_temp.fails(stmt text,needle text,label text,expected_state text DEFAULT NULL) RETURNS void LANGUAGE plpgsql AS $$ DECLARE msg text; state text; BEGIN
@@ -11,6 +20,7 @@ CREATE FUNCTION pg_temp.fails(stmt text,needle text,label text,expected_state te
  IF position(needle IN msg)=0 THEN RAISE EXCEPTION 'ASSERTION FAILED: % expected %, got %',label,needle,msg; END IF; RAISE NOTICE 'ok %',label; RETURN; END;
  RAISE EXCEPTION 'ASSERTION FAILED: % unexpectedly succeeded',label; END $$;
 GRANT EXECUTE ON FUNCTION pg_temp.ok(boolean,text),pg_temp.fails(text,text,text,text) TO PUBLIC;
+SELECT pg_temp.ok(to_regprocedure('public.digest(text,text)') IS NULL AND EXISTS(SELECT 1 FROM pg_extension e JOIN pg_namespace n ON n.oid=e.extnamespace WHERE e.extname='pgcrypto' AND n.nspname='ri_p1_crypto_probe'),'source acceptance runs with pgcrypto outside public');
 CREATE TEMP TABLE fixture AS SELECT
  'ee100000-1111-4000-8000-000000000001'::uuid employer,
  'ee100000-0000-4000-8000-000000000001'::uuid owner,
@@ -55,6 +65,7 @@ INSERT INTO storage.objects(id,bucket_id,name,owner,created_at)
 INSERT INTO public.job_application_answers(application_id,question_id,employer_id,answer_kind,answer_bool)
  SELECT app,q.id,fixture.employer,'yes_no',CASE WHEN q.position=1 AND n BETWEEN 41 AND 60 THEN false ELSE true END FROM seq,fixture,public.recruitment_questions q WHERE q.job_id=fixture.job AND q.position<>6
  AND NOT(q.position=1 AND n BETWEEN 86 AND 90) AND NOT(q.position=4 AND n BETWEEN 96 AND 100);
+SELECT pg_temp.ok(recruiter_intelligence.source_version((SELECT app FROM seq WHERE n=1),'external_reference',' Åsa – 你好 🔒 ')='63b0ba29d36d9461fe65f92af5fa4f628cab431950b6ffd3eb8284eb7a458a0a' AND recruiter_intelligence.source_version((SELECT app FROM seq WHERE n=1),'unknown_source','Åsa') IS NULL,'UTF8 source SHA256 matches fixed independent bytes and preserves absent source NULL');
 UPDATE public.recruitment_application_meta m SET responsible_user_id=CASE WHEN s.n%2=1 THEN f.owner ELSE f.bob END FROM seq s,fixture f WHERE m.application_id=s.app;
 CREATE TEMP TABLE rules AS SELECT jsonb_agg(jsonb_build_object('requirementId',r.id,'kind',r.kind,'acceptedSources',CASE WHEN r.position=2 THEN '["application_cv","interview_source"]'::jsonb ELSE '["application_answer"]'::jsonb END,'decisionRule',CASE WHEN r.position=2 THEN 'valid_at_start' ELSE 'boolean_yes' END,'questionId',q.id,'instructionSv','Kontrollera R'||r.position||' mot beslutad källa','instructionEn','Check criterion R'||r.position||' against agreed original') ORDER BY r.position) body FROM public.recruitment_requirements r JOIN public.recruitment_questions q ON q.requirement_id=r.id,fixture f WHERE r.job_id=f.job;
 GRANT SELECT ON rules TO PUBLIC;
@@ -371,6 +382,11 @@ SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claim.sub='ee100000-0000-4000-8000-000000000001';
 SELECT pg_temp.ok((public.rec_ri_candidate_view((SELECT employer FROM fixture),(SELECT job FROM fixture),'{"stage":"received"}','requirements',NULL,1,25,NULL)->'intelligenceCounts')@>'{"received":100,"reviewed":27,"remaining":73,"green":40,"yellow":25,"gray":35}','unchanged fixture ready for separate browser/API tests');
 RESET ROLE;
+DO $$ DECLARE original_name text; BEGIN
+ SELECT nspname INTO STRICT original_name FROM ri_p1_crypto_original;
+ EXECUTE format('ALTER EXTENSION pgcrypto SET SCHEMA %I',original_name);
+END $$;
+DROP SCHEMA ri_p1_crypto_probe;
 \if :{?RI_P1_KEEP_FIXTURE}
 COMMIT;
 \else

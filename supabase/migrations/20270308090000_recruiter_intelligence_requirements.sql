@@ -183,7 +183,7 @@ BEGIN
     v:=jsonb_build_object('application',a.id,'humanReference',btrim(_reference));
   END IF;
   IF v IS NULL THEN RETURN NULL; END IF;
-  RETURN encode(public.digest(v::text,'sha256'),'hex');
+  RETURN encode(pg_catalog.sha256(pg_catalog.convert_to(v::text,'UTF8')),'hex');
 END $$;
 REVOKE ALL ON FUNCTION recruiter_intelligence.source_version(uuid,text,text) FROM PUBLIC,anon,authenticated;
 

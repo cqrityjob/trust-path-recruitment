@@ -233,7 +233,7 @@ RI_P1_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/recruiter_i
 RI_P1_RC=$?
 set -e
 RI_P1_PASSED="$(echo "$RI_P1_OUT" | grep -c "NOTICE:  ok " || true)"
-if [ "$RI_P1_RC" -ne 0 ] || [ "$RI_P1_PASSED" -lt 89 ]; then
+if [ "$RI_P1_RC" -ne 0 ] || [ "$RI_P1_PASSED" -lt 95 ]; then
   echo "$RI_P1_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
   suite_failed "Recruiter Intelligence authoritative requirements"
 else
