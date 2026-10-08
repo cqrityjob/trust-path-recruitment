@@ -451,6 +451,7 @@ function Page() {
                           {d.sources.map((s) => (
                             <li
                               key={s.id}
+                              id={`source-${s.id}`}
                               className="flex flex-wrap items-center gap-2 px-3 py-2.5"
                             >
                               <Chip tone="work">{uiLabel(SOURCE_KIND_LABEL, s.kind, t)}</Chip>

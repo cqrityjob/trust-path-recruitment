@@ -66,6 +66,13 @@ import type { FollowUpReason } from "@/lib/interview-intelligence/context";
 import { useSessionProcessSave } from "@/lib/interview-intelligence/use-session-process-save";
 import { drainInterviewNoteDraft } from "@/lib/interview-intelligence/note-save-drain";
 import { drainInterviewDrafts } from "@/lib/interview-intelligence/draft-save-drain";
+import {
+  pendingQuestionNoteBody,
+  questionNoteBody,
+  mayApplyStoredQuestionNote,
+  reloadQuestionNote,
+  type QuestionNoteDraft,
+} from "@/lib/interview-intelligence/question-note-draft";
 import { InterviewOpeningDisclosure } from "@/components/employer/interview/InterviewOpeningDisclosure";
 import { ManualControlPoints } from "@/components/employer/interview/ManualControlPoints";
 
@@ -73,6 +80,10 @@ export const Route = createFileRoute(
   "/_authenticated/employer/$employerSlug/interview-intelligence/$caseId/interview",
 )({
   ssr: false,
+  // Question IDs are shared by cases using the same role guide. Drafts and
+  // observed note versions must belong to one case even on a cached SPA move.
+  // Search-only question navigation keeps the current case's save coordinator.
+  remountDeps: ({ params }) => params.caseId,
   validateSearch: (search: Record<string, unknown>): { question?: string } => ({
     question: typeof search.question === "string" ? search.question : undefined,
   }),
@@ -142,7 +153,7 @@ function Page() {
     retry: false,
   });
 
-  const [draft, setDraft] = useState("");
+  const [noteDraft, setNoteDraft] = useState<QuestionNoteDraft | null>(null);
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [navOpen, setNavOpen] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -152,6 +163,8 @@ function Page() {
   // flushNote() is called from event handlers that must see the CURRENT value,
   // not the one captured when the handler was created.
   const draftRef = useRef("");
+  const noteDraftRef = useRef<QuestionNoteDraft | null>(null);
+  const noteEditRevision = useRef(0);
   const storedRef = useRef<{ id: string | null; body: string; questionId: string } | null>(null);
   const sessionIdRef = useRef<string | null>(null);
 
@@ -293,17 +306,31 @@ function Page() {
 
   const existingNote =
     session && question ? (session.notes.find((n) => n.questionId === question.id) ?? null) : null;
+  // Read the untouched input directly from the freshest stored body. Waiting
+  // for a passive effect left an initial empty draft paired with a real saved
+  // note, which autosave/unmount could interpret as a human clearing it.
+  const savedBody = (() => {
+    const mine = question ? known.current[question.id] : undefined;
+    if (mine && (!existingNote || Date.parse(mine.updatedAt) > Date.parse(existingNote.updatedAt)))
+      return mine.body;
+    return existingNote?.body ?? "";
+  })();
+  const draft = questionNoteBody(question?.id ?? null, noteDraft, savedBody);
+  const setDraft = (body: string, questionId = question?.id) => {
+    if (!questionId) return;
+    const next = { questionId, body };
+    noteEditRevision.current += 1;
+    // A guarded action in the same event must see this edit before the next
+    // React render. Its target always travels with its body.
+    noteDraftRef.current = next;
+    if (storedRef.current?.questionId === questionId) draftRef.current = body;
+    setNoteDraft(next);
+  };
 
-  // Load the stored note whenever the active question changes.
+  // Reset UI notices and seed the observed CAS version once. Stored text is
+  // already displayed synchronously; this effect never replaces human input.
   useEffect(() => {
     const mine = question ? known.current[question.id] : undefined;
-    // The freshest text this tab can know: its own last save when that is
-    // newer than what the cached case shows, the cached case otherwise.
-    const fresher =
-      mine && (!existingNote || Date.parse(mine.updatedAt) > Date.parse(existingNote.updatedAt))
-        ? mine.body
-        : (existingNote?.body ?? "");
-    setDraft(fresher);
     setSavedAt(null);
     setNoteError(false);
     setNoteConflict(false);
@@ -327,33 +354,47 @@ function Page() {
   const reloadNote = async () => {
     const stored = storedRef.current;
     if (!stored) return;
-    const fresh = await q.refetch();
-    const n = fresh.data?.session?.notes.find((x) => x.questionId === stored.questionId) ?? null;
-    known.current[stored.questionId] = n
-      ? { id: n.id, updatedAt: n.updatedAt, body: n.body }
-      : undefined;
-    setDraft(n?.body ?? "");
-    setNoteConflict(false);
-    setNoteError(false);
-    setBlockedNotice(false);
+    const requestedEditRevision = noteEditRevision.current;
+    const result = await reloadQuestionNote({
+      read: () => getFn({ data: { caseId } }),
+      mayApply: () =>
+        mayApplyStoredQuestionNote(
+          stored.questionId,
+          storedRef.current?.questionId ?? null,
+          requestedEditRevision,
+          noteEditRevision.current,
+          true,
+        ),
+      apply: (fresh) => {
+        const n = fresh.session?.notes.find((x) => x.questionId === stored.questionId) ?? null;
+        known.current[stored.questionId] = n
+          ? { id: n.id, updatedAt: n.updatedAt, body: n.body }
+          : undefined;
+        qc.setQueryData(["ii", "case", caseId], fresh);
+        setDraft(n?.body ?? "", stored.questionId);
+        setNoteConflict(false);
+        setNoteError(false);
+        setBlockedNotice(false);
+      },
+    });
+    if (result === "failed") setNoteError(true);
   };
 
   // Mirror into refs so flushNote() always sees the live values.
   draftRef.current = draft;
+  noteDraftRef.current = noteDraft;
   storedRef.current = question
     ? { id: existingNote?.id ?? null, body: existingNote?.body ?? "", questionId: question.id }
     : null;
   sessionIdRef.current = session?.id ?? null;
 
-  // "Saved" means saved by THIS tab or shown by the case, whichever is newer
-  // -- the same rule the box is seeded by.
-  const savedBody = (() => {
-    const mine = question ? known.current[question.id] : undefined;
-    if (mine && (!existingNote || Date.parse(mine.updatedAt) > Date.parse(existingNote.updatedAt)))
-      return mine.body;
-    return storedRef.current?.body ?? "";
-  })();
-  const noteDirty = storedRef.current !== null && draft !== savedBody;
+  const noteDirty =
+    pendingQuestionNoteBody(
+      question?.id ?? null,
+      noteDraft,
+      savedBody,
+      Boolean(existingNote?.id ?? (question ? known.current[question.id]?.id : null)),
+    ) !== null;
 
   /**
    * Write the pending note NOW and report whether it landed.
@@ -376,6 +417,7 @@ function Page() {
     const stored = storedRef.current;
     const sessionId = sessionIdRef.current;
     if (!stored || !sessionId) return true;
+    if (noteDraftRef.current?.questionId !== stored.questionId) return true;
     const ok = await drainInterviewNoteDraft({
       readDraft: () => draftRef.current,
       readSaved: () => known.current[stored.questionId]?.body ?? stored.body,
@@ -396,10 +438,13 @@ function Page() {
         const stored = storedRef.current;
         if (!stored) return false;
         const mine = known.current[stored.questionId];
-        const body = draftRef.current;
         return (
-          body !== (mine?.body ?? stored.body) &&
-          (Boolean(mine?.id ?? stored.id) || body.trim() !== "")
+          pendingQuestionNoteBody(
+            stored.questionId,
+            noteDraftRef.current,
+            mine?.body ?? stored.body,
+            Boolean(mine?.id ?? stored.id),
+          ) !== null
         );
       },
       processIsDirty: () => process?.dirty ?? false,
@@ -421,27 +466,46 @@ function Page() {
   // remember to press save while a person is talking to them.
   useEffect(() => {
     if (!session || !question) return;
-    if (draft === (existingNote?.body ?? "")) return;
+    const pending = pendingQuestionNoteBody(
+      question.id,
+      noteDraft,
+      savedBody,
+      Boolean(known.current[question.id]?.id ?? existingNote?.id),
+    );
+    if (pending === null) return;
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(() => {
       // An empty draft with no stored note is nothing to save; an empty draft
       // OVER a stored note is a clearing, and does save.
-      if (draft.trim() === "" && !existingNote?.id) return;
       // A conflict is resolved by the interviewer, not by the next keystroke.
       if (noteConflict) return;
-      saveNote.mutate({ sessionId: session.id, questionId: question.id, body: draft });
+      saveNote.mutate({ sessionId: session.id, questionId: question.id, body: pending });
     }, 1200);
     return () => {
       if (timer.current) clearTimeout(timer.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [draft]);
+  }, [noteDraft, question?.id]);
 
   // Leaving the route entirely -- a reload, a closed tab, a link elsewhere --
   // is the one exit the guarded handlers cannot intercept.
   useEffect(() => {
+    // The map itself is stable; successful writes update its per-question
+    // records. Cleanup needs those latest records, not a mount-time body.
+    const observedNotes = known.current;
     const warn = (e: BeforeUnloadEvent) => {
-      if (draftRef.current !== (storedRef.current?.body ?? "")) e.preventDefault();
+      const stored = storedRef.current;
+      if (!stored) return;
+      const mine = observedNotes[stored.questionId];
+      if (
+        pendingQuestionNoteBody(
+          stored.questionId,
+          noteDraftRef.current,
+          mine?.body ?? stored.body,
+          Boolean(mine?.id ?? stored.id),
+        ) !== null
+      )
+        e.preventDefault();
     };
     window.addEventListener("beforeunload", warn);
     return () => {
@@ -451,9 +515,15 @@ function Page() {
       const stored = storedRef.current;
       const sessionId = sessionIdRef.current;
       if (!stored || !sessionId) return;
-      if (draftRef.current === stored.body) return;
-      if (stored.id === null && draftRef.current.trim() === "") return;
-      saveNote.mutate({ sessionId, questionId: stored.questionId, body: draftRef.current });
+      const mine = observedNotes[stored.questionId];
+      const pending = pendingQuestionNoteBody(
+        stored.questionId,
+        noteDraftRef.current,
+        mine?.body ?? stored.body,
+        Boolean(mine?.id ?? stored.id),
+      );
+      if (pending === null) return;
+      saveNote.mutate({ sessionId, questionId: stored.questionId, body: pending });
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
