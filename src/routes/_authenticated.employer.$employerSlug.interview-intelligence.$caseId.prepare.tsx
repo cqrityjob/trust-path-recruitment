@@ -55,9 +55,12 @@ import {
 import { CaseSetupStrip } from "@/components/library/CaseSetupStrip";
 import { InterviewContextPanel } from "@/components/employer/interview/InterviewContextPanel";
 import { CandidateBackgroundStatus } from "@/components/employer/interview/CandidateBackgroundStatus";
+import { SelectedRequirementBrief } from "@/components/employer/interview/SelectedRequirementBrief";
+import { SavedCaseSources } from "@/components/employer/interview/SavedCaseSources";
 import { InterviewOpeningDisclosure } from "@/components/employer/interview/InterviewOpeningDisclosure";
 import { ManualControlPoints } from "@/components/employer/interview/ManualControlPoints";
 import { ContentIntegrityNotice } from "@/components/employer/interview/ContentIntegrityNotice";
+import { countApplicationSourceReferences } from "@/lib/interview-intelligence/background-source-references";
 import { isOutstandingFinding } from "@/lib/interview-intelligence/finding-state";
 import { getInterviewCaseContext } from "@/lib/interview-intelligence/context.functions";
 import { ContextUnavailable } from "@/components/employer/interview/InterviewContextOutcome";
@@ -427,6 +430,13 @@ function Page() {
               )}
               <Rule />
 
+              <SelectedRequirementBrief
+                sources={d.sources}
+                employerSlug={employerSlug}
+                applicationId={d.applicationId}
+              />
+              <SavedCaseSources sources={d.sources} />
+
               {/* ---- Setting the case up ----
                   Finite work with an end. It is on the page only while it is
                   the recruiter's actual job, and once the plan is approved it
@@ -439,28 +449,6 @@ function Page() {
                     description={t("iiu.pp.setup.body")}
                   >
                     <div className="space-y-4">
-                      {d.sources.length === 0 ? (
-                        <Nothing>{t("iiu.pp.nosources")}</Nothing>
-                      ) : (
-                        <ul className="divide-y divide-border rounded-lg border border-border">
-                          {/* What each piece of material is and what it is
-                              called. How many passages it was split into and
-                              the processing purpose it was filed under are
-                              ingestion facts; they are recorded, and they are
-                              not something a recruiter reads here. */}
-                          {d.sources.map((s) => (
-                            <li
-                              key={s.id}
-                              id={`source-${s.id}`}
-                              className="flex flex-wrap items-center gap-2 px-3 py-2.5"
-                            >
-                              <Chip tone="work">{uiLabel(SOURCE_KIND_LABEL, s.kind, t)}</Chip>
-                              <span className="text-sm font-medium text-foreground">{s.label}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-
                       {["draft", "sources_ready"].includes(d.status) && (
                         <Surface>
                           <form
@@ -850,6 +838,7 @@ function Page() {
                   result={contextQ.data}
                   isLoading={contextQ.isLoading}
                   savedSourceCount={candidateSources.length}
+                  savedReferenceCount={countApplicationSourceReferences(d.sources)}
                 />
                 <Eyebrow>{t("iiu.pp.background.summary.title")}</Eyebrow>
                 {d.plan?.candidateSummary || backgroundItems.length > 0 ? (

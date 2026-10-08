@@ -8164,6 +8164,17 @@ export const dictionaries = {
     "iiu.pp.background.live.standalone": "Intervjun är fristående och har ingen kopplad ansökan.",
     "iiu.pp.background.live.unavailable":
       "Ansökningsuppgifterna kunde inte läsas. Se lässtatusen ovanför; det är inte ett besked om att uppgifter saknas.",
+    "rec.ri.background.references":
+      "{n} valda kravunderlag innehåller referenser till ansökningssvar eller CV. Originalen finns i ansökan. Referenserna är inte separata CV-kopior eller bekräftad intervjuevidens.",
+    "rec.ri.brief.title": "Valda krav och frågor inför intervjun",
+    "rec.ri.brief.body":
+      "Detta underlag valdes uttryckligen från ansökningsgranskningen och sparades i ärendet. Det ersätter inte rollguidens kärnfrågor och är inte bekräftad intervjuevidens. Kontrollera aktuella original och krav i ansökan vid ändringar.",
+    "rec.ri.brief.version": "Kravprofil version {n} vid överföringen",
+    "rec.ri.brief.note": "Granskarens anteckning",
+    "rec.ri.brief.question": "Neutral fråga att klarlägga",
+    "rec.ri.brief.question.missing": "Ingen fråga har formulerats för detta krav.",
+    "rec.ri.brief.source": "Valt originalunderlag",
+    "rec.ri.brief.next": "Nästa handling",
     "iiu.pp.background.saved.title": "Uttryckligen tillagt kandidatunderlag",
     "iiu.pp.background.saved.available":
       "{n} källor finns sparade i intervjuärendet. Källorna visas nedan.",
@@ -17005,6 +17016,17 @@ export const dictionaries = {
       "This is a standalone interview without a linked application.",
     "iiu.pp.background.live.unavailable":
       "Application information could not be read. See the read status above; this does not mean that information is missing.",
+    "rec.ri.background.references":
+      "{n} selected requirement records contain references to application answers or a CV. Originals remain in the application. These references are separate from attached CV copies and confirmed interview evidence.",
+    "rec.ri.brief.title": "Selected requirements and interview questions",
+    "rec.ri.brief.body":
+      "This material was explicitly selected from the application review and saved in the case. It does not replace the role guide's core questions and is not confirmed interview evidence. Check the current originals and requirements in the application when they change.",
+    "rec.ri.brief.version": "Requirement profile version {n} at transfer",
+    "rec.ri.brief.note": "Reviewer's note",
+    "rec.ri.brief.question": "Neutral clarification question",
+    "rec.ri.brief.question.missing": "No question has been written for this requirement.",
+    "rec.ri.brief.source": "Selected original material",
+    "rec.ri.brief.next": "Next action",
     "iiu.pp.background.saved.title": "Explicitly added candidate material",
     "iiu.pp.background.saved.available":
       "{n} sources are saved in the interview case. The sources are shown below.",

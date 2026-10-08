@@ -30,7 +30,7 @@ import { translateJobServerError } from "@/components/employer/EmployerJobForm";
 import { employerPortalEnabled } from "@/lib/job-intelligence/feature-flag";
 import { jobStatusLabel } from "@/lib/job-intelligence/enum-labels";
 import { formatDate } from "@/lib/job-intelligence/date-format";
-import { listApplicationsForEmployer } from "@/lib/job-intelligence/applications.functions";
+import { requirementLabels } from "@/lib/recruitment/requirement-presentation";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -130,10 +130,9 @@ function JobsList({
   status: EmployerStatus;
   hasMultipleWorkspaces: boolean;
 }) {
-  const { t, tp, lang } = useT();
+  const { t, lang } = useT();
   const qc = useQueryClient();
   const listFn = useServerFn(listEmployerJobs);
-  const listApplicationsFn = useServerFn(listApplicationsForEmployer);
   const closeFn = useServerFn(closeEmployerJob);
   const dupFn = useServerFn(duplicateEmployerJob);
   const deleteFn = useServerFn(deleteEmployerJob);
@@ -143,33 +142,6 @@ function JobsList({
     queryKey: ["employer", employerId, "jobs"],
     queryFn: () => listFn({ data: { employerId } }),
   });
-
-  // ── WHERE THE APPLICATION COUNTS COME FROM ────────────────────────────
-  //
-  // "8 ansökningar · 2 nya" is the single most useful thing this table can
-  // say, and it needs no new endpoint: listApplicationsForEmployer is already
-  // RLS-scoped to this organisation, already carries jobId and status on every
-  // row, and is already in the cache under this exact key -- the dashboard and
-  // the applications list both hold it. So the counts are a projection of rows
-  // the reader is independently authorised to see, tallied in the browser.
-  //
-  // Nothing is invented and nothing is estimated: a job with no applications
-  // renders an em dash, and while the query is still in flight the column is
-  // simply blank rather than showing a zero it would later contradict.
-  const applicationsQuery = useQuery({
-    queryKey: ["employer", employerId, "applications"],
-    queryFn: () => listApplicationsFn({ data: { employerId } }),
-  });
-
-  const countsByJob = new Map<string, { total: number; fresh: number }>();
-  for (const a of applicationsQuery.data ?? []) {
-    const c = countsByJob.get(a.jobId) ?? { total: 0, fresh: 0 };
-    c.total += 1;
-    // "New" means nobody has moved it yet -- the same 'submitted' the
-    // dashboard's "nya ansökningar" action counts and links to.
-    if (a.status === "submitted") c.fresh += 1;
-    countsByJob.set(a.jobId, c);
-  }
 
   const [actionError, setActionError] = useState<string | null>(null);
   const view = Route.useSearch();
@@ -211,19 +183,19 @@ function JobsList({
   const closeMutation = useMutation({
     mutationFn: (jobId: string) => closeFn({ data: { employerId, jobId } }),
     onSuccess: refreshAfterAction,
-    onError: (e: any) => setActionError(e?.message ?? "CLOSE_JOB_FAILED"),
+    onError: (e: Error) => setActionError(e?.message ?? "CLOSE_JOB_FAILED"),
   });
 
   const dupMutation = useMutation({
     mutationFn: (jobId: string) => dupFn({ data: { employerId, jobId } }),
     onSuccess: refreshAfterAction,
-    onError: (e: any) => setActionError(e?.message ?? "DUPLICATE_JOB_FAILED"),
+    onError: (e: Error) => setActionError(e?.message ?? "DUPLICATE_JOB_FAILED"),
   });
 
   const deleteMutation = useMutation({
     mutationFn: (jobId: string) => deleteFn({ data: { employerId, jobId } }),
     onSuccess: refreshAfterAction,
-    onError: (e: any, jobId: string) => {
+    onError: (e: Error, jobId: string) => {
       const code = e?.message ?? "DELETE_JOB_FAILED";
       setActionError(code);
       if (DELETE_REFUSED_CODES.includes(code)) {
@@ -235,7 +207,7 @@ function JobsList({
   const restoreMutation = useMutation({
     mutationFn: (jobId: string) => restoreFn({ data: { employerId, jobId } }),
     onSuccess: refreshAfterAction,
-    onError: (e: any) => setActionError(e?.message ?? "RESTORE_JOB_FAILED"),
+    onError: (e: Error) => setActionError(e?.message ?? "RESTORE_JOB_FAILED"),
   });
 
   const allRows: EmployerJobRow[] = jobsQuery.data ?? [];
@@ -482,6 +454,7 @@ function JobsList({
               </thead>
               <tbody className="divide-y divide-border">
                 {rows.map((r) => {
+                  const sm = summaryByJob.get(r.id);
                   const editable = r.status === "draft" || r.status === "rejected";
 
                   // ── ONE OUTCOME, ONE BUTTON ───────────────────────────
@@ -546,35 +519,61 @@ function JobsList({
                           The whole cell is the way into exactly those rows, so
                           the number lands on what it counted. */}
                       <td className="px-4 py-3 text-xs">
-                        {applicationsQuery.isLoading ? (
-                          <span className="text-muted-foreground">&nbsp;</span>
+                        {overviewQuery.isPending ? (
+                          <span className="text-muted-foreground">…</span>
+                        ) : !sm?.intelligenceCounts ? (
+                          <span className="text-muted-foreground">
+                            {lang === "sv" ? "Antal kunde inte läsas" : "Counts unavailable"}
+                          </span>
                         ) : (
-                          (() => {
-                            const c = countsByJob.get(r.id);
-                            if (!c || c.total === 0)
-                              return <span className="text-muted-foreground">—</span>;
-                            return (
+                          <div className="space-y-1" data-testid="recruitment-intelligence-counts">
+                            {[
+                              {
+                                label:
+                                  lang === "sv"
+                                    ? "Mottagna (inkl. arkiv)"
+                                    : "Received (including archived)",
+                                count: sm.intelligenceCounts.received,
+                                review: undefined,
+                              },
+                              {
+                                label: lang === "sv" ? "Mänskligt granskade" : "Human reviewed",
+                                count: sm.intelligenceCounts.reviewed,
+                                review: "reviewed" as const,
+                              },
+                              {
+                                label: lang === "sv" ? "Återstående" : "Remaining",
+                                count: sm.intelligenceCounts.remaining,
+                                review: "remaining" as const,
+                              },
+                            ].map((item) => (
                               <Link
+                                key={item.label}
                                 to="/employer/$employerSlug/jobs/$jobId"
                                 params={{ employerSlug, jobId: r.id }}
-                                search={{ step: "applications" as const, stage: "all" as const }}
-                                className="inline-flex flex-wrap items-baseline gap-x-1.5 text-muted-foreground hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                search={{
+                                  step: "applications",
+                                  stage: "received",
+                                  review: item.review,
+                                }}
+                                className="block min-h-8 hover:text-accent hover:underline"
                               >
-                                <span className="font-medium tabular-nums text-foreground">
-                                  {c.total}
-                                </span>
-                                {tp("employer.jobs.list.applicationCount", c.total)}
-                                {c.fresh > 0 && (
-                                  <span className="rounded-full bg-accent/10 px-1.5 py-0.5 text-[10px] font-semibold text-accent">
-                                    {tp("employer.jobs.list.newCount", c.fresh).replace(
-                                      "{n}",
-                                      String(c.fresh),
-                                    )}
-                                  </span>
-                                )}
+                                {item.label}: <strong>{item.count}</strong>
                               </Link>
-                            );
-                          })()
+                            ))}
+                            {(["green", "yellow", "gray"] as const).map((requirement) => (
+                              <Link
+                                key={requirement}
+                                to="/employer/$employerSlug/jobs/$jobId"
+                                params={{ employerSlug, jobId: r.id }}
+                                search={{ step: "applications", stage: "received", requirement }}
+                                className="block min-h-8 hover:text-accent hover:underline"
+                              >
+                                {requirementLabels[lang][requirement]}:{" "}
+                                {sm.intelligenceCounts![requirement]}
+                              </Link>
+                            ))}
+                          </div>
                         )}
                       </td>
                       <td className="px-4 py-3 text-xs text-muted-foreground">

@@ -1,4 +1,4 @@
-import type { Database as GeneratedDatabase } from "./types";
+import type { Database as GeneratedDatabase, Json } from "./types";
 
 // Keep the generator's output untouched. These SQL arguments have no DEFAULT,
 // and their non-STRICT functions deliberately accept NULL. Lovable/Supabase
@@ -33,6 +33,61 @@ type EvidenceUploadFunctions = {
   };
   sp_confirm_evidence_upload_cleanup: { Args: { _attempt_id: string }; Returns: UploadAttemptJson };
   sp_evidence_upload_storage_writable: { Args: { _path: string }; Returns: boolean };
+};
+type RecruitmentIntelligenceFunctions = {
+  rec_ri_get_profile: { Args: { _job_id: string }; Returns: Json };
+  rec_ri_get_review: { Args: { _application_id: string }; Returns: Json };
+  rec_ri_confirm_profile: {
+    Args: {
+      _job_id: string;
+      _expected_version: number;
+      _operation_id: string;
+      _start_date: string | null;
+      _rules: Json;
+    };
+    Returns: Json;
+  };
+  rec_ri_save_review: {
+    Args: {
+      _application_id: string;
+      _profile_id: string;
+      _expected_revision: number;
+      _binding_token: string;
+      _operation_id: string;
+      _decisions: Json;
+      _confirm: boolean;
+      _next_action: string | null;
+      _responsible_user_id: string | null;
+      _expected_assignment_version: number | null;
+    };
+    Returns: Json;
+  };
+  rec_ri_manual_reference: { Args: { _application_id: string; _label: string }; Returns: Json };
+  rec_ri_transfer_requirements: {
+    Args: {
+      _application_id: string;
+      _case_id: string;
+      _expected_revision: number;
+      _binding_token: string;
+      _operation_id: string;
+      _requirement_ids: string[];
+    };
+    Returns: Json;
+  };
+  rec_ri_overview_counts: { Args: { _employer_id: string }; Returns: Json };
+  rec_ri_candidate_view: {
+    Args: {
+      _employer_id: string;
+      _job_id: string | null;
+      _filters: Json;
+      _sort: string;
+      _dir: string | null;
+      _page: number;
+      _size: number;
+      _around: string | null;
+    };
+    Returns: Json;
+  };
 };
 type FoundationFunctions = {
   scp_iv_case_frozen_labels: {
@@ -149,11 +204,12 @@ export type Database = Omit<GeneratedDatabase, "public"> & {
   public: Omit<GeneratedDatabase["public"], "Functions" | "Tables"> & {
     Functions: Omit<
       Functions,
-      keyof Overrides | keyof FoundationFunctions | keyof EvidenceUploadFunctions
+      keyof Overrides | keyof FoundationFunctions | keyof EvidenceUploadFunctions | keyof RecruitmentIntelligenceFunctions
     > &
       Overrides &
       FoundationFunctions &
-      EvidenceUploadFunctions;
+      EvidenceUploadFunctions &
+      RecruitmentIntelligenceFunctions;
     Tables: Omit<Tables, keyof TableOverrides> & TableOverrides;
   };
 };
