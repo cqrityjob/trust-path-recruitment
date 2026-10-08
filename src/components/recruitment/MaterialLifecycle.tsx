@@ -66,7 +66,7 @@ export function MaterialLifecycle({
       if (action.startsWith("retry:")) await retry({ data: { erasureId: action.slice(6) } });
       if (action === "archive") {
         await archive({ data: { jobId, applicationId, archive: !archived } });
-        setNotice(t("rec.lifecycle.restored"));
+        setNotice(t(archived ? "rec.lifecycle.restoredNotice" : "rec.lifecycle.archivedNotice"));
       }
       if (action === "preview") setConfirmation(await preview({ data: { jobId, applicationId } }));
       if (action === "erase" && confirmation) {
@@ -98,6 +98,15 @@ export function MaterialLifecycle({
       aria-label={t("rec.lifecycle.title")}
     >
       <h2 className="font-semibold">{t("rec.lifecycle.title")}</h2>
+      {archived && (
+        <p
+          role="status"
+          data-testid="archived-state"
+          className="mt-2 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm"
+        >
+          {t(applicationId ? "rec.lifecycle.archivedState" : "rec.lifecycle.archivedStateJob")}
+        </p>
+      )}
       <p className="mt-2 text-sm text-muted-foreground">
         {job.purgeAt ? (
           <>

@@ -12,7 +12,7 @@ export function RecruiterOverviewCounts({
   employerId: string;
   employerSlug: string;
 }) {
-  const { lang } = useT();
+  const { lang, t } = useT();
   const read = useServerFn(listRecruitmentCandidatesPage);
   const navigate = useNavigate();
   const query = useQuery({
@@ -46,6 +46,8 @@ export function RecruiterOverviewCounts({
     <div className="mt-5">
       <RecruiterCounts
         counts={query.data.intelligenceCounts}
+        title={t("rec.overview.counts.title")}
+        intro={t("rec.overview.counts.intro")}
         scopeLabel={
           lang === "sv"
             ? "Organisationens samtliga mottagna ansökningar"

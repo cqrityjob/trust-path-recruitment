@@ -1,24 +1,41 @@
+import { CheckCircle2, CircleDashed, HelpCircle, XCircle, type LucideIcon } from "lucide-react";
 import { useT } from "@/i18n/context";
 import type { CandidateView } from "@/lib/recruitment/definitions";
-
+import type { IntelligenceCounts } from "@/lib/recruitment/requirement-intelligence";
 import { requirementLabels, reviewLabels } from "@/lib/recruitment/requirement-presentation";
+
+// Requirement status is shown with TEXT and a SYMBOL as well as a colour, so a
+// reader who cannot tell green from amber, or who prints the page, still reads
+// the same answer. The meaning of each status is the server's; nothing here
+// classifies anything.
 const tones = {
   green:
     "border-emerald-300 bg-emerald-50 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-100",
   yellow: "border-amber-300 bg-amber-50 text-amber-900 dark:bg-amber-950 dark:text-amber-100",
   gray: "border-border bg-muted text-foreground",
-  not_established: "border-border bg-background text-muted-foreground",
+  not_established: "border-dashed border-border bg-background text-muted-foreground",
 } as const;
 
+export type RequirementStatus = keyof typeof tones;
+
+const STATUS_ICON: Record<RequirementStatus, LucideIcon> = {
+  green: CheckCircle2,
+  yellow: XCircle,
+  gray: HelpCircle,
+  not_established: CircleDashed,
+};
+
 /** Presentation of the server's requirement status, never a client classifier. */
-export function RequirementStatusBadge({ status }: { status: keyof typeof tones }) {
+export function RequirementStatusBadge({ status }: { status: RequirementStatus }) {
   const { lang } = useT();
+  const Icon = STATUS_ICON[status];
   return (
     <span
       data-testid="requirement-status"
       data-status={status}
-      className={`inline-flex rounded border px-2 py-1 text-xs ${tones[status]}`}
+      className={`inline-flex items-center gap-1 rounded border px-2 py-1 text-xs ${tones[status]}`}
     >
+      <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
       {requirementLabels[lang][status]}
     </span>
   );
@@ -43,16 +60,44 @@ export function AnalysisStatusBadge() {
     </span>
   );
 }
-import type { IntelligenceCounts } from "@/lib/recruitment/requirement-intelligence";
+
+/** The plain-language account of what each number covers. Rendered as a
+ *  closed disclosure under the counts, in the same component everywhere the
+ *  counts appear, so the overview, the organisation list and the job hub all
+ *  explain the same numbers the same way. */
+export function CountsExplanation() {
+  const { t } = useT();
+  return (
+    <details data-testid="counts-explanation" className="mt-2 text-xs text-muted-foreground">
+      <summary className="min-h-11 cursor-pointer list-item py-2 font-medium text-foreground underline-offset-4 hover:underline sm:min-h-0 sm:py-0">
+        {t("rec.counts.explainSummary")}
+      </summary>
+      <ul className="mt-2 space-y-1.5 leading-relaxed">
+        <li>{t("rec.counts.explain.received")}</li>
+        <li>{t("rec.counts.explain.reviewed")}</li>
+        <li>{t("rec.counts.explain.remaining")}</li>
+        <li>{t("rec.counts.explain.status")}</li>
+        <li>{t("rec.counts.explain.open")}</li>
+      </ul>
+    </details>
+  );
+}
 
 export function RecruiterCounts({
   counts,
   onView,
   scopeLabel,
+  title,
+  intro,
 }: {
   counts: IntelligenceCounts;
   onView: (view: CandidateView) => void;
   scopeLabel?: string;
+  /** A heading when the block stands on its own (the overview); the lists
+   *  already have a heading above the table and pass none. */
+  title?: string;
+  /** One sentence that separates this population from the numbers next to it. */
+  intro?: string;
 }) {
   const { lang } = useT();
   const sv = lang === "sv";
@@ -73,8 +118,10 @@ export function RecruiterCounts({
     <section
       data-testid="recruiter-counts"
       className="mb-4 rounded-lg border border-border p-3"
-      aria-label={sv ? "Ansökningar och granskning" : "Applications and review"}
+      aria-label={title ?? (sv ? "Ansökningar och granskning" : "Applications and review")}
     >
+      {title && <h2 className="text-base font-semibold text-foreground">{title}</h2>}
+      {intro && <p className="mt-1 mb-2 text-xs leading-relaxed text-muted-foreground">{intro}</p>}
       {scopeLabel && <p className="mb-2 text-xs font-semibold">{scopeLabel}</p>}
       <div className="grid grid-cols-3 gap-2">
         {cards.map((card) => (
@@ -83,7 +130,7 @@ export function RecruiterCounts({
             data-testid={`count-${card.view.review ?? "received"}`}
             key={card.label}
             onClick={() => onView(card.view)}
-            className="min-h-11 rounded border border-border p-2 text-left hover:bg-muted/50"
+            className="min-h-11 rounded border border-border p-2 text-left hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <span className="block text-xs text-muted-foreground">{card.label}</span>
             <strong className="text-xl tabular-nums">{card.count}</strong>
@@ -96,20 +143,26 @@ export function RecruiterCounts({
           : "Received includes archived applications. Test and interview indicators may overlap and are not added as unique applications."}
       </p>
       <div className="mt-3 flex flex-wrap gap-2">
-        {(["green", "yellow", "gray", "not_established"] as const).map((status) => (
-          <button
-            type="button"
-            data-testid={`count-${status}`}
-            key={status}
-            onClick={() => onView({ stage: "received", requirement: status })}
-            className="min-h-11 rounded border border-border px-2 text-xs hover:bg-muted/50"
-          >
-            {requirementLabels[lang][status]}:{" "}
-            <strong className="tabular-nums">
-              {status === "not_established" ? counts.notEstablished : counts[status]}
-            </strong>
-          </button>
-        ))}
+        {(["green", "yellow", "gray", "not_established"] as const).map((status) => {
+          const Icon = STATUS_ICON[status];
+          return (
+            <button
+              type="button"
+              data-testid={`count-${status}`}
+              key={status}
+              onClick={() => onView({ stage: "received", requirement: status })}
+              className={`inline-flex min-h-11 items-center gap-1.5 rounded border px-2 text-xs hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${tones[status]}`}
+            >
+              <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+              <span>
+                {requirementLabels[lang][status]}:{" "}
+                <strong className="tabular-nums">
+                  {status === "not_established" ? counts.notEstablished : counts[status]}
+                </strong>
+              </span>
+            </button>
+          );
+        })}
       </div>
       <p data-testid="filtered-review-counts" className="mt-2 text-xs text-muted-foreground">
         {sv
@@ -121,6 +174,7 @@ export function RecruiterCounts({
           ? `Arkiverade: ${counts.archived}. Återkallade: ${counts.withdrawn}. Med beslut: ${counts.decided}. Kravstatus ändrar inte rekryteringssteg eller beslut.`
           : `Archived: ${counts.archived}. Withdrawn: ${counts.withdrawn}. With a decision: ${counts.decided}. Requirement status does not change recruitment stage or decision.`}
       </p>
+      <CountsExplanation />
     </section>
   );
 }

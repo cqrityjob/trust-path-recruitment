@@ -123,6 +123,7 @@ export const PHASE_FILTERS = [
   "draft",
   "published",
   "closed",
+  "ready",
   "completed",
   "archived",
   "all",
@@ -141,6 +142,11 @@ export function matchesPhaseFilter(
       return true;
     case "active":
       return isActiveRecruitment(phase, unresolved);
+    // The overview's "ready to complete" row opens exactly the recruitments it
+    // counted: closed, and nobody left to answer. `closed` alone also shows
+    // the ones that still have candidates waiting, which is different work.
+    case "ready":
+      return isReadyToComplete(phase, unresolved);
     case "completed":
       return phase === "completed" || phase === "cancelled";
     default:

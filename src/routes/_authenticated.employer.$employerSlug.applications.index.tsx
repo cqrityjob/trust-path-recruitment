@@ -11,6 +11,7 @@ import {
   type EmployerStatus,
 } from "@/components/employer/EmployerAppShell";
 import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
+import { RecruitmentFlowStrip } from "@/components/employer/RecruitmentFlowStrip";
 import { EmployerAccessDenied } from "@/components/employer/EmployerAccessDenied";
 import { CandidateTable } from "@/components/recruitment/CandidateTable";
 import { listMyEmployerWorkspaces } from "@/lib/job-intelligence/membership.functions";
@@ -86,6 +87,7 @@ function ApplicationsList(props: {
   return (
     <EmployerAppShell {...props} activeSection="applications">
       <h1 className="text-2xl font-semibold">{t("employer.applications.heading")}</h1>
+      <RecruitmentFlowStrip employerSlug={props.employerSlug} current="applications" className="mt-3" />
       <p className="mt-2 text-sm text-muted-foreground">
         {lang === "sv"
           ? "Kravstatus, rekryteringssteg, teknisk analys och mänsklig granskning visas separat. Grupper och antal beräknas över hela urvalet före sidindelning."

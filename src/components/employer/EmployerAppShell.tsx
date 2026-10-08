@@ -148,6 +148,12 @@ type NavItem = {
   labelKey: TranslationKey;
   icon: React.ComponentType<{ className?: string }>;
   to: NavTarget;
+  /** One line under the label saying what the area is FOR. The four
+   *  recruitment items carry one, because "Rekryteringar" and "Ansökningar"
+   *  read as two names for the same pile until the difference is said:
+   *  one position's advert, requirements and decisions, versus every
+   *  application received. */
+  descKey?: TranslationKey;
 };
 
 type NavGroup = {
@@ -199,12 +205,14 @@ const NAV_GROUPS: NavGroup[] = [
         labelKey: "employer.nav.jobs",
         icon: Briefcase,
         to: "/employer/$employerSlug/jobs",
+        descKey: "employer.nav.jobs.desc",
       },
       {
         key: "applications",
         labelKey: "employer.nav.applications",
         icon: Inbox,
         to: "/employer/$employerSlug/applications",
+        descKey: "employer.nav.applications.desc",
       },
       // Tester & bedömningar (owner decision 2026-09-19): its Rekryteringsstöd
       // tab holds METHOD -> ROLE -> ENVIRONMENT -> SETUP.
@@ -213,6 +221,7 @@ const NAV_GROUPS: NavGroup[] = [
         labelKey: "employer.nav.assessments",
         icon: ClipboardCheck,
         to: "/employer/$employerSlug/assessments",
+        descKey: "employer.nav.assessments.desc",
       },
       // Interview Intelligence. Added only now that the landing route, the
       // permission checks and the whole journey behind it actually work --
@@ -223,6 +232,7 @@ const NAV_GROUPS: NavGroup[] = [
         icon: MessagesSquare,
         labelKey: "employer.nav.interviewIntelligence",
         to: "/employer/$employerSlug/interview-intelligence",
+        descKey: "employer.nav.interviewIntelligence.desc",
       },
     ],
   },
@@ -465,8 +475,15 @@ function NavLink({
           "Kompetenser & certif…" has no way to finish the sentence.
           A native title costs no layout and works in both languages,
           where the Swedish labels are the longer ones. */}
-      <span className="min-w-0 truncate" title={t(item.labelKey)}>
-        {t(item.labelKey)}
+      <span className="min-w-0">
+        <span className="block truncate" title={t(item.labelKey)}>
+          {t(item.labelKey)}
+        </span>
+        {item.descKey && (
+          <span className="block truncate text-[11px] font-normal leading-tight text-muted-foreground/80">
+            {t(item.descKey)}
+          </span>
+        )}
       </span>
     </Link>
   );

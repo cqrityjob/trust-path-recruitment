@@ -101,6 +101,38 @@ export const Route = createFileRoute(
   validateSearch: (search) => searchSchema.parse(search),
 });
 
+/** The two links the standard report offers in its own body, for the
+ *  Sentinel branch that replaces that body. */
+function SentinelWayBack({
+  employerSlug,
+  applicationId,
+}: {
+  employerSlug: string;
+  applicationId: string | null;
+}) {
+  const { t } = useT();
+  const cls =
+    "no-print inline-flex min-h-[44px] items-center gap-1.5 text-[13px] font-medium text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
+  return (
+    <div className="flex flex-wrap gap-x-5">
+      <Link to="/employer/$employerSlug/assessments/participants" params={{ employerSlug }} className={cls}>
+        <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+        {t("academy.results.back")}
+      </Link>
+      {applicationId && (
+        <Link
+          to="/employer/$employerSlug/applications/$applicationId"
+          params={{ employerSlug, applicationId }}
+          className={cls}
+        >
+          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+          {t("continuity.backToApplication")}
+        </Link>
+      )}
+    </div>
+  );
+}
+
 function ResultsRoute() {
   const { employerSlug, attemptId } = Route.useParams();
   const { application } = Route.useSearch();
@@ -111,6 +143,9 @@ function ResultsRoute() {
           attemptId={attemptId}
           employerId={ws.employerId}
           canManage={ws.role === "owner" || ws.role === "admin"}
+          before={
+            <SentinelWayBack employerSlug={employerSlug} applicationId={application ?? null} />
+          }
         >
           <Report
             attemptId={attemptId}

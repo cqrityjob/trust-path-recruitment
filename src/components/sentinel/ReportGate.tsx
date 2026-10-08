@@ -9,11 +9,16 @@ export function SentinelReportGate({
   employerId,
   canManage = true,
   children,
+  before,
 }: {
   attemptId: string;
   employerId?: string;
   canManage?: boolean;
   children: ReactNode;
+  /** Rendered above the Sentinel report when this gate replaces `children`:
+   *  the page's way back lives inside `children`, and a report with no way
+   *  back is a dead end. */
+  before?: ReactNode;
 }) {
   const { lang } = useT();
   const sv = lang !== "en";
@@ -39,6 +44,7 @@ export function SentinelReportGate({
   if (!q.data) return <>{children}</>;
   return (
     <div className="space-y-5">
+      {before}
       <SentinelReportView
         report={q.data.report}
         status={q.data.status}

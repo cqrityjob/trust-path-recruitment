@@ -11,6 +11,7 @@ import type { TranslationKey } from "@/i18n/dictionaries";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { EmployerAppShell } from "@/components/employer/EmployerAppShell";
+import { RecruitmentFlowStrip } from "@/components/employer/RecruitmentFlowStrip";
 import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
 import { EmployerAccessDenied } from "@/components/employer/EmployerAccessDenied";
 import { useEmployerWorkspace } from "@/lib/job-intelligence/use-employer-workspace";
@@ -141,6 +142,7 @@ function Page() {
         <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground">
           {t("iiu.ix.lead")}
         </p>
+        <RecruitmentFlowStrip employerSlug={employerSlug} current="interviews" className="mt-4" />
       </header>
 
       <div className={noCases ? "hidden" : "mt-6 grid gap-3 sm:grid-cols-3"}>

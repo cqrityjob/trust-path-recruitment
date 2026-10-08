@@ -56,7 +56,7 @@ function EmployerPreferencesPage() {
       employerName={ws.workspace.employerName}
       role={ws.workspace.role}
       status={ws.workspace.employerStatus}
-      activeSection="settings"
+      activeSection="organisation"
       hasMultipleWorkspaces={ws.hasMultipleWorkspaces}
     >
       <EmployerModuleComingSoon

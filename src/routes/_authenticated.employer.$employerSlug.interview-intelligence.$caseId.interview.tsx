@@ -716,6 +716,7 @@ function Page() {
           candidate={d.candidateDisplayName}
           role={d.packName ?? d.title}
           status={d.status}
+          applicationLink={{ employerSlug, applicationId: d.applicationId }}
           action={
             completed ? (
               <NextStepLink status={d.status} employerSlug={employerSlug} caseId={caseId} />
@@ -1475,7 +1476,7 @@ function Page() {
               process?.pending
                 ? "iiu.lv.saving"
                 : process?.error
-                  ? "iiu.iv.process.unsaved"
+                  ? "iiu.iv.process.saveFailed"
                   : process?.dirty
                     ? "iiu.iv.process.unsaved"
                     : "iiu.iv.process.saved",

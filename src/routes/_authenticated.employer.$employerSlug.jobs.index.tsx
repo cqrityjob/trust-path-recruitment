@@ -12,6 +12,7 @@ import {
   type EmployerRole,
   type EmployerStatus,
 } from "@/components/employer/EmployerAppShell";
+import { RecruitmentFlowStrip } from "@/components/employer/RecruitmentFlowStrip";
 import { ConfirmAction, usePendingConfirm } from "@/components/employer/ConfirmAction";
 import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
 import { EmployerAccessDenied } from "@/components/employer/EmployerAccessDenied";
@@ -282,6 +283,11 @@ function JobsList({
             {t("rec.list.heading")}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">{t("rec.list.lede")}</p>
+          <RecruitmentFlowStrip
+            employerSlug={employerSlug}
+            current="requirements"
+            className="mt-3"
+          />
         </div>
         <Link
           to="/employer/$employerSlug/jobs/new"

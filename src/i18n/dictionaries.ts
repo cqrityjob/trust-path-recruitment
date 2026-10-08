@@ -2242,6 +2242,10 @@ export const dictionaries = {
     "employer.nav.jobs": "Rekryteringar",
     "employer.nav.applications": "Ansökningar",
     "employer.nav.assessments": "Tester & bedömningar",
+    "employer.nav.jobs.desc": "Annons, krav och beslut för en tjänst",
+    "employer.nav.applications.desc": "Alla mottagna ansökningar: filtrera och granska",
+    "employer.nav.assessments.desc": "Testbibliotek, utskick och resultat",
+    "employer.nav.interviewIntelligence.desc": "Förbered, genomför och granska samtal",
     "employer.nav.settings": "Inställningar",
     "employer.nav.ariaLabel": "Arbetsgivarnavigering",
 
@@ -2571,6 +2575,8 @@ export const dictionaries = {
     "employer.actions.resultsReady.other": "resultat klara att delas",
     "employer.actions.awaitingNextStep.one": "kandidat väntar på nästa steg",
     "employer.actions.awaitingNextStep.other": "kandidater väntar på nästa steg",
+    "employer.actions.inInterviewStage.one": "kandidat är i intervjusteget",
+    "employer.actions.inInterviewStage.other": "kandidater är i intervjusteget",
     "employer.actions.draftJobs.one": "utkast till annons",
     "employer.actions.draftJobs.other": "utkast till annonser",
     "employer.actions.testsWithCandidates.one": "test är ute hos en kandidat",
@@ -7195,7 +7201,7 @@ export const dictionaries = {
     "sendTest.test.closedTest":
       "Innehållet är ett utkast och körs som sluten test. Resultatet är ett underlag – det fattar inget beslut.",
     "sendTest.level.strategic.interviewInstead":
-      "Intervjustödet BESKT kan användas för rollen redan nu, från Tester & bedömningar → Rekryteringsstöd.",
+      "Intervjustödet BESKT kan användas för rollen redan nu, från Tester & bedömningar → Testbibliotek → Förbered intervju (Rekryteringsstöd).",
     "sendTest.level.notAssignable": "Testet finns men er organisation kan inte skicka det just nu.",
     "sendTest.level.alreadySent":
       "Redan skickat till den här kandidaten. Ett nytt försök skapar inget nytt test.",
@@ -9009,6 +9015,8 @@ export const dictionaries = {
       "Beskriv vad du ändrade, varför och vilken uppföljning som behövs. Det gäller intervjuarens arbetssätt och är inget omdöme om kandidaten.",
     "iiu.iv.process.saved": "Reflektion och avvikelser är sparade",
     "iiu.iv.process.unsaved": "Reflektion eller avvikelser är inte sparade ännu",
+    "iiu.iv.process.saveFailed":
+      "Senaste ändringen kunde inte sparas. Texten finns kvar i fältet; försök igen.",
     "iiu.iv.process.savefailed": "Reflektion och avvikelser kunde inte sparas",
     "iiu.iv.process.failed.body":
       "Texten står kvar här. Nästa åtgärd stoppas tills den har sparats. Försök igen.",
@@ -11235,6 +11243,10 @@ export const dictionaries = {
     "employer.nav.jobs": "Recruitments",
     "employer.nav.applications": "Applications",
     "employer.nav.assessments": "Tests & assessments",
+    "employer.nav.jobs.desc": "Advert, requirements and decisions for one position",
+    "employer.nav.applications.desc": "All received applications: filter and review",
+    "employer.nav.assessments.desc": "Test library, dispatch and results",
+    "employer.nav.interviewIntelligence.desc": "Prepare, conduct and review interviews",
     "employer.nav.settings": "Settings",
     "employer.nav.ariaLabel": "Employer navigation",
 
@@ -11548,6 +11560,8 @@ export const dictionaries = {
     "employer.actions.resultsReady.other": "results are ready to share",
     "employer.actions.awaitingNextStep.one": "candidate is waiting for the next step",
     "employer.actions.awaitingNextStep.other": "candidates are waiting for the next step",
+    "employer.actions.inInterviewStage.one": "candidate is at the interview stage",
+    "employer.actions.inInterviewStage.other": "candidates are at the interview stage",
     "employer.actions.draftJobs.one": "draft job ad",
     "employer.actions.draftJobs.other": "draft job ads",
     "employer.actions.testsWithCandidates.one": "test is out with a candidate",
@@ -16049,7 +16063,7 @@ export const dictionaries = {
     "sendTest.test.closedTest":
       "The content is a draft and runs as a closed test. The result is material for the interview – it makes no decision.",
     "sendTest.level.strategic.interviewInstead":
-      "The BESKT interview support can already be used for the role, from Tests & assessments → Recruitment support.",
+      "The BESKT interview support can already be used for the role, from Tests & assessments → Test library → Prepare interview (Recruitment support).",
     "sendTest.level.notAssignable":
       "The test exists but your organisation cannot send it right now.",
     "sendTest.level.alreadySent":
@@ -17858,6 +17872,8 @@ export const dictionaries = {
       "Describe what you changed, why and any follow-up needed. This concerns the interviewer's conduct and is not a judgement about the candidate.",
     "iiu.iv.process.saved": "Reflection and changes are saved",
     "iiu.iv.process.unsaved": "Reflection or changes are not saved yet",
+    "iiu.iv.process.saveFailed":
+      "The latest change could not be saved. The text stays in the field; try again.",
     "iiu.iv.process.savefailed": "Reflection and changes could not be saved",
     "iiu.iv.process.failed.body":
       "Your text remains here. The next action is blocked until it is saved. Try again.",
