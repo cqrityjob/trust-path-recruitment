@@ -6,6 +6,10 @@ import cp from "node:child_process";
 import { pathToFileURL } from "node:url";
 import { createClient } from "@supabase/supabase-js";
 import { APP_SHA, readCIContext } from "./recruiter-real-ci-contract.mjs";
+import {
+  prepareNativeStorageClaim,
+  storageFailureSummary,
+} from "./recruiter-real-ci-storage-bootstrap.mjs";
 const { stackRoot: root, appRoot: helperRoot } = readCIContext();
 if (process.env.RI_OPS_STACK_ROOT !== root) throw Error("REAL_LOCAL_STACK_ALLOWLIST");
 const temp = path.join(root, "supabase/.temp");
@@ -60,7 +64,14 @@ function save() {
   fs.writeFileSync(output, JSON.stringify(evidence, null, 2), { mode: 0o600 });
 }
 function good(result, label) {
-  if (result.error) throw Error(`${label}:${result.error.code ?? result.status ?? "error"}`);
+  if (result.error) {
+    fs.writeFileSync(
+      path.join(temp, "ri-real-upload-failure.json"),
+      JSON.stringify(storageFailureSummary(label, result)),
+      { mode: 0o600 },
+    );
+    throw Error("REAL_CI_STORAGE_REQUEST_FAILED");
+  }
   return result.data;
 }
 function assert(condition, label) {
@@ -90,19 +101,10 @@ async function missing(c, storagePath) {
   return !list.some((row) => row.name === storagePath.slice(part + 1));
 }
 const holder = await login(client());
-const claimId = good(
-  await holder.rpc("sp_save_international_credential", {
-    _input: {
-      definition_code: "INTL_ASIS_CPP",
-      market_country: "",
-      market_region: "",
-      identifier: `LOCAL-RECOVERY-${crypto.randomUUID()}`,
-      issued_on: "2026-01-01",
-      valid_until: "2028-01-01",
-      no_expiry: false,
-    },
-  }),
-  "create-own-synthetic-credential",
+const claimId = await prepareNativeStorageClaim(
+  holder,
+  `LOCAL-RECOVERY-${crypto.randomUUID()}`,
+  good,
 );
 const cases = [
   "missing-preflight",

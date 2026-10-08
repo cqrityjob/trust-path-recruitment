@@ -16,6 +16,10 @@ import {
   authFailureSummary,
 } from "./recruiter-real-ci-contract.mjs";
 import { validatePublicReport, writePublicReport } from "./recruiter-real-ci-public.mjs";
+import {
+  prepareNativeStorageClaim,
+  storageFailureSummary,
+} from "./recruiter-real-ci-storage-bootstrap.mjs";
 
 const env = {
   CI: "true",
@@ -322,6 +326,87 @@ describe("real CI execution and publication cannot silently narrow", () => {
     expect(config).toContain('trace: "off"');
     expect(config).toContain('screenshot: "off"');
     expect(config).toContain('video: "off"');
+  });
+});
+
+describe("fresh real-Auth holder setup", () => {
+  test("ordinary own Passport RPC completes before the own credential save", async () => {
+    const calls: string[] = [];
+    const holder = {
+      rpc: async (name: string, input: Record<string, unknown>) => {
+        calls.push(name);
+        if (name === "sp_passport_ensure") {
+          expect(input).toEqual({ _question_version: "sp-q-v1" });
+          return { data: [{ created: true, repaired: false }], error: null };
+        }
+        expect(input).toMatchObject({
+          _input: { definition_code: "INTL_ASIS_CPP", identifier: "synthetic-reference" },
+        });
+        return { data: "synthetic-own-claim", error: null };
+      },
+    };
+    const claim = await prepareNativeStorageClaim(
+      holder,
+      "synthetic-reference",
+      (result: { data: unknown }) => result.data,
+    );
+    expect(claim).toBe("synthetic-own-claim");
+    expect(calls).toEqual(["sp_passport_ensure", "sp_save_international_credential"]);
+    const upload = read("scripts/recruiter-real-ci-upload.mjs");
+    expect(upload).toContain("await prepareNativeStorageClaim(");
+    expect(upload).not.toContain('holder.rpc("sp_save_international_credential"');
+  });
+  test("failed or malformed Passport setup never advances to credential or Storage", async () => {
+    for (const malformed of [false, true]) {
+      const calls: string[] = [];
+      const holder = {
+        rpc: async (name: string) => {
+          calls.push(name);
+          return {
+            data: malformed ? [] : null,
+            error: malformed ? null : { code: "42501", message: "SP_SESSION_REVOKED" },
+          };
+        },
+      };
+      await expect(
+        prepareNativeStorageClaim(
+          holder,
+          "synthetic",
+          (result: { data: unknown; error: unknown }) => {
+            if (result.error) throw Error("denied");
+            return result.data;
+          },
+        ),
+      ).rejects.toThrow(malformed ? "PASSPORT_RESPONSE_INVALID" : "denied");
+      expect(calls).toEqual(["sp_passport_ensure"]);
+    }
+  });
+  test("only fixed operation/domain codes, SQLSTATE and HTTP status enter Storage diagnostics", () => {
+    expect(
+      storageFailureSummary("create-own-synthetic-credential", {
+        status: 400,
+        error: { code: "P0001", message: "SP_NO_PASSPORT", details: "private omitted" },
+      }),
+    ).toEqual({
+      operation: "create-own-synthetic-credential",
+      httpStatus: 400,
+      sqlState: "P0001",
+      domainCode: "SP_NO_PASSPORT",
+    });
+    expect(
+      storageFailureSummary("private-arbitrary-operation", {
+        status: Number.NaN,
+        error: { code: "private-arbitrary-code", message: "Bearer syntheticForbiddenToken123" },
+      }),
+    ).toEqual({
+      operation: "unclassified",
+      httpStatus: 0,
+      sqlState: "unclassified",
+      domainCode: "unclassified",
+    });
+    const runner = read("scripts/recruiter-real-ci-run.mjs");
+    expect(runner).toContain("storageFailureSummary(failure.operation");
+    expect(runner).toContain("{ storageFailure: error.storageFailure }");
   });
 });
 

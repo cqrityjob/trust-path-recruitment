@@ -20,6 +20,7 @@ import {
   authFailureSummary,
 } from "./recruiter-real-ci-contract.mjs";
 import { digest, writePublicReport } from "./recruiter-real-ci-public.mjs";
+import { storageFailureSummary } from "./recruiter-real-ci-storage-bootstrap.mjs";
 
 const context = readCIContext();
 if (fs.existsSync(context.stackRoot) || fs.existsSync(context.publicRoot))
@@ -66,6 +67,13 @@ function run(command, args, name, options = {}) {
     const text = fs.readFileSync(privateFile(`${name}.log`), "utf8");
     const error = new Error(`REAL_CI_${name.toUpperCase().replaceAll("-", "_")}_FAILED`);
     error.sqlState = text.match(/ERROR:\s+([A-Z0-9]{5}):/)?.[1];
+    if (name === "storage" && fs.existsSync(privateFile("ri-real-upload-failure.json"))) {
+      const failure = JSON.parse(fs.readFileSync(privateFile("ri-real-upload-failure.json")));
+      error.storageFailure = storageFailureSummary(failure.operation, {
+        status: failure.httpStatus,
+        error: { code: failure.sqlState, message: failure.domainCode },
+      });
+    }
     throw error;
   }
 }
@@ -102,6 +110,7 @@ async function stage(name, action) {
       code,
       ...(error.sqlState ? { sqlState: error.sqlState } : {}),
       ...(error.authFailure ?? {}),
+      ...(error.storageFailure ? { storageFailure: error.storageFailure } : {}),
     });
     console.error(`REAL_CI_FAIL ${name} ${code}`);
     throw Error(code);
