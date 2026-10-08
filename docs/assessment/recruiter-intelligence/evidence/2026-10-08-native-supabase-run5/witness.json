@@ -1,0 +1,154 @@
+{
+  "kind": "failed_actual_native_gotrue_storage_snapshot_ui_ci",
+  "runId": 37762423210,
+  "jobId": 113261817819,
+  "artifactId": 11542903798,
+  "artifactZipSha256": "92ba9ad3935643cd90406bedbdd1731e62c5fb501eed7cfcb81abc847af1640b",
+  "evidenceCodeSha": "439c96130a2cdb751c42b27432accda580cd0b5c",
+  "releaseSchemaSha": "250623cfb677c931caf70a2354daf774f72f443a",
+  "appSha": "a68f22d799769de32230781bba268632e57e796f",
+  "stages": {
+    "official_stack": "passed",
+    "strict_schema_replay": "passed",
+    "real_auth_and_receipt_off_fixture": "passed",
+    "real_storage_upload_recovery": "passed",
+    "pinned_app_start": "passed",
+    "twelve_real_password_ui_journeys": "failed",
+    "owned_stack_stop": "passed"
+  },
+  "errors": [
+    {
+      "stage": "twelve_real_password_ui_journeys",
+      "code": "REAL_CI_BROWSER_PRIMARY_FAILED"
+    }
+  ],
+  "canonicalMigrationCount": 385,
+  "storage": [
+    {
+      "mode": "missing-preflight",
+      "status": "PASS",
+      "outcome": "preflight-rejected",
+      "cleanup": null,
+      "setupCleanupConfirmed": true,
+      "storagePosts": 0,
+      "attachActualStatuses": [],
+      "deleteCalls": 0,
+      "readbackStatuses": []
+    },
+    {
+      "mode": "reject-cleanup-confirmed",
+      "status": "PASS",
+      "outcome": "not_attached",
+      "cleanup": "confirmed",
+      "setupCleanupConfirmed": true,
+      "storagePosts": 1,
+      "attachActualStatuses": [
+        500
+      ],
+      "deleteCalls": 1,
+      "readbackStatuses": [
+        200
+      ]
+    },
+    {
+      "mode": "reject-cleanup503-pending",
+      "status": "PASS",
+      "outcome": "not_attached",
+      "cleanup": "pending",
+      "setupCleanupConfirmed": true,
+      "storagePosts": 1,
+      "attachActualStatuses": [
+        500
+      ],
+      "deleteCalls": 1,
+      "readbackStatuses": [
+        200
+      ]
+    },
+    {
+      "mode": "committed-reply-lost",
+      "status": "PASS",
+      "outcome": "saved",
+      "cleanup": null,
+      "setupCleanupConfirmed": true,
+      "storagePosts": 1,
+      "attachActualStatuses": [
+        200
+      ],
+      "deleteCalls": 0,
+      "readbackStatuses": [
+        200
+      ]
+    },
+    {
+      "mode": "committed-reply-lost-read-denied",
+      "status": "PASS",
+      "outcome": "outcome_unknown",
+      "cleanup": null,
+      "setupCleanupConfirmed": true,
+      "storagePosts": 1,
+      "attachActualStatuses": [
+        200
+      ],
+      "deleteCalls": 0,
+      "readbackStatuses": [
+        401
+      ]
+    },
+    {
+      "mode": "ordinary-success",
+      "status": "PASS",
+      "outcome": "saved",
+      "cleanup": null,
+      "setupCleanupConfirmed": true,
+      "storagePosts": 1,
+      "attachActualStatuses": [
+        200
+      ],
+      "deleteCalls": 0,
+      "readbackStatuses": [
+        200
+      ]
+    },
+    {
+      "mode": "revoked-after-preflight",
+      "status": "PASS",
+      "outcome": "outcome_unknown",
+      "cleanup": null,
+      "setupCleanupConfirmed": true,
+      "storagePosts": 1,
+      "attachActualStatuses": [
+        403
+      ],
+      "deleteCalls": 0,
+      "readbackStatuses": []
+    }
+  ],
+  "beforeBrowser": {
+    "migration_count": 385,
+    "migration_frontier": "20270307100000",
+    "auth_users": 8,
+    "auth_confirmed_invalid_bcrypt": 8,
+    "jobs": 12,
+    "applications": 12,
+    "receipts_enabled": 0,
+    "cases": 0,
+    "reports": 0,
+    "ai_enabled": false,
+    "transcript_enabled": false,
+    "ai_runs": 0,
+    "sw_ai_runs": 0,
+    "recruitment_messages": 0,
+    "email_attempts": 0,
+    "erasure_jobs": 0,
+    "storage_erasure_queue": 0,
+    "cron_jobs": 0
+  },
+  "browserStats": null,
+  "browserSourceLocation": null,
+  "curatedImageCount": 35,
+  "missingImageComparedWithRun4": "images/mobile-375-guard-standalone-sv-report.png",
+  "afterBrowser": null,
+  "cause": "not_established",
+  "privateBrowserErrorsPublished": false
+}
