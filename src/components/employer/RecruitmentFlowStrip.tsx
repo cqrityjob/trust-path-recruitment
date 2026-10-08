@@ -12,6 +12,14 @@
 // strip says so in words, and each station carries a one-line hint. On a
 // phone the stations wrap into rows rather than scrolling sideways, so the
 // later steps are never off-screen.
+//
+// Two stations share a route with another and are told apart by the URL:
+// "Kravgranskning" is the application list filtered to the OPEN applications
+// nobody has reviewed yet (the work that can be done now, never the archived
+// or decided ones), and "Beslut & avslut" is the recruitment list filtered to
+// the active recruitments, where outcomes are given and a recruitment is
+// closed. Each page derives `current` from its own URL, so the station that
+// was clicked is the one that lights up.
 import { Link } from "@tanstack/react-router";
 import { ChevronRight } from "lucide-react";
 import type { ReactNode } from "react";
@@ -126,7 +134,7 @@ export function RecruitmentFlowStrip({
               <Link
                 to="/employer/$employerSlug/applications"
                 params={params}
-                search={{ stage: "received" as const, review: "remaining" as const }}
+                search={{ review: "remaining" as const }}
                 activeOptions={active}
                 title={hint("review")}
                 className={linkClass}

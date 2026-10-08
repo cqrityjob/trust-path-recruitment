@@ -87,10 +87,34 @@ const UI = "src/components/employer/interview/InterviewUi.tsx";
     /search=\{\{ phase: "active" as const \}\}/.test(strip),
     `${STRIP}: Decision & close opens the active recruitments, where decisions are made while a recruitment is still open.`,
   );
-  const pages: [string, string | null][] = [
+  expect(
+    /search=\{\{ review: "remaining" as const \}\}/.test(strip) &&
+      !/stage: "received" as const, review: "remaining"/.test(strip),
+    `${STRIP}: Kravgranskning opens the OPEN applications without a confirmed review (the work that can be done), not the historical remainder that includes archived and decided ones.`,
+  );
+  expect(
+    /rec\.flow\.decisionContext/.test(code(`${R}jobs.index.tsx`)) &&
+      /data-testid="decision-station-context"/.test(code(`${R}jobs.index.tsx`)) &&
+      Boolean(sv["rec.flow.decisionContext"]) &&
+      Boolean(en["rec.flow.decisionContext"]),
+    `${R}jobs.index.tsx: under the active/ready filter the list must say in one line where outcomes are given and where a recruitment is closed.`,
+  );
+  expect(
+    /inte hur långt en kandidat/.test(sv["rec.flow.lede"] ?? "") &&
+      /not how far a candidate/.test(en["rec.flow.lede"] ?? ""),
+    "rec.flow.lede must say the marker is the page you are on, not a candidate's progress.",
+  );
+  // The two pages that host two stations derive `current` from their URL:
+  // the application list is "review" under a review filter, the recruitment
+  // list is "decision" under the active/ready filter. The marker then follows
+  // the link that was clicked, and never a candidate's progress.
+  const pages: [string, string | RegExp | null][] = [
     [OVERVIEW, null],
-    [`${R}jobs.index.tsx`, "requirements"],
-    [`${R}applications.index.tsx`, "applications"],
+    [
+      `${R}jobs.index.tsx`,
+      /current=\{\s*phaseFilter === "active" \|\| phaseFilter === "ready" \? "decision" : "requirements"\s*\}/,
+    ],
+    [`${R}applications.index.tsx`, /current=\{view\.review \? "review" : "applications"\}/],
     [`${R}assessments.index.tsx`, "tests"],
     [`${R}interview-intelligence.index.tsx`, "interviews"],
     [`${R}reports.tsx`, "report"],
@@ -98,7 +122,12 @@ const UI = "src/components/employer/interview/InterviewUi.tsx";
   for (const [file, current] of pages) {
     const src = code(file);
     expect(/<RecruitmentFlowStrip/.test(src), `${file}: the flow strip is gone from this page.`);
-    if (current) {
+    if (current instanceof RegExp) {
+      expect(
+        current.test(src),
+        `${file}: the flow strip's station must follow the URL filter (${current}).`,
+      );
+    } else if (current) {
       expect(
         new RegExp(`<RecruitmentFlowStrip[\\s\\S]{0,200}current="${current}"`).test(src),
         `${file}: the flow strip must name this page's station ("${current}").`,
@@ -124,7 +153,11 @@ const UI = "src/components/employer/interview/InterviewUi.tsx";
   const rows: [string, RegExp, string][] = [
     ["new-applications", /status: "submitted" as const/, "the submitted applications"],
     ["awaiting-next-step", /stage: "review" as const/, "the applications under review"],
-    ["in-interview-stage", /stage: "interview" as const/, "the applications at the interview stage"],
+    [
+      "in-interview-stage",
+      /stage: "interview" as const/,
+      "the applications at the interview stage",
+    ],
     ["draft-jobs", /phase: "draft" as const/, "the draft recruitments"],
     ["ready-to-complete", /phase: "ready" as const/, "the recruitments ready to complete"],
   ];
@@ -150,7 +183,8 @@ const UI = "src/components/employer/interview/InterviewUi.tsx";
       `${OVERVIEW}: the "${stat}" summary number lost its one-line explanation.`,
     );
     expect(
-      Boolean(sv[`rec.overview.stat.${stat}.hint`]) && Boolean(en[`rec.overview.stat.${stat}.hint`]),
+      Boolean(sv[`rec.overview.stat.${stat}.hint`]) &&
+        Boolean(en[`rec.overview.stat.${stat}.hint`]),
       `rec.overview.stat.${stat}.hint is missing in sv or en.`,
     );
   }
@@ -283,7 +317,15 @@ const UI = "src/components/employer/interview/InterviewUi.tsx";
       /data-testid="case-application-link"/.test(ui),
     `${UI}: CaseHeader must offer the case's application as one link.`,
   );
-  for (const screen of ["prepare", "tests", "interview", "evidence", "assessment", "panel", "summary"]) {
+  for (const screen of [
+    "prepare",
+    "tests",
+    "interview",
+    "evidence",
+    "assessment",
+    "panel",
+    "summary",
+  ]) {
     expect(
       /<CaseHeader[\s\S]{0,400}applicationLink=\{\{ employerSlug, applicationId: d\.applicationId \}\}/.test(
         code(`${R}interview-intelligence.$caseId.${screen}.tsx`),
@@ -329,6 +371,95 @@ const UI = "src/components/employer/interview/InterviewUi.tsx";
     ) && Boolean(sv["iiu.iv.process.saveFailed"]),
     "the closing panel must tell a failed save apart from an unsaved draft.",
   );
+}
+
+/* 9 · The actionable review queue stands apart from the historical coverage. */
+{
+  const oc = code("src/components/recruitment/RecruiterOverviewCounts.tsx");
+  const st = code("src/components/recruitment/RecruiterStatus.tsx");
+  expect(
+    /const queueView = \{ stage: "open", review: "remaining" \} as const;/.test(oc) &&
+      /view: queueView/.test(oc) &&
+      /count: queue\.isSuccess \? queue\.data\.total/.test(oc),
+    "RecruiterOverviewCounts: the queue is a second read of the OPEN applications without a confirmed review, and its number is that list's total.",
+  );
+  expect(
+    /data-testid="review-queue"/.test(st) &&
+      /data-testid="review-queue-count"/.test(st) &&
+      /data-testid="review-queue-open"/.test(st) &&
+      /rec\.counts\.history\.heading/.test(st),
+    "RecruiterStatus: the queue is rendered first, with its own count and button, and the historical block is headed as historical.",
+  );
+  for (const k of [
+    "queue.label",
+    "queue.hint",
+    "queue.cta",
+    "queue.unavailable",
+    "history.heading",
+  ]) {
+    expect(
+      Boolean(sv[`rec.counts.${k}`]) && Boolean(en[`rec.counts.${k}`]),
+      `rec.counts.${k} is missing in sv or en.`,
+    );
+  }
+  expect(
+    /[Aa]rkiverade och avgjorda ansökningar ingår inte här/.test(sv["rec.counts.queue.hint"] ?? ""),
+    "rec.counts.queue.hint must say the archived and decided applications are not in the queue.",
+  );
+}
+
+/* 10 · The menu's active item is marked for assistive technology, not only by colour. */
+{
+  const shell = code("src/components/employer/EmployerAppShell.tsx");
+  expect(
+    /data-active=\{active \|\| undefined\}/.test(shell) &&
+      /\{active && <span className="sr-only">\(\{t\("rec\.flow\.current"\)\}\) <\/span>\}/.test(
+        shell,
+      ),
+    "EmployerAppShell: the active menu item carries data-active and a visually hidden 'you are here'.",
+  );
+}
+
+/* 11 · The requirement profile reads krav → underlag → kontroll → fastställ, ids behind details. */
+{
+  const rp = code("src/components/recruitment/RequirementProfilePanel.tsx");
+  const order = [
+    'stepHeading(1, sv ? "Krav"',
+    'stepHeading(2, sv ? "Godtagbart underlag"',
+    'stepHeading(3, sv ? "Kontrollinstruktion"',
+    'stepHeading(4, sv ? "Fastställ"',
+  ];
+  let at = -1;
+  for (const marker of order) {
+    const next = rp.indexOf(marker, at + 1);
+    expect(
+      next > at,
+      `RequirementProfilePanel: the steps must read in order; "${marker}" is missing or out of place.`,
+    );
+    at = next;
+  }
+  expect(
+    /<details className="mt-2 text-xs text-muted-foreground">[\s\S]{0,400}Befintligt krav-ID/.test(
+      rp,
+    ) &&
+      !/<p className="mt-1 break-all text-xs text-muted-foreground">\s*\{sv \? "Befintligt krav-ID"/.test(
+        rp,
+      ),
+    "RequirementProfilePanel: the requirement id lives behind a details element, not as a line of the form.",
+  );
+  for (const anchor of [
+    'data-testid="requirement-profile"',
+    'data-testid="profile-start-date"',
+    'data-testid="profile-confirm-ack"',
+    "data-requirement-id={rule.requirementId}",
+    "rules.some((r) => r.acceptedSources.length === 0 || !r.instructionSv.trim())",
+    '(rules.some((r) => r.decisionRule === "valid_at_start") && !startDate)',
+  ]) {
+    expect(
+      rp.includes(anchor),
+      `RequirementProfilePanel: "${anchor}" must stay; the rules and the test anchors are unchanged.`,
+    );
+  }
 }
 
 if (errors.length > 0) {

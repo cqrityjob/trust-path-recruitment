@@ -19,6 +19,16 @@ export function RecruiterOverviewCounts({
     queryKey: ["employer", employerId, "candidates", "overview"],
     queryFn: () => read({ data: { employerId, jobId: null, view: { stage: "received" } } }),
   });
+  // The work that can be done now: OPEN applications (not archived, no
+  // decision) without a confirmed review. A second, narrower read of the same
+  // list, so the number is the length of exactly the list its button opens --
+  // the historical "remaining" above it also counts the archived and decided
+  // applications a person can no longer review.
+  const queueView = { stage: "open", review: "remaining" } as const;
+  const queue = useQuery({
+    queryKey: ["employer", employerId, "candidates", "overview-queue"],
+    queryFn: () => read({ data: { employerId, jobId: null, view: queueView } }),
+  });
   if (query.isPending)
     return (
       <p className="my-4 text-sm">
@@ -48,6 +58,11 @@ export function RecruiterOverviewCounts({
         counts={query.data.intelligenceCounts}
         title={t("rec.overview.counts.title")}
         intro={t("rec.overview.counts.intro")}
+        queue={{
+          count: queue.isSuccess ? queue.data.total : queue.isError ? "failed" : null,
+          view: queueView,
+          retry: () => void queue.refetch(),
+        }}
         scopeLabel={
           lang === "sv"
             ? "Organisationens samtliga mottagna ansökningar"

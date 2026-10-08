@@ -39,6 +39,10 @@
     "scripts/employer-portal-flow-check.ts",
     "scripts/negative-controls/employer-portal-flow-controls.ts",
     "scripts/playwright-mobile-presets.test.ts",
+    "scripts/employer-portal-evidence-check.ts",
+    "scripts/negative-controls/employer-portal-evidence-controls.ts",
+    "scripts/employer-portal-fixture.test.ts",
+    "e2e/support/employer-portal-fixture.ts",
     // The security guard is added on its own terms rather than by widening the
     // net: it is new, it carries no pre-existing type debt, and a guard that
     // silently stops enforcing is exactly the failure this file was written about.

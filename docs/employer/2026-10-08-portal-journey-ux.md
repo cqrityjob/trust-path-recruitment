@@ -119,6 +119,64 @@ RPC-typöverlagringen i `src/integrations/supabase/database.ts`, metodpaket, fr�
 kompetensområden och poängregler. Inga serverbehörigheter, RPC:er eller migrationer
 ändras; inga räknares innebörd ändras.
 
+## Runda 2: slutgranskningen 2026-10-08 (punkt 7)
+
+Granskningen (produkt, metod/säkerhet, UX) läste `b887c64`, `2ad7a3d` och `ed6bf49`.
+Vad som ändrats sedan dess, per fynd:
+
+- **Stationsmarkering efter klick.** Ansökningslistan markerade alltid "Ansökningar &
+  underlag", även efter Kravgranskning-länken; Beslut & avslut landade på en lista som
+  markerade "Annons & krav". Nu härleder båda sidorna stationen ur URL:en:
+  `review=` i ansökningslistan ger "Kravgranskning", `phase=active|ready` i
+  rekryteringslistan ger "Beslut & avslut" med en kontextrad
+  (`decision-station-context`) som säger var besked ges och var avslut görs.
+  Remsans lede säger att markeringen visar sidan, inte kandidatens framsteg.
+  Pinnat i guarden och i en klickresa i `employer-portal-ux-evidence.spec.ts`.
+- **Historisk täckning vs. handlingsbar kö.** Kravgranskning-stationen länkar nu till
+  de ÖPPNA ansökningarna utan bekräftad granskning (`review=remaining`, steg open), inte
+  till den historiska återstoden (`stage=received`) som också omfattar arkiverade och
+  avgjorda. Översiktens räknarblock inleds med "Att granska nu" (egen läsning av samma
+  lista, antal = listans längd, knapp till kön) och resten rubriceras "Historisk
+  täckning". Arkiverade/avgjorda framställs inte som arbetsuppgifter.
+- **Mobilmenyn testad.** Ny test på `mobile-375`: öppna, fokus i lådan, aktiv sida
+  markerad bortom färg (`data-active` + dold "Du är här"), navigering stänger, Escape
+  stänger och återför fokus till knappen, ingen sidoscroll.
+- **Enhetsparitet före/efter.** Före-jobbet tar nu svit, fixture, harness OCH
+  `playwright.config.ts` från huvudet, så båda fotograferingarna använder samma
+  mobilemulering; bara appen är basens. Tidigare före-bilder i 375 var tagna med
+  basens felaktiga preset (smalt skrivbordsfönster) och är ersatta.
+- **Komplett manifest, SOURCE och föråldrade par.** `continue-on-error` på
+  artefakthämtningen är borttaget. `scripts/employer-portal-evidence-check.ts` (med tre
+  planterade kontroller) kräver 24 + 24 listade och befintliga PNG, inga främmande
+  filer, `SOURCE.txt` med fotograferad commit, och jämför `after/SOURCE.txt`-commiten
+  med PR-huvudet via GitHubs compare-API: ändrad fotograferad sökväg = FAIL ("stale").
+  Kontrollen körs i publish-jobbet innan paret committas och som eget jobb i `ci.yml`.
+  Workflowen kör dessutom bara fotograferingen när pushen ändrat något som fotograferas
+  (`changed`-jobbet); en docs-push ger ingen bot-commit.
+- **Fixturens antal.** Räknarna beräknas nu ur fem ansökningar med serverns regler
+  (`selectCandidatePage`, stubben svarar per vy). Invarianter i
+  `scripts/employer-portal-fixture.test.ts` (CI) och i browsersviten: kravstatusgrupperna
+  summerar till mottagna, granskade + återstående = mottagna, "Vald lista" beskriver den
+  lista som faktiskt returnerades.
+- **Kravprofilens formulär.** Per krav läses 1 Krav → 2 Godtagbart underlag →
+  3 Kontrollinstruktion, sedan 4 Fastställ, med hjälptext per steg och per beslutsregel;
+  krav-ID och rekryterings-ID ligger bakom "Tekniska detaljer". Regler, validering,
+  test-id:n och fastställandets semantik är oförändrade.
+- **`action_required` i GitHub.** Körningar vars utlösande aktör är `github-actions[bot]`
+  (bildcommits) får `conclusion: action_required` med `jobs: []`: repots Actions-policy
+  kräver att en underhållare godkänner körningen; inga jobb har startat, så det är varken
+  PASS eller ett produktfel. Alla sådana huvuden är bot-commits; det stabiliserade huvudet
+  är en vanlig commit vars körningar startar normalt, och `changed`-gaten gör att en
+  bot-commit inte längre blir huvudet efter en docs-push.
+
+Samordning med Astra (gemensamma filer som denna PR ändrar och som P2/P3 troligen
+rör): `src/components/recruitment/CandidateTable.tsx` (oförändrad här, men
+`RecruiterCounts` i den får `queue`-prop), `RecruiterStatus.tsx`,
+`RecruiterOverviewCounts.tsx`, `RequirementProfilePanel.tsx` (omstrukturerad form,
+samma regler), `src/i18n/recruitment-copy.ts` (nya `rec.counts.queue.*`,
+`rec.flow.decisionContext`), `e2e/support/public-entry-harness.ts` (funktionsstubbar).
+Den som ändrar samma komponent efter merge integrerar ovanpå; ingen historik skrivs om.
+
 ## Vilken appversion varje kontroll kör
 
 | Kontroll | Appversion | Täcker UX-ändringarna? |
@@ -126,7 +184,7 @@ kompetensområden och poängregler. Inga serverbehörigheter, RPC:er eller migra
 | `ci.yml` (lint/typecheck/deterministiska guards inkl. `employer-portal-flow:check` och `playwright-mobile-presets`, `verify`, `public-entry-browser` med `e2e:employer-portal-ux`, P1-jobben, migrationsreplay) | PR-huvudet | Ja |
 | `recruitment-evidence.yml` (Supabase CLI-stack, riktig Auth/PostgREST, `e2e/recruitment-workspace.spec.ts`) | PR-huvudet | Ja: tre nya inloggade tester för stegnavigeringens bevarade vy, återlänken till kandidatlistan, översiktens förklaringar, flödesremsan och `phase=ready`, utöver de befintliga 15+ |
 | `e4-evidence.yml` (slutrapporten, riktig stack) | PR-huvudet | Regression på rapportsidan (CaseHeader-länk) |
-| `employer-portal-ux-evidence.yml` | bas `e4531c3b` (före) och PR-huvudet (efter) | Ja: syntetiska bilder, sv/en, 1440 och emulerad 375 |
+| `employer-portal-ux-evidence.yml` | bas `e4531c3b` (före) och PR-huvudet (efter), samma instrument (svit, fixture, harness, Playwright-config från huvudet) | Ja: syntetiska bilder, sv/en, 1440 och emulerad 375; paret kontrolleras av `employer-portal-evidence:check` före commit |
 | `recruiter-p1-native-ci.yml`, `recruiter-real-ci.yml`, `passport-native-op09-ci.yml` | pinnad app `40e5775d…` | **Nej.** Tidigare versionsbevis för Astras leverans; verifierar inte denna PR:s kod |
 
 Mobila kontroller är emulering (Chromium med iPhone 13 Mini-/iPhone 14-metrik), inte
@@ -213,7 +271,6 @@ Kan vänta (backlog):
   ordböckerna. Föräldralösa nycklar efter P1: `employer.applications.lede`,
   `employer.applications.filter.all`, `employer.applications.sort.*`,
   `employer.jobs.list.applicationCount`, `employer.jobs.list.newCount`, `iiu.pp.nosources`.
-- `RequirementProfilePanel` visar råa krav-UUID ("Befintligt krav-ID").
 - Rapporter saknar släppta testrapporter och ansökningslänkar; `summary`-sidan har
   inga inlänkar; `hasMultipleWorkspaces` oanvänd i skalet; dubbel sökstate i
   rekryteringslistan.

@@ -87,7 +87,14 @@ function ApplicationsList(props: {
   return (
     <EmployerAppShell {...props} activeSection="applications">
       <h1 className="text-2xl font-semibold">{t("employer.applications.heading")}</h1>
-      <RecruitmentFlowStrip employerSlug={props.employerSlug} current="applications" className="mt-3" />
+      {/* With a review filter in the URL this list IS the requirement-review
+          station (the strip's own link lands here with review=remaining); the
+          marker follows the URL, never a candidate's progress. */}
+      <RecruitmentFlowStrip
+        employerSlug={props.employerSlug}
+        current={view.review ? "review" : "applications"}
+        className="mt-3"
+      />
       <p className="mt-2 text-sm text-muted-foreground">
         {lang === "sv"
           ? "Kravstatus, rekryteringssteg, teknisk analys och mänsklig granskning visas separat. Grupper och antal beräknas över hela urvalet före sidindelning."

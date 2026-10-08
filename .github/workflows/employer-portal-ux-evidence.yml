@@ -88,9 +88,12 @@ jobs:
       group: employer-portal-ux-evidence-before-${{ github.head_ref || github.ref }}
       cancel-in-progress: true
     steps:
-      - name: Checkout the head (for the suite and its fixture)
+      # The head commit itself (not the pull request's merge ref), so the
+      # "suite:" line in SOURCE.txt names a commit on the branch.
+      - name: Checkout the head (for the suite and its instrument)
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           path: head
 
       - name: Checkout the base
@@ -99,14 +102,20 @@ jobs:
           ref: ${{ github.event.pull_request.base.sha || github.event.inputs.base_ref || 'main' }}
           path: base
 
-      - name: Carry the suite into the base checkout
+      # The suite, its fixture, the harness AND the Playwright config come from
+      # the head, so both photographs are taken with the same device
+      # configuration (the base's config once ran "mobile-375" as a narrow
+      # desktop window, which made the mobile before-images a different
+      # instrument from the after-images). Only the application under test is
+      # the base's.
+      - name: Carry the suite and its instrument into the base checkout
         run: |
-          mkdir -p base/e2e/support
+          mkdir -p base/e2e/support base/scripts
           cp head/e2e/employer-portal-ux-evidence.spec.ts base/e2e/
           cp head/e2e/support/employer-portal-fixture.ts base/e2e/support/
-          # The harness the suite imports must be the one the base's app was
-          # written against; it exists on every base this suite targets.
-          test -f base/e2e/support/public-entry-harness.ts
+          cp head/e2e/support/public-entry-harness.ts base/e2e/support/
+          cp head/playwright.config.ts base/playwright.config.ts
+          cp head/scripts/recruiter-real-ci-mobile-preset.ts base/scripts/
 
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
@@ -149,7 +158,13 @@ jobs:
         if: always()
         run: |
           mkdir -p out/before
-          { echo "base: $(git -C base rev-parse HEAD)"; echo "suite: $(git -C head rev-parse HEAD)"; echo "mode: before"; } > out/before/SOURCE.txt
+          {
+            echo "base: $(git -C base rev-parse HEAD)"
+            echo "suite: $(git -C head rev-parse HEAD)"
+            echo "instrument: head (spec, fixture, harness, playwright.config.ts)"
+            echo "src-tree: $(git -C base rev-parse HEAD:src)"
+            echo "mode: before"
+          } > out/before/SOURCE.txt
 
       - name: Upload the before images
         if: always()
@@ -210,7 +225,11 @@ jobs:
         if: always()
         run: |
           mkdir -p out/after
-          { echo "head: $(git rev-parse HEAD)"; echo "mode: after"; } > out/after/SOURCE.txt
+          {
+            echo "head: $(git rev-parse HEAD)"
+            echo "src-tree: $(git rev-parse HEAD:src)"
+            echo "mode: after"
+          } > out/after/SOURCE.txt
 
       - name: Upload the after images
         if: always()
@@ -254,19 +273,29 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.ref }}
 
+      # A download that fails fails the job: a missing artifact must never
+      # become a half-committed pair.
       - name: Download the before images
         uses: actions/download-artifact@v4
-        continue-on-error: true
         with:
           name: employer-portal-ux-before
           path: artifacts/employer-portal-ux/before
 
       - name: Download the after images
         uses: actions/download-artifact@v4
-        continue-on-error: true
         with:
           name: employer-portal-ux-after
           path: artifacts/employer-portal-ux/after
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      # The pair is checked BEFORE it is committed: complete manifests, every
+      # listed file present, SOURCE.txt naming the commits photographed.
+      - name: Check the pair is complete
+        run: bun run scripts/employer-portal-evidence-check.ts
 
       - name: Commit and push when anything changed
         run: |

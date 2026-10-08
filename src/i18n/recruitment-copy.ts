@@ -414,6 +414,12 @@ export const recruitmentSv = {
   "rec.overview.counts.title": "Kravgranskning av mottagna ansökningar",
   "rec.overview.counts.intro":
     "Ett annat urval än Nya ansökningar ovan: här räknas alla ansökningar organisationen någonsin tagit emot, även arkiverade och avgjorda, uppdelade efter om en person har granskat dem mot den fastställda kravprofilen.",
+  "rec.counts.queue.label": "Att granska nu",
+  "rec.counts.queue.hint":
+    "Öppna ansökningar utan bekräftad granskning. Arkiverade och avgjorda ansökningar ingår inte här, även om de räknas som återstående nedan.",
+  "rec.counts.queue.cta": "Öppna granskningskön",
+  "rec.counts.queue.unavailable": "Kön kunde inte läsas.",
+  "rec.counts.history.heading": "Historisk täckning: alla mottagna ansökningar",
   "rec.counts.explainSummary": "Vad räknas här?",
   "rec.counts.explain.received":
     "Mottagna: alla ansökningar i urvalet, oavsett rekryteringssteg, beslut eller arkivering.",
@@ -427,10 +433,13 @@ export const recruitmentSv = {
     "Rekryteringssteg (Ny, Under granskning, Intervju) och beslut är en annan axel. Kravgranskningen ändrar dem inte.",
   "rec.overview.flowHeading": "Arbetsflödet",
   "rec.flow.lede":
-    "Ordningen i en rekrytering. Tester och intervjuer används när rekryteringen behöver dem; beslut och avslut görs i respektive rekrytering.",
+    "Ordningen i en rekrytering. Tester och intervjuer används när rekryteringen behöver dem; beslut och avslut görs i respektive rekrytering. Markeringen visar vilken sida du är på, inte hur långt en kandidat har kommit.",
+  "rec.flow.decisionContext":
+    "Pågående rekryteringar. Besked till kandidater ges i respektive ansökan; när alla besked är klara avslutas rekryteringen i dess sista steg.",
   "rec.flow.hint.requirements": "Annonsen, kravprofilen och rekryteringens egna steg.",
   "rec.flow.hint.applications": "Alla mottagna ansökningar och kandidatens underlag.",
-  "rec.flow.hint.review": "Ansökningar som ännu inte är mänskligt granskade mot kravprofilen.",
+  "rec.flow.hint.review":
+    "Öppna ansökningar som ännu inte är mänskligt granskade mot kravprofilen. Arkiverade och avgjorda ingår inte.",
   "rec.flow.hint.tests": "Testbibliotek, utskick och resultat. Används när det behövs.",
   "rec.flow.hint.interviews": "Förbered, genomför och granska intervjuer. Används när det behövs.",
   "rec.flow.hint.report": "Rapporter från genomförda intervjuer.",
@@ -1001,8 +1010,7 @@ export const recruitmentEn: { [K in keyof typeof recruitmentSv]: string } = {
     "A hiring or rejection decision is recorded by an owner, administrator or the recruitment's responsible person.",
   "rec.decision.tellCandidate": "Write the outcome to the candidate",
   "rec.error.alreadyCompleted": "The recruitment is already completed.",
-  "rec.error.applicationClosed":
-    "The application is closed, so this action cannot be carried out.",
+  "rec.error.applicationClosed": "The application is closed, so this action cannot be carried out.",
   "rec.error.bookingLocation":
     "Enter a place for an on-site interview and a meeting link for a video interview.",
   "rec.error.bookingNotEditable":
@@ -1081,7 +1089,8 @@ export const recruitmentEn: { [K in keyof typeof recruitmentSv]: string } = {
   "rec.list.emptyPhase": "No recruitments with that status.",
   "rec.list.filterStatus": "Status",
   "rec.list.heading": "Recruitments",
-  "rec.list.lede": "One recruitment per position: advert, requirement profile, applications and decisions.",
+  "rec.list.lede":
+    "One recruitment per position: advert, requirement profile, applications and decisions.",
   "rec.list.phase.default": "Active and drafts",
   "rec.list.phase.active": "Active",
   "rec.list.phase.draft": "Drafts",
@@ -1166,6 +1175,12 @@ export const recruitmentEn: { [K in keyof typeof recruitmentSv]: string } = {
   "rec.overview.counts.title": "Requirement review of received applications",
   "rec.overview.counts.intro":
     "A different selection from New applications above: every application the organisation has ever received, including archived and decided ones, split by whether a person has reviewed it against the confirmed requirement profile.",
+  "rec.counts.queue.label": "To review now",
+  "rec.counts.queue.hint":
+    "Open applications without a confirmed review. Archived and decided applications are not in this queue, even though they count as remaining below.",
+  "rec.counts.queue.cta": "Open the review queue",
+  "rec.counts.queue.unavailable": "The queue could not be loaded.",
+  "rec.counts.history.heading": "Historical coverage: every application received",
   "rec.counts.explainSummary": "What is counted here?",
   "rec.counts.explain.received":
     "Received: every application in the selection, whatever its recruitment stage, decision or archive state.",
@@ -1174,15 +1189,19 @@ export const recruitmentEn: { [K in keyof typeof recruitmentSv]: string } = {
   "rec.counts.explain.remaining":
     "Remaining: not yet confirmed, or reviews that need updating because the requirement profile or the material changed. This also includes applications that can no longer be reviewed: decided, archived or without a confirmed requirement profile.",
   "rec.counts.explain.status":
-    "Requirement status: green means every confirmed mandatory requirement is met by acceptable material. Yellow means at least one mandatory requirement is explicitly not met. Grey means material is missing or needs clarification. \"Mandatory requirements not established\" is about the recruitment, which has no confirmed requirement profile with mandatory requirements, not about the candidate's material. Requirement status is not a hiring decision.",
+    'Requirement status: green means every confirmed mandatory requirement is met by acceptable material. Yellow means at least one mandatory requirement is explicitly not met. Grey means material is missing or needs clarification. "Mandatory requirements not established" is about the recruitment, which has no confirmed requirement profile with mandatory requirements, not about the candidate\'s material. Requirement status is not a hiring decision.',
   "rec.counts.explain.open":
     "Recruitment stage (New, Under review, Interview) and decisions are a separate axis. The requirement review does not change them.",
   "rec.overview.flowHeading": "The workflow",
   "rec.flow.lede":
-    "The order of work in a recruitment. Tests and interviews are used when the recruitment needs them; decisions and closing happen in each recruitment.",
-  "rec.flow.hint.requirements": "The advert, the requirement profile and the recruitment's own steps.",
+    "The order of work in a recruitment. Tests and interviews are used when the recruitment needs them; decisions and closing happen in each recruitment. The marker shows which page you are on, not how far a candidate has come.",
+  "rec.flow.decisionContext":
+    "Active recruitments. Candidates get their outcome in their application; once every outcome is given, the recruitment is closed in its last step.",
+  "rec.flow.hint.requirements":
+    "The advert, the requirement profile and the recruitment's own steps.",
   "rec.flow.hint.applications": "All received applications and the candidate's material.",
-  "rec.flow.hint.review": "Applications not yet human-reviewed against the requirement profile.",
+  "rec.flow.hint.review":
+    "Open applications not yet human-reviewed against the requirement profile. Archived and decided ones are not included.",
   "rec.flow.hint.tests": "Test library, dispatch and results. Used when needed.",
   "rec.flow.hint.interviews": "Prepare, conduct and review interviews. Used when needed.",
   "rec.flow.hint.report": "Reports from conducted interviews.",

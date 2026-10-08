@@ -89,6 +89,7 @@ export function RecruiterCounts({
   scopeLabel,
   title,
   intro,
+  queue,
 }: {
   counts: IntelligenceCounts;
   onView: (view: CandidateView) => void;
@@ -98,8 +99,13 @@ export function RecruiterCounts({
   title?: string;
   /** One sentence that separates this population from the numbers next to it. */
   intro?: string;
+  /** The actionable queue -- open applications without a confirmed review --
+   *  shown first and apart from the historical coverage below it. `count` is
+   *  null while loading and "failed" when the read failed; the view is what
+   *  its button opens. Lists that already are a queue pass none. */
+  queue?: { count: number | null | "failed"; view: CandidateView; retry: () => void };
 }) {
-  const { lang } = useT();
+  const { lang, t } = useT();
   const sv = lang === "sv";
   const cards: { label: string; count: number; view: CandidateView }[] = [
     { label: sv ? "Mottagna" : "Received", count: counts.received, view: { stage: "received" } },
@@ -122,6 +128,46 @@ export function RecruiterCounts({
     >
       {title && <h2 className="text-base font-semibold text-foreground">{title}</h2>}
       {intro && <p className="mt-1 mb-2 text-xs leading-relaxed text-muted-foreground">{intro}</p>}
+      {queue && (
+        <div
+          data-testid="review-queue"
+          className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-md border border-accent/40 bg-accent/5 p-3"
+        >
+          <div className="min-w-0">
+            <span className="block text-xs font-semibold text-foreground">
+              {t("rec.counts.queue.label")}
+            </span>
+            {queue.count === "failed" ? (
+              <span role="alert" className="text-sm">
+                {t("rec.counts.queue.unavailable")}{" "}
+                <button type="button" onClick={queue.retry} className="underline">
+                  {sv ? "Försök igen" : "Retry"}
+                </button>
+              </span>
+            ) : (
+              <strong data-testid="review-queue-count" className="text-2xl tabular-nums">
+                {queue.count ?? "…"}
+              </strong>
+            )}
+            <span className="mt-0.5 block text-xs leading-snug text-muted-foreground">
+              {t("rec.counts.queue.hint")}
+            </span>
+          </div>
+          <button
+            type="button"
+            data-testid="review-queue-open"
+            onClick={() => onView(queue.view)}
+            className="inline-flex min-h-11 items-center rounded-md bg-accent px-3 text-sm font-semibold text-accent-foreground hover:bg-accent/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            {t("rec.counts.queue.cta")}
+          </button>
+        </div>
+      )}
+      {queue && (
+        <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          {t("rec.counts.history.heading")}
+        </h3>
+      )}
       {scopeLabel && <p className="mb-2 text-xs font-semibold">{scopeLabel}</p>}
       <div className="grid grid-cols-3 gap-2">
         {cards.map((card) => (

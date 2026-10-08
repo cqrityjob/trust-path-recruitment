@@ -124,6 +124,32 @@ export function RequirementProfileEditor({
     setAcknowledged(false);
     setRules((current) => current.map((rule, i) => (i === index ? { ...rule, ...value } : rule)));
   };
+  const ruleHelp = {
+    sv: {
+      boolean_yes:
+        "Kravet räknas som uppfyllt när kandidaten svarat Ja på den kopplade ansökningsfrågan. Svaret är kandidatens egen uppgift.",
+      valid_at_start:
+        "En person kontrollerar att dokumentet är giltigt på referensdatumet nedan; utgångna dokument ger inte uppfyllt.",
+      human_confirmed:
+        "En person bekräftar kravet enligt instruktionen nedan. Utan bekräftelse står kravet som behöver klarläggas.",
+    },
+    en: {
+      boolean_yes:
+        "The requirement counts as met when the candidate answered Yes to the linked application question. The answer is the candidate's own statement.",
+      valid_at_start:
+        "A person checks that the document is valid on the reference date below; an expired document does not count as met.",
+      human_confirmed:
+        "A person confirms the requirement according to the instruction below. Without that confirmation the requirement reads as needing clarification.",
+    },
+  } as const;
+  const stepHeading = (n: number, text: string) => (
+    <h4 className="mt-3 text-sm font-semibold">
+      <span className="mr-1.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-accent/10 text-xs text-accent">
+        {n}
+      </span>
+      {text}
+    </h4>
+  );
   return (
     <section
       data-testid="requirement-profile"
@@ -142,10 +168,14 @@ export function RequirementProfileEditor({
             ? "Skallkrav inte fastställda. Annonstext och CV-närvaro ger inte grönt."
             : "Mandatory requirements not established. Advert text and CV presence do not make requirements met."}
       </p>
+      {/* How the form reads: for each requirement, 1 what it is, 2 what
+          counts as evidence, 3 how a person checks it; then 4 confirm the
+          whole profile as a new version. The rules are the server's; this
+          only puts them in the order a recruiter thinks in. */}
       <p className="mt-2 text-sm text-muted-foreground">
         {sv
-          ? "Ändrade regler får en ny version och kräver ny aktuell granskning. Tidigare beslut och rapporter behåller sin historik. Meriter kompenserar inte skallkrav."
-          : "Changed rules receive a new version and require current review. Earlier decisions and reports retain their history. Merits do not compensate for mandatory requirements."}
+          ? "För varje krav: 1 kravtyp, 2 godtagbart underlag, 3 kontrollinstruktion. Fastställ sedan hela profilen som en ny version (4). Ändrade regler får en ny version och kräver ny aktuell granskning. Tidigare beslut och rapporter behåller sin historik. Meriter kompenserar inte skallkrav."
+          : "For each requirement: 1 the kind, 2 acceptable evidence, 3 the checking instruction. Then confirm the whole profile as a new version (4). Changed rules receive a new version and require current review. Earlier decisions and reports retain their history. Merits do not compensate for mandatory requirements."}
       </p>
       {stale && (
         <p role="alert" className="mt-3">
@@ -194,9 +224,19 @@ export function RequirementProfileEditor({
                 }}
                 className={controlClass}
               />
+              <span className="mt-1 block text-xs text-muted-foreground">
+                {sv
+                  ? "Den dag ett dokument ska vara giltigt för regeln ”giltigt vid referensdatum”. Krävs när något krav använder den regeln."
+                  : 'The day a document must be valid for the rule "valid at the reference date". Required when any requirement uses that rule.'}
+              </span>
             </label>
             {rules.map((rule, index) => {
               const req = base.requirements.find((r) => r.id === rule.requirementId);
+              const questions = base.questions.filter(
+                (q) =>
+                  q.requirementId === rule.requirementId &&
+                  (rule.decisionRule !== "boolean_yes" || q.answerKind === "yes_no"),
+              );
               return (
                 <fieldset
                   key={rule.requirementId}
@@ -206,6 +246,8 @@ export function RequirementProfileEditor({
                   <legend className="px-1 font-semibold">
                     {label(req?.labelSv ?? null, req?.labelEn ?? null)}
                   </legend>
+
+                  {stepHeading(1, sv ? "Krav" : "Requirement")}
                   <label className="block text-sm">
                     {sv ? "Kravtyp" : "Requirement kind"}
                     <select
@@ -219,11 +261,18 @@ export function RequirementProfileEditor({
                       <option value="desirable">{sv ? "Merit" : "Desirable"}</option>
                     </select>
                   </label>
-                  <div className="mt-2 text-sm">
+                  <p className="mt-1 text-xs text-muted-foreground">
                     {sv
-                      ? "Tillåtna underlag för detta krav"
-                      : "Accepted evidence for this requirement"}
-                  </div>
+                      ? "Skallkrav måste vara uppfyllda för grön kravstatus. En merit vägs in av en person och kompenserar aldrig ett skallkrav."
+                      : "Mandatory requirements must be met for a green requirement status. A desirable one is weighed by a person and never compensates for a mandatory one."}
+                  </p>
+
+                  {stepHeading(2, sv ? "Godtagbart underlag" : "Acceptable evidence")}
+                  <p className="text-xs text-muted-foreground">
+                    {sv
+                      ? "Minst ett. Bara underlag av dessa slag kan ge uppfyllt; annonstext, ett CV:s existens eller ett AI-förslag räknas inte."
+                      : "At least one. Only evidence of these kinds can make the requirement met; advert text, the existence of a CV or an AI suggestion does not count."}
+                  </p>
                   {SOURCE_KINDS.map((kind) => (
                     <label key={kind} className="flex min-h-11 items-center gap-2 text-sm">
                       <input
@@ -240,6 +289,8 @@ export function RequirementProfileEditor({
                       {sourceLabels[lang][kind]}
                     </label>
                   ))}
+
+                  {stepHeading(3, sv ? "Kontrollinstruktion" : "Checking instruction")}
                   <label className="block text-sm">
                     {sv ? "Beslutsregel" : "Decision rule"}
                     <select
@@ -258,8 +309,16 @@ export function RequirementProfileEditor({
                       ))}
                     </select>
                   </label>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {ruleHelp[lang][rule.decisionRule]}
+                  </p>
                   <label className="mt-2 block text-sm">
                     {sv ? "Kopplad ansökningsfråga" : "Linked application question"}
+                    {rule.decisionRule === "boolean_yes" && (
+                      <span className="ml-1 text-xs text-muted-foreground">
+                        ({sv ? "krävs för ja/nej-regeln" : "required by the yes/no rule"})
+                      </span>
+                    )}
                     <select
                       required={rule.decisionRule === "boolean_yes"}
                       value={rule.questionId ?? ""}
@@ -267,19 +326,20 @@ export function RequirementProfileEditor({
                       className={controlClass}
                     >
                       <option value="">{sv ? "Ingen vald" : "None selected"}</option>
-                      {base.questions
-                        .filter(
-                          (q) =>
-                            q.requirementId === rule.requirementId &&
-                            (rule.decisionRule !== "boolean_yes" || q.answerKind === "yes_no"),
-                        )
-                        .map((q) => (
-                          <option key={q.id} value={q.id}>
-                            {label(q.promptSv, q.promptEn)}
-                          </option>
-                        ))}
+                      {questions.map((q) => (
+                        <option key={q.id} value={q.id}>
+                          {label(q.promptSv, q.promptEn)}
+                        </option>
+                      ))}
                     </select>
                   </label>
+                  {rule.decisionRule === "boolean_yes" && questions.length === 0 && (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {sv
+                        ? "Annonsen har ingen ja/nej-fråga för detta krav. Lägg till en i annonsen eller välj en annan beslutsregel."
+                        : "The advert has no yes/no question for this requirement. Add one to the advert or choose another decision rule."}
+                    </p>
+                  )}
                   <label className="mt-2 block text-sm">
                     {sv
                       ? "Regel och kontrollinstruktion (svenska)"
@@ -292,6 +352,11 @@ export function RequirementProfileEditor({
                       className={controlClass}
                     />
                   </label>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {sv
+                      ? "Skriv vad granskaren ska kontrollera och mot vad, så att två personer kommer till samma svar. Visas för granskaren vid varje ansökan."
+                      : "Write what the reviewer checks and against what, so two people reach the same answer. Shown to the reviewer on every application."}
+                  </p>
                   <label className="mt-2 block text-sm">
                     {sv
                       ? "Regel och kontrollinstruktion (engelska)"
@@ -303,12 +368,26 @@ export function RequirementProfileEditor({
                       className={controlClass}
                     />
                   </label>
-                  <p className="mt-1 break-all text-xs text-muted-foreground">
-                    {sv ? "Befintligt krav-ID" : "Existing requirement ID"}: {rule.requirementId}
-                  </p>
+                  {/* The identifier is for support and audit, not for the
+                      recruiter; it stays reachable but out of the way. */}
+                  <details className="mt-2 text-xs text-muted-foreground">
+                    <summary className="cursor-pointer">
+                      {sv ? "Tekniska detaljer" : "Technical details"}
+                    </summary>
+                    <p className="mt-1 break-all">
+                      {sv ? "Befintligt krav-ID" : "Existing requirement ID"}: {rule.requirementId}
+                    </p>
+                  </details>
                 </fieldset>
               );
             })}
+
+            {stepHeading(4, sv ? "Fastställ" : "Confirm")}
+            <p className="text-xs text-muted-foreground">
+              {sv
+                ? `Fastställandet skapar version ${base.version + 1} av kravprofilen. Redan granskade ansökningar behöver då granskas igen mot de nya reglerna; fastställda rapporter och tidigare beslut ändras inte.`
+                : `Confirming creates version ${base.version + 1} of the requirement profile. Applications already reviewed then need a new review against the new rules; confirmed reports and earlier decisions do not change.`}
+            </p>
             <label className="flex min-h-11 items-start gap-2 text-sm">
               <input
                 data-testid="profile-confirm-ack"
@@ -332,6 +411,16 @@ export function RequirementProfileEditor({
             >
               {sv ? "Fastställ ny kravprofilversion" : "Confirm new requirement profile version"}
             </button>
+            <details className="text-xs text-muted-foreground">
+              <summary className="cursor-pointer">
+                {sv ? "Tekniska detaljer" : "Technical details"}
+              </summary>
+              <p className="mt-1 break-all">
+                {sv ? "Rekryterings-ID" : "Recruitment ID"}: {base.jobId}
+                {" · "}
+                {sv ? "Profilversion" : "Profile version"}: {base.version}
+              </p>
+            </details>
           </fieldset>
           {mutation.isError && (
             <p role="alert" className="mt-3 text-sm">

@@ -462,6 +462,11 @@ function NavLink({
       to={item.to}
       params={{ employerSlug }}
       onClick={onNavigate}
+      // The active item is the page's SECTION (Rapporter lights Intervjuer),
+      // which the router's own path matching cannot know; the router owns
+      // aria-current, so the section marker is a data attribute plus a
+      // visually hidden "you are here" inside the link's name.
+      data-active={active || undefined}
       className={cn(
         "flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium transition-colors",
         active
@@ -470,6 +475,7 @@ function NavLink({
       )}
     >
       <Icon className="h-4 w-4 shrink-0" />
+      {active && <span className="sr-only">({t("rec.flow.current")}) </span>}
       {/* `truncate` is visual only — the full label is still in the DOM
           for screen readers, but a sighted user reading
           "Kompetenser & certif…" has no way to finish the sentence.

@@ -283,11 +283,25 @@ function JobsList({
             {t("rec.list.heading")}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">{t("rec.list.lede")}</p>
+          {/* Filtered to the active or ready-to-complete recruitments this
+              list is the "Beslut & avslut" station (the strip links here with
+              phase=active); otherwise it is where adverts and requirement
+              profiles live. The marker follows the URL. */}
           <RecruitmentFlowStrip
             employerSlug={employerSlug}
-            current="requirements"
+            current={
+              phaseFilter === "active" || phaseFilter === "ready" ? "decision" : "requirements"
+            }
             className="mt-3"
           />
+          {(phaseFilter === "active" || phaseFilter === "ready") && (
+            <p
+              data-testid="decision-station-context"
+              className="mt-1 text-xs text-muted-foreground"
+            >
+              {t("rec.flow.decisionContext")}
+            </p>
+          )}
         </div>
         <Link
           to="/employer/$employerSlug/jobs/new"

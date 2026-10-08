@@ -10,6 +10,14 @@
 // two application populations on the overview differ: "Nya ansökningar" counts
 // status=submitted across non-archived recruitments (2), while the review
 // block counts every application ever received, archived included (5).
+//
+// The counts are not typed in: they are COMPUTED from the five applications by
+// `selectCandidatePage`, which applies the same rules the server's
+// rec_ri_candidate_view applies (stage population, review and requirement
+// filters, one requirement status per application). So the status groups sum
+// to "received", reviewed + remaining = received, and the "selected list"
+// numbers describe the list actually returned for the view that was asked
+// for. scripts/employer-portal-fixture.test.ts asserts those invariants.
 
 export const EMPLOYER_ID = "00000000-0000-4000-8000-00000000e0c1";
 export const SLUG = "exempelvakt";
@@ -32,62 +40,17 @@ export const workspace = {
   role: "owner",
 };
 
-const intelligence = (
-  received: number,
-  reviewed: number,
-  green: number,
-  yellow: number,
-  gray: number,
-  notEstablished: number,
-  archived: number,
-  decided: number,
-) => ({
-  received,
-  reviewed,
-  remaining: received - reviewed,
-  green,
-  yellow,
-  gray,
-  notEstablished,
-  filtered: received,
-  filteredReviewed: reviewed,
-  filteredRemaining: received - reviewed,
-  archived,
-  withdrawn: 0,
-  decided,
-});
-
-const recruitment = (
-  jobId: string,
-  title: string,
-  phase: "draft" | "published" | "closed",
-  jobStatus: string,
-  counts: { total: number; newCount: number; unresolved: number; interviewStage: number },
-  intelligenceCounts: ReturnType<typeof intelligence>,
-) => ({
-  intelligenceCounts,
-  archivedAt: null,
-  jobId,
-  titleSv: title,
-  titleEn: title,
-  jobStatus,
-  phase,
-  applicationMethod: "platform",
-  publishedAt: phase === "draft" ? null : "2026-09-10T08:00:00.000Z",
-  deadlineAt: phase === "published" ? "2026-11-30T22:59:59.000Z" : "2026-09-30T22:59:59.000Z",
-  updatedAt: AT,
-  responsibleUserId: USER,
-  responsibleName: "Rita Rekryterare",
-  ...counts,
-  nextInterviewAt: phase === "published" ? "2026-10-14T08:00:00.000Z" : null,
-});
+export type RequirementStatus = "green" | "yellow" | "gray" | "not_established";
+export type ReviewState = "reviewed" | "pending" | "stale";
+export type FixtureCandidate = ReturnType<typeof candidate>;
 
 const candidate = (
   n: number,
   name: string,
   status: string,
-  requirementStatus: "green" | "yellow" | "gray" | "not_established",
-  reviewState: "reviewed" | "pending" | "stale",
+  requirementStatus: RequirementStatus,
+  reviewState: ReviewState,
+  archived = false,
 ) => ({
   requirementStatus,
   reviewState,
@@ -118,9 +81,155 @@ const candidate = (
   answers: {},
   notesCount: 0,
   messagesCount: 0,
+  archivedAt: archived ? AT : null,
 });
 
-const uppsalaIntelligence = intelligence(5, 1, 1, 1, 1, 1, 1, 1);
+/** Every application the Uppsala recruitment ever received: four open ones
+ *  and one that was rejected and archived after its review. */
+export const UPPSALA_APPLICATIONS: readonly FixtureCandidate[] = [
+  candidate(1, "Ali Ansökande", "submitted", "gray", "pending"),
+  candidate(2, "Birgitta Bevakning", "reviewing", "green", "reviewed"),
+  candidate(3, "Kim Kandidat", "interview", "yellow", "stale"),
+  candidate(4, "Dana Dörrvakt", "submitted", "not_established", "pending"),
+  candidate(5, "Erik Efterhand", "rejected", "gray", "reviewed", true),
+];
+
+/** The view a list call asks for; the same shape as the app's CandidateView. */
+export type FixtureView = {
+  stage?: "new" | "review" | "interview" | "open" | "decided" | "all" | "archived" | "received";
+  review?: "remaining" | "reviewed" | "pending" | "stale";
+  requirement?: RequirementStatus;
+  status?: string;
+  job?: string;
+  page?: number;
+};
+
+const OPEN = new Set(["submitted", "reviewing", "interview"]);
+
+/** The stage POPULATION, as rec_ri_candidate_view draws it: "received" is
+ *  everything, "archived" only the archived, every other stage excludes the
+ *  archived and then narrows by status. */
+function inStage(c: FixtureCandidate, stage: FixtureView["stage"]) {
+  const s = stage ?? "open";
+  if (s === "received") return true;
+  if (s === "archived") return c.archivedAt !== null;
+  if (c.archivedAt !== null) return false;
+  if (s === "open") return OPEN.has(c.status);
+  if (s === "decided") return !OPEN.has(c.status);
+  if (s === "new") return c.status === "submitted";
+  if (s === "review") return c.status === "reviewing";
+  if (s === "interview") return c.status === "interview";
+  return true;
+}
+
+function inReview(c: FixtureCandidate, review: FixtureView["review"]) {
+  if (!review) return true;
+  if (review === "remaining") return c.reviewState !== "reviewed";
+  return c.reviewState === review;
+}
+
+/** One page of candidates for `view`, with the counts the server would send:
+ *  `counts` and `intelligenceCounts` describe the stage population ("base"),
+ *  the `filtered*` numbers describe the rows after every filter. */
+export function selectCandidatePage(view: FixtureView, all = UPPSALA_APPLICATIONS) {
+  const base = all.filter((c) => inStage(c, view.stage) && (!view.job || c.jobId === view.job));
+  const rows = base.filter(
+    (c) =>
+      inReview(c, view.review) &&
+      (!view.requirement || c.requirementStatus === view.requirement) &&
+      (!view.status || c.status === view.status),
+  );
+  const by = (list: readonly FixtureCandidate[], f: (c: FixtureCandidate) => boolean) =>
+    list.filter(f).length;
+  const unarchived = base.filter((c) => c.archivedAt === null);
+  return {
+    rows,
+    total: rows.length,
+    page: 1,
+    pages: 1,
+    from: rows.length ? 1 : 0,
+    to: rows.length,
+    counts: {
+      total: unarchived.length,
+      new: by(unarchived, (c) => c.status === "submitted"),
+      review: by(unarchived, (c) => c.status === "reviewing"),
+      interview: by(unarchived, (c) => c.status === "interview"),
+      hired: by(unarchived, (c) => c.status === "hired"),
+      decided: by(unarchived, (c) => !OPEN.has(c.status)),
+    },
+    intelligenceCounts: {
+      received: base.length,
+      reviewed: by(base, (c) => c.reviewState === "reviewed"),
+      remaining: by(base, (c) => c.reviewState !== "reviewed"),
+      green: by(base, (c) => c.requirementStatus === "green"),
+      yellow: by(base, (c) => c.requirementStatus === "yellow"),
+      gray: by(base, (c) => c.requirementStatus === "gray"),
+      notEstablished: by(base, (c) => c.requirementStatus === "not_established"),
+      filtered: rows.length,
+      filteredReviewed: by(rows, (c) => c.reviewState === "reviewed"),
+      filteredRemaining: by(rows, (c) => c.reviewState !== "reviewed"),
+      archived: by(base, (c) => c.archivedAt !== null),
+      withdrawn: by(base, (c) => c.status === "withdrawn"),
+      decided: by(base, (c) => !OPEN.has(c.status)),
+    },
+    yesNoQuestions: [],
+  };
+}
+
+/** The view inside a listRecruitmentCandidatesPage call's arguments. */
+export function viewOf(args: Record<string, unknown>): FixtureView {
+  const view = args.view;
+  return view && typeof view === "object" ? (view as FixtureView) : {};
+}
+
+/** The default list (open applications), the page most surfaces ask for. */
+export const candidatePage = selectCandidatePage({});
+
+/** The whole recruitment's requirement-review coverage: what
+ *  rec_ri_overview_counts reports per job (stage "received"). */
+const uppsalaIntelligence = selectCandidatePage({ stage: "received" }).intelligenceCounts;
+const uppsalaCounts = candidatePage.counts;
+
+const recruitment = (
+  jobId: string,
+  title: string,
+  phase: "draft" | "published" | "closed",
+  jobStatus: string,
+  counts: { total: number; newCount: number; unresolved: number; interviewStage: number },
+  intelligenceCounts: typeof uppsalaIntelligence,
+) => ({
+  intelligenceCounts,
+  archivedAt: null,
+  jobId,
+  titleSv: title,
+  titleEn: title,
+  jobStatus,
+  phase,
+  applicationMethod: "platform",
+  publishedAt: phase === "draft" ? null : "2026-09-10T08:00:00.000Z",
+  deadlineAt: phase === "published" ? "2026-11-30T22:59:59.000Z" : "2026-09-30T22:59:59.000Z",
+  updatedAt: AT,
+  responsibleUserId: USER,
+  responsibleName: "Rita Rekryterare",
+  ...counts,
+  nextInterviewAt: phase === "published" ? "2026-10-14T08:00:00.000Z" : null,
+});
+
+const none = {
+  received: 0,
+  reviewed: 0,
+  remaining: 0,
+  green: 0,
+  yellow: 0,
+  gray: 0,
+  notEstablished: 0,
+  filtered: 0,
+  filteredReviewed: 0,
+  filteredRemaining: 0,
+  archived: 0,
+  withdrawn: 0,
+  decided: 0,
+};
 
 export const recruitmentOverview = {
   recruitments: [
@@ -129,7 +238,12 @@ export const recruitmentOverview = {
       "Väktare, Uppsala",
       "published",
       "published",
-      { total: 4, newCount: 2, unresolved: 4, interviewStage: 1 },
+      {
+        total: uppsalaCounts.total,
+        newCount: uppsalaCounts.new,
+        unresolved: uppsalaCounts.new + uppsalaCounts.review + uppsalaCounts.interview,
+        interviewStage: uppsalaCounts.interview,
+      },
       uppsalaIntelligence,
     ),
     recruitment(
@@ -138,7 +252,7 @@ export const recruitmentOverview = {
       "draft",
       "draft",
       { total: 0, newCount: 0, unresolved: 0, interviewStage: 0 },
-      intelligence(0, 0, 0, 0, 0, 0, 0, 0),
+      none,
     ),
     recruitment(
       JOB_READY,
@@ -146,7 +260,7 @@ export const recruitmentOverview = {
       "closed",
       "published",
       { total: 2, newCount: 0, unresolved: 0, interviewStage: 0 },
-      intelligence(2, 2, 2, 0, 0, 0, 0, 2),
+      { ...none, received: 2, reviewed: 2, green: 2, filtered: 2, filteredReviewed: 2, decided: 2 },
     ),
   ],
   upcomingInterviews: [
@@ -168,23 +282,6 @@ export const recruitmentOverview = {
   myUserId: USER,
   role: "owner",
   receiptsNeedingAttention: 0,
-};
-
-export const candidatePage = {
-  rows: [
-    candidate(1, "Ali Ansökande", "submitted", "gray", "pending"),
-    candidate(2, "Birgitta Bevakning", "reviewing", "green", "reviewed"),
-    candidate(3, "Kim Kandidat", "interview", "yellow", "stale"),
-    candidate(4, "Dana Dörrvakt", "submitted", "not_established", "pending"),
-  ],
-  total: 4,
-  page: 1,
-  pages: 1,
-  from: 1,
-  to: 4,
-  counts: { total: 5, new: 2, review: 1, interview: 1, hired: 0, decided: 1 },
-  intelligenceCounts: uppsalaIntelligence,
-  yesNoQuestions: [],
 };
 
 const job = (id: string, title: string, status: string, published: boolean) => ({
@@ -239,7 +336,7 @@ const pipelineRow = (n: number, lifecycleState: string, reviewsOpen: number) => 
 });
 
 /** The whole stubbed backend for a signed-in owner. */
-export const table: Record<string, unknown> = {
+export const table: Record<string, unknown | ((args: Record<string, unknown>) => unknown)> = {
   countMyAcademyWork: 0,
   countMyReviewQueue: 0,
   ensureMyEmployerCompanyFromSignup: null,
@@ -295,7 +392,11 @@ export const table: Record<string, unknown> = {
   ],
   employerVerificationCounts: { open: 0, total: 0 },
   getRecruitmentOverview: recruitmentOverview,
-  listRecruitmentCandidatesPage: candidatePage,
+  // Answered per call: the overview's coverage block asks for stage
+  // "received", the list for the view in its URL, and the numbers must
+  // describe the list each of them actually gets.
+  listRecruitmentCandidatesPage: (args: Record<string, unknown>) =>
+    selectCandidatePage(viewOf(args)),
   // Two reads the overview made before this pass and never rendered. Answered
   // so the same suite photographs the base commit; the head asks for neither.
   listApplicationsForEmployer: [],
