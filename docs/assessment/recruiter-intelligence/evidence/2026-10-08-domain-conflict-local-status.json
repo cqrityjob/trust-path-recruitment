@@ -1,0 +1,31 @@
+{
+  "observed_on": "2026-10-08",
+  "base_sha": "c1d154420c4477c56f1fbeeecf7933e0171bf5e1",
+  "migration": "20270307100000_recruiter_domain_conflict_transport.sql",
+  "environment": "owned disposable PostgreSQL17, loopback55694; synthetic fixture only",
+  "performed": {
+    "strict_canonical_replay": {"status": "PASS", "migrations": 385},
+    "forward_foundation": {"status": "PASS", "mandatory_assertions": 56},
+    "forward_snapshot": {"status": "PASS", "mandatory_assertions": 94},
+    "domain_sql": {"status": "PASS", "assertions": 31},
+    "wrong_sqlstate_negative_control": {"status": "PASS", "failed_assertion": "P0.32 stale process save refused"},
+    "rollback": {"status": "PASS", "exact_prior_functions": 12, "reports_snapshots_locks_sha256_unchanged": true},
+    "reapply_catalog": {"status": "PASS", "definitions_defaults_owners_acl_config_unchanged": true},
+    "prior_session_case_cycle": {"status": "PASS", "observed_sqlstate": "40P01", "prior_definitions_only_in_disposable_clone": true},
+    "forward_session_process_overlap": {"status": "PASS", "observed_sqlstate": "PT409", "deadlock": false},
+    "direct_finding_rpc_overlap": {"status": "PASS", "observed_sqlstate": "PT409", "deadlock": false}
+  },
+  "remaining": {
+    "actual_postgrest14_final_runner": "BLOCKED: local Docker I/O and database TCP unavailable; mandatory CI test is registered",
+    "actual_engine_serialization_race": "BLOCKED: added after local database outage",
+    "real_gotrue_two_tab_after_fix": "BLOCKED: local real Auth/Storage unhealthy; earlier primary12 is schema384 evidence only",
+    "full_historical_db_test": "BLOCKED: local database outage; historical suite files and expected40001 remain unchanged",
+    "hosted_installation": "NOT_PERFORMED_BY_THIS_AGENT",
+    "physical_phone": "NOT_PERFORMED"
+  },
+  "secrets_or_real_candidate_data_in_evidence": false,
+  "production_writes": false,
+  "schema450_modified": false,
+  "generated_types_modified": false,
+  "ai_mail_worker_cron_activated": false
+}
