@@ -55,6 +55,7 @@ import {
 import { CaseSetupStrip } from "@/components/library/CaseSetupStrip";
 import { InterviewContextPanel } from "@/components/employer/interview/InterviewContextPanel";
 import { CandidateBackgroundStatus } from "@/components/employer/interview/CandidateBackgroundStatus";
+import { SelectedRequirementBrief } from "@/components/employer/interview/SelectedRequirementBrief";
 import { InterviewOpeningDisclosure } from "@/components/employer/interview/InterviewOpeningDisclosure";
 import { ManualControlPoints } from "@/components/employer/interview/ManualControlPoints";
 import { ContentIntegrityNotice } from "@/components/employer/interview/ContentIntegrityNotice";
@@ -427,6 +428,12 @@ function Page() {
                 />
               )}
               <Rule />
+
+              <SelectedRequirementBrief
+                sources={d.sources}
+                employerSlug={employerSlug}
+                applicationId={d.applicationId}
+              />
 
               {/* ---- Setting the case up ----
                   Finite work with an end. It is on the page only while it is
