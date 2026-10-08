@@ -15,7 +15,11 @@ type FoundationKeys =
   | "scp_iv_create_manual_finding"
   | "scp_iv_review_manual_finding"
   | "scp_iv_manual_finding_capabilities"
-  | "scp_iv_case_content_manifest";
+  | "scp_iv_case_content_manifest"
+  | "scp_iv_case_frozen_content"
+  | "scp_iv_acknowledge_observed_content"
+  | "scp_iv_content_inventory"
+  | "scp_iv_case_frozen_labels";
 type FoundationColumns =
   | "origin"
   | "neutral_question"
@@ -86,6 +90,52 @@ export type FoundationAssertions = [
   Assert<Equal<Functions["scp_iv_save_session_process"]["Args"]["_expected_updated_at"], string>>,
   Assert<Equal<Database["public"]["Tables"]["scp_interview_findings"]["Row"]["revision"], number>>,
 ];
+type ReportPayload = Generated["public"]["Tables"]["scp_interview_reports"]["Row"]["payload"];
+export type SnapshotAssertions = [
+  Assert<Equal<Functions["scp_iv_case_frozen_content"]["Args"], { _case_id: string }>>,
+  Assert<Equal<Functions["scp_iv_case_frozen_content"]["Returns"], ReportPayload>>,
+  Assert<
+    Equal<
+      Functions["scp_iv_acknowledge_observed_content"]["Args"],
+      {
+        _case_id: string;
+        _expected_manifest_hash: string;
+        _note: string;
+      }
+    >
+  >,
+  Assert<Equal<Functions["scp_iv_acknowledge_observed_content"]["Returns"], ReportPayload>>,
+  Assert<Equal<Functions["scp_iv_content_inventory"]["Args"], { _employer_id: string }>>,
+  Assert<
+    Equal<
+      Functions["scp_iv_content_inventory"]["Returns"],
+      {
+        case_id: string;
+        status: string;
+        created_at: string;
+        provenance: string;
+        frozen_at: string;
+        manifest_hash: string;
+        requires_acknowledgement: boolean;
+      }[]
+    >
+  >,
+  Assert<Equal<Functions["scp_iv_case_frozen_labels"]["Args"], { _case_ids: string[] }>>,
+  Assert<
+    Equal<
+      Functions["scp_iv_case_frozen_labels"]["Returns"],
+      {
+        case_id: string;
+        name_sv_at_freeze: string | null;
+        name_en_at_freeze: string | null;
+        content_status_at_freeze: string | null;
+        validation_label_at_freeze: string | null;
+        provenance: string;
+        frozen_at: string;
+      }[]
+    >
+  >,
+];
 declare const client: SupabaseClient<Database>;
 const resolution = {
   _operation_id: "synthetic",
@@ -123,6 +173,25 @@ client.rpc("scp_iv_create_manual_finding", {
   _next_action: "Request copy",
   _due_on: null,
 });
+client.rpc("scp_iv_case_frozen_content", { _case_id: "synthetic" });
+client.rpc("scp_iv_acknowledge_observed_content", {
+  _case_id: "synthetic",
+  _expected_manifest_hash: "synthetic",
+  _note: "Reviewed observed content",
+});
+client.rpc("scp_iv_content_inventory", { _employer_id: "synthetic" });
+client.rpc("scp_iv_case_frozen_labels", { _case_ids: ["synthetic"] });
+client.rpc("scp_iv_case_frozen_labels", { _case_ids: [] });
+// @ts-expect-error Frozen case IDs are required, never nullable.
+client.rpc("scp_iv_case_frozen_content", { _case_id: null });
+// @ts-expect-error Acknowledgement always names the exact expected manifest hash.
+client.rpc("scp_iv_acknowledge_observed_content", { _case_id: "synthetic", _note: "Reviewed" });
+// @ts-expect-error Inventory requires its employer UUID argument.
+client.rpc("scp_iv_content_inventory", {});
+// @ts-expect-error Frozen label batching requires an array, never one string.
+client.rpc("scp_iv_case_frozen_labels", { _case_ids: "synthetic" });
+// @ts-expect-error NULL array elements are rejected by the SQL contract.
+client.rpc("scp_iv_case_frozen_labels", { _case_ids: [null] });
 // @ts-expect-error New nullable arguments are also required by their SQL contracts.
 client.rpc("scp_iv_save_session_process", {
   _session_id: "synthetic",
