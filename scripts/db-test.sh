@@ -244,6 +244,14 @@ else
   echo "    ok  ${RI_PASSED} AI-off persistence, access, provenance and immutable report assertions"
 fi
 
+# Snapshot installation is proven in an isolated clone with legacy cases,
+# then the EMPTY main test database restores its exact prior definitions.
+# Historical-stage assertions still run against the schema they were written
+# for; adopted production installs cannot use this rollback.
+echo "==> Running permanent interview content snapshot installation and races"
+TEST_DB="$TEST_DB" bash scripts/interview-content-snapshot-check.sh
+psql_q -d "$TEST_DB" -f supabase/rollback/20270307090000_interview_content_snapshot_lock_rollback.sql >/dev/null
+
 # ---------------------------------------------------------------------------
 # Interview-method library tenant read (20261115090000). Run against the full
 # release schema, before historical participant rollback reintroduces the old
