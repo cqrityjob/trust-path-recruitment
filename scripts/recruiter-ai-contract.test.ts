@@ -396,6 +396,249 @@ describe("synthetic-only bounded proposal lifecycle", () => {
       reserved: 0,
     });
   });
+  test("woken waiter rechecks the slot taken by an incoming context read", async () => {
+    const runner = new SyntheticRecruiterAiSandbox();
+    const c = syntheticContext();
+    c.plan.maxQueued = 8;
+    const aCompute = deferred<{ output: unknown; usedUnits: number }>();
+    const bCompute = deferred<{ output: unknown; usedUnits: number }>();
+    const cCompute = deferred<{ output: unknown; usedUnits: number }>();
+    const aAfterRead = deferred<unknown>();
+    const cFirstRead = deferred<unknown>();
+    const aStarted = deferred<void>();
+    const aAfterStarted = deferred<void>();
+    const bStarted = deferred<void>();
+    const cFirstStarted = deferred<void>();
+    const cStarted = deferred<void>();
+    let aReads = 0;
+    let cReads = 0;
+    let maximumActive = 0;
+    const observe = () => {
+      maximumActive = Math.max(
+        maximumActive,
+        runner.budgetObservation(c.employerId, c.plan.id, c.plan.version).active,
+      );
+    };
+    const a = runner.exercise({
+      ...exercise(11),
+      snapshot: c,
+      readCurrent: async () => {
+        if (++aReads === 3) {
+          aAfterStarted.resolve();
+          return aAfterRead.promise;
+        }
+        return copy(c);
+      },
+      fixture: async () => {
+        observe();
+        aStarted.resolve();
+        return aCompute.promise;
+      },
+    });
+    await aStarted.promise;
+    const b = runner.exercise({
+      ...exercise(12),
+      request: syntheticRequest(12, "neutral_clarifications"),
+      snapshot: c,
+      readCurrent: async () => copy(c),
+      fixture: async () => {
+        observe();
+        bStarted.resolve();
+        return bCompute.promise;
+      },
+    });
+    await tick();
+    expect(runner.budgetObservation(c.employerId, c.plan.id, c.plan.version)).toMatchObject({
+      active: 1,
+      waiting: 1,
+    });
+    const incoming = runner.exercise({
+      ...exercise(13),
+      request: syntheticRequest(13, "criterion_linking"),
+      snapshot: c,
+      readCurrent: async () => {
+        if (++cReads === 1) {
+          cFirstStarted.resolve();
+          return cFirstRead.promise;
+        }
+        return copy(c);
+      },
+      fixture: async () => {
+        observe();
+        cStarted.resolve();
+        return cCompute.promise;
+      },
+    });
+    await cFirstStarted.promise;
+    aCompute.resolve({ output: syntheticOutput(c), usedUnits: 1 });
+    await aAfterStarted.promise;
+    aAfterRead.resolve(copy(c));
+    // This exact microtask order reproduced active2 under maxConcurrent1:
+    // incoming context finishes between releasing A and B acquiring its slot.
+    queueMicrotask(() => cFirstRead.resolve(copy(c)));
+    await cStarted.promise;
+    await tick();
+    expect(maximumActive).toBe(1);
+    expect(runner.budgetObservation(c.employerId, c.plan.id, c.plan.version)).toMatchObject({
+      active: 1,
+      waiting: 1,
+      reserved: 20,
+      spent: 1,
+    });
+    cCompute.resolve({ output: syntheticOutput(c, "criterion_linking"), usedUnits: 1 });
+    await bStarted.promise;
+    bCompute.resolve({ output: syntheticOutput(c, "neutral_clarifications"), usedUnits: 1 });
+    expect((await Promise.all([a, b, incoming])).map((r) => r.status)).toEqual([
+      "proposal",
+      "proposal",
+      "proposal",
+    ]);
+    expect(maximumActive).toBe(1);
+    expect(runner.budgetObservation(c.employerId, c.plan.id, c.plan.version)).toMatchObject({
+      active: 0,
+      waiting: 0,
+      reserved: 0,
+      spent: 3,
+    });
+  });
+  test("cancelled already-woken waiter passes the free slot onward without leaks", async () => {
+    const runner = new SyntheticRecruiterAiSandbox();
+    const c = syntheticContext();
+    c.plan.maxQueued = 8;
+    const compute = deferred<{ output: unknown; usedUnits: number }>();
+    const afterRead = deferred<unknown>();
+    const started = deferred<void>();
+    const afterStarted = deferred<void>();
+    let reads = 0;
+    const a = runner.exercise({
+      ...exercise(),
+      snapshot: c,
+      readCurrent: async () => {
+        if (++reads === 3) {
+          afterStarted.resolve();
+          return afterRead.promise;
+        }
+        return copy(c);
+      },
+      fixture: async () => {
+        started.resolve();
+        return compute.promise;
+      },
+    });
+    await started.promise;
+    const cancel = new AbortController();
+    let cancelledFixtureCalls = 0;
+    const b = runner.exercise({
+      ...exercise(12),
+      request: syntheticRequest(12, "neutral_clarifications"),
+      snapshot: c,
+      signal: cancel.signal,
+      readCurrent: async () => copy(c),
+      fixture: async () => {
+        cancelledFixtureCalls++;
+        return { output: syntheticOutput(c, "neutral_clarifications"), usedUnits: 1 };
+      },
+    });
+    const next = runner.exercise({
+      ...exercise(13),
+      request: syntheticRequest(13, "criterion_linking"),
+      snapshot: c,
+      readCurrent: async () => copy(c),
+      fixture: async () => ({ output: syntheticOutput(c, "criterion_linking"), usedUnits: 1 }),
+    });
+    await tick();
+    expect(runner.budgetObservation(c.employerId, c.plan.id, c.plan.version).waiting).toBe(2);
+    compute.resolve({ output: syntheticOutput(c), usedUnits: 1 });
+    await afterStarted.promise;
+    afterRead.resolve(copy(c));
+    // A's cleanup removes B from the waiter list first. Abort before B's
+    // resolved wake is consumed, so it must hand the empty slot on to C.
+    let cancelledAfterRelease = false;
+    const abortAfterRelease = (attempt = 0) => {
+      const state = runner.budgetObservation(c.employerId, c.plan.id, c.plan.version);
+      if (state.active === 0 && state.waiting === 2) {
+        cancelledAfterRelease = true;
+        cancel.abort();
+      } else if (attempt < 100) {
+        queueMicrotask(() => abortAfterRelease(attempt + 1));
+      } else {
+        cancel.abort();
+      }
+    };
+    queueMicrotask(() => abortAfterRelease());
+    expect(await a).toMatchObject({ status: "proposal" });
+    expect(await b).toEqual({ status: "rejected", reason: "cancelled" });
+    expect(await next).toMatchObject({ status: "proposal" });
+    expect(cancelledAfterRelease).toBe(true);
+    expect(cancelledFixtureCalls).toBe(0);
+    expect(runner.budgetObservation(c.employerId, c.plan.id, c.plan.version)).toMatchObject({
+      active: 0,
+      waiting: 0,
+      reserved: 0,
+      spent: 2,
+    });
+  });
+  test("a retry cancellation is bounded without cancelling the original operation", async () => {
+    const runner = new SyntheticRecruiterAiSandbox();
+    const compute = deferred<{ output: unknown; usedUnits: number }>();
+    const input = { ...exercise(), fixture: async () => compute.promise };
+    const original = runner.exercise(input);
+    await tick();
+    const cancel = new AbortController();
+    const retry = runner.exercise({ ...input, signal: cancel.signal });
+    await tick();
+    cancel.abort();
+    expect(await retry).toEqual({ status: "rejected", reason: "cancelled" });
+    expect(runner.budgetObservation(syntheticId(1), "synthetic-plan", "1")).toMatchObject({
+      active: 1,
+      reserved: 10,
+    });
+    compute.resolve({ output: syntheticOutput(syntheticContext()), usedUnits: 4 });
+    expect(await original).toMatchObject({ status: "proposal" });
+    expect(runner.instrumentation.fixtureCalls).toBe(1);
+    expect(runner.budgetObservation(syntheticId(1), "synthetic-plan", "1")).toMatchObject({
+      active: 0,
+      waiting: 0,
+      reserved: 0,
+      spent: 4,
+    });
+  });
+  test("a retry checks revocation after shared work without modifying the original result", async () => {
+    const runner = new SyntheticRecruiterAiSandbox();
+    const c = syntheticContext();
+    const input = { ...exercise(), snapshot: c, readCurrent: async () => copy(c) };
+    expect(await runner.exercise(input)).toMatchObject({ status: "proposal" });
+    let reads = 0;
+    const withdrawn = copy(c);
+    withdrawn.passages[0].withdrawn = true;
+    expect(
+      await runner.exercise({ ...input, readCurrent: async () => (++reads === 1 ? c : withdrawn) }),
+    ).toEqual({ status: "rejected", reason: "stale_context" });
+    expect(runner.instrumentation.fixtureCalls).toBe(1);
+    expect(await runner.exercise(input)).toMatchObject({ status: "proposal" });
+  });
+  test("a retry deadline bounds its latest read without affecting the original reservation", async () => {
+    const runner = new SyntheticRecruiterAiSandbox();
+    const c = syntheticContext();
+    c.plan.maxDurationMs = 10;
+    const input = { ...exercise(), snapshot: c, readCurrent: async () => copy(c) };
+    expect(await runner.exercise(input)).toMatchObject({ status: "proposal" });
+    const never = deferred<unknown>();
+    let reads = 0;
+    expect(
+      await runner.exercise({
+        ...input,
+        readCurrent: async () => (++reads === 1 ? copy(c) : never.promise),
+      }),
+    ).toEqual({ status: "rejected", reason: "timed_out" });
+    expect(runner.budgetObservation(c.employerId, c.plan.id, c.plan.version)).toMatchObject({
+      active: 0,
+      waiting: 0,
+      reserved: 0,
+      spent: 4,
+    });
+    never.resolve(copy(c));
+  });
   test("cancelled queued job costs no fixture use", async () => {
     const r = new SyntheticRecruiterAiSandbox();
     const d = deferred<{ output: unknown; usedUnits: number }>();

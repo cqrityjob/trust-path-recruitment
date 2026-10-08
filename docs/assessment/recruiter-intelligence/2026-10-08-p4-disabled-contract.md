@@ -29,7 +29,7 @@ En korrekt citering bevisar att texten finns, inte att påståendet är sant, at
 
 ## Hårt avstängt runtime, separat syntetisk sandlåda
 
-De fyra [serveringångarna](../../../src/lib/recruitment/ai/recruiter-ai.functions.ts) använder befintlig autentiseringsmiddleware och uppgiftsspecifik request-validering. Deras enda handleråtgärd är den ovillkorliga spärren i [kontraktet](../../../src/lib/recruitment/ai/contract.ts). Ingen leverantör, administrativ klient, RPC, databasläsning, fetch, meddelandefunktion eller rapportskrivning anropas. Inga UI-knappar kopplas in.
+De fyra [serveringångarna](../../../src/lib/recruitment/ai/recruiter-ai.functions.ts) använder befintlig autentiseringsmiddleware och uppgiftsspecifik request-validering. Deras enda handleråtgärd är den ovillkorliga spärren i [kontraktet](../../../src/lib/recruitment/ai/contract.ts). Ingen AI-leverantör, administrativ klient, underlags-RPC, databasläsning, meddelandefunktion eller rapportskrivning anropas av dessa handlers. Befintlig autentiseringsmiddleware kan verifiera JWT via Supabase; dess faktiska nätbeteende provas inte av offlinekontraktet. Inga UI-knappar kopplas in.
 
 [Den syntetiska sandlådan](../../../src/lib/recruitment/ai/synthetic-sandbox.server.ts) är endast en offlineövning med injicerade lokala facitfunktioner. Den visar kontrakt för idempotens, versionsbunden cache, reservation och konservativ kostnadsdebitering, högst två samtidiga övningar och åtta köade per arbetsgivar-/planversion. Kontext läses före, före beräkning och efter beräkning. Stale, återkallade, oläsbara eller ändrade källor avvisas; sena svar efter avbrott eller timeout publiceras och cachas inte. En beräkning som ignorerar avbrott håller sin plats och reservation tills den avslutas.
 
@@ -63,6 +63,49 @@ Den förenade koden har återprovats lokalt: **68 tester/151 Bun-expect-kontroll
 De utförda proven är fortfarande offlinekontrakt och lokala syntetiska objekt. Sandlådans kostnads-, idempotens-, cache- och kötillstånd är **inte beständigt eller samordnat över processer**. Syntetiska debiteringsenheter är inte pengar, tokenräkningar eller leverantörsfakturor. Ingen riktig Auth/API/RLS-, browser-, modell-, hosted- eller publicerad runtime verifieras här. Det finns inget nytt aktiveringsbeslut.
 
 Den riktade diffkontrollen är grön. En extra kontroll av hela merge-diffen fann en tom slutrad i den oförändrat ärvda main-filen `employer-portal-ux-evidence.yml:315`; detta redovisas i kvittensen och räknas inte som ett AI-produktfel eller som att hela merge-diffen är ren.
+
+## Kö- och retrykorrigering, 2026-10-09
+
+En separat granskning av frysta `452a3f090d8f8ebb32f1cbfced5d492a321f4aa5`
+hittade två konkreta fel i minnessandlådan. En ny begäran kunde ta en frigjord
+plats innan en redan väckt väntare ökade aktivantalet. Den första minnesproben
+visade `maxConcurrent=1` men `active=2`. En avbruten retry av en pågående
+operation väntade också vidare och returnerade ett förslag. De tidigare 68
+kontrollerna var gröna men täckte inte dessa ordningar. [Första felutfall och
+ursprunglig källhash](evidence/2026-10-09-p4-queue-race/initial-readback.json)
+bevaras; detta är inte en AI-aktiveringsläcka.
+
+Sandlådan återkontrollerar nu platsen efter varje väckning, utan ett await
+mellan ledighetskontroll och ökning av aktivantalet. Om en väckt väntare
+avbryts väcks nästa när platsen är fri. Väntarantal och reservation städas
+även när väntan upprepas, avbryts eller löper ut. Retry-väntan har egen
+avbrottssignal/deadline och en ny läsning av aktuell context innan samma
+operationsresultat återges. Den ändrar inte originaloperationen, dess
+reservation eller dess giltiga resultat.
+
+Faktisk lokal verifiering efter fix: **73 tester/176 assertions PASS**, alla
+tidigare 68 tester bevarade. Fem nya tester omfattar den deterministiska
+väckt-väntare/inkommande-context-racen, avbrott efter väckning utan resursläcka,
+retry-avbrott med fortsatt giltig originaloperation samt aktuell återkallning
+och deadline vid retry. Samma fem nya tester kördes mot den oförändrade gamla
+452a-källan i en privat temporär fixture: **fem FAIL**, vilket bevisar att de
+upptäcker de gamla luckorna. De 68 övriga testerna var avsiktligt filtrerade
+bort i just detta negativa prov, inte borttagna ur den riktiga sviten.
+
+Nio offlinefacitfall utan avvikelse, appens och scripts fulla typkontroller,
+nio negativa typkontrakt samt de 35 äldre AI-spärrkontrollerna är gröna.
+Repo-ESLint/Prettier för ändrade kodfiler och riktad diff-check är gröna.
+[Ny avgränsad kvittens](evidence/2026-10-09-p4-queue-race/verification.json)
+binds till källhashar och provloggar. De fyra avstängda handlers, fasta
+featureflaggor, övriga kontraktsfält, fixture/facit och schema är oförändrade.
+
+Korrigeringen är fortfarande endast i en syntetisk minnessandlåda. Den ger
+ingen beständig idempotens, flerprocessbudget, produktionskö eller betrodd
+tenant-/delningsadapter. Första context-läsningen och själva övningen har
+separata tidsgränser; ingen total leverantörs-/API-latensgaranti provas.
+Inga provider-, databas-, status-, meddelande- eller rapportadapters har
+kopplats in, och ingen tjänst, riktig Auth, browser, hosted installation,
+publicering eller aktivering ingår i dessa nya prov.
 
 ## Kvar före eventuell aktivering
 

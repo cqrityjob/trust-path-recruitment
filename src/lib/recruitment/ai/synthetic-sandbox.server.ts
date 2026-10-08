@@ -182,7 +182,8 @@ export class SyntheticRecruiterAiSandbox {
     let current: RecruiterAiContext | null;
     try {
       const firstRead = await abortable(input.readCurrent(), firstSignal);
-      if (!firstRead.ok) return rejected(input.signal?.aborted ? "cancelled" : "timed_out");
+      if (!firstRead.ok || firstSignal.aborted)
+        return rejected(input.signal?.aborted ? "cancelled" : "timed_out");
       current = verifiedContext(firstRead.value, request);
     } catch {
       return rejected("scope_or_source_invalid");
@@ -193,10 +194,25 @@ export class SyntheticRecruiterAiSandbox {
     const fingerprint = syntheticDigest({ intent, context: initial });
     const operation = `${initial.employerId}:${initial.actorId}:${operationId}`;
     const prior = this.operations.get(operation);
-    if (prior)
-      return prior.fingerprint === fingerprint
-        ? structuredClone(await prior.promise)
-        : rejected("operation_reused");
+    if (prior) {
+      if (prior.fingerprint !== fingerprint) return rejected("operation_reused");
+      // A retry may wait on shared work, but its own caller cancellation and
+      // deadline never cancel or otherwise mutate the original operation.
+      try {
+        const result = await abortable(prior.promise, firstSignal);
+        if (!result.ok || firstSignal.aborted)
+          return rejected(input.signal?.aborted ? "cancelled" : "timed_out");
+        const latestRead = await abortable(input.readCurrent(), firstSignal);
+        if (!latestRead.ok || firstSignal.aborted)
+          return rejected(input.signal?.aborted ? "cancelled" : "timed_out");
+        const latest = verifiedContext(latestRead.value, request);
+        if (!latest || syntheticDigest(latest) !== syntheticDigest(initial))
+          return rejected("stale_context");
+        return structuredClone(result.value);
+      } catch {
+        return rejected("scope_or_source_invalid");
+      }
+    }
     const cached = this.cache.get(fingerprint);
     if (this.operations.size >= 1024) return rejected("quota_exceeded");
     if (cached) {
@@ -251,13 +267,15 @@ export class SyntheticRecruiterAiSandbox {
     const settle = () => {
       budget.spent += charged;
       budget.reserved -= input.reservedUnits;
-      if (active) {
-        budget.active--;
-        budget.waiters.shift()?.();
-      }
+      if (active) budget.active--;
+      // A cancelled, already-woken waiter did not acquire a slot. It must
+      // still wake the next waiter if a slot is free, or the queue can stall.
+      if (budget.active < initial.plan.maxConcurrent) budget.waiters.shift()?.();
     };
     try {
-      if (budget.active >= initial.plan.maxConcurrent) {
+      // Waking does not reserve a slot: another completed context read may
+      // acquire it first. Recheck without an await between test and increment.
+      while (budget.active >= initial.plan.maxConcurrent) {
         budget.waiting++;
         let wake: () => void = () => {};
         const queued = new Promise<void>((resolve) => {
@@ -266,12 +284,13 @@ export class SyntheticRecruiterAiSandbox {
         });
         const available = await abortable(queued, controller.signal);
         budget.waiting--;
-        if (!available.ok) {
+        if (!available.ok || controller.signal.aborted) {
           const index = budget.waiters.indexOf(wake);
           if (index >= 0) budget.waiters.splice(index, 1);
           return rejected(timedOut ? "timed_out" : "cancelled");
         }
       }
+      if (controller.signal.aborted) return rejected(timedOut ? "timed_out" : "cancelled");
       budget.active++;
       active = true;
       if (budget.spent + budget.reserved > initial.plan.budgetUnits)
