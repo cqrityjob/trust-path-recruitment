@@ -155,6 +155,9 @@ jobs:
           bun test scripts/sp-evidence-upload-recovery-ci.test.ts
           bunx tsc --noEmit --allowJs --checkJs false --skipLibCheck --module preserve --moduleResolution bundler --target ES2022 --types node scripts/sp-evidence-upload-recovery-ci.test.ts
 
+      - name: Bounded public-registry pull retry controls
+        run: bun test scripts/registry-image-retry.test.mjs
+
       - name: Type-check
         run: bunx tsc --noEmit
 
