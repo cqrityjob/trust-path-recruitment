@@ -13,6 +13,7 @@ import {
   requireCompleteHistory,
   requireBrowserCounts,
   requireReleaseSchemaWitness,
+  authFailureSummary,
 } from "./recruiter-real-ci-contract.mjs";
 import { validatePublicReport, writePublicReport } from "./recruiter-real-ci-public.mjs";
 
@@ -134,6 +135,31 @@ describe("official real Supabase CI target", () => {
       expect(EXCLUDED.split(",")).toContain(service);
     for (const service of ["gotrue", "postgrest", "storage-api", "kong"])
       expect(EXCLUDED.split(",")).not.toContain(service);
+  });
+  test("native admin accounts can use password login while public signup and SMTP remain off", () => {
+    const auth = CONFIG.match(/\[auth\]\n([\s\S]*?)\n\[auth\.email\]/)?.[1];
+    const email = CONFIG.match(/\[auth\.email\]\n([\s\S]*?)\n\[auth\.sms\]/)?.[1];
+    expect(auth).toContain("enable_signup = false");
+    expect(email).toContain("enable_signup = true");
+    expect(email).toContain("enable_confirmations = false");
+  });
+  test("Auth diagnostics retain only HTTP status and fixed error taxonomy, never response contents", () => {
+    expect(
+      authFailureSummary(422, {
+        error_code: "email_provider_disabled",
+        msg: "private response omitted",
+        access_token: "Bearer syntheticForbiddenToken123",
+        email: "hidden@fixture.invalid",
+      }),
+    ).toEqual({ httpStatus: 422, authCode: "email_provider_disabled" });
+    expect(authFailureSummary(503, { error_code: "private_arbitrary_body" })).toEqual({
+      httpStatus: 503,
+      authCode: "unclassified",
+    });
+    expect(authFailureSummary(Number.NaN, null)).toEqual({
+      httpStatus: 0,
+      authCode: "unclassified",
+    });
   });
   test("app child receives local Supabase overrides and no inherited AI/mail/hosted credentials", () => {
     const child = childEnvironment(

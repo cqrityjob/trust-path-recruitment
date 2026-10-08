@@ -26,6 +26,29 @@ export function requireCompleteHistory(names) {
   return files;
 }
 
+// Public diagnostic codes come from a fixed Auth taxonomy. Never reflect the
+// response message, user, token, URL or arbitrary error strings into evidence.
+const authErrorCodes = new Set([
+  "email_provider_disabled",
+  "invalid_credentials",
+  "email_not_confirmed",
+  "over_request_rate_limit",
+  "over_email_send_rate_limit",
+  "unexpected_failure",
+  "request_timeout",
+  "validation_failed",
+  "bad_json",
+  "signup_disabled",
+  "weak_password",
+  "access_denied",
+]);
+export function authFailureSummary(status, payload) {
+  return {
+    httpStatus: Number.isInteger(status) && status >= 100 && status <= 599 ? status : 0,
+    authCode: authErrorCodes.has(payload?.error_code) ? payload.error_code : "unclassified",
+  };
+}
+
 export function requireBrowserCounts(stats, expected) {
   const result = {
     expected: stats?.expected,
@@ -221,7 +244,7 @@ enable_signup = false
 enable_anonymous_sign_ins = false
 minimum_password_length = 8
 [auth.email]
-enable_signup = false
+enable_signup = true
 enable_confirmations = false
 [auth.sms]
 enable_signup = false

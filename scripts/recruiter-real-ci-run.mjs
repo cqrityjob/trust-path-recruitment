@@ -17,6 +17,7 @@ import {
   childEnvironment,
   requireCompleteHistory,
   requireBrowserCounts,
+  authFailureSummary,
 } from "./recruiter-real-ci-contract.mjs";
 import { digest, writePublicReport } from "./recruiter-real-ci-public.mjs";
 
@@ -100,7 +101,9 @@ async function stage(name, action) {
       stage: name,
       code,
       ...(error.sqlState ? { sqlState: error.sqlState } : {}),
+      ...(error.authFailure ?? {}),
     });
+    console.error(`REAL_CI_FAIL ${name} ${code}`);
     throw Error(code);
   }
 }
@@ -129,7 +132,14 @@ async function login(actor) {
     headers: headers(status.ANON_KEY),
     body: JSON.stringify({ email: actor.email, password: actor.password }),
   });
-  if (response.status !== 200) throw Error("REAL_CI_GOTRUE_PASSWORD_LOGIN_FAILED");
+  if (response.status !== 200) {
+    const error = new Error("REAL_CI_GOTRUE_PASSWORD_LOGIN_FAILED");
+    error.authFailure = authFailureSummary(
+      response.status,
+      await response.json().catch(() => null),
+    );
+    throw error;
+  }
   const body = await response.json();
   const claims = JSON.parse(Buffer.from(body.access_token.split(".")[1], "base64url").toString());
   if (
