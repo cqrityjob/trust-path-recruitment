@@ -1,4 +1,5 @@
-import { describe, expect, test } from "bun:test";
+import { describe, test } from "node:test";
+import assert from "node:assert/strict";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "../src/integrations/supabase/database";
 import { uploadOwnedEvidence } from "../src/lib/security-passport/evidence-upload-adapter";
@@ -54,8 +55,8 @@ describe("evidence upload transaction boundaries", () => {
     input.preflight = async () => {
       throw new Error("SP_TARGET_NOT_FOUND");
     };
-    await expect(uploadAndAttachEvidence(input)).rejects.toThrow("SP_TARGET_NOT_FOUND");
-    expect(calls).toEqual([]);
+    await assert.rejects(uploadAndAttachEvidence(input), new RegExp("SP_TARGET_NOT_FOUND"));
+    assert.deepEqual(calls, []);
   });
 
   test("a Storage response loss is unknown and does not attach or remove", async () => {
@@ -64,18 +65,21 @@ describe("evidence upload transaction boundaries", () => {
       calls.push("upload");
       throw new Error("response lost");
     };
-    expect(await uploadAndAttachEvidence(input)).toEqual({ status: "outcome_unknown", attemptId });
-    expect(calls).toEqual(["preflight", "upload"]);
+    assert.deepEqual(await uploadAndAttachEvidence(input), {
+      status: "outcome_unknown",
+      attemptId,
+    });
+    assert.deepEqual(calls, ["preflight", "upload"]);
   });
 
   test("explicit rejection plus empty metadata read can confirm its exact cleanup", async () => {
     const { calls, input } = actions();
-    expect(await uploadAndAttachEvidence(input)).toEqual({
+    assert.deepEqual(await uploadAndAttachEvidence(input), {
       status: "not_attached",
       fileCleanup: "confirmed",
       attemptId,
     });
-    expect(calls).toEqual(["preflight", "upload", "attach", "read", "remove"]);
+    assert.deepEqual(calls, ["preflight", "upload", "attach", "read", "remove"]);
   });
 
   for (const failure of ["sdk-error", "thrown-error", "no-op", "list-error"]) {
@@ -89,7 +93,7 @@ describe("evidence upload transaction boundaries", () => {
         if (failure === "list-error") throw new Error("read denied");
         return false;
       };
-      expect(await uploadAndAttachEvidence(input)).toEqual({
+      assert.deepEqual(await uploadAndAttachEvidence(input), {
         status: "not_attached",
         fileCleanup: "pending",
         attemptId,
@@ -100,7 +104,7 @@ describe("evidence upload transaction boundaries", () => {
   test("a no-op removal is confirmed only by a successful absence read", async () => {
     const { input } = actions();
     input.remove = async () => ({ failed: false, deleted: false });
-    expect(await uploadAndAttachEvidence(input)).toEqual({
+    assert.deepEqual(await uploadAndAttachEvidence(input), {
       status: "not_attached",
       fileCleanup: "confirmed",
       attemptId,
@@ -114,11 +118,11 @@ describe("evidence upload transaction boundaries", () => {
         if (attachment === "throw") throw new Error("lost response");
         return attachment;
       };
-      expect(await uploadAndAttachEvidence(input)).toEqual({
+      assert.deepEqual(await uploadAndAttachEvidence(input), {
         status: "outcome_unknown",
         attemptId,
       });
-      expect(calls).not.toContain("remove");
+      assert.equal(calls.includes("remove"), false);
     });
   }
 
@@ -141,14 +145,17 @@ describe("evidence upload transaction boundaries", () => {
       bytes = false;
       return { failed: false, deleted: true };
     };
-    expect(await uploadAndAttachEvidence(input)).toEqual({ status: "outcome_unknown", attemptId });
-    expect(committed).toBe(false);
-    expect(bytes).toBe(true);
+    assert.deepEqual(await uploadAndAttachEvidence(input), {
+      status: "outcome_unknown",
+      attemptId,
+    });
+    assert.equal(committed, false);
+    assert.equal(bytes, true);
     releaseCommit();
     await databaseCommit;
-    expect(committed).toBe(true);
-    expect(bytes).toBe(true);
-    expect(calls).not.toContain("remove");
+    assert.equal(committed, true);
+    assert.equal(bytes, true);
+    assert.equal(calls.includes("remove"), false);
   });
 
   test("committed metadata reconciles a lost RPC response to saved", async () => {
@@ -157,11 +164,11 @@ describe("evidence upload transaction boundaries", () => {
       throw new Error("response lost after commit");
     };
     input.readAttached = async () => ({ state: "found", evidence: "saved-record" });
-    expect(await uploadAndAttachEvidence(input)).toEqual({
+    assert.deepEqual(await uploadAndAttachEvidence(input), {
       status: "saved",
       evidence: "saved-record",
     });
-    expect(calls).not.toContain("remove");
+    assert.equal(calls.includes("remove"), false);
   });
 
   for (const unreadable of ["unknown", "throw"] as const) {
@@ -171,24 +178,26 @@ describe("evidence upload transaction boundaries", () => {
         if (unreadable === "throw") throw new Error("session lost");
         return { state: "unknown" };
       };
-      expect(await uploadAndAttachEvidence(input)).toEqual({
+      assert.deepEqual(await uploadAndAttachEvidence(input), {
         status: "outcome_unknown",
         attemptId,
       });
-      expect(calls).not.toContain("remove");
+      assert.equal(calls.includes("remove"), false);
     });
   }
 
   test("only known SQL refusals are treated as rollback; gateway/network are unknown", () => {
-    expect(isDefiniteAttachmentRejection({ code: "P0002", message: "SP_TARGET_NOT_FOUND" })).toBe(
+    assert.equal(
+      isDefiniteAttachmentRejection({ code: "P0002", message: "SP_TARGET_NOT_FOUND" }),
       true,
     );
-    expect(isDefiniteAttachmentRejection({ code: "42501", message: "SP_NOT_HOLDER" })).toBe(true);
-    expect(isDefiniteAttachmentRejection({ code: "23503", message: "foreign key violation" })).toBe(
+    assert.equal(isDefiniteAttachmentRejection({ code: "42501", message: "SP_NOT_HOLDER" }), true);
+    assert.equal(
+      isDefiniteAttachmentRejection({ code: "23503", message: "foreign key violation" }),
       true,
     );
     for (const code of ["", "PGRST000", "PGRST301", "08006", "57014", "503", "P0001", "42501"]) {
-      expect(isDefiniteAttachmentRejection({ code, message: "unknown" })).toBe(false);
+      assert.equal(isDefiniteAttachmentRejection({ code, message: "unknown" }), false);
     }
   });
 
@@ -204,20 +213,21 @@ describe("evidence upload transaction boundaries", () => {
       } catch (cause) {
         issue = evidenceUploadIssue(cause);
       }
-      expect(issue.reference).toBe(attemptId);
+      assert.equal(issue.reference, attemptId);
       for (const language of ["sv", "en"] as const) {
         const message = passportT(issue.key, language);
-        expect(message.length).toBeGreaterThan(40);
-        expect(message).not.toContain(passportT("ev.saved", language));
+        assert.ok(message.length > 40);
+        assert.equal(message.includes(passportT("ev.saved", language)), false);
       }
     }
-    expect(evidenceUploadIssue(new Error("network failed"))).toEqual({
+    assert.deepEqual(evidenceUploadIssue(new Error("network failed")), {
       key: "ev.uploadUnknown",
       reference: null,
     });
-    expect(
+    assert.deepEqual(
       evidenceUploadIssue(new Error("SP_EVIDENCE_UPLOAD_CLEANUP_PENDING:<private-url>")),
-    ).toEqual({ key: "ev.uploadPending", reference: null });
+      { key: "ev.uploadPending", reference: null },
+    );
   });
 });
 
@@ -322,55 +332,60 @@ function adapterFixture(
 describe("caller-scoped upload adapter", () => {
   test("missing or invisible own target refuses before upload; both target IDs also refuse", async () => {
     const missing = adapterFixture({ target: false });
-    await expect(uploadOwnedEvidence(missing.input)).rejects.toThrow("SP_TARGET_NOT_FOUND");
-    expect(missing.calls).toHaveLength(1);
+    await assert.rejects(uploadOwnedEvidence(missing.input), new RegExp("SP_TARGET_NOT_FOUND"));
+    assert.equal(missing.calls.length, 1);
     const targetUrl = new URL(missing.calls[0].url);
-    expect(targetUrl.searchParams.get("holder_user_id")).toBe(`eq.${holder}`);
-    expect(targetUrl.searchParams.get("id")).toBe(`eq.${claim}`);
+    assert.equal(targetUrl.searchParams.get("holder_user_id"), `eq.${holder}`);
+    assert.equal(targetUrl.searchParams.get("id"), `eq.${claim}`);
     const ambiguous = adapterFixture();
-    await expect(uploadOwnedEvidence({ ...ambiguous.input, periodId: claim })).rejects.toThrow(
-      "SP_TARGET_AMBIGUOUS",
+    await assert.rejects(
+      uploadOwnedEvidence({ ...ambiguous.input, periodId: claim }),
+      new RegExp("SP_TARGET_AMBIGUOUS"),
     );
-    expect(ambiguous.calls).toHaveLength(0);
+    assert.equal(ambiguous.calls.length, 0);
   });
 
   test("generated path invariant refuses any other folder or object before Storage", async () => {
     const fixture = adapterFixture();
-    await expect(
+    await assert.rejects(
       uploadOwnedEvidence({ ...fixture.input, storagePath: `${claim}/foreign.pdf` }),
-    ).rejects.toThrow("SP_EVIDENCE_PATH_NOT_OWNED");
-    expect(fixture.calls).toHaveLength(0);
+      new RegExp("SP_EVIDENCE_PATH_NOT_OWNED"),
+    );
+    assert.equal(fixture.calls.length, 0);
   });
 
   test("SDK cleanup error after real-shaped SQL refusal remains pending and targets exactly one own object", async () => {
     const fixture = adapterFixture({ rejection: true, cleanupFails: true });
-    expect(await uploadOwnedEvidence(fixture.input)).toEqual({
+    assert.deepEqual(await uploadOwnedEvidence(fixture.input), {
       status: "not_attached",
       fileCleanup: "pending",
       attemptId,
     });
     const removal = fixture.calls.find((request) => request.method === "DELETE");
-    expect(await removal?.json()).toEqual({ prefixes: [path] });
+    assert.deepEqual(await removal?.json(), { prefixes: [path] });
     const metadata = fixture.calls.find(
       (request) => new URL(request.url).pathname === "/rest/v1/sp_evidence",
     );
-    expect(new URL(metadata!.url).searchParams.get("holder_user_id")).toBe(`eq.${holder}`);
-    expect(new URL(metadata!.url).searchParams.get("storage_path")).toBe(`eq.${path}`);
+    assert.equal(new URL(metadata!.url).searchParams.get("holder_user_id"), `eq.${holder}`);
+    assert.equal(new URL(metadata!.url).searchParams.get("storage_path"), `eq.${path}`);
   });
 
   test("committed metadata after response loss returns the existing record and never deletes", async () => {
     const fixture = adapterFixture({ committed: true });
-    expect(await uploadOwnedEvidence(fixture.input)).toMatchObject({
-      status: "saved",
-      evidence: { id: attemptId, claimId: claim },
-    });
-    expect(fixture.calls.some((request) => request.method === "DELETE")).toBe(false);
+    const result = await uploadOwnedEvidence(fixture.input);
+    assert.ok(result.status === "saved");
+    assert.equal(result.evidence.id, attemptId);
+    assert.equal(result.evidence.claimId, claim);
+    assert.equal(
+      fixture.calls.some((request) => request.method === "DELETE"),
+      false,
+    );
   });
 
   for (const options of [{ revokedBeforeAbsence: true }, { revokedDuringAbsence: true }]) {
     test(`an RLS-hidden empty Storage list is not confirmed absence: ${JSON.stringify(options)}`, async () => {
       const fixture = adapterFixture({ rejection: true, removeNoOp: true, ...options });
-      expect(await uploadOwnedEvidence(fixture.input)).toEqual({
+      assert.deepEqual(await uploadOwnedEvidence(fixture.input), {
         status: "not_attached",
         fileCleanup: "pending",
         attemptId,
@@ -387,11 +402,14 @@ describe("caller-scoped upload adapter", () => {
   ]) {
     test(`uncertain/mismatched metadata protects bytes: ${JSON.stringify(options)}`, async () => {
       const fixture = adapterFixture(options);
-      expect(await uploadOwnedEvidence(fixture.input)).toEqual({
+      assert.deepEqual(await uploadOwnedEvidence(fixture.input), {
         status: "outcome_unknown",
         attemptId,
       });
-      expect(fixture.calls.some((request) => request.method === "DELETE")).toBe(false);
+      assert.equal(
+        fixture.calls.some((request) => request.method === "DELETE"),
+        false,
+      );
     });
   }
 });
