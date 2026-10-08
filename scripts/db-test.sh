@@ -224,6 +224,25 @@ SENTINEL_OUT="$(psql_q -d "$TEST_DB" -f supabase/tests/sentinel_test.sql 2>&1)" 
 echo "    ok  35 Sentinel pilot assertions passed"
 # STRICT-REPLAY-CONTRACT END
 
+# Lifecycle runs against all current migrations before any historical standdown.
+# SQL role tests do not claim genuine Auth or PostgREST HTTP coverage.
+echo "==> Running interview content lifecycle authorization assertions"
+RI_LIFECYCLE_OUT="$(psql -X -v ON_ERROR_STOP=1 -q -d "$TEST_DB" -f supabase/tests/interview_method_lifecycle_test.sql 2>&1)" || { echo "$RI_LIFECYCLE_OUT"; exit 1; }
+RI_LIFECYCLE_PASSED="$(echo "$RI_LIFECYCLE_OUT" | command grep -c 'NOTICE:  ok ' || true)"
+[ "$RI_LIFECYCLE_PASSED" -ge 124 ] || { echo "$RI_LIFECYCLE_OUT"; echo "FAIL:124 lifecycle assertions required" >&2; exit 1; }
+echo "    ok  ${RI_LIFECYCLE_PASSED} lifecycle SQL assertions"
+TEST_DB="$TEST_DB" bash scripts/interview-method-lifecycle-check.sh
+# Product rollback must fail before changing any function, trigger or row.
+set +e
+RI_LIFECYCLE_DOWN="$(psql -X -v ON_ERROR_STOP=1 -q -d "$TEST_DB" -f supabase/rollback/20270310090000_interview_method_lifecycle_revocation_rollback.sql 2>&1)"
+RI_LIFECYCLE_DOWN_RC=$?
+set -e
+if [ "$RI_LIFECYCLE_DOWN_RC" -eq 0 ] || ! echo "$RI_LIFECYCLE_DOWN" | command grep -q 'SCP_IV_LIFECYCLE_ROLLBACK_UNSAFE'; then
+ echo "$RI_LIFECYCLE_DOWN"; echo 'FAIL: lifecycle unsafe DOWN must refuse' >&2; exit 1
+fi
+[ "$(psql_q -d "$TEST_DB" -Atc "SELECT EXISTS(SELECT 1 FROM pg_trigger WHERE tgrelid='public.scp_interview_pack_pilot_grants'::regclass AND tgname='ri_pilot_grant_serialise')")" = "t" ] || exit 1
+echo '    ok  unsafe lifecycle rollback refuses without removing the lock'
+
 # Durable holder recovery is checked on the complete current schema before
 # historical rollbacks. Synthetic metadata does not prove actual object bytes.
 echo "==> Running durable own upload journal assertions"
@@ -316,6 +335,7 @@ fi
 # then the EMPTY main test database restores its exact prior definitions.
 # Historical-stage assertions still run against the schema they were written
 # for; adopted production installs cannot use this rollback.
+psql_q -d "$TEST_DB" -f supabase/tests/interview_method_lifecycle_historical_standdown.sql >/dev/null
 echo "==> Running permanent interview content snapshot installation and races"
 TEST_DB="$TEST_DB" bash scripts/interview-content-snapshot-check.sh
 psql_q -d "$TEST_DB" -f supabase/rollback/20270307090000_interview_content_snapshot_lock_rollback.sql >/dev/null
