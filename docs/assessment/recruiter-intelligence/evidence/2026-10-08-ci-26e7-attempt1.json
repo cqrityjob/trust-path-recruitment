@@ -1,0 +1,305 @@
+{
+  "schemaVersion": 1,
+  "scope": "read_only_ci_attempt_witness",
+  "repository": "cqrityjob/trust-path-recruitment",
+  "pullRequest": 452,
+  "headSha": "26e7f2958fd6b01c3dfd2365d017817fbd886073",
+  "mainBase": "2a4687d7e6ca3886f39a52190bea19b3d54c734e",
+  "runId": 37779464756,
+  "attempt": 1,
+  "terminalObservedAt": "2026-10-08T13:34:49Z",
+  "status": "failure",
+  "requiredJobs": {
+    "total": 15,
+    "success": 14,
+    "failure": 1,
+    "pending": 0,
+    "core": {
+      "total": 8,
+      "success": 7,
+      "failure": 1
+    },
+    "external": {
+      "total": 7,
+      "success": 7,
+      "failure": 0
+    }
+  },
+  "actualPrCheckout": {
+    "sha": "20d3371c1a3762c1c721b0722ae54e62c25e604b",
+    "treeEquivalentToHead": true,
+    "proof": "GitHub compare: merge_base=head, ahead_by=1, behind_by=0, files=[]"
+  },
+  "productSourceEquivalentToNativeInterviewPin": {
+    "sha": "3d66dd8cb0ce4c03d9d8e9a27aeb179aa9182101",
+    "paths": [
+      "src"
+    ],
+    "proof": "read-only git diff --quiet exit 0; CI success is not inherited from native run"
+  },
+  "coreJobs": [
+    {
+      "id": 113318598146,
+      "name": "Lint, typecheck and deterministic checks",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37779464756/job/113318598146"
+    },
+    {
+      "id": 113318598162,
+      "name": "Passport three-market browser — catalogue, cards, pilot access",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37779464756/job/113318598162"
+    },
+    {
+      "id": 113318598216,
+      "name": "Migration replay, RLS and rollback tests",
+      "status": "completed",
+      "conclusion": "failure",
+      "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37779464756/job/113318598216"
+    },
+    {
+      "id": 113318598221,
+      "name": "Recruiter current schema — PostgreSQL 17 and PostgREST 14",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37779464756/job/113318598221"
+    },
+    {
+      "id": 113318598353,
+      "name": "CV browser — the signed-in journey",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37779464756/job/113318598353"
+    },
+    {
+      "id": 113318598357,
+      "name": "Recruiter Intelligence P1 — PostgreSQL 17 and concurrent HTTP API",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37779464756/job/113318598357"
+    },
+    {
+      "id": 113318598401,
+      "name": "CV export — PDF and ATS proof",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37779464756/job/113318598401"
+    },
+    {
+      "id": 113318598726,
+      "name": "Public entry browser — homepage, employers and the employer journey",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37779464756/job/113318598726"
+    }
+  ],
+  "externalRuns": [
+    {
+      "runId": 37779464746,
+      "name": "Job ad back navigation — routed browser evidence",
+      "jobs": [
+        {
+          "id": 113318597633,
+          "name": "Job ad back navigation browser evidence (isolated local stack)",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ],
+      "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37779464746"
+    },
+    {
+      "runId": 37779464714,
+      "name": "Passport preview image — Cloudflare Worker runtime evidence",
+      "jobs": [
+        {
+          "id": 113318596500,
+          "name": "Preview image in workerd (Cloudflare Worker runtime)",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ],
+      "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37779464714"
+    },
+    {
+      "runId": 37779464581,
+      "name": "E4 employer final report — routed browser evidence",
+      "jobs": [
+        {
+          "id": 113318596930,
+          "name": "E4 routed browser evidence (isolated local stack)",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ],
+      "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37779464581"
+    },
+    {
+      "runId": 37779464692,
+      "name": "Recruitment workspace — routed browser evidence",
+      "jobs": [
+        {
+          "id": 113318597222,
+          "name": "Recruitment workspace browser evidence (isolated local stack)",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ],
+      "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37779464692"
+    },
+    {
+      "runId": 37779464703,
+      "name": "Passport public pilot — real-backend evidence",
+      "jobs": [
+        {
+          "id": 113318597903,
+          "name": "Passport public pilot browser evidence (isolated local stack)",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ],
+      "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37779464703"
+    },
+    {
+      "runId": 37779464632,
+      "name": "Security Work browser evidence",
+      "jobs": [
+        {
+          "id": 113318597567,
+          "name": "browser",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ],
+      "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37779464632"
+    },
+    {
+      "runId": 37779464804,
+      "name": "Career Center persistence — routed browser evidence",
+      "jobs": [
+        {
+          "id": 113318598076,
+          "name": "Career Center persistence browser evidence (isolated local stack)",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ],
+      "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37779464804"
+    }
+  ],
+  "failure": {
+    "jobId": 113318598216,
+    "kind": "registry_rate_limit",
+    "source": {
+      "path": "scripts/recruiter-domain-conflict-check.mjs",
+      "line": 276,
+      "sha": "26e7f2958fd6b01c3dfd2365d017817fbd886073"
+    },
+    "image": "public.ecr.aws/supabase/postgrest:v14.15",
+    "exactExcerpts": [
+      "2026-10-08T12:56:53.5796122Z Unable to find image 'public.ecr.aws/supabase/postgrest:v14.15' locally",
+      "2026-10-08T12:56:53.5796663Z docker: toomanyrequests: Rate exceeded",
+      "2026-10-08T12:56:53.5800105Z       at /home/runner/work/trust-path-recruitment/trust-path-recruitment/scripts/recruiter-domain-conflict-check.mjs:276:6"
+    ],
+    "dockerExitCode": 125,
+    "boundary": "Docker image pull failed before this job started PostgREST 14.15. Earlier SQL/rollback/concurrency controls passed, but the remainder of this PG16 full-history job did not complete.",
+    "expectedNegativeControls": "Later PostgreSQL server-log P0.32/deadlock/stale/40001 entries are deliberate controls with preceding successful control assertions, not the observed failing Docker pull.",
+    "classification": "confirmed infrastructure registry-rate-limit failure; no product or schema failure established",
+    "originalFailureRetained": true
+  },
+  "publicJob": {
+    "id": 113318598726,
+    "conclusion": "success",
+    "previouslyObservedStep": "Career Center journey browser suite",
+    "progressionConfirmed": [
+      "Career Center journey browser suite",
+      "Jobs product experience — bilingual responsive and navigation checks",
+      "Reported user flows — desktop and mobile, Swedish and English"
+    ],
+    "completedLogExcerpts": [
+      "2026-10-08T12:59:40.4008160Z Running 168 tests using 1 worker",
+      "2026-10-08T13:14:14.3345267Z   168 passed (14.6m)",
+      "2026-10-08T13:14:15.3067453Z Running 27 tests using 1 worker",
+      "2026-10-08T13:15:55.7615881Z   27 passed (1.7m)",
+      "2026-10-08T13:15:56.8152190Z Running 2 tests using 1 worker",
+      "2026-10-08T13:17:49.1548585Z   2 passed (1.9m)",
+      "2026-10-08T13:17:50.4488676Z Running 12 tests using 1 worker",
+      "2026-10-08T13:18:45.7723451Z   12 passed (56.0s)",
+      "2026-10-08T13:18:45.7933074Z ##[group]Run bun run e2e e2e/career-center-journey.spec.ts --project=chromium --project=mobile-375",
+      "2026-10-08T13:18:46.6334983Z Running 26 tests using 1 worker",
+      "2026-10-08T13:21:48.0593388Z   26 passed (3.0m)",
+      "2026-10-08T13:21:48.9343559Z Running 20 tests using 1 worker",
+      "2026-10-08T13:22:47.5232888Z   20 passed (58.9s)",
+      "2026-10-08T13:22:47.5457805Z ##[group]Run bun run e2e e2e/cqrity-user-flows.spec.ts e2e/academy-user-flow.spec.ts e2e/career-analysis-availability.spec.ts e2e/application-draft-account-isolation.spec.ts --project=chromium --project=mobile-375",
+      "2026-10-08T13:22:48.6706431Z Running 94 tests using 1 worker",
+      "2026-10-08T13:29:46.4277551Z   94 passed (7.0m)"
+    ],
+    "observedReportedUserFlows": {
+      "tests": 94,
+      "workers": 1,
+      "retriesConfigured": 0,
+      "result": "94 passed",
+      "durationReported": "7.0m"
+    },
+    "configuredBounds": {
+      "publicJobTimeoutMinutes": null,
+      "academyTestTimeoutMs": 90000,
+      "workers": 1,
+      "retries": 0
+    },
+    "assessment": "The original job progressed and completed. No hang is established; timings and counts are observed from completed log, not inferred from missing job-step timestamps.",
+    "environmentClaim": "Routed browser tests with synthetic/stubbed fixture transport, not hosted Auth/Storage or a physical phone."
+  },
+  "deterministicGuardProof": [
+    {
+      "name": "Lint",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "Type-check",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "Type-check the Passport guard scripts",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "Interview UX and safety contract guard",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "Interview evidence reliability guard",
+      "status": "completed",
+      "conclusion": "success"
+    }
+  ],
+  "lintLimitation": {
+    "jobStepConclusion": "success",
+    "continueOnError": true,
+    "source": ".github/workflows/ci.yml:104",
+    "globalLintZeroEstablished": false
+  },
+  "observerActions": {
+    "readOnly": true,
+    "reruns": 0,
+    "pushes": 0,
+    "codeChanges": 0,
+    "deployments": 0,
+    "hostedWrites": 0,
+    "localServicesStarted": 0
+  },
+  "retryAtObservation": {
+    "latestAttemptObserved": true,
+    "jobId": 113337203108,
+    "status": "in_progress",
+    "conclusion": null,
+    "owner": "root",
+    "independentFromAttempt1": true
+  },
+  "publicEvidencePolicy": "Only fixed job metadata, allowlisted completed-log excerpts and source pointers. No raw logs, credentials, private actor state or SDK payloads."
+}
