@@ -1,0 +1,54 @@
+{
+  "capturedFrom": "http://localhost:3100",
+  "startedAt": "2026-10-08T17:29:26.126Z",
+  "shots": [
+    {
+      "file": "after-overview-sv-1440.png",
+      "note": "overview in sv at 1440px (chromium)"
+    },
+    {
+      "file": "after-jobs-sv-1440.png",
+      "note": "jobs in sv at 1440px (chromium)"
+    },
+    {
+      "file": "after-applications-sv-1440.png",
+      "note": "applications in sv at 1440px (chromium)"
+    },
+    {
+      "file": "after-assessments-sv-1440.png",
+      "note": "assessments in sv at 1440px (chromium)"
+    },
+    {
+      "file": "after-interviews-sv-1440.png",
+      "note": "interviews in sv at 1440px (chromium)"
+    },
+    {
+      "file": "after-reports-sv-1440.png",
+      "note": "reports in sv at 1440px (chromium)"
+    },
+    {
+      "file": "after-overview-en-1440.png",
+      "note": "overview in en at 1440px (chromium)"
+    },
+    {
+      "file": "after-jobs-en-1440.png",
+      "note": "jobs in en at 1440px (chromium)"
+    },
+    {
+      "file": "after-applications-en-1440.png",
+      "note": "applications in en at 1440px (chromium)"
+    },
+    {
+      "file": "after-assessments-en-1440.png",
+      "note": "assessments in en at 1440px (chromium)"
+    },
+    {
+      "file": "after-interviews-en-1440.png",
+      "note": "interviews in en at 1440px (chromium)"
+    },
+    {
+      "file": "after-reports-en-1440.png",
+      "note": "reports in en at 1440px (chromium)"
+    }
+  ]
+}

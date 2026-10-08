@@ -1,0 +1,102 @@
+{
+  "capturedFrom": "http://localhost:3100",
+  "startedAt": "2026-10-08T17:29:21.949Z",
+  "shots": [
+    {
+      "file": "before-overview-sv-1440.png",
+      "note": "overview in sv at 1440px (chromium)"
+    },
+    {
+      "file": "before-jobs-sv-1440.png",
+      "note": "jobs in sv at 1440px (chromium)"
+    },
+    {
+      "file": "before-applications-sv-1440.png",
+      "note": "applications in sv at 1440px (chromium)"
+    },
+    {
+      "file": "before-assessments-sv-1440.png",
+      "note": "assessments in sv at 1440px (chromium)"
+    },
+    {
+      "file": "before-interviews-sv-1440.png",
+      "note": "interviews in sv at 1440px (chromium)"
+    },
+    {
+      "file": "before-reports-sv-1440.png",
+      "note": "reports in sv at 1440px (chromium)"
+    },
+    {
+      "file": "before-overview-en-1440.png",
+      "note": "overview in en at 1440px (chromium)"
+    },
+    {
+      "file": "before-jobs-en-1440.png",
+      "note": "jobs in en at 1440px (chromium)"
+    },
+    {
+      "file": "before-applications-en-1440.png",
+      "note": "applications in en at 1440px (chromium)"
+    },
+    {
+      "file": "before-assessments-en-1440.png",
+      "note": "assessments in en at 1440px (chromium)"
+    },
+    {
+      "file": "before-interviews-en-1440.png",
+      "note": "interviews in en at 1440px (chromium)"
+    },
+    {
+      "file": "before-reports-en-1440.png",
+      "note": "reports in en at 1440px (chromium)"
+    },
+    {
+      "file": "before-overview-sv-375.png",
+      "note": "overview in sv at 375px (mobile-375)"
+    },
+    {
+      "file": "before-jobs-sv-375.png",
+      "note": "jobs in sv at 375px (mobile-375)"
+    },
+    {
+      "file": "before-applications-sv-375.png",
+      "note": "applications in sv at 375px (mobile-375)"
+    },
+    {
+      "file": "before-assessments-sv-375.png",
+      "note": "assessments in sv at 375px (mobile-375)"
+    },
+    {
+      "file": "before-interviews-sv-375.png",
+      "note": "interviews in sv at 375px (mobile-375)"
+    },
+    {
+      "file": "before-reports-sv-375.png",
+      "note": "reports in sv at 375px (mobile-375)"
+    },
+    {
+      "file": "before-overview-en-375.png",
+      "note": "overview in en at 375px (mobile-375)"
+    },
+    {
+      "file": "before-jobs-en-375.png",
+      "note": "jobs in en at 375px (mobile-375)"
+    },
+    {
+      "file": "before-applications-en-375.png",
+      "note": "applications in en at 375px (mobile-375)"
+    },
+    {
+      "file": "before-assessments-en-375.png",
+      "note": "assessments in en at 375px (mobile-375)"
+    },
+    {
+      "file": "before-interviews-en-375.png",
+      "note": "interviews in en at 375px (mobile-375)"
+    },
+    {
+      "file": "before-reports-en-375.png",
+      "note": "reports in en at 375px (mobile-375)"
+    }
+  ]
+}
