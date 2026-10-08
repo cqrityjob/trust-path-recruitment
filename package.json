@@ -192,6 +192,8 @@
     "negative-controls:global-certification": "bun run scripts/negative-controls/global-certification-controls.ts",
     "negative-controls:classifier-behaviour": "bun run scripts/negative-controls/classifier-behaviour-controls.ts",
     "negative-controls:governed-issuer": "bun run scripts/negative-controls/governed-issuer-controls.ts",
+    "recruiter-ai-contract:test": "bun test scripts/recruiter-ai-contract.test.ts",
+    "recruiter-ai-synthetic:evaluate": "bun scripts/recruiter-ai-synthetic-evaluation.ts",
     "scripts:typecheck": "tsc -p tsconfig.scripts.json --noEmit",
     "passport-regulatory-claim:check": "bun run scripts/passport-regulatory-claim-check.ts",
     "passport-scope-surface:check": "bun run scripts/passport-scope-surface-check.ts",
