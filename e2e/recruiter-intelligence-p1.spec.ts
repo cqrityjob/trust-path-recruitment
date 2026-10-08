@@ -157,6 +157,13 @@ test("100 oracle: global status/counts/order, source-aware manual review, preser
         await expect(page.getByTestId("filtered-review-counts")).toContainText(
           lang === "sv" ? "0 ansökningar" : "0 applications",
         );
+        // Stage links keep the recruitment filter, so they may not display
+        // organisation-wide counts such as New (50) on the empty job.
+        const stageLabels = await page
+          .getByTestId("stage-filter")
+          .locator("option")
+          .allTextContents();
+        expect(stageLabels.every((label) => !/\(\d+\)/.test(label))).toBe(true);
         await page.getByTestId("count-received").click();
         await expect(visibleRows(page)).toHaveCount(25);
         expect(new URL(page.url()).searchParams.has("job")).toBe(false);
@@ -335,18 +342,35 @@ test("explicit chosen clarification reaches the existing PEACE case once without
     const headers = { Authorization: `Bearer ${await sessionToken(page)}` };
     const rpc = async (name: string, data: object) => {
       const response = await page.request.post(`${API}/rest/v1/rpc/${name}`, { headers, data });
-      expect(response.ok(), `${name}: HTTP ${response.status()}`).toBe(true);
-      return response.json();
+      const body = await response.text();
+      expect(response.ok(), `${name}: HTTP ${response.status()} ${body}`).toBe(true);
+      return body ? JSON.parse(body) : null;
     };
     // Use the application's existing atomic start contract, preserving its
     // lifecycle and setup, rather than inserting a case through a test shortcut.
+    // Full migration replay creates fresh UUIDs; bind the role by its actual
+    // slug/version rather than an ID copied from an earlier test database.
+    const packsResponse = await page.request.get(`${API}/rest/v1/scp_interview_packs`, {
+      headers,
+      params: { slug: "eq.vaktare-se", select: "id" },
+    });
+    expect(packsResponse.ok()).toBe(true);
+    const packs = await packsResponse.json();
+    expect(packs).toHaveLength(1);
+    const versionsResponse = await page.request.get(`${API}/rest/v1/scp_interview_pack_versions`, {
+      headers,
+      params: { pack_id: `eq.${packs[0].id}`, version_number: "eq.1", select: "id,content_hash" },
+    });
+    expect(versionsResponse.ok()).toBe(true);
+    const versions = await versionsResponse.json();
+    expect(versions).toHaveLength(1);
     const start = await rpc("scp_iv_start_interview", {
       _employer_id: EMPLOYER,
       _application_id: uuid(80),
       _source_kind: "chosen_setup",
       _source_id: null,
       _method: "trust",
-      _pack_version_id: "162d10b3-9b3d-4153-88c3-5d7f9c6f6896",
+      _pack_version_id: versions[0].id,
       _role_group: null,
       _role_profile: null,
       _environment: null,
@@ -423,5 +447,183 @@ test("explicit chosen clarification reaches the existing PEACE case once without
     await capture(page, "sv-desktop-explicit-peace-handoff");
   } finally {
     await context.close();
+  }
+});
+
+test("cached recruitment navigation resets the profile target and unsaved drafts even at equal version numbers", async ({
+  browser,
+}, info) => {
+  test.skip(info.project.name !== "chromium", "One controlled cached-route transition.");
+  const context = await browser.newContext({ baseURL: BASE });
+  try {
+    const page = await context.newPage();
+    await signIn(page, "sv");
+    const headers = { Authorization: `Bearer ${await sessionToken(page)}` };
+    const rpc = async (name: string, data: object) => {
+      const response = await page.request.post(`${API}/rest/v1/rpc/${name}`, { headers, data });
+      const body = await response.text();
+      expect(response.ok(), `${name}: HTTP ${response.status()} ${body}`).toBe(true);
+      return body ? JSON.parse(body) : null;
+    };
+    const jobB = "ee100000-2222-4000-8000-000000000002";
+    // Create the second profile through the existing authorised structure
+    // and confirmation contracts. There remain exactly 100 applications.
+    await rpc("rec_save_vacancy_structure", {
+      _job_id: jobB,
+      _requirements: [
+        {
+          key: "B1",
+          kind: "mandatory",
+          label_sv: "Syntetiskt B-krav",
+          label_en: "Synthetic B criterion",
+        },
+      ],
+      _questions: [
+        {
+          requirement_key: "B1",
+          prompt_sv: "Har du B1?",
+          prompt_en: "Do you hold B1?",
+          answer_kind: "yes_no",
+          is_required: false,
+        },
+      ],
+    });
+    const b = await rpc("rec_ri_get_profile", { _job_id: jobB });
+    await rpc("rec_ri_confirm_profile", {
+      _job_id: jobB,
+      _expected_version: 0,
+      _operation_id: "ee100000-3333-4000-8000-000000000099",
+      _start_date: "2027-02-01",
+      _rules: [
+        {
+          requirementId: b.requirements[0].id,
+          kind: "mandatory",
+          acceptedSources: ["application_answer"],
+          decisionRule: "boolean_yes",
+          questionId: b.questions[0].id,
+          instructionSv: "Kontrollera B-originalet",
+          instructionEn: "Check B original",
+        },
+      ],
+    });
+    await page.goto(`/employer/${SLUG}/jobs/${JOB}?step=requirements`);
+    const profile = page.getByTestId("requirement-profile");
+    await expect(profile).toHaveAttribute("data-job-id", JOB);
+    await expect(profile.getByTestId("profile-start-date")).toHaveValue("2026-11-01");
+    await profile.getByTestId("profile-start-date").fill("2040-01-01");
+    // Dispatch the native history event to change only route parameters,
+    // retaining this document and the React Query cache (no full reload).
+    const navigateSameDocument = async (job: string) => {
+      await page.evaluate((path) => {
+        const current = history.state ?? {};
+        history.pushState(current, "", path);
+        window.dispatchEvent(new PopStateEvent("popstate", { state: current }));
+      }, `/employer/${SLUG}/jobs/${job}?step=requirements`);
+      await expect(profile).toHaveAttribute("data-job-id", job);
+    };
+    await navigateSameDocument(jobB);
+    await expect(profile.getByTestId("profile-start-date")).toHaveValue("2027-02-01");
+    await expect(profile).toContainText("Syntetiskt B-krav");
+    await profile.getByTestId("profile-start-date").fill("2041-01-01");
+    await navigateSameDocument(JOB);
+    await expect(profile.getByTestId("profile-start-date")).toHaveValue("2026-11-01");
+    await expect(profile).toContainText("Krav R1");
+    await navigateSameDocument(jobB);
+    await expect(profile.getByTestId("profile-start-date")).toHaveValue("2027-02-01");
+    expect((await rpc("rec_ri_get_profile", { _job_id: JOB })).version).toBe(1);
+    expect((await rpc("rec_ri_get_profile", { _job_id: jobB })).version).toBe(1);
+    await capture(page, "sv-desktop-cached-job-profile-target");
+  } finally {
+    await context.close();
+  }
+});
+
+test("archive-only recruitment still exposes all received applications and its archive filter", async ({
+  browser,
+}, info) => {
+  test.skip(info.project.name !== "chromium", "One controlled archive-only synthetic population.");
+  test.setTimeout(120_000);
+  const contexts: BrowserContext[] = [];
+  try {
+    const context = await browser.newContext({ baseURL: BASE });
+    contexts.push(context);
+    const page = await context.newPage();
+    await signIn(page, "sv");
+    const headers = { Authorization: `Bearer ${await sessionToken(page)}` };
+    const rpc = async (name: string, data: object) => {
+      const response = await page.request.post(`${API}/rest/v1/rpc/${name}`, { headers, data });
+      const body = await response.text();
+      expect(response.ok(), `${name}: HTTP ${response.status()} ${body}`).toBe(true);
+      return body ? JSON.parse(body) : null;
+    };
+    const args = {
+      _employer_id: EMPLOYER,
+      _job_id: JOB,
+      _filters: { stage: "received" },
+      _sort: "requirements",
+      _dir: "desc",
+      _page: 1,
+      _size: 100,
+      _around: null,
+    };
+    const baseline = await rpc("rec_ri_candidate_view", args);
+    expect(baseline.rows).toHaveLength(100);
+    for (const row of baseline.rows) {
+      await rpc("rec_set_application_stage", {
+        _application_id: row.id,
+        _expected_status: row.status,
+        _new_status: "rejected",
+        _note: "Explicit synthetic local archive regression; no candidate notification",
+      });
+      await rpc("rec_archive_material", { _job_id: JOB, _application_id: row.id, _archive: true });
+    }
+    const archived = await rpc("rec_ri_candidate_view", args);
+    expect(archived.intelligenceCounts).toMatchObject({ received: 100, archived: 100 });
+    expect(archived.counts.total).toBe(0);
+    for (const [lang, mobile] of [
+      ["sv", false],
+      ["en", true],
+    ] as const) {
+      const view = mobile
+        ? await browser.newContext({
+            baseURL: BASE,
+            viewport: { width: 375, height: 812 },
+            isMobile: true,
+            hasTouch: true,
+          })
+        : context;
+      if (mobile) contexts.push(view);
+      const target = mobile ? await view.newPage() : page;
+      if (mobile) await signIn(target, lang);
+      await target.goto(`/employer/${SLUG}/jobs/${JOB}?step=applications&stage=open`);
+      await expect(target.getByTestId("candidate-empty")).toContainText(
+        lang === "sv" ? "Inga kandidater matchar filtren." : "No candidates match the filters.",
+      );
+      await expect(target.getByTestId("candidate-empty")).not.toContainText(
+        lang === "sv" ? "Inga ansökningar ännu." : "No applications yet.",
+      );
+      await target.getByTestId("candidate-empty").getByRole("button").click();
+      await expect(visibleRows(target)).toHaveCount(25);
+      expect(new URL(target.url()).searchParams.get("stage")).toBe("received");
+      await expect(target.getByTestId("count-received").locator("strong")).toHaveText("100");
+      await target.getByTestId("count-received").click();
+      for (let p = 1; p <= 4; p++) {
+        if (p > 1)
+          await target.goto(
+            `/employer/${SLUG}/jobs/${JOB}?step=applications&stage=received&page=${p}`,
+          );
+        await expect(visibleRows(target)).toHaveCount(25);
+        await expect(target.getByTestId("active-population-reset")).toHaveCount(0);
+        expect(await ids(target)).toEqual(ordered.slice((p - 1) * 25, p * 25));
+      }
+      await target.getByTestId("stage-filter").selectOption("archived");
+      await expect(visibleRows(target)).toHaveCount(25);
+      await expect(target.getByTestId("filtered-review-counts")).toContainText(
+        lang === "sv" ? "100 ansökningar" : "100 applications",
+      );
+      await capture(target, `${lang}-${mobile ? "emulated-375" : "desktop"}-archive-only-received`);
+    }
+  } finally {
+    for (const context of contexts) await context.close();
   }
 });
