@@ -447,7 +447,6 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // ledger, body and privilege parity are recorded in the 2026-10-08 hosted proof.
 // Conflict transport is installed; only requirements080 is pending.
 const expectedPending: string[] = [
-  "20270308090000_recruiter_intelligence_requirements.sql",
 ];
 
 const hostedIdentities = [
