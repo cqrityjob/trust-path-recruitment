@@ -13,7 +13,12 @@ export default defineConfig({
   workers: 1,
   forbidOnly: true,
   captureGitInfo: { commit: false, diff: false },
-  reporter: [["json"]],
+  reporter: [
+    [
+      "json",
+      { outputFile: join(root, "p1-native-stack/supabase/.temp/browser/playwright-report.json") },
+    ],
+  ],
   outputDir: join(root, "p1-native-stack/supabase/.temp/browser/results"),
   use: { baseURL: APP, trace: "off", screenshot: "off", video: "off" },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],

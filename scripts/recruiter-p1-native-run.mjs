@@ -44,6 +44,7 @@ import {
 } from "./recruiter-p1-native-fixture.mjs";
 import { writeNativePublic } from "./recruiter-p1-native-public.mjs";
 import { createNativeCvBucket, storageFailure } from "./recruiter-p1-native-storage.mjs";
+import { summarizeNativeBrowser } from "./recruiter-p1-native-browser-summary.mjs";
 import {
   capturePrivateOutput,
   fixtureFailure,
@@ -653,25 +654,35 @@ try {
       "utf8",
     );
     writePrivate("browser/recruiter-intelligence-p1-native.spec.ts", nativeBrowserSource(source));
-    const result = command(
-      "bunx",
-      ["playwright", "test", "--config", "scripts/recruiter-p1-native-browser.config.ts"],
-      "browser",
-      {
-        timeout: 1_200_000,
-        env: {
-          ...process.env,
-          E2E_LOCAL_STACK: "1",
-          E2E_BASE_URL: APP,
-          E2E_SUPABASE_URL: API,
-          E2E_RI_OWNER_EMAIL: actors.owner.email,
-          E2E_RI_PASSWORD: actors.owner.password,
-          E2E_RI_NATIVE_ANON_KEY: status.ANON_KEY,
-          E2E_RI_EVIDENCE_DIR: privateFile("browser/curated"),
+    const browserReport = writePrivate("browser/playwright-report.json", "");
+    let browserCommandError;
+    try {
+      command(
+        "bunx",
+        ["playwright", "test", "--config", "scripts/recruiter-p1-native-browser.config.ts"],
+        "browser",
+        {
+          timeout: 1_200_000,
+          env: {
+            ...process.env,
+            E2E_LOCAL_STACK: "1",
+            E2E_BASE_URL: APP,
+            E2E_SUPABASE_URL: API,
+            E2E_RI_OWNER_EMAIL: actors.owner.email,
+            E2E_RI_PASSWORD: actors.owner.password,
+            E2E_RI_NATIVE_ANON_KEY: status.ANON_KEY,
+            E2E_RI_EVIDENCE_DIR: privateFile("browser/curated"),
+          },
         },
-      },
-    );
-    report.browser = requireBrowserCounts(JSON.parse(result).stats);
+      );
+    } catch (error) {
+      browserCommandError = error;
+    }
+    // Read the private reporter file for both outcomes. Never publish raw
+    // messages or reinterpret a nonzero exit as an accepted run.
+    report.browserDiagnostic = summarizeNativeBrowser(readPrivateJson(browserReport));
+    if (browserCommandError) throw browserCommandError;
+    report.browser = requireBrowserCounts(report.browserDiagnostic.stats);
     report.serverSignedOriginalUiReads = 4;
     report.finalSafety = safety(2);
   });

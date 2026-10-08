@@ -12,7 +12,7 @@ import {
 
 export const SQL_HASH = "45db1d33d64f1fc1c424f2a22090105694daecdb079cf2eaee5afa277a1f98ce";
 export const API_HASH = "b650ce6987192c88404cc65bca63bad4f23983fd711e2af7c89cb3327ae4b3a4";
-export const BROWSER_HASH = "dc1e4e02f97e3116c553dc287d97360a99363f55e02fb0da7962a4c26acf72c4";
+export const BROWSER_HASH = "3ac000be5fbaf613e11ef8393ce51f0e4f0da0adafee5d69d45173fe25f8988b";
 function pinned(source, expected) {
   if (sha256(source) !== expected) throw Error("P1_NATIVE_CANONICAL_SOURCE_CHANGED");
 }

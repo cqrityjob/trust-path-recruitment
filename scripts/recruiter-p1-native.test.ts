@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import {
   ACTORS,
   API,
@@ -34,6 +34,7 @@ import {
 } from "./recruiter-p1-native-fixture.mjs";
 import { writeNativePublic } from "./recruiter-p1-native-public.mjs";
 import { CV_BUCKET, createNativeCvBucket, storageFailure } from "./recruiter-p1-native-storage.mjs";
+import { summarizeNativeBrowser } from "./recruiter-p1-native-browser-summary.mjs";
 import {
   capturePrivateOutput,
   fixtureFailure,
@@ -797,4 +798,78 @@ test("SQL phase diagnostics accept fixed markers and syntax state while refusing
   );
   const generated = appFixtureSql(sql, ns);
   assert.equal((generated.match(/^\\echo RI_P1_FIXTURE_PHASE /gm) ?? []).length, 11);
+});
+
+test("actual harmless Playwright JSON preserves a failing case and source line while redacting all private error data", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "p1-browser-report-"));
+  try {
+    const titles = [...browser.matchAll(/test\("([^"]+)"/g)].map((match) => match[1]);
+    assert.equal(titles.length, 5);
+    const source =
+      `import {test,expect} from ${JSON.stringify(path.join(root, "node_modules/@playwright/test/index.mjs"))};\n` +
+      titles
+        .map(
+          (title, i) =>
+            `test(${JSON.stringify(title)},()=>{expect(${i === 2 ? 1 : 0},"private_secret_canary").toBe(0)});`,
+        )
+        .join("\n");
+    const spec = path.join(dir, "recruiter-intelligence-p1-native.spec.ts");
+    const file = path.join(dir, "report.json");
+    fs.writeFileSync(spec, source, { mode: 0o600 });
+    fs.writeFileSync(file, "", { mode: 0o600 });
+    const config = path.join(dir, "playwright.config.mjs");
+    fs.writeFileSync(
+      config,
+      `export default {testDir:${JSON.stringify(dir)},testMatch:"recruiter-intelligence-p1-native.spec.ts",workers:1,retries:0,reporter:[["json",{outputFile:${JSON.stringify(file)}}]],outputDir:${JSON.stringify(path.join(dir, "results"))}}`,
+      { mode: 0o600 },
+    );
+    const result = spawnSync(
+      "node",
+      [path.join(root, "node_modules/@playwright/test/cli.js"), "test", "--config", config],
+      {
+        cwd: dir,
+        env: { PATH: process.env.PATH },
+        encoding: "utf8",
+        timeout: 30_000,
+      },
+    );
+    assert.equal(result.status, 1, "one intentional assertion must fail");
+    assert.equal(fs.statSync(file).mode & 0o777, 0o600);
+    const raw = JSON.parse(fs.readFileSync(file, "utf8"));
+    assert.match(JSON.stringify(raw), /private_secret_canary/);
+    const summary = summarizeNativeBrowser(raw);
+    assert.deepEqual(summary.stats, { expected: 4, unexpected: 1, flaky: 0, skipped: 0 });
+    assert.deepEqual(
+      summary.cases.find((item: { case: string }) => item.case === "explicit_peace_handoff"),
+      {
+        case: "explicit_peace_handoff",
+        status: "unexpected",
+        attempts: 1,
+        sourceLines: [4],
+      },
+    );
+    assert.doesNotMatch(
+      JSON.stringify(summary),
+      /private_secret_canary|\.spec\.ts|Bearer|file:|\/tmp/,
+    );
+    assert.throws(() => requireBrowserCounts(summary.stats), /FIVE_BROWSER_CASES_REQUIRED/);
+    const wrong = structuredClone(raw);
+    wrong.stats.unexpected = 0;
+    assert.throws(() => summarizeNativeBrowser(wrong), /COUNTS_MISMATCH/);
+    const unknown = structuredClone(raw);
+    const replaceTitle = (suites: typeof raw.suites) => {
+      for (const suite of suites) {
+        if (suite.specs.length) {
+          suite.specs[0].title = "private_secret_canary";
+          return true;
+        }
+        if (replaceTitle(suite.suites)) return true;
+      }
+      return false;
+    };
+    replaceTitle(unknown.suites);
+    assert.throws(() => summarizeNativeBrowser(unknown), /IDENTITY_REQUIRED/);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
 });
