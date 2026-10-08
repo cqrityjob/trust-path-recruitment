@@ -1,0 +1,220 @@
+{
+  "kind": "actual_gotrue_storage_postgrest14_snapshot_ui_ci",
+  "runId": 37773555371,
+  "jobId": 113298742234,
+  "artifactId": 11549306797,
+  "artifactZipSha256": "c18d41735625d29a7fa3f5b4303f2c38abedeca0487c6d837f90eff6ecd7134f",
+  "evidenceCodeSha": "191d283777601b5eb3ee3a89d7233a05a940d07f",
+  "releaseSchemaSha": "250623cfb677c931caf70a2354daf774f72f443a",
+  "appSha": "3d66dd8cb0ce4c03d9d8e9a27aeb179aa9182101",
+  "serviceVersions": {
+    "cli": "2.111.0",
+    "node": "v22.23.3",
+    "bun": "1.3.14",
+    "postgres": "17.6",
+    "gotrueImage": "public.ecr.aws/supabase/gotrue:v2.194.0",
+    "storageImage": "public.ecr.aws/supabase/storage-api:v1.67.20",
+    "postgrestImage": "public.ecr.aws/supabase/postgrest:v14.15",
+    "postgresImage": "public.ecr.aws/supabase/postgres:17.6.1.156",
+    "postgrestBinary": "PostgREST 14.15"
+  },
+  "storage": [
+    {
+      "mode": "missing-preflight",
+      "status": "PASS",
+      "outcome": "preflight-rejected",
+      "cleanup": null,
+      "setupCleanupConfirmed": true,
+      "storagePosts": 0,
+      "attachActualStatuses": [],
+      "deleteCalls": 0,
+      "readbackStatuses": []
+    },
+    {
+      "mode": "reject-cleanup-confirmed",
+      "status": "PASS",
+      "outcome": "not_attached",
+      "cleanup": "confirmed",
+      "setupCleanupConfirmed": true,
+      "storagePosts": 1,
+      "attachActualStatuses": [
+        500
+      ],
+      "deleteCalls": 1,
+      "readbackStatuses": [
+        200
+      ]
+    },
+    {
+      "mode": "reject-cleanup503-pending",
+      "status": "PASS",
+      "outcome": "not_attached",
+      "cleanup": "pending",
+      "setupCleanupConfirmed": true,
+      "storagePosts": 1,
+      "attachActualStatuses": [
+        500
+      ],
+      "deleteCalls": 1,
+      "readbackStatuses": [
+        200
+      ]
+    },
+    {
+      "mode": "committed-reply-lost",
+      "status": "PASS",
+      "outcome": "saved",
+      "cleanup": null,
+      "setupCleanupConfirmed": true,
+      "storagePosts": 1,
+      "attachActualStatuses": [
+        200
+      ],
+      "deleteCalls": 0,
+      "readbackStatuses": [
+        200
+      ]
+    },
+    {
+      "mode": "committed-reply-lost-read-denied",
+      "status": "PASS",
+      "outcome": "outcome_unknown",
+      "cleanup": null,
+      "setupCleanupConfirmed": true,
+      "storagePosts": 1,
+      "attachActualStatuses": [
+        200
+      ],
+      "deleteCalls": 0,
+      "readbackStatuses": [
+        401
+      ]
+    },
+    {
+      "mode": "ordinary-success",
+      "status": "PASS",
+      "outcome": "saved",
+      "cleanup": null,
+      "setupCleanupConfirmed": true,
+      "storagePosts": 1,
+      "attachActualStatuses": [
+        200
+      ],
+      "deleteCalls": 0,
+      "readbackStatuses": [
+        200
+      ]
+    },
+    {
+      "mode": "revoked-after-preflight",
+      "status": "PASS",
+      "outcome": "outcome_unknown",
+      "cleanup": null,
+      "setupCleanupConfirmed": true,
+      "storagePosts": 1,
+      "attachActualStatuses": [
+        403
+      ],
+      "deleteCalls": 0,
+      "readbackStatuses": []
+    }
+  ],
+  "browserPrimary": {
+    "expected": 12,
+    "unexpected": 0,
+    "flaky": 0,
+    "skipped": 0
+  },
+  "browserCAS": {
+    "expected": 2,
+    "unexpected": 0,
+    "flaky": 0,
+    "skipped": 0
+  },
+  "actualGoTrueCAS": {
+    "status": 409,
+    "code": "PT409",
+    "message": "SCP_IV_SESSION_PROCESS_STALE",
+    "elapsedMs": 7.53,
+    "timeoutMs": 8000
+  },
+  "beforeBrowser": {
+    "migration_count": 385,
+    "migration_frontier": "20270307100000",
+    "auth_users": 8,
+    "auth_confirmed_invalid_bcrypt": 8,
+    "jobs": 12,
+    "applications": 12,
+    "receipts_enabled": 0,
+    "cases": 0,
+    "reports": 0,
+    "ai_enabled": false,
+    "transcript_enabled": false,
+    "ai_runs": 0,
+    "sw_ai_runs": 0,
+    "recruitment_messages": 0,
+    "email_attempts": 0,
+    "erasure_jobs": 0,
+    "storage_erasure_queue": 0,
+    "cron_jobs": 0
+  },
+  "afterBrowser": {
+    "migration_count": 385,
+    "migration_frontier": "20270307100000",
+    "auth_users": 8,
+    "auth_confirmed_invalid_bcrypt": 8,
+    "jobs": 12,
+    "applications": 12,
+    "receipts_enabled": 0,
+    "cases": 14,
+    "reports": 12,
+    "ai_enabled": false,
+    "transcript_enabled": false,
+    "ai_runs": 0,
+    "sw_ai_runs": 0,
+    "recruitment_messages": 0,
+    "email_attempts": 0,
+    "erasure_jobs": 0,
+    "storage_erasure_queue": 0,
+    "cron_jobs": 0
+  },
+  "canonicalMigrationCount": 385,
+  "canonicalHashesCheckedAgainstExactRelease": true,
+  "allStages": {
+    "official_stack": "passed",
+    "strict_schema_replay": "passed",
+    "real_auth_and_receipt_off_fixture": "passed",
+    "real_storage_upload_recovery": "passed",
+    "pinned_app_start": "passed",
+    "twelve_real_password_ui_journeys": "passed",
+    "two_tab_real_auth_stress": "passed",
+    "real_gotrue_postgrest_bounded_conflict": "passed",
+    "final_readback": "passed",
+    "owned_stack_stop": "passed"
+  },
+  "allEightQuestionNotes": {
+    "status": "PASS",
+    "mandatoryCheckpoints": [
+      "paused",
+      "completed",
+      "evidence-review"
+    ],
+    "readPath": "Own authenticated REST note/question/status readback; exact Q1–Q8 identities, nonblank bodies and expected synthetic markers",
+    "scope": "All 12 primary journeys"
+  },
+  "curatedImageCount": 36,
+  "publishedErrors": [],
+  "explicitReloadFailure": {
+    "productCommit": "55d6b543d371aed7ec684a9e4bbe36c3ccfc36e8",
+    "includedInAppPin": true,
+    "verification": "Local QueryClient/QueryObserver regression; no native HTTP transport fault injection"
+  },
+  "limitations": [
+    "No hosted writes or proof",
+    "No physical mobile",
+    "No app HTTP upload-fault injection",
+    "No OP09 journal/resume/fence proof",
+    "No P1 100 population proof",
+    "Normal JWT expiry invalidation is not claimed"
+  ]
+}

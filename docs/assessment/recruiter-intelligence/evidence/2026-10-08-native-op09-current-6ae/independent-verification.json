@@ -1,0 +1,373 @@
+{
+  "kind": "independent_read_only_native_op09_current_6ae_verification",
+  "result": "PASS",
+  "reviewedAt": "2026-10-08T15:28:09.814204+00:00",
+  "evidenceSha": "6ae933c68da56121cdf02d4a7d4e301510a0709e",
+  "appSha": "40e5775de5195050571421827434ec2872a61506",
+  "schemaSha": "1e5988c6f9c7121a0fefd22c0db06f6b573f0ae9",
+  "appSrcTree": "3d5feca97be01959778173fc3a0f0959fe62355c",
+  "schemaMigrationsTree": "eecc3229705f2c81f7ee8ff63eae032527bb6a38",
+  "schemaConfigBlob": "720daa8eda53adfba26e9ebde29284d7cfcd5931",
+  "bothPinnedAncestors": true,
+  "sourceTreeEquivalent": true,
+  "schemaTreeEquivalent": true,
+  "runId": 37796851340,
+  "jobId": 113378429798,
+  "artifactId": 11559159823,
+  "zipBytes": 2816182,
+  "zipSha256": "9a7e9277abd2cf2b4dfd8c8f2be8f55c1fddf0e1e5f8e5b54b9d3d91fb447de0",
+  "manifestSha256": "498b0af41ad666c0ac2f369b3ace9f00b694561baa8a32ff26fbe23590ea85c8",
+  "actualStartedAt": "2026-10-08T15:17:18.804Z",
+  "actualFinishedAt": "2026-10-08T15:20:34.918Z",
+  "stages": {
+    "official_native_stack": "passed",
+    "strict_complete_schema": "passed",
+    "real_auth_receipt_off_setup": "passed",
+    "actual_sdk_44": "passed",
+    "pinned_app_start": "passed",
+    "actual_browser_reload_resume_cleanup": "passed",
+    "final_side_effect_readback": "passed"
+  },
+  "serviceVersions": {
+    "postgres": "17.6",
+    "auth": "public.ecr.aws/supabase/gotrue:v2.194.0",
+    "storage": "public.ecr.aws/supabase/storage-api:v1.67.20",
+    "rest": "public.ecr.aws/supabase/postgrest:v14.15",
+    "db": "public.ecr.aws/supabase/postgres:17.6.1.156",
+    "postgrestBinary": "PostgREST 14.15",
+    "supabase-js": "2.110.5",
+    "auth-js": "2.110.5"
+  },
+  "verifiedMigrationCount": 387,
+  "allMigrationNamesOrderHashesMatchAuthoritativeGit": true,
+  "operationalHelperSha256": "d6c145b5dc2d25114d4f60cad22fb18e9a81ca84e3c0a14dcf1459954c0ac1fe",
+  "faultPreloadSha256": "fb946ffc25843ba8a2892eefc75830c8e1ce9a08e7fb9835b126f455407ca2ca",
+  "browserSourceSha256": "1a1ce0e8de39a5ba0687e953a1df3df43a99db3b5a930b20a9aba5b60ee12bcb",
+  "authCreated": 8,
+  "sdk": {
+    "completed": 44,
+    "kind": "actual_gotrue_storage_sdk",
+    "checks": [
+      "lost_actual_storage_reply_unknown",
+      "fresh_client_reload_retains_intent",
+      "fresh_client_explicit_resume",
+      "resume_same_record_idempotent",
+      "exactly_one_metadata_row",
+      "other_holder_direct_reconcile_denied",
+      "other_holder_direct_cleanup_denied",
+      "other_holder_original_bytes_denied",
+      "begin_own_journal",
+      "actual_owner_storage_upload",
+      "actual_fence_cleanup_transport_failure_retained",
+      "fresh_client_reload_retains_cleanup_fence",
+      "actual_late_attach_after_fence_refused",
+      "actual_late_storage_upsert_after_fence_refused",
+      "fresh_client_explicit_cleanup_retry_confirmed",
+      "cleanup_repeat_idempotent",
+      "actual_cleaned_object_not_downloadable",
+      "registration_wins_fence_preserves_record",
+      "registered_actual_bytes_unchanged",
+      "existing_withdraw_rpc_preserved",
+      "withdrawn_record_never_orphan_cleanup",
+      "begin_own_journal",
+      "actual_owner_storage_upload",
+      "prepared_own_bytes_change_for_integrity_probe",
+      "actual_altered_bytes_never_registered",
+      "altered_unregistered_bytes_explicit_cleanup",
+      "begin_own_journal",
+      "actual_owner_storage_upload",
+      "concurrent_registration_won_cleanup_preserved",
+      "concurrent_registered_original_bytes_survive",
+      "begin_own_journal",
+      "actual_owner_storage_upload",
+      "concurrent_registration_won_cleanup_preserved",
+      "concurrent_registered_original_bytes_survive",
+      "actual_gotrue_local_session_logout",
+      "replayed_jwt_live_session_inactive",
+      "revoked_session_direct_reconcile_denied",
+      "revoked_session_direct_cleanup_denied",
+      "revoked_session_direct_confirm_denied",
+      "revoked_session_direct_begin_denied",
+      "revoked_session_cannot_claim_empty_attempt_list",
+      "revoked_session_never_claims_cleanup_confirmed",
+      "revoked_session_never_resumes_attachment",
+      "revoked_session_original_bytes_denied"
+    ],
+    "observedRaceOutcomes": [
+      "registration_won",
+      "registration_won"
+    ],
+    "bothRaceOrdersObserved": false,
+    "sequentialCommittedOrdersVerified": true,
+    "logoutScope": "local",
+    "expiredJwtClaim": false,
+    "replayProtection": "Passport live-session guard; JWT may verify until TTL"
+  },
+  "browser": {
+    "expected": 4,
+    "unexpected": 0,
+    "flaky": 0,
+    "skipped": 0,
+    "locales": [
+      "sv",
+      "en"
+    ],
+    "viewports": [
+      "desktop1440",
+      "emulated375"
+    ],
+    "physicalPhone": false,
+    "journeys": [
+      {
+        "result": "PASS",
+        "locale": "sv",
+        "viewport": "desktop1440",
+        "appSha": "40e5775de5195050571421827434ec2872a61506",
+        "injections": 1,
+        "metadataCount": 1,
+        "registeredBytesPreserved": true,
+        "cleanedAbsent": true,
+        "noImplicitResume": true,
+        "noImplicitCleanupRetry": true,
+        "checks": [
+          "reload_reads_own_intent_without_implicit_attachment",
+          "explicit_resume_once_registers_one_original",
+          "one_exact_own_delete503_leaves_durable_fence_and_bytes",
+          "reload_keeps_fence_without_rearming_or_implicit_delete",
+          "explicit_retry_proves_absence_and_preserves_registered_bytes"
+        ]
+      },
+      {
+        "result": "PASS",
+        "locale": "en",
+        "viewport": "desktop1440",
+        "appSha": "40e5775de5195050571421827434ec2872a61506",
+        "injections": 1,
+        "metadataCount": 1,
+        "registeredBytesPreserved": true,
+        "cleanedAbsent": true,
+        "noImplicitResume": true,
+        "noImplicitCleanupRetry": true,
+        "checks": [
+          "reload_reads_own_intent_without_implicit_attachment",
+          "explicit_resume_once_registers_one_original",
+          "one_exact_own_delete503_leaves_durable_fence_and_bytes",
+          "reload_keeps_fence_without_rearming_or_implicit_delete",
+          "explicit_retry_proves_absence_and_preserves_registered_bytes"
+        ]
+      },
+      {
+        "result": "PASS",
+        "locale": "sv",
+        "viewport": "emulated375",
+        "appSha": "40e5775de5195050571421827434ec2872a61506",
+        "injections": 1,
+        "metadataCount": 1,
+        "registeredBytesPreserved": true,
+        "cleanedAbsent": true,
+        "noImplicitResume": true,
+        "noImplicitCleanupRetry": true,
+        "checks": [
+          "reload_reads_own_intent_without_implicit_attachment",
+          "explicit_resume_once_registers_one_original",
+          "one_exact_own_delete503_leaves_durable_fence_and_bytes",
+          "reload_keeps_fence_without_rearming_or_implicit_delete",
+          "explicit_retry_proves_absence_and_preserves_registered_bytes"
+        ]
+      },
+      {
+        "result": "PASS",
+        "locale": "en",
+        "viewport": "emulated375",
+        "appSha": "40e5775de5195050571421827434ec2872a61506",
+        "injections": 1,
+        "metadataCount": 1,
+        "registeredBytesPreserved": true,
+        "cleanedAbsent": true,
+        "noImplicitResume": true,
+        "noImplicitCleanupRetry": true,
+        "checks": [
+          "reload_reads_own_intent_without_implicit_attachment",
+          "explicit_resume_once_registers_one_original",
+          "one_exact_own_delete503_leaves_durable_fence_and_bytes",
+          "reload_keeps_fence_without_rearming_or_implicit_delete",
+          "explicit_retry_proves_absence_and_preserves_registered_bytes"
+        ]
+      }
+    ]
+  },
+  "beforeSdk": {
+    "auth": 8,
+    "jobs": 1,
+    "ai_runs": 0,
+    "journal": 0,
+    "evidence": 0,
+    "messages": 0,
+    "confirmed": 8,
+    "ai_enabled": false,
+    "sw_ai_runs": 0,
+    "applications": 0,
+    "erasure_jobs": 0,
+    "erasure_queue": 0,
+    "mail_attempts": 0,
+    "receipt_enabled": 0,
+    "cron": 0
+  },
+  "afterSdk": {
+    "auth": 8,
+    "jobs": 1,
+    "ai_runs": 0,
+    "journal": 5,
+    "evidence": 3,
+    "messages": 0,
+    "confirmed": 8,
+    "ai_enabled": false,
+    "sw_ai_runs": 0,
+    "applications": 0,
+    "erasure_jobs": 0,
+    "erasure_queue": 0,
+    "mail_attempts": 0,
+    "receipt_enabled": 0,
+    "cron": 0
+  },
+  "finalReadback": {
+    "auth": 8,
+    "jobs": 1,
+    "ai_runs": 0,
+    "journal": 13,
+    "evidence": 7,
+    "messages": 0,
+    "confirmed": 8,
+    "ai_enabled": false,
+    "sw_ai_runs": 0,
+    "applications": 0,
+    "erasure_jobs": 0,
+    "erasure_queue": 0,
+    "mail_attempts": 0,
+    "receipt_enabled": 0,
+    "cron": 0
+  },
+  "ownedStackStopped": true,
+  "allTwelveArchivePngHashSizeMatchManifest": true,
+  "images": [
+    {
+      "path": "images/en-desktop1440-cleaned.png",
+      "sha256": "941cc50d3f560372c2f1f91e7ddb4e18bf5bf3ee937ce74c7d884fb45616bebf",
+      "bytes": 259127,
+      "width": 1440,
+      "height": 3100
+    },
+    {
+      "path": "images/en-desktop1440-fenced.png",
+      "sha256": "dde3a78654c2438da9c8a4e3e39d170e3fb21e7b2ce60ce2748d640a6233c20e",
+      "bytes": 263301,
+      "width": 1440,
+      "height": 3188
+    },
+    {
+      "path": "images/en-desktop1440-resumed.png",
+      "sha256": "82d53bf869285d89e60835768382f46b192d3cc5c74534c4f02451f44c10ba41",
+      "bytes": 264347,
+      "width": 1440,
+      "height": 3188
+    },
+    {
+      "path": "images/en-emulated375-cleaned.png",
+      "sha256": "f488e59e0cd1ece146f86eddb186881ab0c1116e46ac6c2cd4f97876cd86c9da",
+      "bytes": 244839,
+      "width": 375,
+      "height": 4504
+    },
+    {
+      "path": "images/en-emulated375-fenced.png",
+      "sha256": "6ac3bffa9465cc152018db71e70e600ced32af4cbd0df021a20b264ad2a7cc7e",
+      "bytes": 251771,
+      "width": 375,
+      "height": 4565
+    },
+    {
+      "path": "images/en-emulated375-resumed.png",
+      "sha256": "058af6eac17d289d3aba3f7f01953ef443a54021594c24aa957fde3ebb627e27",
+      "bytes": 254108,
+      "width": 375,
+      "height": 4617
+    },
+    {
+      "path": "images/sv-desktop1440-cleaned.png",
+      "sha256": "ecbf90537c6975b30e687a74f582b048af92c58c0567fc2ea9ce1bef5b0e6ec1",
+      "bytes": 248878,
+      "width": 1440,
+      "height": 3103
+    },
+    {
+      "path": "images/sv-desktop1440-fenced.png",
+      "sha256": "07911b4de28cee2c2951245f1b80bb6c393166f3b4de125a16d5de6c16285bb0",
+      "bytes": 253786,
+      "width": 1440,
+      "height": 3190
+    },
+    {
+      "path": "images/sv-desktop1440-resumed.png",
+      "sha256": "511a15d8fb38be01efc514db1555e5d2f0b0f4bb08e00b3f8b54c18bf6b949af",
+      "bytes": 254661,
+      "width": 1440,
+      "height": 3190
+    },
+    {
+      "path": "images/sv-emulated375-cleaned.png",
+      "sha256": "edb0d1a2ab38f0ce7c547fb69ae32577968eafa1b8165c0cf41e13cca64e7c5e",
+      "bytes": 230668,
+      "width": 375,
+      "height": 4337
+    },
+    {
+      "path": "images/sv-emulated375-fenced.png",
+      "sha256": "a9a1d356d44fc18754166a3a48ee4d2fc8f54ff3af2f1ac4dbf11f289901c89d",
+      "bytes": 236544,
+      "width": 375,
+      "height": 4398
+    },
+    {
+      "path": "images/sv-emulated375-resumed.png",
+      "sha256": "756bf06f58b01e92723284675f2a6ce2145deb914c9b83429e310409f6d9e613",
+      "bytes": 238830,
+      "width": 375,
+      "height": 4450
+    }
+  ],
+  "remoteCorroboration": {
+    "latestAttemptJob": "completed/success",
+    "artifactDigestMatchesDownloadedZip": true,
+    "artifactEvidenceHeadMatches": true
+  },
+  "limits": [
+    "Fresh actual ephemeral GitHub stack, not hosted or published runtime/CDN",
+    "Local logout and Passport live-session guard, not JWT expiry or universal global logout",
+    "Both observed concurrent races registration_won; both sequential orders checked, not both concurrent orders",
+    "375 is actual isMobile/hasTouch Chromium emulation, not physical phone",
+    "Core same6ae PG16 failure from ECR rate-limit remains separate; no whole current CI PASS",
+    "No service/test/Auth/Storage/DB execution or production writes by independent reviewer",
+    "Historical7b2/a037/2bb evidence is not relabeled"
+  ],
+  "visualReview": {
+    "status": "COMPLETED_TWO_CURRENT_ORIGINALS_ONLY",
+    "selected": [
+      {
+        "path": "/private/tmp/ri-op09-native-current-6ae-20261008/images/sv-desktop1440-fenced.png",
+        "sha256": "07911b4de28cee2c2951245f1b80bb6c393166f3b4de125a16d5de6c16285bb0",
+        "observation": "Swedish desktop shows durable Removal needs confirmation with explicit retry/reload, separate retained registered original and no completed-cleanup claim."
+      },
+      {
+        "path": "/private/tmp/ri-op09-native-current-6ae-20261008/images/en-emulated375-fenced.png",
+        "sha256": "6ac3bffa9465cc152018db71e70e600ced32af4cbd0df021a20b264ad2a7cc7e",
+        "observation": "English375 shows durable fence and explicit retry, while registered op09-resume.pdf remains separate. Known nearly character-per-line filename wrapping remains; no physical-phone or polished mobile-layout claim."
+      }
+    ],
+    "layoutDebt": [
+      "Registered filename wraps narrowly alongside action buttons on375."
+    ],
+    "currentArchiveBytesRead": true
+  },
+  "newBlockingFindings": [],
+  "reviewCompletedAt": "2026-10-08T15:29:03.625399+00:00"
+}

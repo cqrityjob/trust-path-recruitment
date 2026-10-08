@@ -1,0 +1,19 @@
+{
+  "observedAt": "2026-10-08T09:39:38Z",
+  "id": 37757213133,
+  "headSha": "4a5921e7e7bcd0ef02b984e7abb0d4b7afe43a20",
+  "status": "completed",
+  "conclusion": "failure",
+  "updatedAt": "2026-10-08T09:34:49Z",
+  "jobs": [
+    {
+      "id": 113244602192,
+      "name": "Real GoTrue, Storage, PostgREST 14 and snapshot app",
+      "status": "completed",
+      "conclusion": "failure",
+      "failedSteps": [
+        "Fresh real Supabase, strict history, Storage and 12 UI journeys plus 2 CAS probes"
+      ]
+    }
+  ]
+}

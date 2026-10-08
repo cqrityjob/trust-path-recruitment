@@ -1,0 +1,316 @@
+{
+  "schemaVersion": "ri-e341-ci-attempt2-terminal-v1",
+  "observedAt": "2026-10-08T16:11:44.528Z",
+  "head": "e3418b3b7f0c82af74e38a276fd7b897d9d07a2c",
+  "runId": 37800119402,
+  "runAttempt": 2,
+  "core": {
+    "conclusion": "success",
+    "passed": 9,
+    "total": 9,
+    "ownerOnlyRetry": {
+      "oldJobId": 113390264909,
+      "currentJobId": 113410073851,
+      "acceptedAt": "2026-10-08T16:04:35Z",
+      "startedAt": "2026-10-08T16:04:39Z",
+      "completedAt": "2026-10-08T16:05:48Z"
+    }
+  },
+  "external": {
+    "passed": 9,
+    "total": 9
+  },
+  "native": {
+    "runId": 37800119373,
+    "jobId": 113389758215,
+    "conclusion": "success"
+  },
+  "totalJobs": 19,
+  "successJobs": 19,
+  "failureJobs": 0,
+  "jobs": [
+    {
+      "runId": 37800119373,
+      "name": "Recruiter real Supabase evidence",
+      "jobs": [
+        {
+          "id": 113389758215,
+          "name": "Real GoTrue, Storage, PostgREST 14 and snapshot app",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "runId": 37800119396,
+      "name": "Passport public pilot — real-backend evidence",
+      "jobs": [
+        {
+          "id": 113389757857,
+          "name": "Passport public pilot browser evidence (isolated local stack)",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "runId": 37800119405,
+      "name": "Job ad back navigation — routed browser evidence",
+      "jobs": [
+        {
+          "id": 113389757563,
+          "name": "Job ad back navigation browser evidence (isolated local stack)",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "runId": 37800119300,
+      "name": "Recruitment workspace — routed browser evidence",
+      "jobs": [
+        {
+          "id": 113389758230,
+          "name": "Recruitment workspace browser evidence (isolated local stack)",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "runId": 37800119467,
+      "name": "Application retention — worker and UI",
+      "jobs": [
+        {
+          "id": 113389757428,
+          "name": "worker-and-ui",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "runId": 37800119315,
+      "name": "E4 employer final report — routed browser evidence",
+      "jobs": [
+        {
+          "id": 113389757788,
+          "name": "E4 routed browser evidence (isolated local stack)",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "runId": 37800119358,
+      "name": "Security Work browser evidence",
+      "jobs": [
+        {
+          "id": 113390654260,
+          "name": "browser",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "runId": 37800119402,
+      "name": "CI",
+      "jobs": [
+        {
+          "id": 113410073851,
+          "name": "Recruiter Intelligence P1 — PostgreSQL 17 and concurrent HTTP API",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "id": 113410075930,
+          "name": "CV export — PDF and ATS proof",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "id": 113410076878,
+          "name": "Migration replay, RLS and rollback tests",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "id": 113410077451,
+          "name": "Passport three-market browser — catalogue, cards, pilot access",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "id": 113410078361,
+          "name": "Recruiter current schema — PostgreSQL 17 and PostgREST 14",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "id": 113410122485,
+          "name": "Lint, typecheck and deterministic checks",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "id": 113410145169,
+          "name": "Recruiter Intelligence P1 — full SQL, HTTP and browser proof",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "id": 113410149912,
+          "name": "CV browser — the signed-in journey",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "id": 113410150007,
+          "name": "Public entry browser — homepage, employers and the employer journey",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "runId": 37800119262,
+      "name": "Role assessment and TestBank regression",
+      "jobs": [
+        {
+          "id": 113389756992,
+          "name": "Assigned officer/manager reports and TestBank (isolated desktop/mobile)",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "runId": 37800119269,
+      "name": "Passport preview image — Cloudflare Worker runtime evidence",
+      "jobs": [
+        {
+          "id": 113389757194,
+          "name": "Preview image in workerd (Cloudflare Worker runtime)",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "runId": 37800119275,
+      "name": "Career Center persistence — routed browser evidence",
+      "jobs": [
+        {
+          "id": 113390022249,
+          "name": "Career Center persistence browser evidence (isolated local stack)",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ]
+    }
+  ],
+  "coreTimings": [
+    {
+      "id": 113410073851,
+      "name": "Recruiter Intelligence P1 — PostgreSQL 17 and concurrent HTTP API",
+      "startedAt": "2026-10-08T16:04:39Z",
+      "completedAt": "2026-10-08T16:05:48Z"
+    },
+    {
+      "id": 113410075930,
+      "name": "CV export — PDF and ATS proof",
+      "startedAt": "2026-10-08T15:34:39Z",
+      "completedAt": "2026-10-08T15:36:11Z"
+    },
+    {
+      "id": 113410076878,
+      "name": "Migration replay, RLS and rollback tests",
+      "startedAt": "2026-10-08T15:35:12Z",
+      "completedAt": "2026-10-08T15:48:07Z"
+    },
+    {
+      "id": 113410077451,
+      "name": "Passport three-market browser — catalogue, cards, pilot access",
+      "startedAt": "2026-10-08T15:33:42Z",
+      "completedAt": "2026-10-08T15:47:36Z"
+    },
+    {
+      "id": 113410078361,
+      "name": "Recruiter current schema — PostgreSQL 17 and PostgREST 14",
+      "startedAt": "2026-10-08T15:31:33Z",
+      "completedAt": "2026-10-08T15:41:43Z"
+    },
+    {
+      "id": 113410122485,
+      "name": "Lint, typecheck and deterministic checks",
+      "startedAt": "2026-10-08T15:31:59Z",
+      "completedAt": "2026-10-08T15:56:56Z"
+    },
+    {
+      "id": 113410145169,
+      "name": "Recruiter Intelligence P1 — full SQL, HTTP and browser proof",
+      "startedAt": "2026-10-08T15:32:30Z",
+      "completedAt": "2026-10-08T15:38:11Z"
+    },
+    {
+      "id": 113410149912,
+      "name": "CV browser — the signed-in journey",
+      "startedAt": "2026-10-08T15:31:19Z",
+      "completedAt": "2026-10-08T15:35:47Z"
+    },
+    {
+      "id": 113410150007,
+      "name": "Public entry browser — homepage, employers and the employer journey",
+      "startedAt": "2026-10-08T15:32:09Z",
+      "completedAt": "2026-10-08T16:02:19Z"
+    }
+  ],
+  "coreTimingScope": "Only API job starts after owner retry at16:04:35; other eight PASS jobs retain original15:xx timings despite new latest-attempt GitHub IDs.",
+  "apiProof": {
+    "path": "/private/tmp/ri-456-e341-p1-api-attempt2/independent-readback.json",
+    "sha256": "7f251c07229d7c7169b76dfe71677600349f4747e71695a01d203fca2245b3e3",
+    "artifactId": 11562642426,
+    "artifactSha256": "37d28541ba42f3724507beaf9e21d52cfbaf22feadb09db6d0a2c504dfecd615",
+    "originalManifestSha256": "d51d67ee10f0ea7ae3e8cd5ad34a222619cc1381aeed865dd9f902659e072c52",
+    "sqlAssertions": 95,
+    "httpAssertions": 23,
+    "migrations": 387,
+    "postgres": "17.11",
+    "postgrest": "14.15",
+    "runtime": "intentionally_not_run",
+    "browser": "intentionally_not_run",
+    "authStorage": "substitutes"
+  },
+  "nativeProof": {
+    "path": "/private/tmp/ri-native-456-e341-actual-20261008/independent-readback.json",
+    "sha256": "6e91709287b8f6dea909b1c02b279bd76278b7cb1b2e3ef2f8c23cb463694777",
+    "appSha": "40e5775de5195050571421827434ec2872a61506",
+    "schemaSha": "1e5988c6f9c7121a0fefd22c0db06f6b573f0ae9",
+    "curatedWitness": "/private/tmp/ri-final-witness-prep/interview-e341/"
+  },
+  "historicalFailurePreserved": [
+    {
+      "path": "/private/tmp/ri-456-e341-ci-attempt1-terminal.json",
+      "sha256": "202f54d59a213e1abbda565e4f8f12e2e585c518a90fddfdaff49335b3eaa6db"
+    },
+    {
+      "path": "/private/tmp/ri-456-e341-p1-api-attempt1/independent-readback.json",
+      "sha256": "69c8b9e99cab57adadb82ecdcf8c38e204b7a3f4ac709d38681f84379a1b3786"
+    }
+  ],
+  "limits": [
+    "Successful retry proves current readiness/API success, not the cause of the original readiness failure",
+    "No ECR/rate-limit or product/schema fault claimed",
+    "Job-level lint SUCCESS does not assert zero historical global lint errors; continue-on-error remains",
+    "Corrected native mobile proof and old narrow375 evidence are kept separate",
+    "No agent retry/push/head/service change"
+  ],
+  "apiRetrySourceComparison": {
+    "checkoutSha": "c3f9b9153db9aafe39070c761dda5c97a1ab73b7",
+    "sourceInputsSha256": "97c8253eb3dff6254522ef774e08aebca83f0af77efc2dcd26ea706968f992e8",
+    "sourceInputCount": 1612,
+    "sameCheckoutAsFirst": true,
+    "sameSourceInputsAsFirst": true
+  }
+}

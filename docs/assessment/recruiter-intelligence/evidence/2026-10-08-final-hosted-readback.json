@@ -1,0 +1,69 @@
+{
+  "recorded_at": "2026-10-08T16:33:27.499528Z",
+  "mode": "read_only",
+  "project_ref": "wrygicdfxwjnrugduxnt",
+  "inventory": {
+    "case_count": 21,
+    "ledger_md5": "06f74289059ecc9175ba98d6563affb0",
+    "observed_at": "2026-10-08T16:30:21.728104+00:00",
+    "role_guides": [
+      {
+        "slug": "security-manager-se",
+        "questions": 8,
+        "version_id": "9fb47b91-3c5a-466b-ab42-8dee1e25d154",
+        "stored_hash": "06d58c640dce2ddb4455ac07239d4803",
+        "competencies": 6,
+        "computed_hash": "06d58c640dce2ddb4455ac07239d4803",
+        "content_status": "draft",
+        "missing_en_names": 6,
+        "validation_label": "pilot_hypothesis",
+        "missing_en_prompts": 8,
+        "missing_en_definitions": 6
+      },
+      {
+        "slug": "vaktare-se",
+        "questions": 8,
+        "version_id": "a5acdaeb-fdd2-4d43-bd74-cb36a4e9b829",
+        "stored_hash": "6b0ace21db962486d791da79a55be19b",
+        "competencies": 6,
+        "computed_hash": "2f1e15e0c303da31942a4d2040bc8bc8",
+        "content_status": "draft",
+        "missing_en_names": 6,
+        "validation_label": "pilot_hypothesis",
+        "missing_en_prompts": 8,
+        "missing_en_definitions": 6
+      }
+    ],
+    "ledger_count": 387,
+    "ledger_latest": "20270309090000",
+    "lock_rows_md5": "f44fb1dcb3178158b809b77bc6fbea7d",
+    "snapshot_count": 21,
+    "snapshot_rows_md5": "b05d988581a4b53ea2357889daf6abcd",
+    "permanent_lock_count": 14,
+    "acknowledgement_count": 0,
+    "snapshots_observed_now": 20
+  },
+  "protected_row_comparison": {
+    "observed_at": "2026-10-08T16:33:27.499528+00:00",
+    "source_method": "row JSON newline aggregation, matching recorded installation witness",
+    "all_locks_count": 14,
+    "old_observed_snapshots_count": 20,
+    "all_lock_row_json_newline_md5": "2ae6acac5fc9c53a295db47df0dfb48b",
+    "new_case_created_snapshot_count": 1,
+    "old_observed_snapshot_row_json_newline_md5": "d8dccb112f9044502dd0163ad2bb4025"
+  },
+  "aggregation_note": "Inventory snapshot_rows_md5 and lock_rows_md5 use JSON-array aggregation and cannot be compared to prior row-JSON/newline hashes. Only protected_row_comparison uses the same row-JSON/newline method as installation witness.",
+  "prior_row_json_newline_md5": {
+    "observed_now_snapshots": "d8dccb112f9044502dd0163ad2bb4025",
+    "permanent_locks": "2ae6acac5fc9c53a295db47df0dfb48b"
+  },
+  "comparison": {
+    "prior20_observed_now_rows_unchanged": true,
+    "prior14_permanent_locks_unchanged": true,
+    "new_case_created_snapshot_count": 1,
+    "creator_attribution": "not_observed",
+    "vaktare_hash_discrepancy": "same as previously documented P0 inventory; no retroactive rehash"
+  },
+  "performed_writes": false,
+  "auth_storage_published_runtime_status": "BLOCKED; read-only inventory is not an authenticated product-flow PASS"
+}

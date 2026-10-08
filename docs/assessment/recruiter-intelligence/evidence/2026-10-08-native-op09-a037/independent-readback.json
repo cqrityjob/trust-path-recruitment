@@ -1,0 +1,181 @@
+{
+  "runId": 37774303398,
+  "jobId": 113301207464,
+  "conclusion": "success",
+  "zipArtifactId": 11549931289,
+  "zipSha256": "186f803c694fda8f5f3bf25335b56ae54692b05dfc51ad676adf1b0d22c48a33",
+  "manifestSha256": "123b460539bc74f8f74f245d9c95822d1d160d27e4de7cb61e5b5d4ee2f21d12",
+  "evidenceSha": "a037191087620fed975fade51e5585a9b604b0bd",
+  "appSha": "cce2c8a238522d51396b52697d25bc9d54a8a8bd",
+  "schemaSha": "9c8b8159ce5f350c6ace074c917823599d19ce99",
+  "stages": {
+    "official_native_stack": "passed",
+    "strict_complete_schema": "passed",
+    "real_auth_receipt_off_setup": "passed",
+    "actual_sdk_44": "passed",
+    "pinned_app_start": "passed",
+    "actual_browser_reload_resume_cleanup": "passed",
+    "final_side_effect_readback": "passed"
+  },
+  "migrationHashesVerified": 387,
+  "imageHashesVerified": 12,
+  "operationalHelperHashVerified": "d6c145b5dc2d25114d4f60cad22fb18e9a81ca84e3c0a14dcf1459954c0ac1fe",
+  "faultPreloadHashVerified": "fb946ffc25843ba8a2892eefc75830c8e1ce9a08e7fb9835b126f455407ca2ca",
+  "authCreated": 8,
+  "sdkCompleted": 44,
+  "observedRaceOutcomes": [
+    "registration_won",
+    "registration_won"
+  ],
+  "bothRaceOrdersObserved": false,
+  "sequentialCommittedOrdersVerified": true,
+  "logoutScope": "local",
+  "expiredJwtClaim": false,
+  "browser": {
+    "expected": 4,
+    "unexpected": 0,
+    "flaky": 0,
+    "skipped": 0,
+    "locales": [
+      "sv",
+      "en"
+    ],
+    "viewports": [
+      "desktop1440",
+      "emulated375"
+    ],
+    "physicalPhone": false,
+    "journeys": [
+      {
+        "result": "PASS",
+        "locale": "sv",
+        "viewport": "desktop1440",
+        "appSha": "cce2c8a238522d51396b52697d25bc9d54a8a8bd",
+        "injections": 1,
+        "metadataCount": 1,
+        "registeredBytesPreserved": true,
+        "cleanedAbsent": true,
+        "noImplicitResume": true,
+        "noImplicitCleanupRetry": true,
+        "checks": [
+          "reload_reads_own_intent_without_implicit_attachment",
+          "explicit_resume_once_registers_one_original",
+          "one_exact_own_delete503_leaves_durable_fence_and_bytes",
+          "reload_keeps_fence_without_rearming_or_implicit_delete",
+          "explicit_retry_proves_absence_and_preserves_registered_bytes"
+        ]
+      },
+      {
+        "result": "PASS",
+        "locale": "en",
+        "viewport": "desktop1440",
+        "appSha": "cce2c8a238522d51396b52697d25bc9d54a8a8bd",
+        "injections": 1,
+        "metadataCount": 1,
+        "registeredBytesPreserved": true,
+        "cleanedAbsent": true,
+        "noImplicitResume": true,
+        "noImplicitCleanupRetry": true,
+        "checks": [
+          "reload_reads_own_intent_without_implicit_attachment",
+          "explicit_resume_once_registers_one_original",
+          "one_exact_own_delete503_leaves_durable_fence_and_bytes",
+          "reload_keeps_fence_without_rearming_or_implicit_delete",
+          "explicit_retry_proves_absence_and_preserves_registered_bytes"
+        ]
+      },
+      {
+        "result": "PASS",
+        "locale": "sv",
+        "viewport": "emulated375",
+        "appSha": "cce2c8a238522d51396b52697d25bc9d54a8a8bd",
+        "injections": 1,
+        "metadataCount": 1,
+        "registeredBytesPreserved": true,
+        "cleanedAbsent": true,
+        "noImplicitResume": true,
+        "noImplicitCleanupRetry": true,
+        "checks": [
+          "reload_reads_own_intent_without_implicit_attachment",
+          "explicit_resume_once_registers_one_original",
+          "one_exact_own_delete503_leaves_durable_fence_and_bytes",
+          "reload_keeps_fence_without_rearming_or_implicit_delete",
+          "explicit_retry_proves_absence_and_preserves_registered_bytes"
+        ]
+      },
+      {
+        "result": "PASS",
+        "locale": "en",
+        "viewport": "emulated375",
+        "appSha": "cce2c8a238522d51396b52697d25bc9d54a8a8bd",
+        "injections": 1,
+        "metadataCount": 1,
+        "registeredBytesPreserved": true,
+        "cleanedAbsent": true,
+        "noImplicitResume": true,
+        "noImplicitCleanupRetry": true,
+        "checks": [
+          "reload_reads_own_intent_without_implicit_attachment",
+          "explicit_resume_once_registers_one_original",
+          "one_exact_own_delete503_leaves_durable_fence_and_bytes",
+          "reload_keeps_fence_without_rearming_or_implicit_delete",
+          "explicit_retry_proves_absence_and_preserves_registered_bytes"
+        ]
+      }
+    ]
+  },
+  "beforeSdk": {
+    "auth": 8,
+    "jobs": 1,
+    "ai_runs": 0,
+    "journal": 0,
+    "evidence": 0,
+    "messages": 0,
+    "confirmed": 8,
+    "ai_enabled": false,
+    "sw_ai_runs": 0,
+    "applications": 0,
+    "erasure_jobs": 0,
+    "erasure_queue": 0,
+    "mail_attempts": 0,
+    "receipt_enabled": 0,
+    "cron": 0
+  },
+  "afterSdk": {
+    "auth": 8,
+    "jobs": 1,
+    "ai_runs": 0,
+    "journal": 5,
+    "evidence": 3,
+    "messages": 0,
+    "confirmed": 8,
+    "ai_enabled": false,
+    "sw_ai_runs": 0,
+    "applications": 0,
+    "erasure_jobs": 0,
+    "erasure_queue": 0,
+    "mail_attempts": 0,
+    "receipt_enabled": 0,
+    "cron": 0
+  },
+  "finalReadback": {
+    "auth": 8,
+    "jobs": 1,
+    "ai_runs": 0,
+    "journal": 13,
+    "evidence": 7,
+    "messages": 0,
+    "confirmed": 8,
+    "ai_enabled": false,
+    "sw_ai_runs": 0,
+    "applications": 0,
+    "erasure_jobs": 0,
+    "erasure_queue": 0,
+    "mail_attempts": 0,
+    "receipt_enabled": 0,
+    "cron": 0
+  },
+  "ownedStackStopped": true,
+  "scope": "actual ephemeral native integration, not hosted/published runtime or physical phone",
+  "visualLimitation": "supporting-document filename wraps in individual characters in existing375px evidence row"
+}

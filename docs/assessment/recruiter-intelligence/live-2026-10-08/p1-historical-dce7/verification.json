@@ -1,0 +1,122 @@
+{
+  "archiveName": "p1-dce7-ci-evidence.zip",
+  "archiveBytes": 4956626,
+  "archiveSha256": "1ca3e110ddec495e98c1fde2e91fd468119e8802ea94dcef153570c27602ab16",
+  "publicationManifestSha256": "b89d1076a5b0120857d8d9ed74ceef1803a893bdb79b44476e0657854defdfff",
+  "verifiedEntryCount": 20,
+  "verifiedEntries": [
+    {
+      "path": "stages.log",
+      "bytes": 181,
+      "sha256": "c687b84089da33cc3d4088194dc5bdea5082533bd065474d2d5bbfa17f657316"
+    },
+    {
+      "path": "postgres-version.log",
+      "bytes": 32,
+      "sha256": "412cbe116971701e23d1a6a6081b50c3a71e032e130c911fdabe7d74f170a3ef"
+    },
+    {
+      "path": "api-postgrest-version.log",
+      "bytes": 16,
+      "sha256": "90a93bd17365cfc57bdf4cad96cb02c81a68ba079abae4148d6052c678ef93e6"
+    },
+    {
+      "path": "ui-postgrest-version.log",
+      "bytes": 16,
+      "sha256": "90a93bd17365cfc57bdf4cad96cb02c81a68ba079abae4148d6052c678ef93e6"
+    },
+    {
+      "path": "bootstrap.log",
+      "bytes": 237,
+      "sha256": "2a76defc707243a0db6f6d8d116ba1ece7722a62e8ff152e8e535ca697f8257c"
+    },
+    {
+      "path": "replay.log",
+      "bytes": 129551,
+      "sha256": "0e8300b7599250b0ffc9a38d8528b447a34318035ecc306e9014630ad644d3c2"
+    },
+    {
+      "path": "sql-oracle.log",
+      "bytes": 83598,
+      "sha256": "c6cbcdb34389af3ad7ac43dc157101bb5a1061ad3d390b2f8010ab887225952e"
+    },
+    {
+      "path": "http-api.log",
+      "bytes": 2966,
+      "sha256": "606d7a8e3013686b01e0bb47305f3567ffc444a2d0fd80eb3e6479ffe4e650b4"
+    },
+    {
+      "path": "browser.log",
+      "bytes": 922,
+      "sha256": "7c070ec38299d27c7f8d10b5f2ddd1ce634e1d31f5fa54267c6a874fe7882f8f"
+    },
+    {
+      "path": "images/en-desktop-remaining.png",
+      "bytes": 668382,
+      "sha256": "b80b8b86a5420f83a78a3e6685a05486d4093fc81307380dfbb695c411c23c81"
+    },
+    {
+      "path": "images/en-emulated-375-archive-only-received.png",
+      "bytes": 507585,
+      "sha256": "fb4bff69fd1313d6e73430372f8fc3026c3922d889c5584eb5d34a90f0d2e5d1"
+    },
+    {
+      "path": "images/en-emulated-375-remaining.png",
+      "bytes": 555317,
+      "sha256": "86039f4ac33f9503340514f62bb847c2461cd0cb731de94e44e8850fcba85604"
+    },
+    {
+      "path": "images/sv-desktop-archive-only-received.png",
+      "bytes": 608175,
+      "sha256": "306f5c7188f844304823088c4acb42507a64b28f0a01a6b8bee84d733b735aec"
+    },
+    {
+      "path": "images/sv-desktop-cached-job-profile-target.png",
+      "bytes": 172907,
+      "sha256": "c509733caa889f8944c8b5c398acc04d287b3605a593072ee5441466ab103fb7"
+    },
+    {
+      "path": "images/sv-desktop-concurrent-explicit-reload.png",
+      "bytes": 660942,
+      "sha256": "ab0cec6842c50c2ca7b5f1521534e3c971a25d50a486521fc4834a6b11b6b953"
+    },
+    {
+      "path": "images/sv-desktop-explicit-peace-handoff.png",
+      "bytes": 390681,
+      "sha256": "40ddb644252abf901ff2dad8c9ef2fe218c1d6d8aa72563646c830c73d3d8745"
+    },
+    {
+      "path": "images/sv-desktop-gray-human-reviewed.png",
+      "bytes": 675822,
+      "sha256": "32a888f3ecf0ba0e4e0c1dd81930dea79521ce003216ce1cd908f29c79049f10"
+    },
+    {
+      "path": "images/sv-desktop-remaining.png",
+      "bytes": 643845,
+      "sha256": "31de3d31ab524530e793f06d2e8ce1de8e1b816e80b06d13fe8109bb18b793a5"
+    },
+    {
+      "path": "images/sv-emulated-375-remaining.png",
+      "bytes": 540456,
+      "sha256": "5e0a369cdcd3f3efbb2d1046cda5b942a7686414bc9571c2c46aca90ad86bf99"
+    },
+    {
+      "path": "runtime.log",
+      "bytes": 177,
+      "sha256": "43658fdbe21a687af08de0a5303283e3f94646493b8433e8c2b7a68098853877"
+    }
+  ],
+  "selectedImages": [
+    "images/sv-desktop-remaining.png",
+    "images/en-emulated-375-remaining.png",
+    "images/sv-desktop-explicit-peace-handoff.png"
+  ],
+  "verification": "Every declared file and redacted runtime summary verified by byte count and SHA-256; no undeclared archive entry. Source private manifest unavailable and not independently verified.",
+  "independentlyCountedResults": {
+    "sqlNoticeOk": 93,
+    "apiOkLines": 23,
+    "browserIndexedCases": 5,
+    "baselineSqlNotice": "100 applications: 40 green / 25 yellow / 35 gray, 27 reviewed / 73 remaining",
+    "matchesOriginalManifest": true
+  }
+}

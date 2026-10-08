@@ -1,0 +1,160 @@
+{
+  "schemaVersion": 1,
+  "scope": "read-only CI terminal retry witness",
+  "repository": "cqrityjob/trust-path-recruitment",
+  "pullRequest": 462,
+  "headSha": "398862f2ef264d369451d5a7c38d0df672b4fdb7",
+  "runId": 37787703129,
+  "attempt": 2,
+  "observedAtUtc": "2026-10-08T14:48:38Z",
+  "status": "completed",
+  "conclusion": "success",
+  "requiredCoreJobs": {
+    "total": 8,
+    "success": 8,
+    "failure": 0,
+    "pending": 0
+  },
+  "jobs": [
+    {
+      "id": 113361345106,
+      "name": "Migration replay, RLS and rollback tests",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37787703129/job/113361345106"
+    },
+    {
+      "id": 113361347018,
+      "name": "Recruiter Intelligence P1 — PostgreSQL 17 and concurrent HTTP API",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37787703129/job/113361347018"
+    },
+    {
+      "id": 113361347963,
+      "name": "CV browser — the signed-in journey",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37787703129/job/113361347963"
+    },
+    {
+      "id": 113361392473,
+      "name": "CV export — PDF and ATS proof",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37787703129/job/113361392473"
+    },
+    {
+      "id": 113361398412,
+      "name": "Lint, typecheck and deterministic checks",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37787703129/job/113361398412"
+    },
+    {
+      "id": 113361401584,
+      "name": "Public entry browser — homepage, employers and the employer journey",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37787703129/job/113361401584"
+    },
+    {
+      "id": 113361402006,
+      "name": "Recruiter current schema — PostgreSQL 17 and PostgREST 14",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37787703129/job/113361402006"
+    },
+    {
+      "id": 113361416542,
+      "name": "Passport three-market browser — catalogue, cards, pilot access",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37787703129/job/113361416542"
+    }
+  ],
+  "rerun": {
+    "authorizedOwnerReruns": 1,
+    "rerunOriginalJobId": 113347338449,
+    "newPg16JobId": 113361345106,
+    "sameHead": true,
+    "scope": "Previously failed PG16 only; seven successful core outcomes retained."
+  },
+  "fullPg16Proof": {
+    "jobId": 113361345106,
+    "serverVersion": "16.15",
+    "strictMigrationReplay": {
+      "count": 387,
+      "firstFailureAborts": true,
+      "completed": true
+    },
+    "op09DurableUploadSqlAssertions": 41,
+    "p1SqlAssertions": 95,
+    "interviewFoundationAssertions": 56,
+    "snapshotAssertions": 94,
+    "actualPostgrestVersion": "14.15",
+    "domainConflictAssertions": 28,
+    "historicalRollbackAssertions": 51,
+    "fullHistoricalChainCompleted": true,
+    "dbSuiteOk": true,
+    "rollbackProtection": {
+      "nonemptyUploadJournalRefused": true,
+      "probeRolledBack": true,
+      "emptyJournalAndFencesStoodDownBeforeHistoricalConsumers": true,
+      "adoptedSnapshotRollbackRefused": true
+    },
+    "completedLogExcerpts": [
+      "2026-10-08T14:35:20.4601977Z migration-safety-check: 387 active migrations",
+      "2026-10-08T14:35:47.8261898Z     ok  387 migrations applied cleanly, in filename order",
+      "2026-10-08T14:35:48.5348708Z     ok  41 durable upload SQL assertions",
+      "2026-10-08T14:35:52.3025235Z     ok  95 actual P1 counts, sources, CAS, access and handoff assertions",
+      "2026-10-08T14:36:08.9726189Z     ok  CONFLICT actual14 rec_set_recruitment_responsible finite409 unchanged message",
+      "2026-10-08T14:36:08.9747069Z     ok  CONFLICT actual14 rec_complete_recruitment finite409 unchanged message",
+      "2026-10-08T14:36:08.9779166Z     ok  CONFLICT actual14 rec_set_application_responsible finite409 unchanged message",
+      "2026-10-08T14:36:08.9798203Z     ok  CONFLICT actual14 rec_set_application_stage finite409 unchanged message",
+      "2026-10-08T14:36:08.9929272Z     ok  CONFLICT actual14 rec_save_booking finite409 unchanged message",
+      "2026-10-08T14:36:08.9945657Z     ok  CONFLICT actual14 rec_set_booking_status finite409 unchanged message",
+      "2026-10-08T14:36:08.9967434Z     ok  CONFLICT actual14 rec_set_receipt_settings finite409 unchanged message",
+      "2026-10-08T14:36:09.0029405Z     ok  CONFLICT actual14 scp_iv_save_session_process finite409 unchanged message",
+      "2026-10-08T14:36:09.0074605Z     ok  CONFLICT actual14 scp_iv_review_manual_finding finite409 unchanged message",
+      "2026-10-08T14:36:09.0396620Z     ok  CONFLICT actual14 scp_iv_acknowledge_observed_content finite409 unchanged message",
+      "2026-10-08T14:36:11.1191935Z     ok  CONFLICT actual14 void state RPC returns empty body",
+      "2026-10-08T14:36:11.1192607Z     ok  CONFLICT actual14 overlapping state/process waits then finite409 without deadlock",
+      "2026-10-08T14:36:11.1483748Z     ok  CONFLICT actual14 winning pause and existing reflection preserved",
+      "2026-10-08T14:36:11.2059422Z     ok  CONFLICT actual14 no continuing stale request",
+      "2026-10-08T14:36:11.2060096Z     ok  CONFLICT 28 bounded runner assertions; original historical tests remain unchanged",
+      "2026-10-08T14:36:12.2859747Z     ok  56 AI-off persistence, access, provenance and immutable report assertions",
+      "2026-10-08T14:36:12.9561771Z     ok  94 snapshot/backfill/direct-service/report/labels assertions",
+      "2026-10-08T14:44:41.9026403Z     ok  51 rollback assertions passed",
+      "2026-10-08T14:45:23.5667857Z  DB suite OK: 162 domain assertions,",
+      "2026-10-08T14:35:52.3025938Z ==> Proving upload journal rollback refuses any unresolved intention",
+      "2026-10-08T14:35:52.5097075Z     ok  nonempty journal refused, probe rolled back, empty journal/fences stood down before historical consumers",
+      "2026-10-08T14:36:13.0145256Z     ok  adopted rollback refuses before changing snapshots or permanent locks"
+    ],
+    "rawLogPublished": false
+  },
+  "firstFailurePreserved": {
+    "path": "/private/tmp/ri-462-398862-ci-attempt1-readback.json",
+    "sha256": "6869a602b1beed52ec9f6e287929464d55e03b7760d832fdfdb55a422522ed0a",
+    "originalConclusion": "failure",
+    "successfulJobs": 7,
+    "failedJobId": 113347338449,
+    "confirmedCause": "ECR registry Rate exceeded at PostgREST14.15 pull",
+    "unchanged": true
+  },
+  "limitations": [
+    "Only the eight requested core jobs are evaluated here.",
+    "The completed plain PostgreSQL/PostgREST proof is distinct from native GoTrue/Storage, hosted runtime and physical-phone validation.",
+    "Successful deterministic/lint job status does not independently establish global lint-zero."
+  ],
+  "observerActions": {
+    "readOnly": true,
+    "reruns": 0,
+    "pushes": 0,
+    "repositoryEdits": 0,
+    "localServices": 0,
+    "hostedWrites": 0,
+    "artifactDownloads": 0,
+    "newPullRequests": 0
+  }
+}

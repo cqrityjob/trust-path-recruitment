@@ -1,0 +1,64 @@
+{
+  "kind": "bounded_actual_ci_first_attempt_failure_witness",
+  "head": "6ae933c68da56121cdf02d4a7d4e301510a0709e",
+  "runId": 37796851285,
+  "jobId": 113379032076,
+  "conclusion": "failure",
+  "failureStep": "Migration replay + database assertions + rollback verification",
+  "cause": "public.ecr.aws/supabase/postgrest:v14.15 registry toomanyrequests: Rate exceeded",
+  "numericHttpStatusCaptured": false,
+  "fatalAllowlistedLines": [
+    "2026-10-08T15:20:50.3112184Z docker: toomanyrequests: Rate exceeded",
+    "2026-10-08T15:20:50.3113761Z  output: [ null, \"\", \"Unable to find image 'public.ecr.aws/supabase/postgrest:v14.15' locally\\nv14.15: Pulling from supabase/postgrest\\ndocker: toomanyrequests: Rate exceeded\\n\\nRun 'docker run --help' for more information\\n\" ],",
+    "2026-10-08T15:20:50.3117399Z       at /home/runner/work/trust-path-recruitment/trust-path-recruitment/scripts/recruiter-domain-conflict-check.mjs:276:6",
+    "2026-10-08T15:20:50.3443441Z ##[error]Process completed with exit code 1."
+  ],
+  "partialProofAllowlistedLines": [
+    "2026-10-08T15:20:33.1836703Z     ok  387 migrations applied cleanly, in filename order",
+    "2026-10-08T15:20:33.8006023Z     ok  35 Sentinel pilot assertions passed",
+    "2026-10-08T15:20:33.9199989Z     ok  41 durable upload SQL assertions",
+    "2026-10-08T15:20:37.3479207Z     ok  95 actual P1 counts, sources, CAS, access and handoff assertions",
+    "2026-10-08T15:20:38.5869493Z     ok  CONFLICT current-foundation mandatory 56 assertions",
+    "2026-10-08T15:20:38.8221975Z     ok  CONFLICT current-snapshot mandatory 94 assertions",
+    "2026-10-08T15:20:38.8854821Z     ok  CONFLICT current-domain mandatory 31 assertions",
+    "2026-10-08T15:20:39.0806193Z     ok  CONFLICT negative control wrong SQLSTATE is rejected",
+    "2026-10-08T15:20:39.4490784Z     ok  CONFLICT rollback restores all12 exact prior definitions",
+    "2026-10-08T15:20:39.4960033Z     ok  CONFLICT rollback preserves immutable reports/snapshots/locks byte for byte",
+    "2026-10-08T15:20:39.5597291Z     ok  CONFLICT reapply preserves function definitions/defaults/owners/ACL/config",
+    "2026-10-08T15:20:42.7371782Z     ok  CONFLICT prior-session-case reproduces exact prior deadlock",
+    "2026-10-08T15:20:44.9764588Z     ok  CONFLICT forward-case-session waits then returns finite stale conflict",
+    "2026-10-08T15:20:47.1037996Z     ok  CONFLICT direct-rpc-finding waits then returns finite stale conflict",
+    "2026-10-08T15:20:49.1887062Z     ok  CONFLICT engine-serialization preserves genuine engine40001"
+  ],
+  "verifiedBeforeFailure": {
+    "migrations": 387,
+    "sentinelSql": 35,
+    "uploadJournalSql": 41,
+    "p1Sql": 95,
+    "p0Sql": 56,
+    "snapshotSql": 94,
+    "domainSql": 31,
+    "priorDeadlockNegativeControl": true,
+    "forwardLockConflict": true,
+    "directFindingConflict": true,
+    "engine40001Preserved": true,
+    "rollbackExactPriorFunctions": 12,
+    "immutableDataPreserved": true
+  },
+  "notCompleted": [
+    "actual PostgREST14 mandatory HTTP assertions",
+    "full remaining historical replay and rollback chain",
+    "whole core CI success"
+  ],
+  "retryByIndependentReviewer": false,
+  "otherCoreJobsAtCapture": "still pending/in progress; not whole PASS",
+  "separateNative": {
+    "runId": 37796851340,
+    "jobId": 113378429798,
+    "conclusion": "success",
+    "artifactId": 11559159823,
+    "digest": "9a7e9277abd2cf2b4dfd8c8f2be8f55c1fddf0e1e5f8e5b54b9d3d91fb447de0",
+    "artifactManifestNotYetReverified": true
+  },
+  "observedAt": "2026-10-08T15:24:58.101595+00:00"
+}

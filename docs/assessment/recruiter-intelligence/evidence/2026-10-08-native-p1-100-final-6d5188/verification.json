@@ -1,0 +1,84 @@
+{
+  "kind": "read_only_downloaded_final_ci_witness_validation",
+  "runId": 37790811759,
+  "jobId": 113357388444,
+  "artifactId": 11556599285,
+  "zipSha256": "023819c618702424fc28b895a0faf6cfc28a17231ed3b3f77e1e8b1c96246561",
+  "manifestSha256": "af04c653c1c6200ea467612751880953c647acafc9ed9a726ef5ced1196764ef",
+  "evidenceSha": "6d518880aaa9aa0ad96aac75cad7b667145712ff",
+  "appSha": "40e5775de5195050571421827434ec2872a61506",
+  "schemaSha": "1e5988c6f9c7121a0fefd22c0db06f6b573f0ae9",
+  "sourceTrees": {
+    "appSrc": "3d5feca97be01959778173fc3a0f0959fe62355c",
+    "appAndSchemaMigrations": "eecc3229705f2c81f7ee8ff63eae032527bb6a38",
+    "schemaConfig": "720daa8eda53adfba26e9ebde29284d7cfcd5931"
+  },
+  "migrationsByteCompared": 387,
+  "canonicalSourceHashesCompared": {
+    "sql": "45db1d33d64f1fc1c424f2a22090105694daecdb079cf2eaee5afa277a1f98ce",
+    "api": "b650ce6987192c88404cc65bca63bad4f23983fd711e2af7c89cb3327ae4b3a4",
+    "browser": "3ac000be5fbaf613e11ef8393ce51f0e4f0da0adafee5d69d45173fe25f8988b"
+  },
+  "allImageHashesCompared": 10,
+  "stagesPassed": 11,
+  "baseline": {
+    "received": 100,
+    "green": 40,
+    "yellow": 25,
+    "gray": 35,
+    "reviewed": 27,
+    "remaining": 73
+  },
+  "apiV2": {
+    "received": 100,
+    "green": 30,
+    "yellow": 35,
+    "gray": 35,
+    "reviewed": 0,
+    "remaining": 100
+  },
+  "revokedSource": {
+    "received": 100,
+    "green": 25,
+    "yellow": 35,
+    "gray": 40,
+    "reviewed": 0,
+    "remaining": 100
+  },
+  "httpAssertions": 23,
+  "concurrentReviewerHttp": [
+    200,
+    409
+  ],
+  "browser": {
+    "expected": 5,
+    "unexpected": 0,
+    "flaky": 0,
+    "skipped": 0
+  },
+  "serverSignedOriginalUiReads": 4,
+  "imagesVisuallyInspected": [
+    "images/sv-desktop-explicit-peace-handoff.png",
+    "images/en-emulated-375-remaining.png"
+  ],
+  "visualObservations": {
+    "svDesktopHandoff": "Selected requirement R2, version1, reviewer note, neutral question, submitted CV reference and next action visible; saved sources distinguish confirmed evidence; 8 role questions and six competency areas present; draft content/method status explicit.",
+    "enEmulated375": "Global received100/reviewed27/remaining73, requirement40/25/35, remaining73 and page1of3 visible; requirement, stage and human-review labels separate."
+  },
+  "scope": {
+    "auth": "local_admin_createUser_email_confirm_true_fixed_104_ids",
+    "storage": "local_service_role_setup_80_original_pdf_objects_not_candidate_upload_acl",
+    "applicationDml": "disposable_local_postgres_own_fixture_only",
+    "judgment": "signed_in_owner_and_admin_http_rpc",
+    "browser": "real_password_sessions_sv_en_desktop_emulated_mobile_not_physical_phone"
+  },
+  "excluded": [
+    "hosted runtime/CDN",
+    "physical phone",
+    "candidate upload ACL claim",
+    "private keys/passwords/JWTs/raw logs/signed URLs"
+  ],
+  "doesNotReplaceHistoricalEvidence": true,
+  "localExecution": "none; inspected exact downloaded native CI witness only",
+  "result": "PASS"
+}

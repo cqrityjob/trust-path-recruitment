@@ -1,0 +1,14 @@
+{
+  "kind": "read_only_original_op09_failure_archive",
+  "runId": 37770828265,
+  "jobId": 113289696803,
+  "artifactId": 11547717915,
+  "archiveSha256": "addc40af1a4f3ad9925f775b95ba89373abdb19b1c2487729800717bd5398073",
+  "manifestSha256": "bdd28f303785067ff71d379c48aeeb70b8f943b672998dc863aeeeb23f616811",
+  "canonicalMigrationsListed": 387,
+  "originalManifestBytesPreserved": true,
+  "actualSdk44Passed": false,
+  "actualBrowser4Passed": false,
+  "privateExceptionRecovered": false,
+  "newServiceCalls": 0
+}

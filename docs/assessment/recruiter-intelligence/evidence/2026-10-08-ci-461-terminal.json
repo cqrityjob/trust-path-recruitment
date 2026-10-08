@@ -1,0 +1,213 @@
+{
+  "pr": 461,
+  "head": "6ae933c68da56121cdf02d4a7d4e301510a0709e",
+  "mainBefore": "f249bc68ad2a40a217f861db033402f8dfb2eb6b",
+  "observedAt": "2026-10-08 16:24:29 UTC",
+  "mandatoryJobs": [
+    {
+      "run": 37796851241,
+      "id": 113378429029,
+      "name": "Preview image in workerd (Cloudflare Worker runtime)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "run": 37796851233,
+      "id": 113378429589,
+      "name": "Career Center persistence browser evidence (isolated local stack)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "run": 37796851319,
+      "id": 113378432052,
+      "name": "Job ad back navigation browser evidence (isolated local stack)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "run": 37796851336,
+      "id": 113378431559,
+      "name": "Recruitment workspace browser evidence (isolated local stack)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "run": 37796851292,
+      "id": 113378429713,
+      "name": "Assigned officer/manager reports and TestBank (isolated desktop/mobile)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "run": 37796851239,
+      "id": 113378435987,
+      "name": "E4 routed browser evidence (isolated local stack)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "run": 37796851340,
+      "id": 113378429798,
+      "name": "Actual GoTrue Storage44 and four routed reload recovery journeys",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "run": 37796851285,
+      "id": 113412007956,
+      "name": "Migration replay, RLS and rollback tests",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "run": 37796851285,
+      "id": 113412010185,
+      "name": "CV export — PDF and ATS proof",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "run": 37796851285,
+      "id": 113412010855,
+      "name": "Lint, typecheck and deterministic checks",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "run": 37796851285,
+      "id": 113412011436,
+      "name": "Recruiter Intelligence P1 — full SQL, HTTP and browser proof",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "run": 37796851285,
+      "id": 113412050522,
+      "name": "Passport three-market browser — catalogue, cards, pilot access",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "run": 37796851285,
+      "id": 113412060494,
+      "name": "Recruiter current schema — PostgreSQL 17 and PostgREST 14",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "run": 37796851285,
+      "id": 113412066050,
+      "name": "Recruiter Intelligence P1 — PostgreSQL 17 and concurrent HTTP API",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "run": 37796851285,
+      "id": 113412067734,
+      "name": "CV browser — the signed-in journey",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "run": 37796851285,
+      "id": 113412083645,
+      "name": "Public entry browser — homepage, employers and the employer journey",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "run": 37796851174,
+      "id": 113378428327,
+      "name": "worker-and-ui",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "run": 37796851163,
+      "id": 113378429280,
+      "name": "Passport public pilot browser evidence (isolated local stack)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "run": 37796851175,
+      "id": 113378430013,
+      "name": "browser",
+      "status": "completed",
+      "conclusion": "success"
+    }
+  ],
+  "runs": [
+    {
+      "id": 37796851241,
+      "name": "Passport preview image — Cloudflare Worker runtime evidence",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 37796851233,
+      "name": "Career Center persistence — routed browser evidence",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 37796851319,
+      "name": "Job ad back navigation — routed browser evidence",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 37796851336,
+      "name": "Recruitment workspace — routed browser evidence",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 37796851292,
+      "name": "Role assessment and TestBank regression",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 37796851239,
+      "name": "E4 employer final report — routed browser evidence",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 37796851340,
+      "name": "Passport native OP09 recovery evidence",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 37796851285,
+      "name": "CI",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 37796851174,
+      "name": "Application retention — worker and UI",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 37796851163,
+      "name": "Passport public pilot — real-backend evidence",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 37796851175,
+      "name": "Security Work browser evidence",
+      "status": "completed",
+      "conclusion": "success"
+    }
+  ],
+  "coreAttempt": 3,
+  "ownerReruns": 2,
+  "review": "current native OP09 independently verified; strict handwritten script types; first two registry failures preserved; all assertions retained; final PG16 full historical chain SUCCESS",
+  "mergeCommit": "e4531c3b8abac440c9a98ed0f4182106d5b31106"
+}

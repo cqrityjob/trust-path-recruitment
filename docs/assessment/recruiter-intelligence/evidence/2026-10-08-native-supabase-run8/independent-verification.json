@@ -1,0 +1,14 @@
+{
+  "kind": "independent_read_only_native885_archive_recheck",
+  "artifactId": 11548333208,
+  "archiveSha256": "5b7a43459173781d724809f4bc373633d0d95dcadb198347acc99dc8261e2c1e",
+  "manifestSha256": "11e45c336427a840f3faf5081cb8b12ba7e27deace0e88b7658ae96875f9216a",
+  "errorsSha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+  "exactSchemaSha": "250623cfb677c931caf70a2354daf774f72f443a",
+  "canonicalMigrationHashesMatched": 385,
+  "originalImageHashesMatched": 36,
+  "copiedImagesByteIdentical": 2,
+  "visualReview": "Two copied synthetic report images checked: desktop EN has Swedish role-content fallback and draft notice; SV375 rendered full report. Not a physical-phone or hosted claim.",
+  "lateExplicitRead55d6InThisApp": false,
+  "newServiceCalls": 0
+}

@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "review_version": "0.3-P0-REVIEW-r2",
+  "product_baseline_sha": "20dd01e7c73017dd44e250ebbefd7c02995f043c",
+  "schema_head_sha": "82564cc3ad390f0a378d8a8ef4376dbbc31fae12",
+  "main_base_sha": "7fb66dcdaf22b7e0aec31b95c0cd4f220b0b873d",
+  "scope": "Review documents and standalone proposed P1 acceptance oracle. No P1 product changes. Manifest excludes itself.",
+  "acceptance_run": {
+    "python": "3.12.14",
+    "exit_code": 0,
+    "product_imports": false,
+    "db_api_browser_tests": false,
+    "facit_approved": false
+  },
+  "files": [
+    {
+      "file": "2026-10-07-p0-content-protection.md",
+      "bytes": 35982,
+      "sha256": "29429afad3ea7f1e8b6f38f0e24727901013f3555fe6bc1372b3ec7b2cdf2292"
+    },
+    {
+      "file": "2026-10-07-p0-operational-test-plan.md",
+      "bytes": 49021,
+      "sha256": "215bc4351db1a5011c55ed5a26cc0b70f83eb0f5efe42a44cb182d45af1a69ee"
+    },
+    {
+      "file": "2026-10-07-p0-release-review.md",
+      "bytes": 24560,
+      "sha256": "0d5efd543da90653882d0a4ba367ed9759419ec15010afa6c561bdb61466546d"
+    },
+    {
+      "file": "2026-10-07-p1-acceptance-criteria.md",
+      "bytes": 53652,
+      "sha256": "253aaec6ea805670ac091afad3af9655cbc7ad1d54d663ccacde8d71cdec5f44"
+    },
+    {
+      "file": "p0-review/ci-current-heads.json",
+      "bytes": 127199,
+      "sha256": "37899a7e01f1bf971c9030e4332b0cc7855d1d20021df8124c640611d1b9d15e"
+    },
+    {
+      "file": "p0-review/ci-log-excerpts.json",
+      "bytes": 4078,
+      "sha256": "50c419184c736dca7519728d5bf4474e82d287cd214a23e76bf5c3f7fd6411ec"
+    },
+    {
+      "file": "p0-review/content-observation.json",
+      "bytes": 35975,
+      "sha256": "f84499b0bdf672c35f52b11561d6fd45638e547f29fe9dea380515ba249269d5"
+    },
+    {
+      "file": "p0-review/guard-independent-review.md",
+      "bytes": 6854,
+      "sha256": "9b154a7866c1f02370e49f9f008e03485c7dfeecb5acfc75cc8105b7e7593c66"
+    },
+    {
+      "file": "p0-review/guard-local-verification.json",
+      "bytes": 8311,
+      "sha256": "b3434a3382be1645853dde203b73902bbb157f4f0ddee9c58902ff498f4b9d5b"
+    },
+    {
+      "file": "p1-acceptance/README.md",
+      "bytes": 1899,
+      "sha256": "d0f29e32c0d4569d8ba4e0f82c1ca6d3e1da1b4b09af42808fc05effd1424669"
+    },
+    {
+      "file": "p1-acceptance/ri-p1-100-v1-output.json",
+      "bytes": 93393,
+      "sha256": "7d8c666a1ef28ff2a51922f16a10584bb53fd601936c92c1933fa87776214a78"
+    },
+    {
+      "file": "p1-acceptance/ri-p1-100-v1.py",
+      "bytes": 14565,
+      "sha256": "58a2c43dd4d148f62459046d18ef6b34a68613b482af2890edbe95c671bfdb13"
+    }
+  ],
+  "ci_observed_at_utc": "2026-10-07 20:23:45 UTC"
+}

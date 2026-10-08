@@ -1,0 +1,2 @@
+psql:supabase/tests/00_bootstrap.sql:55: NOTICE:  column "banned_until" of relation "users" already exists, skipping
+psql:supabase/tests/00_bootstrap.sql:56: NOTICE:  column "last_sign_in_at" of relation "users" already exists, skipping

@@ -1,0 +1,284 @@
+{
+  "schemaVersion": 1,
+  "scope": "read_only_ci_terminal_witness",
+  "repository": "cqrityjob/trust-path-recruitment",
+  "pullRequest": 452,
+  "headSha": "26e7f2958fd6b01c3dfd2365d017817fbd886073",
+  "mainBase": "2a4687d7e6ca3886f39a52190bea19b3d54c734e",
+  "runId": 37779464756,
+  "attempt": 2,
+  "observedAt": "2026-10-08T13:46:46Z",
+  "conclusion": "success",
+  "requiredJobs": {
+    "total": 15,
+    "success": 15,
+    "failure": 0,
+    "pending": 0,
+    "core": 8,
+    "external": 7
+  },
+  "coreJobs": [
+    {
+      "id": 113337203108,
+      "name": "Migration replay, RLS and rollback tests",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37779464756/job/113337203108"
+    },
+    {
+      "id": 113337205329,
+      "name": "CV export — PDF and ATS proof",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37779464756/job/113337205329"
+    },
+    {
+      "id": 113337205842,
+      "name": "Public entry browser — homepage, employers and the employer journey",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37779464756/job/113337205842"
+    },
+    {
+      "id": 113337206304,
+      "name": "Recruiter Intelligence P1 — PostgreSQL 17 and concurrent HTTP API",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37779464756/job/113337206304"
+    },
+    {
+      "id": 113337246241,
+      "name": "Passport three-market browser — catalogue, cards, pilot access",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37779464756/job/113337246241"
+    },
+    {
+      "id": 113337277257,
+      "name": "Recruiter current schema — PostgreSQL 17 and PostgREST 14",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37779464756/job/113337277257"
+    },
+    {
+      "id": 113337281943,
+      "name": "Lint, typecheck and deterministic checks",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37779464756/job/113337281943"
+    },
+    {
+      "id": 113337282636,
+      "name": "CV browser — the signed-in journey",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37779464756/job/113337282636"
+    }
+  ],
+  "workflowRuns": [
+    {
+      "id": 37779464714,
+      "name": "Passport preview image — Cloudflare Worker runtime evidence",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37779464714"
+    },
+    {
+      "id": 37779464746,
+      "name": "Job ad back navigation — routed browser evidence",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37779464746"
+    },
+    {
+      "id": 37779464703,
+      "name": "Passport public pilot — real-backend evidence",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37779464703"
+    },
+    {
+      "id": 37779464581,
+      "name": "E4 employer final report — routed browser evidence",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37779464581"
+    },
+    {
+      "id": 37779464692,
+      "name": "Recruitment workspace — routed browser evidence",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37779464692"
+    },
+    {
+      "id": 37779464804,
+      "name": "Career Center persistence — routed browser evidence",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37779464804"
+    },
+    {
+      "id": 37779464632,
+      "name": "Security Work browser evidence",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37779464632"
+    },
+    {
+      "id": 37779464756,
+      "name": "CI",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37779464756"
+    }
+  ],
+  "rerunScope": "Owner reran failed job(s) on unchanged head after first attempt was terminal. Only the previously failed PG16 execution is claimed as newly re-executed; successful core/external outcomes are retained. GitHub latest-attempt exposes replacement IDs for all core job summaries.",
+  "firstAttemptPreserved": {
+    "commit": "97b677d51f605f617db5724fe1cbc0f858087c03",
+    "file": "2026-10-08-ci-26e7-attempt1.json",
+    "coreSuccess": 7,
+    "externalSuccess": 7,
+    "failureJobId": 113318598216,
+    "failureKind": "registry_rate_limit",
+    "failureConclusion": "failure",
+    "originalOutcomeUnchanged": true
+  },
+  "pg16CompletedEvidence": {
+    "jobId": 113337203108,
+    "serverVersion": "16.15",
+    "migrationCount": 386,
+    "strictReplay": true,
+    "p1SqlAssertions": 95,
+    "interviewFoundationAssertions": 56,
+    "snapshotAssertions": 94,
+    "actualPostgrestVersion": "14.15",
+    "domainConflictRunnerAssertions": 28,
+    "historicalRollbackAssertions": 51,
+    "fullDbSuiteCompleted": true,
+    "completedLogExcerpts": [
+      "2026-10-08T13:31:47.9727556Z migration-safety-check: 386 active migrations",
+      "2026-10-08T13:31:48.5054856Z ==> Replaying full migration history (strict: first failure aborts)",
+      "2026-10-08T13:32:12.4897279Z     ok  386 migrations applied cleanly, in filename order",
+      "2026-10-08T13:32:17.3393788Z     ok  95 actual P1 counts, sources, CAS, access and handoff assertions",
+      "2026-10-08T13:32:32.7462847Z     ok  CONFLICT actual14 rec_set_recruitment_responsible finite409 unchanged message",
+      "2026-10-08T13:32:32.7484141Z     ok  CONFLICT actual14 rec_complete_recruitment finite409 unchanged message",
+      "2026-10-08T13:32:32.7517712Z     ok  CONFLICT actual14 rec_set_application_responsible finite409 unchanged message",
+      "2026-10-08T13:32:32.7534397Z     ok  CONFLICT actual14 rec_set_application_stage finite409 unchanged message",
+      "2026-10-08T13:32:32.7664714Z     ok  CONFLICT actual14 rec_save_booking finite409 unchanged message",
+      "2026-10-08T13:32:32.7680933Z     ok  CONFLICT actual14 rec_set_booking_status finite409 unchanged message",
+      "2026-10-08T13:32:32.7705412Z     ok  CONFLICT actual14 rec_set_receipt_settings finite409 unchanged message",
+      "2026-10-08T13:32:32.7766703Z     ok  CONFLICT actual14 scp_iv_save_session_process finite409 unchanged message",
+      "2026-10-08T13:32:32.7811457Z     ok  CONFLICT actual14 scp_iv_review_manual_finding finite409 unchanged message",
+      "2026-10-08T13:32:32.8133755Z     ok  CONFLICT actual14 scp_iv_acknowledge_observed_content finite409 unchanged message",
+      "2026-10-08T13:32:34.9042357Z     ok  CONFLICT actual14 void state RPC returns empty body",
+      "2026-10-08T13:32:34.9042748Z     ok  CONFLICT actual14 overlapping state/process waits then finite409 without deadlock",
+      "2026-10-08T13:32:34.9335624Z     ok  CONFLICT actual14 winning pause and existing reflection preserved",
+      "2026-10-08T13:32:34.9914512Z     ok  CONFLICT actual14 no continuing stale request",
+      "2026-10-08T13:32:34.9914943Z     ok  CONFLICT 28 bounded runner assertions; original historical tests remain unchanged",
+      "2026-10-08T13:32:36.3611105Z     ok  56 AI-off persistence, access, provenance and immutable report assertions",
+      "2026-10-08T13:32:37.0555459Z     ok  94 snapshot/backfill/direct-service/report/labels assertions",
+      "2026-10-08T13:32:37.1140076Z     ok  adopted rollback refuses before changing snapshots or permanent locks",
+      "2026-10-08T13:41:02.8442830Z     ok  51 rollback assertions passed",
+      "2026-10-08T13:41:42.9996648Z  DB suite OK: 162 domain assertions,"
+    ],
+    "noRawLogPublished": true,
+    "schemaBoundary": "This #452 checkout has 386 migrations including 080. It does not contain pending 0909; the 41 OP09 journal SQL assertions belong to the separate #457 387-migration witness."
+  },
+  "sourceIdentity": {
+    "prMergeCheckout": "20d3371c1a3762c1c721b0722ae54e62c25e604b",
+    "trackedTreeEquivalentToHead": true,
+    "headSrcEquivalentTo": "3d66dd8cb0ce4c03d9d8e9a27aeb179aa9182101",
+    "checksAreNotInheritedFromNativeWitness": true
+  },
+  "repairedGuards": {
+    "interviewUxSafety": "success",
+    "interviewEvidenceReliability": "success",
+    "proof": "Original deterministic core job explicit step conclusions in attempt-1 witness, retained in successful retry run."
+  },
+  "lintLimitation": {
+    "continueOnError": true,
+    "source": ".github/workflows/ci.yml:104",
+    "globalLintZeroEstablished": false
+  },
+  "artifactsMetadataOnly": [
+    {
+      "id": 11553736512,
+      "name": "public-entry-browser-evidence",
+      "sizeInBytes": 16845011,
+      "digest": "sha256:c0aee39639a3f1a20309e8f86bd3b1fd1ec7ad6429a4ce59d465cf7440ccdfcd",
+      "expired": false,
+      "createdAt": "2026-10-08T13:29:48Z",
+      "headSha": "26e7f2958fd6b01c3dfd2365d017817fbd886073",
+      "url": "https://api.github.com/repos/cqrityjob/trust-path-recruitment/actions/artifacts/11553736512",
+      "localBytesDownloaded": false
+    },
+    {
+      "id": 11552650285,
+      "name": "cv-export-pdfs",
+      "sizeInBytes": 75749,
+      "digest": "sha256:de1ad16b32d5dae44c87ed1a7279a31f61b8cc6e05b00b6669dd253d16e81c4c",
+      "expired": false,
+      "createdAt": "2026-10-08T12:57:56Z",
+      "headSha": "26e7f2958fd6b01c3dfd2365d017817fbd886073",
+      "url": "https://api.github.com/repos/cqrityjob/trust-path-recruitment/actions/artifacts/11552650285",
+      "localBytesDownloaded": false
+    },
+    {
+      "id": 11552646733,
+      "name": "passport-sharing-screens",
+      "sizeInBytes": 5177099,
+      "digest": "sha256:7a210fcc4eca0f33ed7c062da391da10f5347103dd53901cdb10cb595abddb70",
+      "expired": false,
+      "createdAt": "2026-10-08T13:08:22Z",
+      "headSha": "26e7f2958fd6b01c3dfd2365d017817fbd886073",
+      "url": "https://api.github.com/repos/cqrityjob/trust-path-recruitment/actions/artifacts/11552646733",
+      "localBytesDownloaded": false
+    },
+    {
+      "id": 11552147526,
+      "name": "recruiter-domain-conflict-pg17-26e7f2958fd6b01c3dfd2365d017817fbd886073",
+      "sizeInBytes": 2578,
+      "digest": "sha256:814df6793d8c2f6fc9281c791aef7371c2c8d7c580b87d18cafbf65bbbb7f6cc",
+      "expired": false,
+      "createdAt": "2026-10-08T13:09:31Z",
+      "headSha": "26e7f2958fd6b01c3dfd2365d017817fbd886073",
+      "url": "https://api.github.com/repos/cqrityjob/trust-path-recruitment/actions/artifacts/11552147526",
+      "localBytesDownloaded": false
+    },
+    {
+      "id": 11551677348,
+      "name": "recruiter-intelligence-p1-schema-api",
+      "sizeInBytes": 27140,
+      "digest": "sha256:eec141974f7ead86724dd3e44d4b75396d186b500fc2003834d417d94e46ae12",
+      "expired": false,
+      "createdAt": "2026-10-08T12:59:09Z",
+      "headSha": "26e7f2958fd6b01c3dfd2365d017817fbd886073",
+      "url": "https://api.github.com/repos/cqrityjob/trust-path-recruitment/actions/artifacts/11551677348",
+      "localBytesDownloaded": false
+    }
+  ],
+  "publicProof": {
+    "originalJobId": 113318598726,
+    "allSevenInvocationsPassed": true,
+    "totalTests": 349,
+    "lastInvocationTests": 94,
+    "lastInvocationDuration": "7.0m",
+    "hangEstablished": false,
+    "originalCompletedEvidence": "2026-10-08-ci-26e7-attempt1.json"
+  },
+  "verificationLimits": [
+    "Regular CI browser fixtures and SQL/Auth transport substitutes remain distinct from native GoTrue/Storage witnesses.",
+    "No hosted user flow or physical-phone validation is established by this CI status.",
+    "No product/source/schema change, service start, rerun, push, deployment or hosted write was performed by this observer."
+  ],
+  "observer": {
+    "readOnly": true,
+    "docsOnly": true,
+    "reruns": 0,
+    "pushes": 0,
+    "deployments": 0,
+    "hostedWrites": 0,
+    "localServicesStarted": 0
+  }
+}

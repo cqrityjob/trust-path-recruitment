@@ -1,0 +1,7 @@
+# Bevarat native100-fel: 2dd
+
+Faktisk [körning 37770009238](https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37770009238), jobb `113286984923`, [artefakt 11548230075](https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37770009238/artifacts/11548230075). Evidenskod `2dd96b9966a7ae5020ed11fcac302a4a11c7b10f`; app `ac25b3befbfb87ed5eb682679a929708d6dfbebf`; schema `fd48827b79f3e09c1dc9ccb4a8720e18692d68a1`.
+
+Stack,386 migrationer,104 riktiga Auth-konton och exakt100 ansökningsfixtures passerade. Den första originaluppladdningen misslyckades;80 fungerande Storage-original,100 mänskliga granskningar,23 API och5 browserfall är inte genomförda. Före uppladdningen visade safety100 ansökningar samt0 kvitton/meddelanden/email attempts/AI/erasure/cron. Den borttagna bucketsetupens saknade API-ersättning är separat bekräftad i källan; det exakta HTTP-felet ingår inte i originalmanifestet.
+
+[Originalmanifest](manifest.json) är byteidentiskt med det redigerade originalarkivet. [Oberoende hashkontroll](verification.json) anger ZIP-SHA256 `582e96deee2da6ef9cb973fb263fa631a71cc87fb66ce8762c171a3448aabdc0` och manifest-SHA256 `ce2dce22015383dae1e74bebc5f8b52735277219174bb305730b66eb944ade7c`. Arkivet innehåller enbart manifestet; inga privata råloggar eller bilder har lästs eller publicerats här. Detta FAIL bevaras även när senare rättningar eller körningar passerar.

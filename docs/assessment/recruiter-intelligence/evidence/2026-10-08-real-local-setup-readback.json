@@ -1,0 +1,91 @@
+{
+  "at": "2026-10-08T06:55:50.997026+00:00",
+  "jobs": 12,
+  "cases": 0,
+  "ai_runs": 0,
+  "reports": 0,
+  "ai_enabled": false,
+  "auth_users": 8,
+  "sw_ai_runs": 0,
+  "memberships": [
+    {
+      "role": "admin",
+      "status": "active",
+      "user_id": "fe720a3a-05c6-4a8e-8f47-e768fc4161cf",
+      "employer_id": "e8050000-1111-4000-8000-000000000001"
+    },
+    {
+      "role": "member",
+      "status": "active",
+      "user_id": "1d41763d-73d3-45e1-beff-86731047e02c",
+      "employer_id": "e8050000-1111-4000-8000-000000000001"
+    },
+    {
+      "role": "member",
+      "status": "active",
+      "user_id": "3b5f3272-6459-46e2-b15c-5f4b4aeb4e58",
+      "employer_id": "e8050000-1111-4000-8000-000000000001"
+    },
+    {
+      "role": "owner",
+      "status": "active",
+      "user_id": "c01b3872-2802-44d7-9cd8-19b864bda33a",
+      "employer_id": "e8050000-1111-4000-8000-000000000001"
+    },
+    {
+      "role": "owner",
+      "status": "active",
+      "user_id": "972340b6-cea1-4017-8ee0-510881398132",
+      "employer_id": "e8050000-1111-4000-8000-000000000002"
+    }
+  ],
+  "applications": 12,
+  "erasure_jobs": 0,
+  "role_versions": [
+    {
+      "id": "722b79ba-6ccb-47bb-80e2-0f002da5a6b9",
+      "slug": "security-manager-se",
+      "status": "draft",
+      "version": 1,
+      "questions": 8,
+      "stored_hash": "85b45fb7e778080fc1c2a6ec772cba30",
+      "competencies": 6,
+      "pilot_availability": "open"
+    },
+    {
+      "id": "7d62a1e7-1442-4d07-87de-559e6b9820d2",
+      "slug": "vaktare-se",
+      "status": "draft",
+      "version": 1,
+      "questions": 8,
+      "stored_hash": "266a4c71dd4c10aec40efc9fc46e5715",
+      "competencies": 6,
+      "pilot_availability": "open"
+    }
+  ],
+  "email_attempts": 0,
+  "platform_roles": [
+    {
+      "role": "passport_verifier",
+      "user_id": "2f6d1505-c627-4cf9-a528-afaba59acb9a"
+    }
+  ],
+  "server_version": "17.6",
+  "migration_count": 384,
+  "reviewer_grants": [
+    {
+      "revoked": false,
+      "user_id": "1d41763d-73d3-45e1-beff-86731047e02c",
+      "allowed_use_cases": ["recruitment"]
+    }
+  ],
+  "receipts_enabled": 0,
+  "migration_frontier": "20270307090000",
+  "transcript_enabled": false,
+  "recruitment_messages": 0,
+  "storage_erasure_queue": 0,
+  "auth_confirmed_invalid_bcrypt": 8,
+  "createdAt": "2026-10-08T06:55:50.965Z",
+  "environment": "cqj-ri-real-20261008b: loopback55690/55691",
+  "measurementScope": "Read-only observation after local service checks and setup, before browser journeys; explicit side-effect initial counters were not captured."
+}

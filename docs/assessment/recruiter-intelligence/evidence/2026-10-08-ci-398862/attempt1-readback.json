@@ -1,0 +1,145 @@
+{
+  "schemaVersion": 1,
+  "scope": "read-only CI first-attempt status",
+  "repository": "cqrityjob/trust-path-recruitment",
+  "pullRequest": 462,
+  "headSha": "398862f2ef264d369451d5a7c38d0df672b4fdb7",
+  "runId": 37787703129,
+  "attempt": 1,
+  "observedAtUtc": "2026-10-08T14:22:11Z",
+  "status": "completed",
+  "conclusion": "failure",
+  "requiredCoreJobs": {
+    "total": 8,
+    "success": 7,
+    "failure": 1,
+    "pending": 0
+  },
+  "jobs": [
+    {
+      "id": 113347338449,
+      "name": "Migration replay, RLS and rollback tests",
+      "status": "completed",
+      "conclusion": "failure",
+      "failedSteps": [
+        "Migration replay + database assertions + rollback verification"
+      ],
+      "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37787703129/job/113347338449"
+    },
+    {
+      "id": 113347338783,
+      "name": "CV browser — the signed-in journey",
+      "status": "completed",
+      "conclusion": "success",
+      "failedSteps": [],
+      "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37787703129/job/113347338783"
+    },
+    {
+      "id": 113347338789,
+      "name": "Passport three-market browser — catalogue, cards, pilot access",
+      "status": "completed",
+      "conclusion": "success",
+      "failedSteps": [],
+      "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37787703129/job/113347338789"
+    },
+    {
+      "id": 113347338891,
+      "name": "Recruiter current schema — PostgreSQL 17 and PostgREST 14",
+      "status": "completed",
+      "conclusion": "success",
+      "failedSteps": [],
+      "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37787703129/job/113347338891"
+    },
+    {
+      "id": 113347338903,
+      "name": "Recruiter Intelligence P1 — PostgreSQL 17 and concurrent HTTP API",
+      "status": "completed",
+      "conclusion": "success",
+      "failedSteps": [],
+      "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37787703129/job/113347338903"
+    },
+    {
+      "id": 113347338940,
+      "name": "Lint, typecheck and deterministic checks",
+      "status": "completed",
+      "conclusion": "success",
+      "failedSteps": [],
+      "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37787703129/job/113347338940"
+    },
+    {
+      "id": 113347339028,
+      "name": "CV export — PDF and ATS proof",
+      "status": "completed",
+      "conclusion": "success",
+      "failedSteps": [],
+      "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37787703129/job/113347339028"
+    },
+    {
+      "id": 113347339263,
+      "name": "Public entry browser — homepage, employers and the employer journey",
+      "status": "completed",
+      "conclusion": "success",
+      "failedSteps": [],
+      "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37787703129/job/113347339263"
+    }
+  ],
+  "failure": {
+    "jobId": 113347338449,
+    "classification": "confirmed registry rate limit",
+    "source": "scripts/recruiter-domain-conflict-check.mjs:276:6",
+    "image": "public.ecr.aws/supabase/postgrest:v14.15",
+    "dockerExitCode": 125,
+    "stepExitCode": 1,
+    "boundedCompletedLogExcerpts": [
+      "2026-10-08T13:54:22.8461269Z Unable to find image 'public.ecr.aws/supabase/postgrest:v14.15' locally",
+      "2026-10-08T13:54:22.8462100Z docker: toomanyrequests: Rate exceeded",
+      "2026-10-08T13:54:22.8469222Z       at /home/runner/work/trust-path-recruitment/trust-path-recruitment/scripts/recruiter-domain-conflict-check.mjs:276:6",
+      "2026-10-08T13:54:22.8882418Z ##[error]Process completed with exit code 1."
+    ],
+    "actualPartialChecksBeforeFailedPull": {
+      "migrationCount": 387,
+      "durableUploadSqlAssertions": 41,
+      "p1SqlAssertions": 95,
+      "currentFoundationMandatory": 56,
+      "currentSnapshotMandatory": 94,
+      "currentDomainMandatory": 31
+    },
+    "partialProofExcerpts": [
+      "2026-10-08T13:53:41.1959334Z migration-safety-check: 387 active migrations",
+      "2026-10-08T13:54:03.2480030Z     ok  387 migrations applied cleanly, in filename order",
+      "2026-10-08T13:54:04.0441081Z     ok  41 durable upload SQL assertions",
+      "2026-10-08T13:54:09.9005845Z     ok  95 actual P1 counts, sources, CAS, access and handoff assertions",
+      "2026-10-08T13:54:11.3245000Z     ok  CONFLICT current-foundation mandatory 56 assertions",
+      "2026-10-08T13:54:11.6370837Z     ok  CONFLICT current-snapshot mandatory 94 assertions",
+      "2026-10-08T13:54:11.7295461Z     ok  CONFLICT current-domain mandatory 31 assertions"
+    ],
+    "boundary": "This execution did not start its PostgREST14 transport portion; its later full historical rollback chain did not complete.",
+    "fullPg16SuitePassed": false,
+    "productOrSchemaFaultEstablished": false
+  },
+  "publicJob": {
+    "id": 113347339263,
+    "conclusion": "success",
+    "progressionObserved": [
+      "Public entry browser suites",
+      "Career Center journey browser suite",
+      "Reported user flows — desktop and mobile, Swedish and English"
+    ],
+    "hangEstablished": false
+  },
+  "limitations": [
+    "Only the eight requested core jobs are evaluated here.",
+    "Successful lint/typecheck job status is not an independent global lint-zero claim.",
+    "No hosted runtime/Auth/Storage or physical-phone validation is established by this status."
+  ],
+  "observerActions": {
+    "readOnly": true,
+    "reruns": 0,
+    "pushes": 0,
+    "codeChanges": 0,
+    "localServices": 0,
+    "hostedWrites": 0,
+    "artifactDownloads": 0,
+    "newPullRequests": 0
+  }
+}

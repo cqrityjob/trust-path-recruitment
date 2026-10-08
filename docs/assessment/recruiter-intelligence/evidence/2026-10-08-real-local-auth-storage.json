@@ -1,0 +1,354 @@
+{
+  "schemaVersion": 1,
+  "startedAt": "2026-10-08T06:33:57.376Z",
+  "environment": "cqj-ri-real-20261008b: loopback55690/55691",
+  "productSourceSha": "0683d5d961b03668e8d4e6fe56d676e07b656566",
+  "scope": "Local real GoTrue, PostgREST and Storage with synthetic accounts; actual pinned withdrawal helper and direct authenticated transport. No published-runtime, app-server, browser-cache or physical-device claim.",
+  "versions": {
+    "cli": "2.111.0",
+    "gotrue": "2.194.0",
+    "storage": "1.67.20",
+    "postgrest": "14.15",
+    "postgresImage": "17.6.1.156"
+  },
+  "checks": [
+    {
+      "id": "OP-01",
+      "name": "Exact local target and complete canonical schema",
+      "at": "2026-10-08T06:33:57.383Z",
+      "actual": {
+        "version": "17.6",
+        "migrations": 383,
+        "last": "20270306090000",
+        "users": 0
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "OP-02",
+      "name": "Real GoTrue sessions and invalid password/missing/tampered bearer",
+      "at": "2026-10-08T06:33:58.967Z",
+      "actual": {
+        "jwtAlgorithm": "ES256",
+        "issuer": "http://127.0.0.1:55690/auth/v1",
+        "accessTtlSeconds": 120,
+        "actorFingerprint": "001629d854ee",
+        "missingBearerStatus": 401,
+        "tamperedStatus": 401,
+        "externalEmailSent": false
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "OP-08",
+      "name": "Real owner upload, metadata/hash and DOCUMENT_PROVIDED",
+      "at": "2026-10-08T06:33:59.124Z",
+      "actual": {
+        "bytesSha256": "08f28d6701768e7d431a2df960e006fc2fa9686456db1b62dda1294764dbcabd",
+        "sizeBytes": 92,
+        "assertionLevel": "document_provided",
+        "objectFingerprint": "d86b558a0b91d6a1ad30092d2589a7eadc5016f07c4b4d9534d0d3e74fad843e"
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "OP-11",
+      "name": "Private Storage owner signing and foreign upload/read/sign denial",
+      "at": "2026-10-08T06:33:59.247Z",
+      "actual": {
+        "publicStatus": 400,
+        "signedStatus": 200,
+        "signedUrlFingerprint": "e1109512c1c126570f655fc91a55df0830827edc1df0c8d392d2a03b65c3f043"
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "OP-14",
+      "name": "Real owner revoke ends current recipient session/new handoff",
+      "at": "2026-10-08T06:33:59.329Z",
+      "actual": {
+        "recipientAfterRevoke": "unavailable",
+        "newHandoff": false,
+        "preissuedSignedUrlAfterDisclosureRevoke": 200,
+        "gatewayTransport": "real privileged gateway RPCs, not Edge/app HTTP"
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "OP-13",
+      "name": "Withdraw/delete: actual helper, real bytes removal and old link refusal",
+      "at": "2026-10-08T06:33:59.367Z",
+      "actual": {
+        "accessWithdrawn": true,
+        "fileDeletion": "confirmed",
+        "oldSignedUrlStatus": 400,
+        "objectMissing": true,
+        "scope": "local origin deletion; no hosted CDN propagation claim"
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "OP-13-FAULT",
+      "name": "Storage DELETE503 leaves withdrawal durable and retry deletes real bytes",
+      "at": "2026-10-08T06:33:59.422Z",
+      "actual": {
+        "injectedTransport": "test-only client503; real object persisted",
+        "initialDeletion": "pending",
+        "retryDeletion": "confirmed",
+        "historicalMetadataPreserved": true
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "OP-09",
+      "name": "Metadata refusal cleanup succeeds; combined cleanup503 produces actual orphan",
+      "at": "2026-10-08T06:33:59.508Z",
+      "actual": {
+        "missingTargetDenied": true,
+        "ordinaryCleanupMissing": true,
+        "cleanup503OrphanObserved": true,
+        "objectFingerprint": "28eca4e69fdb0616a34aa35b109f7cff7be5c000e943b900d2246f0710ee43c4",
+        "setupCleanupConfirmed": true,
+        "limitation": "Direct transport sequence proves leftover bytes if cleanup fails; upload handler still ignores remove.error. App HTTP fault injection NOT RUN."
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "OP-05",
+      "name": "Real refresh rotates tokens while retaining user/session",
+      "at": "2026-10-08T06:33:59.589Z",
+      "actual": {
+        "refreshRotated": true,
+        "identityPreserved": true,
+        "sessionPreserved": true,
+        "browserBackgroundAndTwoTabRace": "NOT RUN"
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "OP-07",
+      "name": "Real global logout denies refresh and Passport JWT replay before expiry",
+      "at": "2026-10-08T06:34:00.960Z",
+      "actual": {
+        "logoutStatus": 204,
+        "passportReplayStatus": 200,
+        "passportReplayRows": 0,
+        "refreshStatus": 400,
+        "otherSessionRefreshStatus": 400,
+        "storageNewSignStatus": 400,
+        "preissuedSignedUrlAfterLogout": 200,
+        "jwtStillCryptographicallyUnexpired": true,
+        "interviewImmediateRevoke": "NOT RUN; no immediate-revoke guarantee"
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "OP-06",
+      "name": "Naturally expired real GoTrue JWT denied, fresh reauthentication works",
+      "at": "2026-10-08T06:36:01.502Z",
+      "status": "FAIL",
+      "error": "EXPIRED_TOKEN_ADMITTED"
+    },
+    {
+      "id": "OP-06-EXACT",
+      "name": "401 immediately after exp",
+      "status": "FAIL",
+      "actual": {
+        "secondsAfterExp": 1.6,
+        "status": 200,
+        "rows": 1
+      },
+      "error": "STANDARD_CLOCK_TOLERANCE_ADMITS_WITHIN_GRACE"
+    },
+    {
+      "id": "OP-06-BOUNDED",
+      "name": "Natural JWT denial after documented30s PostgREST tolerance; exact-exp denial separately fails",
+      "at": "2026-10-08T06:45:20.503Z",
+      "actual": {
+        "issuedTtlSeconds": 120,
+        "tokenFingerprint": "6042e8a0fbfacc273a54b2a0b58e2bd7834eaa0b389761b92b1cb5b8b5364814",
+        "preExpiryStatus": 200,
+        "timeline": [
+          {
+            "secondsAfterExp": 1.6,
+            "status": 200,
+            "rows": 1
+          },
+          {
+            "secondsAfterExp": 6.6,
+            "status": 200,
+            "rows": 1
+          },
+          {
+            "secondsAfterExp": 11.6,
+            "status": 200,
+            "rows": 1
+          },
+          {
+            "secondsAfterExp": 16.7,
+            "status": 200,
+            "rows": 1
+          },
+          {
+            "secondsAfterExp": 21.7,
+            "status": 200,
+            "rows": 1
+          },
+          {
+            "secondsAfterExp": 26.7,
+            "status": 200,
+            "rows": 1
+          },
+          {
+            "secondsAfterExp": 31.7,
+            "status": 401,
+            "rows": null
+          }
+        ],
+        "exactExpiryAssertion": "FAIL",
+        "clockToleranceSeconds": 30,
+        "configChanged": false,
+        "forgedJwtUsed": false,
+        "sameActorReauthentication": true,
+        "uiDraftRecovery": "NOT RUN"
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "OP-12-LOCAL",
+      "name": "Naturally expired signed URL refuses origin bytes; hosted cache not measured",
+      "at": "2026-10-08T06:48:20.501Z",
+      "actual": {
+        "expiredOriginStatus": 400,
+        "date": "Thu, 08 Oct 2026 06:48:20 GMT",
+        "cacheControl": null,
+        "age": null,
+        "signedUrlFingerprint": "156c7a9068cdf3e0e9cc8f235500e1740dadfe507046921f0834aed3b02f3166",
+        "ttlSeconds": 300,
+        "measuredSecondsAfterExp": 1.8,
+        "actualObjectStillExistedAtExpiry": true,
+        "finalOwnObjectCleanup": "confirmed",
+        "hostedSmartCdnAndBrowserCache": "NOT RUN"
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "OP-22",
+      "name": "AI/transcript and side effects remain off",
+      "at": "2026-10-08T06:48:20.761Z",
+      "actual": {
+        "ai_enabled": false,
+        "transcript_enabled": false,
+        "ai_runs": 0,
+        "sw_ai_runs": 0,
+        "email_tables": [],
+        "cronJobs": 0,
+        "emailAndRetentionCounts": {},
+        "mailTransport": "Auth accounts preconfirmed; local mailsink/Edge/mail workers stopped",
+        "providerCalls": "none in runner; no provider integration invoked"
+      },
+      "status": "PASS"
+    }
+  ],
+  "withdrawalModuleSha256": "dc52256834ef55ba5d6ebad847bc253daf9320318e7951ec06e65d6a743363c9",
+  "baseline": {
+    "ai_enabled": false,
+    "transcript_enabled": false,
+    "ai_runs": 0,
+    "sw_ai_runs": 0,
+    "email_tables": [],
+    "cronJobs": 0,
+    "emailAndRetentionCounts": {}
+  },
+  "signedUrl": {
+    "fingerprint": "e1109512c1c126570f655fc91a55df0830827edc1df0c8d392d2a03b65c3f043",
+    "ttlSeconds": 300,
+    "createdAt": "2026-10-08T06:33:59.303Z",
+    "initialStatus": 200,
+    "cacheControl": null,
+    "smartCdn": "not present on local origin; hosted cache NOT RUN"
+  },
+  "finishedAt": "2026-10-08T06:48:20.860Z",
+  "resumedAt": "2026-10-08T06:43:19.048Z",
+  "previousExactExpiryFailureObservation": {
+    "actualStatus": 200,
+    "measuredAt": "exp+approximately1.5seconds",
+    "originalAssertion": "401 immediately after exp",
+    "retainedOriginalResult": "FAIL",
+    "source": "first attempt OP06; no configuration changed"
+  },
+  "expiryTrial": {
+    "startedAt": "2026-10-08T06:43:19.383Z",
+    "tokenFingerprint": "6042e8a0fbfacc273a54b2a0b58e2bd7834eaa0b389761b92b1cb5b8b5364814",
+    "jwtTtlSeconds": 120,
+    "signedTtlSeconds": 300,
+    "signedUrlFingerprint": "156c7a9068cdf3e0e9cc8f235500e1740dadfe507046921f0834aed3b02f3166",
+    "signedInitialStatus": 200,
+    "initialCacheControl": null,
+    "postgrestClockSkewSeconds": 30,
+    "clockSkewSource": "https://docs.postgrest.org/en/v14/references/auth.html#time-based-claims-validation",
+    "jwtTimeline": [
+      {
+        "secondsAfterExp": 1.6,
+        "status": 200,
+        "rows": 1
+      },
+      {
+        "secondsAfterExp": 6.6,
+        "status": 200,
+        "rows": 1
+      },
+      {
+        "secondsAfterExp": 11.6,
+        "status": 200,
+        "rows": 1
+      },
+      {
+        "secondsAfterExp": 16.7,
+        "status": 200,
+        "rows": 1
+      },
+      {
+        "secondsAfterExp": 21.7,
+        "status": 200,
+        "rows": 1
+      },
+      {
+        "secondsAfterExp": 26.7,
+        "status": 200,
+        "rows": 1
+      },
+      {
+        "secondsAfterExp": 31.7,
+        "status": 401,
+        "rows": null
+      }
+    ]
+  },
+  "notRun": [
+    "Published runtime and hosted CDN/cache invalidation (OP12)",
+    "Complete app HTTP and12 browser journeys (OP16/17)",
+    "Candidate CV server signing, verifier open/closed review matrix, app upload8MiB ceiling",
+    "UI logout/cache/reauth unsaved draft recovery, two-tab refresh and different-project signed JWT",
+    "Physical iPhone/Android, WebKit, app3140 not launched"
+  ],
+  "summary": {
+    "pass": 13,
+    "fail": 2,
+    "partialUploadCleanupRisk": "actual orphan reproduced under test-only cleanup fault then own object cleaned; product upload cleanup error handling remains a limitation"
+  },
+  "productFindings": [
+    {
+      "id": "OP06-EXACT-SEMANTICS",
+      "status": "FAIL",
+      "meaning": "Immediate JWT-exp denial was not met; standard30s clock tolerance is measured and config is unchanged."
+    },
+    {
+      "id": "OP09-UPLOAD-CLEANUP",
+      "status": "FAIL",
+      "meaning": "When metadata fails and cleanup returns503, actual unreferenced bytes remain. Current upload handler ignores remove.error; direct transport fault proof only."
+    }
+  ],
+  "initialCounterLimitation": "Original OP22 before/after table-name search did not include recruitment_messages/recruitment_erasure_jobs/storage_erasure_queue. Companion final readback observes all three as0; no invented pre-run explicit counters.",
+  "canonicalReplayManifestSha256": "1d47acefe81f32013226cf96669b6a44b599547911719b5b8b7f23caf741f674"
+}

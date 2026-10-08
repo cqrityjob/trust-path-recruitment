@@ -1,0 +1,119 @@
+{
+  "kind": "current_native_p1_redacted_witness_copy",
+  "evidenceSha": "19edc333631ac858bfbf5538686fe47bbbece9c8",
+  "appSha": "40e5775de5195050571421827434ec2872a61506",
+  "schemaSha": "1e5988c6f9c7121a0fefd22c0db06f6b573f0ae9",
+  "runId": 37796857513,
+  "jobId": 113378454528,
+  "artifactId": 11559901382,
+  "result": "PASS",
+  "zipBytes": 5044644,
+  "zipSha256": "89d6ec6bdaaad26bc345ad8ecaa2c431cca5e34b592baed4c9d57d72e4c0d1ee",
+  "nativeTimesUtc": {
+    "started": "2026-10-08T15:02:50.232Z",
+    "finished": "2026-10-08T15:07:31.853Z"
+  },
+  "copiedOriginals": {
+    "manifest.json": "ab679c025f01a161a95affb91a6ed47cb35fb3e5ad87009f26608ac54f8cddb5",
+    "verification.json": "0df49829ac2bcb73b177fa1a7f0eed8e415ed7f050fcebf8523ad3e42c2a8854",
+    "images/sv-desktop-explicit-peace-handoff.png": "5e81cef47d75e99707dae7c9501fe0fa35e66b2e056f1d38973bcfee7c998ea4",
+    "images/en-emulated-375-remaining.png": "86039f4ac33f9503340514f62bb847c2461cd0cb731de94e44e8850fcba85604"
+  },
+  "sourceTrees": {
+    "appSrc": "3d5feca97be01959778173fc3a0f0959fe62355c",
+    "appMigrations": "eecc3229705f2c81f7ee8ff63eae032527bb6a38",
+    "schemaMigrations": "eecc3229705f2c81f7ee8ff63eae032527bb6a38",
+    "schemaConfig": "720daa8eda53adfba26e9ebde29284d7cfcd5931"
+  },
+  "canonicalSources": {
+    "sql": "45db1d33d64f1fc1c424f2a22090105694daecdb079cf2eaee5afa277a1f98ce",
+    "api": "b650ce6987192c88404cc65bca63bad4f23983fd711e2af7c89cb3327ae4b3a4",
+    "browser": "3ac000be5fbaf613e11ef8393ce51f0e4f0da0adafee5d69d45173fe25f8988b"
+  },
+  "baseline": {
+    "received": 100,
+    "green": 40,
+    "yellow": 25,
+    "gray": 35,
+    "reviewed": 27,
+    "remaining": 73
+  },
+  "profileV2": {
+    "received": 100,
+    "green": 30,
+    "yellow": 35,
+    "gray": 35,
+    "reviewed": 0,
+    "remaining": 100
+  },
+  "sourceRevoked": {
+    "received": 100,
+    "green": 25,
+    "yellow": 35,
+    "gray": 40,
+    "reviewed": 0,
+    "remaining": 100
+  },
+  "replacementDoesNotRestoreOldAcceptance": true,
+  "actualHttpAssertions": 23,
+  "twoDistinctReviewerStatuses": [
+    200,
+    409
+  ],
+  "browser": {
+    "expected": 5,
+    "unexpected": 0,
+    "flaky": 0,
+    "skipped": 0
+  },
+  "allBrowserCasesOneAttempt": true,
+  "strictFullMigrationHistory": 387,
+  "allOriginalPngHashesChecked": 10,
+  "actualAuthUsers": 104,
+  "actualStorageOriginals": 80,
+  "ownerSignedOriginalBytes": true,
+  "serverSignedOriginalUiReads": 4,
+  "aiProposalIsolation": {
+    "syntheticMockRows": 2,
+    "positiveAndNegativeDraftsLeaveGray": true,
+    "missingOriginalMetDenied": true,
+    "generatedAi": 0
+  },
+  "finalSideEffects": {
+    "auth": 104,
+    "sw_ai": 0,
+    "messages": 0,
+    "confirmed": 104,
+    "ai_enabled": false,
+    "applications": 100,
+    "erasure_jobs": 0,
+    "generated_ai": 0,
+    "synthetic_ai": 2,
+    "erasure_queue": 0,
+    "mail_attempts": 0,
+    "receipt_enabled": 0,
+    "cron": 0
+  },
+  "scope": {
+    "auth": "local_admin_createUser_email_confirm_true_fixed_104_ids",
+    "storage": "local_service_role_setup_80_original_pdf_objects_not_candidate_upload_acl",
+    "applicationDml": "disposable_local_postgres_own_fixture_only",
+    "judgment": "signed_in_owner_and_admin_http_rpc",
+    "browser": "real_password_sessions_sv_en_desktop_emulated_mobile_not_physical_phone"
+  },
+  "excluded": [
+    "hosted runtime/CDN",
+    "physical phone",
+    "candidate upload ACL claim",
+    "private keys/passwords/JWTs/raw logs/signed URLs"
+  ],
+  "visualObservations": {
+    "svDesktopHandoff": "Selected R2/version1/reviewer note/neutral question/original reference/next action visible. Saved source distinct from confirmed evidence; six competencies, eight role questions and draft method/content notice visible. At this exact captured frame the separate live application context still says loading, so this image does not prove that panel finished loading.",
+    "enEmulated375": "Received100/reviewed27/remaining73 and green40/yellow25/gray35 visible; remaining filter73/page1of3 and separate requirement/recruitment/human/technical axes visible."
+  },
+  "historicalArtifactsModified": false,
+  "repoModified": false,
+  "newLocalServiceExecution": false,
+  "zipCopied": false,
+  "copyBoundary": "Only two original PNGs and original redacted manifest/verification copied; original ZIP and remaining eight PNGs preserved in source witness directory."
+}

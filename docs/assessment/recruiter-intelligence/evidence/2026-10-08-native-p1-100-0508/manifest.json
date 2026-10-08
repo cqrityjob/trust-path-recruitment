@@ -1,0 +1,1838 @@
+{
+  "kind": "executed-native-p1-100-v1",
+  "startedAt": "2026-10-08T12:24:27.888Z",
+  "evidenceSha": "0508192b9f554260471a19d456385ee72469fe19",
+  "appSha": "3e0aa8552b7d45f99c5de881320d4e6c773e59cf",
+  "schemaSha": "6039fbc685cad255aae4a4e39c1035e933af883d",
+  "project": "cqj-ri-native-p1-100",
+  "namespace": "ri-p1-94c6eeab29a2",
+  "serviceVersions": {
+    "postgres": "17.6",
+    "auth": "public.ecr.aws/supabase/gotrue:v2.194.0",
+    "storage": "public.ecr.aws/supabase/storage-api:v1.67.20",
+    "rest": "public.ecr.aws/supabase/postgrest:v14.15",
+    "db": "public.ecr.aws/supabase/postgres:17.6.1.156",
+    "postgrestBinary": "PostgREST 14.15",
+    "supabaseJs": "2.110.5",
+    "authJs": "2.110.5"
+  },
+  "canonicalSources": {
+    "sql": "45db1d33d64f1fc1c424f2a22090105694daecdb079cf2eaee5afa277a1f98ce",
+    "api": "b650ce6987192c88404cc65bca63bad4f23983fd711e2af7c89cb3327ae4b3a4",
+    "browser": "3ac000be5fbaf613e11ef8393ce51f0e4f0da0adafee5d69d45173fe25f8988b"
+  },
+  "stages": {
+    "official_native_stack": "passed",
+    "strict_complete_schema": "passed",
+    "auth_104_admin_api_fixed_ids": "passed",
+    "application_fixture_receipts_off": "passed",
+    "storage_80_actual_pdf_bytes": "passed",
+    "baseline_100_human_session_rpc": "passed",
+    "canonical_23_http_two_real_reviewers": "passed",
+    "actual_source_revoke_replace": "passed",
+    "historical_synthetic_ai_never_green": "passed",
+    "owned_job_cascade_fresh_browser_baseline": "passed",
+    "actual_password_browser_five_cases": "passed"
+  },
+  "errors": [],
+  "setupAuthority": {
+    "auth": "local_admin_createUser_email_confirm_true_fixed_104_ids",
+    "storage": "local_service_role_setup_80_original_pdf_objects_not_candidate_upload_acl",
+    "applicationDml": "disposable_local_postgres_own_fixture_only",
+    "judgment": "signed_in_owner_and_admin_http_rpc",
+    "browser": "real_password_sessions_sv_en_desktop_emulated_mobile_not_physical_phone"
+  },
+  "excluded": [
+    "hosted runtime/CDN",
+    "physical phone",
+    "candidate upload ACL claim",
+    "private keys/passwords/JWTs/raw logs/signed URLs"
+  ],
+  "migrations": [
+    {
+      "file": "20260716153446_41bff585-4ff3-4abc-9d86-1f11c2927006.sql",
+      "sha256": "921c2ef9954560ee8f3e526d2399b54fbb17a576f8fde4ef6dcfb65ea6b895c2"
+    },
+    {
+      "file": "20260716153527_4de906eb-a9ff-4e82-a77a-18a3f02b1604.sql",
+      "sha256": "30111fe05611e202c7f7f43b57e3c6a81f39362372aa587bf30af4429c46f476"
+    },
+    {
+      "file": "20260717052749_cb7bcd11-d09e-495e-bc50-eedd84567c2c.sql",
+      "sha256": "965081bceb4d2caaa1adf5d7dbcb6f1440480346d372c49f052b657a905852c3"
+    },
+    {
+      "file": "20260717064956_c64dae88-e0d2-4ce7-aa34-50414c49d1ef.sql",
+      "sha256": "7d1c0d386dd815bd9e1a7ac0d8174e55f1b4a92cfebe0b4ad0d88ebdda13a402"
+    },
+    {
+      "file": "20260717071442_7fe7e558-d6a7-4ef6-946f-e68017ba2d08.sql",
+      "sha256": "7b9e0d98ceabdc5432204c8515c44aec809bc7b0750f10329d9c0e81930a6507"
+    },
+    {
+      "file": "20260717073316_2bb2b7a4-e12a-4024-8e35-cb69452f6cec.sql",
+      "sha256": "41cf1bfece10b65a87991184f9849ed1e075c33626a313e903da27aa266ebdbb"
+    },
+    {
+      "file": "20260717073758_a3d931d5-63b3-4227-90de-e3468d3a6f32.sql",
+      "sha256": "eabe9c1ce84b44cfb46f871c4ea9e59253c93c1577400c769554198419892428"
+    },
+    {
+      "file": "20260717074139_4feb6c1b-9035-4a3d-a696-49b2280be31f.sql",
+      "sha256": "4c1f009f2a42884d845d01c75c64ba8e74ae2031535e7647176ce25273cc7242"
+    },
+    {
+      "file": "20260717113432_d50ef104-1f91-4f59-9607-4a38cd187e83.sql",
+      "sha256": "da5147f270a7944b7c347f56de44c0c284e4a0e7f607c9a2388675329cd29356"
+    },
+    {
+      "file": "20260717143604_f1d977b5-3bae-4317-abcd-f74ff5a961f5.sql",
+      "sha256": "4dd15c19cf98cecdbcaeb6373bcfbf7c0b2d155fc23dc05bb2e23dbba4b7865a"
+    },
+    {
+      "file": "20260717165835_1264dd66-dd6e-4b79-ae08-17d960b99cb6.sql",
+      "sha256": "ca4e58a6b8cd80be6254d67b3727a8950eddfb6fb38064c15a0d8dd9f38b5b48"
+    },
+    {
+      "file": "20260717172039_2633ba0f-b467-4c57-83a4-08b68a1f7984.sql",
+      "sha256": "e057f996dc7f6be6fcd57be99cc5d92bb2327faaa1942b2e3a0d0f9f8d999673"
+    },
+    {
+      "file": "20260718083056_security_career_profiles.sql",
+      "sha256": "b9e7ab1256ce5bf6ea8b30cd7b45aa4777ca513ef844f95c3953b0a685729d47"
+    },
+    {
+      "file": "20260718182544_dbec41a3-8985-4aaa-bc19-30cf337ef376.sql",
+      "sha256": "9cce87f025d097b8ec848a89e278b9292889424c2f42443eade1f97a1ce5b9df"
+    },
+    {
+      "file": "20260718190227_0dc8d8a9-077e-4d87-be34-b2a9b8e2bdd0.sql",
+      "sha256": "d191bc2b87ea2916acf9bee0d7c467ce9c567839bfa1cea5c676589ae5492cdd"
+    },
+    {
+      "file": "20260718193035_8fbbcd18-7977-4c9c-afec-17c5aba48eca.sql",
+      "sha256": "f8474aaf71499a9f618c0fffdc9bfe97db729989367d537acce4bc060b15c4b3"
+    },
+    {
+      "file": "20260719100000_employer_memberships.sql",
+      "sha256": "366b28e9d1595ae09584570fa71505596bcbfd85a0621d4a1216d80b8107fe3d"
+    },
+    {
+      "file": "20260719173615_a71beb5d-e303-4dcb-8938-d87c1d982bd4.sql",
+      "sha256": "2c8a9010ef3b3d8cb1bce0fef4f87d9d2dfc79eccd4f314aaff4ee4dad1109e4"
+    },
+    {
+      "file": "20260719173654_4efae4c1-4aa6-4c3b-87d7-4ecf8a2371db.sql",
+      "sha256": "3dc135af7f888b381e39bf43bc62bbe249e56db1fd53aa709808e8ce7099b045"
+    },
+    {
+      "file": "20260719180509_f897a9d9-28c9-41ed-b398-05030b81ec40.sql",
+      "sha256": "96efae3e723488fa43e62fddfc2b90e3abf080f9e3558e693d68b07d256e0949"
+    },
+    {
+      "file": "20260719181557_f3038432-81c6-4331-802a-62a30ec97775.sql",
+      "sha256": "443cca5f006b3f4194da315ce14e350f618ff6f32083b4bebbb440e3e94c4606"
+    },
+    {
+      "file": "20260719190845_h3_1_candidate_employer_portal.sql",
+      "sha256": "1e431742da69d2d8012555058cad4439e53cfba2a86a5f3388a72cda6308d9d1"
+    },
+    {
+      "file": "20260719221351_7481e40f-5d24-4e2f-bf06-1f697abada0d.sql",
+      "sha256": "54cb07a93afe9861a34eb2b00e6f23fbf330f3e3c677a3d400ef8a37295d5d48"
+    },
+    {
+      "file": "20260720064743_h3_2_employer_settings.sql",
+      "sha256": "01a65d3fa4833f15432dd9ccba227f67cd530382610390d8c1360203a39ad27b"
+    },
+    {
+      "file": "20260720114043_h3_3_platform_admin_employer_moderation.sql",
+      "sha256": "5b9f9f1a29914a85e4ef6e546bb1cea8647b7bfe6369e553ee91174f8b54b4b8"
+    },
+    {
+      "file": "20260720140000_h3_3_employer_status_transition_guard.sql",
+      "sha256": "f665017c75763f65f3e54bf852367b56a2ecaadd6a4b042df70e85c46e63be57"
+    },
+    {
+      "file": "20260720150000_h3_4a_candidate_application_core.sql",
+      "sha256": "5c6f2f6ded9557e064a5bdfca6d50e63321193dee754289827edade3a3340ad2"
+    },
+    {
+      "file": "20260720153228_f907bf88-0e75-4ff2-af66-bdbc63995640.sql",
+      "sha256": "2e3a9e5ae49101776c0e109287c35a9d2aa81b0314fc4090c636c37229534ee1"
+    },
+    {
+      "file": "20260720160000_h3_4b_beta_feedback.sql",
+      "sha256": "db45febbde62e6c2ee39644f103b2f1d433ec4991d43d63e8d73a28edeffe2b2"
+    },
+    {
+      "file": "20260720170000_h3_4_job_rejection_note_guard.sql",
+      "sha256": "926d488e63f15a334f3e902dcb4804b1415c1fd8ef2f349c3339188f2c976389"
+    },
+    {
+      "file": "20260720180001_assessment_run_reports_canonical_home.sql",
+      "sha256": "7482096f6ca69694a4a2ec6b8b3b39cd67ff2506ffab3336f11615460c1153ee"
+    },
+    {
+      "file": "20260721085020_796e7c92-8234-4081-87b4-0b57dce9f35d.sql",
+      "sha256": "8c8bf617be51e92f290add52818acb8268a5493077011f8e23a838540bd3ce55"
+    },
+    {
+      "file": "20260721090000_public_assessment_v2.sql",
+      "sha256": "a4b76f3a6b4819a06b2a51e970145779fd489f9d26f0552f93ed59795c277844"
+    },
+    {
+      "file": "20260721110000_assessment_catalog_public_career_assessment.sql",
+      "sha256": "4a7fca9c1f4a359514b8d651558f5e4c63c799ee0b5f49316dcd00b6de314255"
+    },
+    {
+      "file": "20260721110100_assessment_catalog_security_guard_foundation.sql",
+      "sha256": "858035192987be7fa765e9c49a2b0ce71c7ce4d5f1bfc025aaa3d390319ee539"
+    },
+    {
+      "file": "20260721120000_employer_assessment_catalog_visibility.sql",
+      "sha256": "a0ced8b2c4bb2ad0a66b6aafe711e1a9dc5a90931cd65b3f8dd639e38c1cc06b"
+    },
+    {
+      "file": "20260722090000_employer_workforce_employees.sql",
+      "sha256": "23e026e7ed53c36bd0a75c608e723445820829b7dc8d6ae9c8e28188681ab53a"
+    },
+    {
+      "file": "20260724090000_employer_assessment_assignments.sql",
+      "sha256": "cd3a15bd92674f1ace016d98b9f487931f14ae67c9ce6de2807178983124690d"
+    },
+    {
+      "file": "20260724120000_admin_audit_job_publish_requires_active_employer.sql",
+      "sha256": "7818cc78fdfc3d889e47a30c6736d7dcc60bffcc129e5ec9b281584280ec23d6"
+    },
+    {
+      "file": "20260724130000_admin_portal_operational_scope.sql",
+      "sha256": "e830e92a52a74e17ad89e0b5161b0d1dca4e19ae92c10b61ddcf77065806b104"
+    },
+    {
+      "file": "20260725090000_assignment_email_delivery_tracking.sql",
+      "sha256": "bce48dc1c08151fa061becbf208580c108aef11751f3bbb02b5844cabfb982e5"
+    },
+    {
+      "file": "20260725100000_assignment_duplicate_send_guard.sql",
+      "sha256": "c2dd1566b08da790532a7ae7728c643e5b97ba4d77778a5365f3cffbec07dd30"
+    },
+    {
+      "file": "20260727120000_scp_a1_security_competency_platform_domain.sql",
+      "sha256": "c0b9a2480da12dcad812591519c843a67f861b5a5924796c12f761c6dde933a7"
+    },
+    {
+      "file": "20260727130000_scp_a2_scoring_versions_and_publication_gates.sql",
+      "sha256": "054dab29e933ba81e12812ecf776f00654bb1e463dba3e4ec3ad4946925a30ec"
+    },
+    {
+      "file": "20260727140000_scp_a3_close_high_findings.sql",
+      "sha256": "0133f0af89c50afc91752a7f5bf2a39645a46b8a2cbe6c3dd9f93fb6c1860c89"
+    },
+    {
+      "file": "20260727150000_scp_a4_scoring_visibility.sql",
+      "sha256": "82729e0485bf59904a25f7dd86a29833b07f4679f545acac134deffeddfa90b2"
+    },
+    {
+      "file": "20260728120000_career_discovery_v3_phase1.sql",
+      "sha256": "068e60bb0ee71e87139aee6e277df5fd6b6ea8a7c4b0635c5f67395bb17e922d"
+    },
+    {
+      "file": "20260728130000_career_discovery_v3_phase1_hardening.sql",
+      "sha256": "f445b159aa0c097ac75ad082d10f73d5567b70cb6d09ea94c4bc4c56a1fe073b"
+    },
+    {
+      "file": "20260729090000_career_discovery_v3_internal_test.sql",
+      "sha256": "23b3f97813954dcdd9370fdec06063b39f8b5647dd59194d8d44bcbde085be3d"
+    },
+    {
+      "file": "20260729140000_retire_legacy_public_career_assessment.sql",
+      "sha256": "5ef8120de970b3e993d970082ffe0ea373393ba48839abfbd4c43829937ac600"
+    },
+    {
+      "file": "20260729150000_normalise_cd_complete_session_contract.sql",
+      "sha256": "aa1899e48c73b88dec090fc510001e03b8c3b5c63ed388311e1eb54e8e8d4638"
+    },
+    {
+      "file": "20260730090000_career_discovery_v3_1_schema.sql",
+      "sha256": "bc2a86f5fc8f737b4cdd019c62c0035dbca2939ee9c465a7494c17b4275cfafe"
+    },
+    {
+      "file": "20260730100000_career_discovery_v3_1_instrument.sql",
+      "sha256": "38f9f7af7efee7e99d23783e243c116d0cb86bf4604e1e8096cc70c2a2cabcfb"
+    },
+    {
+      "file": "20260730110000_career_discovery_v3_1_completion.sql",
+      "sha256": "1734b25531fdb69f5eb4d332aba259f9debe873e9ea82228bdcccba4f571ac8e"
+    },
+    {
+      "file": "20260731053218_ebac47bc-fefb-457c-add0-71b0d6e6d768.sql",
+      "sha256": "cf79d92ea5c5946419a84bb4bf7ce1703205d37a165f45487864cda6fdc02466"
+    },
+    {
+      "file": "20260731054144_3d28abeb-16ff-4324-b3b5-51897f2e0ac8.sql",
+      "sha256": "9ab0a4128dc668f2779391f51ff658b4d3498036d172b9673e8f3d84b34aa1db"
+    },
+    {
+      "file": "20260731054522_843ecd41-0bbe-44af-8bcd-fa15549c2c12.sql",
+      "sha256": "4abdd6d50aebe66f1c129d2ff9905654d1442a7f8bdf144015d5390b2dead448"
+    },
+    {
+      "file": "20260731054640_7c8e5c25-8fdc-4930-b9ef-d4e0f3e177ae.sql",
+      "sha256": "4b0d6c000f9e4d6c5f158fed26b4f1e9cb0befdfb4ccfcfa7d2c10aca1311552"
+    },
+    {
+      "file": "20260731054834_c14b01f8-c876-4d74-bb36-e94df4f4ab69.sql",
+      "sha256": "417f7b6ffc9d99f926881d59e01b5601d635ce87be4c444ad77075f2c22cdb75"
+    },
+    {
+      "file": "20260731100000_career_discovery_v31_launch.sql",
+      "sha256": "640d02aa1df0d9f6117e6b60df92b2f4ded87ff52e082f13d95bb83f500e31ad"
+    },
+    {
+      "file": "20260801090000_career_discovery_v31_personal_layer.sql",
+      "sha256": "548f17095c9f2a9b9501f0d63e6a7127142a4805a2d829509134f031067905e0"
+    },
+    {
+      "file": "20260801100000_scp_restore_scoring_lineage_readability.sql",
+      "sha256": "8de5e81be2fb13a6a2041ae010333c1034ac9cb79ce82a29f9a2ab6dd19e4279"
+    },
+    {
+      "file": "20260802090000_scp_phase0_competency_graph.sql",
+      "sha256": "92e0182dc5c64cde2d31184192b6f0bd12a924759fb969e573f096bf2222d512"
+    },
+    {
+      "file": "20260803090000_scp_phase1a_programmes_and_modes.sql",
+      "sha256": "83199ccbcfc649c1f927079470e37c09ba2a0f2318f307005ffe0ae605cc87f5"
+    },
+    {
+      "file": "20260803100000_scp_phase1b_rubrics_attempts_responses.sql",
+      "sha256": "34a2ef3491af473fc16fdfba7d3aa01ae05bc6ac7984e6155f6fc2fcdefc3b09"
+    },
+    {
+      "file": "20260803110000_scp_phase1c_ai_scoring_review_reports.sql",
+      "sha256": "301386199e01cae169ad0300e6a3584b79d208f6eb773f4907c036a30c54ef7f"
+    },
+    {
+      "file": "20260803114922_9ee0e932-5bae-4e63-88f6-8a0c36369ca2.sql",
+      "sha256": "679fb51eaa3e95cdafae1ccc3942ac566c1c389069f6ab7b5045d8f374a3cf86"
+    },
+    {
+      "file": "20260803115001_5ecf4be3-9090-45b9-bd90-e19e0c45cade.sql",
+      "sha256": "3b51f577aa32ce85f30c6ca0e8ea55cd973c278adff91debf7c1520e2e6c9222"
+    },
+    {
+      "file": "20260803120000_scp_phase1d_security_guard_draft_content.sql",
+      "sha256": "a2be9d214c77d4992fe30f9150101d5d163177c41e3643727d19c18baf2e2e85"
+    },
+    {
+      "file": "20260804061230_19f031e1-16f3-4eb5-983d-7a2231155eba.sql",
+      "sha256": "83440e20832b7d424c90b6b0c8dfac01600d05f65b41474817e8eeaf5e8d0f20"
+    },
+    {
+      "file": "20260804061440_9b082372-366c-49e5-b555-260e4e01941b.sql",
+      "sha256": "600fc248b5a1cbe8068fab6e715683b6ff50297ada350bca22fdc7b53d7af537"
+    },
+    {
+      "file": "20260804061624_2dae3b4e-4e96-4a3f-94f9-0964a4a456a0.sql",
+      "sha256": "3fb470b4dedc03460ea3886dec5cbdc7512130eaa2aa08856af98c827bb84ce3"
+    },
+    {
+      "file": "20260804061750_26a3790b-e8ad-4e8d-8682-c6bce42b4d1f.sql",
+      "sha256": "afb01c0b8e1ca5c61277d9069b80521cd28900c17902391785b144fe82c80426"
+    },
+    {
+      "file": "20260804063418_06f72e92-e195-482f-a19a-0a113806c9e7.sql",
+      "sha256": "eaadba39fc2a7df827a452185f626052ae82857b11c372539d38d5f314b418c7"
+    },
+    {
+      "file": "20260804063710_e62eb18e-fc2a-4a42-bd86-64a6f97b071b.sql",
+      "sha256": "b1b35c6a2f02ca001ca21eb1539b9c825436a4f676b86a78074ea27f6ab1394b"
+    },
+    {
+      "file": "20260804090000_scp_phase1f_content_schema.sql",
+      "sha256": "9615c4775cc7c3130eccdf54009378c8afc4462fd8b5b8d72cc5fc08a5944b03"
+    },
+    {
+      "file": "20260804100000_scp_phase1f_sjt_content.sql",
+      "sha256": "dc867b192df7944946f9b3eda9fd3a2e5a45159bb26f5079421188dfa413d580"
+    },
+    {
+      "file": "20260804110000_scp_phase1f_bestworst_cr_rubrics.sql",
+      "sha256": "3a13d37229f5097f7aed6458ed29f568bb053b262bd504f0574e2b6e799169cf"
+    },
+    {
+      "file": "20260805055146_315b28d2-1824-42d7-85ab-417db7974667.sql",
+      "sha256": "6ebfac3e655e45285b5d972e67a5ea9f13d3393f24521888b277372160658325"
+    },
+    {
+      "file": "20260805090000_scp_phase1g_content_correction.sql",
+      "sha256": "d1bd3e48d2e8e93aa531ca43ed8b6a74baacc0198a92c236416f4903581e234a"
+    },
+    {
+      "file": "20260805100000_scp_phase1g_learning_and_anchors.sql",
+      "sha256": "4b9d79bcc7030e44b802632ca7e3ae1d2bc58ad020481ef4c5ec2c3cacc8d506"
+    },
+    {
+      "file": "20260806090000_scp_phase1h_foundation_corrections.sql",
+      "sha256": "5d735971459dd5184dde69ff249cd4e5d0fffdc280ae633d86f2f869e4edbbfc"
+    },
+    {
+      "file": "20260807090000_scp_phase2_read_models_and_identity_rpc.sql",
+      "sha256": "7497c228d85de0bd46e00a106af02863f9883c72be2957655094e1ebe03f6a78"
+    },
+    {
+      "file": "20260808090000_scp_phase2b_fixture_and_delivery.sql",
+      "sha256": "a5940dbd385bdf406befc9a997ccb0bb528a68d69ac22c1e2a793089581d3e83"
+    },
+    {
+      "file": "20260808100000_scp_phase2c_test_fixture_programme.sql",
+      "sha256": "1b133ebccf229bab9f06cabbf6e33bdbc15389c7c9045cc6bb4f3ad87ad30a23"
+    },
+    {
+      "file": "20260809090000_scp_phase2e_employer_learning_progress.sql",
+      "sha256": "da9c86716447051716e2578076644febe402b776f69cf47f4021fc2f1de81f60"
+    },
+    {
+      "file": "20260809100000_scp_phase2f_learning_fixture.sql",
+      "sha256": "ca7589f1427d42b3bf34a855e024bb0b211ce5301db55de65cf82b15c0cfc5bc"
+    },
+    {
+      "file": "20260810090000_scp_phase2h_staging_corrections.sql",
+      "sha256": "917732c75868d16230bb9b2adf10663b6a4b75e17b4ad1e6d820d68c03fbf2ec"
+    },
+    {
+      "file": "20260811090000_scp_phase2i_seed_processing_purpose_version.sql",
+      "sha256": "12c25dd05ce436cc28d8759725447eaa517784529111c9e334311b41738e073a"
+    },
+    {
+      "file": "20260811100000_scp_phase2j_assign_token_without_pgcrypto.sql",
+      "sha256": "a710c0a94c6b89cf8410b15e78388146fedeed91cda5a8bf9bb117a0f93a052d"
+    },
+    {
+      "file": "20260812090000_scp_phase2k_partial_bestworst_while_open.sql",
+      "sha256": "924b271975ad4fb201e8a2d84450580fa3ecf432c3dde2e9a2e2f842f06d09e1"
+    },
+    {
+      "file": "20260812100000_scp_phase2l_submit_requires_every_item.sql",
+      "sha256": "91eff44fb9877af77e9321ba89877de4363fd77eaad9fb5f630429c8d1ea418a"
+    },
+    {
+      "file": "20260813090000_scp_phase2m_fixture_internal_only.sql",
+      "sha256": "83826b274219350ad061eb903a7fee86c825204146c046891a015d80fb53ec11"
+    },
+    {
+      "file": "20260814090000_jobs_archive_lifecycle.sql",
+      "sha256": "3298cf21b4c4cf2c075049374ec3726d7049b28e3634b6ce0e7de749e0463a1d"
+    },
+    {
+      "file": "20260814171100_cd_profession_layer4_content_fields.sql",
+      "sha256": "934a50cfa9b293f6922741dc6dee6b032df17ee6f3dd4ce05e6f7049c200127d"
+    },
+    {
+      "file": "20260814180000_cd_layer4_first_wave_professions.sql",
+      "sha256": "f153ae8269d47e63ae2f25c208e3384c5705d14c2d45dc56092f60a42dbfb8d5"
+    },
+    {
+      "file": "20260815090000_cd_v31_feedback_analytics_goals.sql",
+      "sha256": "653e7cfe905dd5f648e1ee67f7a2150bb3cb3ea03a455cbb27a36f0c6ed0f602"
+    },
+    {
+      "file": "20260815120000_cd_profession_rationale_softening.sql",
+      "sha256": "2f53ad3f4f57fe21e613744470ffd2e06c5aac2f507e5a909012178f1094bbaa"
+    },
+    {
+      "file": "20260815130000_cd_profession_calibration_operational_signal.sql",
+      "sha256": "8995d2545361f8aa65dc43a69bc42704d6c971096943b42ea2779d7d4159a0f1"
+    },
+    {
+      "file": "20260815140000_cd_career_context_fields.sql",
+      "sha256": "d96c982957fe5b55be46c5a524b1495c6fe00764f27d382507f4466a933ffb6f"
+    },
+    {
+      "file": "20260816083319_cd_layer4_polis_operational_central.sql",
+      "sha256": "995cc71a1fe7485baf35eb1d727a6ecec18cb7160827ae91cc830df83f2c599f"
+    },
+    {
+      "file": "20260816105618_cd_v31_option_matrix_v2_cid02_leadership.sql",
+      "sha256": "f9dabc4ab3ebf413cceac49a301e95a22e82cd7426769f680697d39aaa7ca19e"
+    },
+    {
+      "file": "20260816150000_cd_v31_content_v2_compliance_dimension.sql",
+      "sha256": "041d8b885a2a7422e4e24a432d3b6669dce7aa59efb33061c2d8d53ab6a2818f"
+    },
+    {
+      "file": "20260816160000_cd_v31_option_matrix_v3_scoring_version_sync.sql",
+      "sha256": "d0c50219d2b69dfd7c47fffb7a8745a4e0639ba5ed003e42b555e1a55b8c971d"
+    },
+    {
+      "file": "20260816161000_cd_guard_profession_ranking_approval_17_dims.sql",
+      "sha256": "27d53642ebb32cc0ea3a4e0baa1fd3408ac8302ac3f0da5b4c224711f33c182d"
+    },
+    {
+      "file": "20260816162000_cd_v31_funnel_event_result_downloaded.sql",
+      "sha256": "1b34d748aee31df5610d0f2c271c4aec6a96812831f6626d13a103e062837c9a"
+    },
+    {
+      "file": "20260816170000_cd_profession_profiles_current_view.sql",
+      "sha256": "4a382148d5f806cc2f9ea2d3df77f0d3153cf56a310c31550c490a3f16182e3c"
+    },
+    {
+      "file": "20260816180000_cd_v31_rationale_evidence_consistency.sql",
+      "sha256": "2dc0391af556120f007ec5043a9a7a1da63e9e04621f99630837c47520f87320"
+    },
+    {
+      "file": "20260816190000_cd_v31_activate_first_wave_professions.sql",
+      "sha256": "0ed72ab00a1b689b68e5cae0af225c8ceb71633c6e2cbc2e1ee0c07841381487"
+    },
+    {
+      "file": "20260817090000_sp_phase2_live_foundation.sql",
+      "sha256": "5368f601774fab7f8f99d141a183fee433425dd966077c618d86ae877ef1a89d"
+    },
+    {
+      "file": "20260817113707_7564d753-411c-45bf-9f56-67c74e910c83.sql",
+      "sha256": "09d4816d24a1e4b82d7d94c5149b66c034c3e33ea6b8840dbaf7ab10b70551fc"
+    },
+    {
+      "file": "20260817115635_ae62ad64-ba93-4027-8fe3-dfaa1953dd32.sql",
+      "sha256": "3bf43a4263e11b3e6d89e1be5d4dcc0870be3bb371bd6e0235fc88985f281f2e"
+    },
+    {
+      "file": "20260817120000_sp_phase3_verification_and_sharing.sql",
+      "sha256": "f24ca9305777f7a0934b8db72b3b01f54c1659d774542598fde71c8963ac06b0"
+    },
+    {
+      "file": "20260817140000_sp_phase5_storage_public_boundary_and_workflow.sql",
+      "sha256": "514a2270ca0a7cbda74aedde171e81dc4d3a1bd69efca3037717a445a8363316"
+    },
+    {
+      "file": "20260817150000_sp_phase5b_pgcrypto_search_path_fix.sql",
+      "sha256": "f05dcf18cfa1c5f3f03222403715a946be67eb179db3cb24fbbcad82fa4aa5b5"
+    },
+    {
+      "file": "20260817160000_sp_phase6_credential_taxonomy.sql",
+      "sha256": "e2e856d16b07584d6b373a2e462781e151e3f6f365a723623b6fdd7d0d5692ae"
+    },
+    {
+      "file": "20260817170000_sp_phase6b_correction_preserves_credential.sql",
+      "sha256": "7b0344628fab5f9ec9037577fc38bac0d49d3244971b52e05c5aa861c2d25106"
+    },
+    {
+      "file": "20260817180000_sp_phase7_disclosure_credential_presentation.sql",
+      "sha256": "6800116793cdad85cb1442c0abc044ca8a1edcdedf505a1ba0bb9cf8ef855c44"
+    },
+    {
+      "file": "20260817190000_sp_phase7b_revoke_trigger_function_execute.sql",
+      "sha256": "bb2c421c50d2cd7237733a76a5e5f350cdacb672ce3e4c162f53c7b2fb85497d"
+    },
+    {
+      "file": "20260817200000_sp_phase9_single_credential_share.sql",
+      "sha256": "72d323636adcec91f7515e3898d9dc94fbd184a7c59baf762feffd5bfaa0ffe8"
+    },
+    {
+      "file": "20260817210000_sp_phase9b_revoke_delete_grants.sql",
+      "sha256": "4dd4cf2fb59630af46cc467fcae72ed0da7689e7dd75196e879209be854a2ab2"
+    },
+    {
+      "file": "20260818090000_sp_phase10_self_review_and_decision_events.sql",
+      "sha256": "9e9f4ce5c0fdfff42cf15956b5103e28e1ac8c39ff309851171661054d639eb2"
+    },
+    {
+      "file": "20260818100000_cd_ranking_guard_per_match.sql",
+      "sha256": "bd6eb8ebb38530d518a76dfdd882c4499e81742c564e60ba44c8223efd745a47"
+    },
+    {
+      "file": "20260818120000_sp_phase11_languages_and_practical_skills.sql",
+      "sha256": "b72cd7913db1c18235be93f05f4b14a4165d1631d32f007877e9afa267c363c8"
+    },
+    {
+      "file": "20260818162445_scp_closed_test_governance.sql",
+      "sha256": "e40bcb49e4e9d362b00de0c0e0bb303a0ceee2bd6c00d842adac8652f73c1ea2"
+    },
+    {
+      "file": "20260819090000_employer_people_model.sql",
+      "sha256": "25af2bdcfeb5cf06ebb254d3586b6bdc190a3e9cfabb6d8857cc28d36f7b679a"
+    },
+    {
+      "file": "20260819100000_scp_governed_assignment.sql",
+      "sha256": "a22d7e8f07072b77a1eb9ec2fe1f49292123ba8d59054a179cec1c70a7fe68e6"
+    },
+    {
+      "file": "20260819110000_sg_sjt_option_labels.sql",
+      "sha256": "469f68ab15a574d0d5263fcbc45fe564305831ec9cfaac8044cf073652f3382d"
+    },
+    {
+      "file": "20260819120000_scp_safety_critical_requires_review.sql",
+      "sha256": "56f6bdfcc0b6cd78f0e5f523f023df7b93cf9043b980f4f900ff0dce3370f77a"
+    },
+    {
+      "file": "20260819130000_scp_library_reflects_governance.sql",
+      "sha256": "7a249fc9ed45f09b8c2206980b0e927bc324c13ffeb67b4a376cdc9d028a7c1b"
+    },
+    {
+      "file": "20260819140000_scp_reviewer_workspace_context.sql",
+      "sha256": "f259ec28a52c44c8c9c62d4bf4520f8b413fead7968d919c8f223c667dc40258"
+    },
+    {
+      "file": "20260820090000_scp_governed_purpose_selection.sql",
+      "sha256": "3ea8a4fcef1b349c526bdad5e46f6c0b66d311eb68e583ba8524814e276d0740"
+    },
+    {
+      "file": "20260820100000_scp_report_audience_payloads.sql",
+      "sha256": "4b8a5ed6680dbcb638a12a21d953fd20e4351d0016605fb0e5e39b6065ff7c64"
+    },
+    {
+      "file": "20260820110000_scp_report_context.sql",
+      "sha256": "f72418b0ea1b19a63757e81d9b0f34e16ffc2959fd4eb323591b36e132d047d3"
+    },
+    {
+      "file": "20260820120000_scp_employer_report_decisions.sql",
+      "sha256": "eb43afd4df8698e3ab96a5500eef668003ffa4c0d866ff14f5d9eab5d91068a1"
+    },
+    {
+      "file": "20260820130000_scp_report_attempt_scoped_evidence.sql",
+      "sha256": "bc62ca84a23f4b22d62671837cc57d5450d7fbd5ac38a8d54ba4411af3fd9a27"
+    },
+    {
+      "file": "20260821090000_scp_pilot_security_gate.sql",
+      "sha256": "bd5ab7914191d56db824bd128fc56d87efc085dbb87c244185ecb6d79938acc5"
+    },
+    {
+      "file": "20260822090000_scp_followup_prompts_explicit_grants.sql",
+      "sha256": "c7383477d5b3f4e2147d27d6c1f71e0791c2b96b64852f74933b276d92ed3f24"
+    },
+    {
+      "file": "20260822091000_trust_findings_least_privilege.sql",
+      "sha256": "de25af18b8a81c3dbb84802961547f3bc442319d0a2d9b2fe428382125b88579"
+    },
+    {
+      "file": "20260822092000_cd_profession_bands_accessor.sql",
+      "sha256": "96ecf00fa2dbcf22c189ea81b2f0cb052e68f96434259c16967aa84a866139dd"
+    },
+    {
+      "file": "20260823090000_scp_governed_evidence_model.sql",
+      "sha256": "dde93ab70e720a43e87af1113eb4a181b303bb214f896fcf6a3ab787d3b25d2e"
+    },
+    {
+      "file": "20260823100000_scp_sg_v1_content_governance_corrections.sql",
+      "sha256": "374114a3dc6d554e7cee10faa92a869b16a86b0b439fffcb7f72c84350b8e60b"
+    },
+    {
+      "file": "20260824090000_scp_review_concurrency_and_legacy_removal.sql",
+      "sha256": "88c5092452428ba51b20477e1bc94a53565489e1729adbeaf73a85ed34c41aa6"
+    },
+    {
+      "file": "20260825090000_scp_content_tenancy.sql",
+      "sha256": "c177d19ca80d37fa081c7c147aa1debd9a48894fa4a70008bba6dfb6a28319f4"
+    },
+    {
+      "file": "20260825091000_scp_training_maturity_isolation.sql",
+      "sha256": "307c6ba4d421b307952347565dbff7d8203c76a6d4a5d9f924e3c5594d558f72"
+    },
+    {
+      "file": "20260825092000_scp_content_library_read_model.sql",
+      "sha256": "dfa46b84d3c417beeb7043b46f7fb8920e89ab77e765ff0c5d2eba16c2aeb6e7"
+    },
+    {
+      "file": "20260826090000_scp_training_delivery.sql",
+      "sha256": "e0270e66cae43f0fe1e4bb49604eb1a3d91892116f345a6eda61260758537274"
+    },
+    {
+      "file": "20260826091000_scp_training_delivery_rpcs.sql",
+      "sha256": "df0c749ad38161e216f050837d8fee6367da6929e758d3f0dfc7d3baf029b979"
+    },
+    {
+      "file": "20260826092000_scp_internal_training_fixture.sql",
+      "sha256": "a1d4b12e0d23936ff97ba2724b52f3eefd9fed7a4c736ad4a2ab041064620e55"
+    },
+    {
+      "file": "20260827090000_scp_training_closed_test_assignability.sql",
+      "sha256": "a406bc1ecc4d5c93819976b994ab9ea3f6183e646cfe4a40cb49fdeab9473a98"
+    },
+    {
+      "file": "20260828090000_scp_sg_situational_awareness_assessment.sql",
+      "sha256": "e488ab3a3267abba41c8b677678ddc42e9b2c2a6d7e95cfdcfaf1184fcb7c9d3"
+    },
+    {
+      "file": "20260828091000_scp_sg_conflict_deescalation_assessment.sql",
+      "sha256": "a10a484c32448facaa0198b79a85c9c44073cf1b7bdac50efbb87fbcff4bdf63"
+    },
+    {
+      "file": "20260828092000_scp_sg_reporting_documentation_assessment.sql",
+      "sha256": "b05f210d3748a2612f2a1037ae6acba54294f55362d4c11d34997f76b948aab9"
+    },
+    {
+      "file": "20260828093000_scp_sg_access_control_assessment.sql",
+      "sha256": "8bc6edbb0656f40022fadd45a0cb2dd5e76607167a9b3eb88ff187b57902e9cd"
+    },
+    {
+      "file": "20260828094000_scp_sg_incident_response_assessment.sql",
+      "sha256": "2edb1baefcf8537afe86643e0b1478835ce95fad2bba6a9165b6cafdd7586a8e"
+    },
+    {
+      "file": "20260828095000_scp_sg_module_learning_content.sql",
+      "sha256": "e675aa8a5314770bd22bff6ed0dd03cf59dee20f7becba8859eff27a6711364b"
+    },
+    {
+      "file": "20260828096000_scp_standalone_development_programmes.sql",
+      "sha256": "7bb8804eb0467c43e03f5d97e2c16c41091415f6415b16c86afea095b96e81d1"
+    },
+    {
+      "file": "20260828097000_scp_library_programmes_need_modules.sql",
+      "sha256": "b2ca8e5f3c4edd394714501f23255ed734397650ad5ec2f16c355f0a63fd9c96"
+    },
+    {
+      "file": "20260829090000_scp_employer_response_reviewers.sql",
+      "sha256": "7eef942bcf80de0287552b096f743df9c11b46f5487270960c4954eae485e672"
+    },
+    {
+      "file": "20260829091000_scp_employer_team.sql",
+      "sha256": "9e73c86f99188b6e85e15cfa6b3d755dca6e0aa706b26cb2c00953842d7e5b5d"
+    },
+    {
+      "file": "20260829092000_scp_employee_subject_spine.sql",
+      "sha256": "0d0d2dfc6c29ef51a2d2912b8c5ad8752e5f2e5d30e02ff1bf85c78c07c38736"
+    },
+    {
+      "file": "20260829093000_scp_lifecycle_projections.sql",
+      "sha256": "a7a58a9af1934b28ee4cefe8b1d70291aa9aa2d3fb767c6c03c10b119dfa53da"
+    },
+    {
+      "file": "20260829094000_scp_pipeline_supersedes_participants.sql",
+      "sha256": "941761951458c12ceebfeafcbf283e2e25714ebe2570cdbc0838854d23b3d504"
+    },
+    {
+      "file": "20260829095000_scp_review_workload.sql",
+      "sha256": "d19d6aba853318aaec956fab2b41f80dffeaf538ab09cbfd9b8b6318d95f949d"
+    },
+    {
+      "file": "20260829096000_scp_lifecycle_started_signal.sql",
+      "sha256": "74d78f253e27c567e9e807194f3380dcc4fad24ebac9a1d975a63378816e319b"
+    },
+    {
+      "file": "20260829097000_scp_bind_known_employee_on_assign.sql",
+      "sha256": "b604dfc06375e5c932273797fee771088420bbca7719e6c5347f58d27b1943b2"
+    },
+    {
+      "file": "20260830090000_scp_self_reported_evidence.sql",
+      "sha256": "8f6d446a32b26900194dd515676b7dbd6c30685906565121d897d68a3f0f3e66"
+    },
+    {
+      "file": "20260830091000_scp_form_modules.sql",
+      "sha256": "108d1e5524d9ec74a3cbb3d79118a2e61b2ee47f5e5f1e227c3f32d48cc72255"
+    },
+    {
+      "file": "20260830092000_scp_recruitment_assessment_metadata.sql",
+      "sha256": "acf95a7b032aa0656889e1d9b38fec1d53459e6282d81e85b6b0cc8dcfb3f38c"
+    },
+    {
+      "file": "20260830093000_scp_candidate_brief_and_interview_guide.sql",
+      "sha256": "d49d2eba8eeb3135e2a75245476a615df33a1f6549a1d19c92f10f70f5c3852d"
+    },
+    {
+      "file": "20260830094000_scp_security_officer_recruitment_assessment.sql",
+      "sha256": "2d7c2d2cfaf3380cc0a2957c2de201cf957f995527c30d10e29513b3fd306f9f"
+    },
+    {
+      "file": "20260831090000_scp_closed_test_recruitment_purpose.sql",
+      "sha256": "de34016e7274ff73ad9571d81018861b60ad911b7f1cdc9da9373299415475d4"
+    },
+    {
+      "file": "20260831091000_scp_participant_invitations.sql",
+      "sha256": "9b27191ae1ecbc31c6a996fd61e9cc0aea15c6b458bf003a031f8119aa39feb6"
+    },
+    {
+      "file": "20260831092000_scp_recruitment_read_models.sql",
+      "sha256": "4bd05ebacbb757ea8e11b2337221520b1a0e1f641a9c9c9e9e1743621a650b91"
+    },
+    {
+      "file": "20260831093000_scp_brief_executive_summary.sql",
+      "sha256": "1bc5c5301a6a40d800ca19b7cec1da7ee9ed48c086039dd11d91e191bdd51356"
+    },
+    {
+      "file": "20260831094000_scp_recruit_from_application.sql",
+      "sha256": "765cafe60e8a09431d8e9de0f580d4794a1889307913b45debe27d8177a2ce4b"
+    },
+    {
+      "file": "20260901090000_scp_purpose_display_names.sql",
+      "sha256": "a07bceb2966b61b4c5f9d77448762656fa5c3c830a6e7483ecd07a973e05cae1"
+    },
+    {
+      "file": "20260902090000_scp_library_assessment_area_count.sql",
+      "sha256": "823f133173f5591b11a52087c8ba9a19a91e111530db3beeb63ecb51ef80b4e2"
+    },
+    {
+      "file": "20260903090000_scp_candidate_from_application.sql",
+      "sha256": "1f5de1797d47a7c91071aad5cf3504b9e0e376e37a85e45d7b4066c204806c1e"
+    },
+    {
+      "file": "20260903091000_sp_application_scoped_disclosure.sql",
+      "sha256": "4ec73ddaef302b25fdda8f6a7b11824605688060757e53aecf44a1c8c6e30345"
+    },
+    {
+      "file": "20260903092000_scp_hired_becomes_employee.sql",
+      "sha256": "4a1671cafc498e844332e8c127d05e7e699eeb85d17cd4c30faa2c2d9bb668f8"
+    },
+    {
+      "file": "20260903100000_scp_review_conflict_disclosure.sql",
+      "sha256": "9a70ecff6aa23695c6094aacd2a0f15427ae176aac22736343e12f4e65fdbe0e"
+    },
+    {
+      "file": "20260903110000_scp_stamp_trigger_least_privilege.sql",
+      "sha256": "bce8f7bbfd27e0690584237a69d6c584e9ab11af92cc6a57f13e03ca435c2690"
+    },
+    {
+      "file": "20260903120000_scp_sg_reporting_documentation_rubrics.sql",
+      "sha256": "73a344e32f734dd620c08b5adca94507f06844a54773f937b8ef54a0971d7d6a"
+    },
+    {
+      "file": "20260904090000_sp_application_submission_with_passport.sql",
+      "sha256": "7e91582a732d90b17c6eb18c9cfb31ec41ecced537a6d71b412460831de7af49"
+    },
+    {
+      "file": "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
+      "sha256": "77c3e3dbf512c86abf28af034ecf79c7d50c281f2d94dcf25d47127ba15d2dbd"
+    },
+    {
+      "file": "20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql",
+      "sha256": "cce2464b7b64afa723bd43baa5c7232b88ba379429ec7b41131d67efe236196f"
+    },
+    {
+      "file": "20260904174903_scp_trust_evidence_report_r2a_contract.sql",
+      "sha256": "31a30e753323cab4c717f2d1b57d80e7c285ea3e2b32c292b773d6739f1f379b"
+    },
+    {
+      "file": "20260904190901_scp_trust_evidence_report_r1_provenance.sql",
+      "sha256": "d10536d83267506bb49b93b1b03213b4f2cfe27b4c8ee9a847af001facc22207"
+    },
+    {
+      "file": "20260905053344_scp_option_order_per_attempt.sql",
+      "sha256": "fe1cbbd6901e9a6ef7cd0235ddcbe00f50d3e9e5c560a83d0db382259616a8d8"
+    },
+    {
+      "file": "20260905053809_scp_release_facet_resolution.sql",
+      "sha256": "1390d8f731ec59d19a8bd19a74fa409030c18b9f86e1aff36da15123f17adbc5"
+    },
+    {
+      "file": "20260905054603_scp_trust_evidence_report_r1_provenance.sql",
+      "sha256": "48e5e9dd309df356ede547067610c657575d790d222916c104783ae9a46a77a2"
+    },
+    {
+      "file": "20260905090000_scp_standard_recruitment_availability.sql",
+      "sha256": "5a4f38483f592db4cf387a6959a80e0dd9dac8b4075faec93967aa606d1104ed"
+    },
+    {
+      "file": "20260906090000_jobs_bilingual_candidate_requirements.sql",
+      "sha256": "ec766e86131a041dbe647dfb35006388834e972310852807965660e667f8e9fd"
+    },
+    {
+      "file": "20260906091000_jobs_employer_self_publish.sql",
+      "sha256": "04517d22ffe5a9498d4944bf14e5b2fe14471d7f316a486f5bbf6e07cbb0451f"
+    },
+    {
+      "file": "20260906100000_jobs_self_publish_admin_member_fix.sql",
+      "sha256": "0d797af43b97fc494f6829432a4638ee4c0b88752a9b3010272e30421e448cb5"
+    },
+    {
+      "file": "20260906125945_scp_trust_evidence_report_r3a_contract.sql",
+      "sha256": "319f33104b548f8d3d47809564c1fe639ff8a7fee45c03394167e880d07d01ae"
+    },
+    {
+      "file": "20260907064303_f8efc1c3-def4-4147-9db1-45a68b1f6a69.sql",
+      "sha256": "880b770f40ad3644b71184c2439d329c1ee758b5adae7deed0d798d169d142f2"
+    },
+    {
+      "file": "20260907064513_19c76abb-f1fd-40e5-aa50-b008b7de38bf.sql",
+      "sha256": "08fa6c7bf828e74379d811c28b6637b2b84ffa9e8e1ce38b50e284432ed18edc"
+    },
+    {
+      "file": "20260907064849_0bb96516-c1eb-4178-8e9e-60bde13071dd.sql",
+      "sha256": "cdb04ef8f8d3643840e203639429313279bb3e099c106cb6f742c2ae2ec982a5"
+    },
+    {
+      "file": "20260907071826_6c070461-aa51-4d78-8ed0-a82294f12489.sql",
+      "sha256": "256ae60d0fb49744b9b8f822463f789b20cd4db1e4fecb1fe0a89338c598fb4c"
+    },
+    {
+      "file": "20260907090000_sp_three_market_foundation.sql",
+      "sha256": "3dd0ee188b1fa3d407ff310f45108fd806c71351c26f358bf05f75e0fd1f3828"
+    },
+    {
+      "file": "20260907091000_sp_sweden_truth_model.sql",
+      "sha256": "aa1e9b53e6ef3ba80132caf4923666755381aff31d64349acff8fb3f6abddbd5"
+    },
+    {
+      "file": "20260907092000_sp_uk_market_pack.sql",
+      "sha256": "0da983183ffa6c1b0c48975efc5d069e5b1d7d509a3ea99fb5c9f4a0125771a5"
+    },
+    {
+      "file": "20260907092500_sp_uk_title_rules_correction.sql",
+      "sha256": "c5384c174dd09bc4a48d47fb5dae17434b59cdae43faadd4bf3973e11df5b689"
+    },
+    {
+      "file": "20260907093000_sp_uae_dubai_market_pack.sql",
+      "sha256": "11fcc1466e62ffb229986c3a7aca1ad423aeac31f217d86c2a2d626a81700a7e"
+    },
+    {
+      "file": "20260908043205_b315714c-89df-4610-9dd0-7b55207229a7.sql",
+      "sha256": "f7af8fe497bbd28cd5559dd4691ec9edf85080d7323b590304b56282bd121dc4"
+    },
+    {
+      "file": "20260908090000_sp_legacy_scope_correctable.sql",
+      "sha256": "843561b77843cb29f767dc5b19e623d1b273a30ff6eac9e109be08d277e0c9f2"
+    },
+    {
+      "file": "20260908091000_sp_title_country_and_training_label.sql",
+      "sha256": "8512a282c3a236f1554fa2bedaa4f8c2fc457bd63f9e3c22a988a65fb1012434"
+    },
+    {
+      "file": "20260908092000_sp_disclosure_scope_boundary.sql",
+      "sha256": "9bdf1f6583de9a408c4633773799c375f2fc06c4efbeba9a97f061d54405a2f6"
+    },
+    {
+      "file": "20260908093000_sp_profile_work_country.sql",
+      "sha256": "c678cd235c16b74db7e7d861a1698759ff30c0470764bd51db91504dce4924d2"
+    },
+    {
+      "file": "20260908094000_sp_disclosure_holder_sub_jurisdiction.sql",
+      "sha256": "d8a7fb563e230a53061df89cdb10fd84fbe8dc9ed6dfce0e84e2f3fffca245b4"
+    },
+    {
+      "file": "20260909090000_jobs_delete_unpublished_draft.sql",
+      "sha256": "fdd4175c84fcd0a4904944aba59c31ad3e32f8cecea1ad279b1dc289e357bdd3"
+    },
+    {
+      "file": "20260909092000_jobs_other_profession_selection.sql",
+      "sha256": "bf353a4ba894332a590967c944e0e6f2aef1cc6750cbceb2cadcb5e8c235ff97"
+    },
+    {
+      "file": "20260909093000_application_status_notifications.sql",
+      "sha256": "80c7981dcbf317d8f3346dc6d1a0664a5eb3051e106dddc58947474ad730bd58"
+    },
+    {
+      "file": "20260909094000_job_audit_vocabulary_lifecycle.sql",
+      "sha256": "1b92db4b0caa811f375694b6d14be8d60a5e01fa86be7538e6a7187cc96690dc"
+    },
+    {
+      "file": "20260910090000_sp_pilot_bugfix_1.sql",
+      "sha256": "0b62ce6937dbc90d664a238dc8ea73082987ebad3384fd5174e71386d8645885"
+    },
+    {
+      "file": "20260910091000_cd_v31_content_v3_question_refinement.sql",
+      "sha256": "5136fe4bccb2a67da61baa1847d2dc9efb4c79b4d127c397a044e592ecec4e50"
+    },
+    {
+      "file": "20260911090000_admin_control_center_lifecycle.sql",
+      "sha256": "cea6c40f0800a5e756fc13018514f844a7f076645d72c01288c9ec99d0137753"
+    },
+    {
+      "file": "20260912090000_cd_ranking_guard_recommendation.sql",
+      "sha256": "45452a813417904e98cf1f3b9392bc72ff9643af9dd7c664524bfc4ea8ac9619"
+    },
+    {
+      "file": "20260913090000_cd_v31_content_v4_context_intent_separation.sql",
+      "sha256": "debe58c7f8812126e64234d99c6631c6364205e15df5d68e1828dcbc8f4378ba"
+    },
+    {
+      "file": "20260913091000_cd_career_context_other_profession.sql",
+      "sha256": "784fc535a4bebe8780a109dc051e50feba4782df9089e7f018d191cbf1f9a574"
+    },
+    {
+      "file": "20260913092000_cig_security_leadership_professions.sql",
+      "sha256": "e9f987c38bbd907ae183c056d4c05371254242d84bb6b3981e64e6694d3b2ba0"
+    },
+    {
+      "file": "20260914090000_sp_uk_vehicle_immobilisation.sql",
+      "sha256": "e8208f515cad3d00eca9f267bb047e0f4491616ea4ad1804e4bf51a552f0295f"
+    },
+    {
+      "file": "20260914091000_sp_uae_dubai_cadre_catalogue.sql",
+      "sha256": "53ad1496a7f3094ce9d45854b03ea27059816fce7c5da88ce83d4d96dd047976"
+    },
+    {
+      "file": "20260914092000_sp_uae_abu_dhabi_market_pack.sql",
+      "sha256": "1418aab99ceddc61e6b66927c6daf964807541aa887ef3a0366072a5bd4f6b51"
+    },
+    {
+      "file": "20260915090000_sp_market_pilot_entitlement.sql",
+      "sha256": "611b8a08fd6b8b936dcbb143d50f986ecc45f132e139be50d6d26146eca2a5c3"
+    },
+    {
+      "file": "20260916090000_security_hardening_expand.sql",
+      "sha256": "1ac6639964f6495a7e841cd617d9b3857d35e0d715e2d0fc5c498df51421f947"
+    },
+    {
+      "file": "20260916091000_security_hardening_contract.sql",
+      "sha256": "2f66360d9e0887e3c1bfdd13913d0da5ee2e0972c5b85798301d88596b0919cd"
+    },
+    {
+      "file": "20260916155430_sp_international_passport_foundation.sql",
+      "sha256": "1ebd5ed66ee772b94f825be4dd2e63ce3937b04ff326e0c495085fc3d6f1e62e"
+    },
+    {
+      "file": "20260916155456_sp_international_credential_wallet.sql",
+      "sha256": "e3849dbe099a87d070f52e0643d9cad9625182b657e476d87b18ab5d96a74328"
+    },
+    {
+      "file": "20260916155521_sp_credential_selective_sharing_v2.sql",
+      "sha256": "20b92b425733d815abbc55cd015de6c7b7f03bd298d6c3be3535b6cefc282dc1"
+    },
+    {
+      "file": "20260916155551_sp_closed_credential_catalogue.sql",
+      "sha256": "5b63832819de35b1df1c070f3fc0fbf43ef4878ad341f46ca72631a9a46de47c"
+    },
+    {
+      "file": "20260916155620_cv_owned_application_snapshot.sql",
+      "sha256": "d4c9a7d1143015e69631be2b25975552e21a98745f40bcd0c6eaa4a034eb1b3d"
+    },
+    {
+      "file": "20260916190510_sp_credential_organisation_roles.sql",
+      "sha256": "d0fb6a1af52621de4b43350580706ea90e7de57fba0eec813f5a80cbaf5fa604"
+    },
+    {
+      "file": "20260917090000_superadmin_permanent_account_deletion.sql",
+      "sha256": "7b8c4d86471063c2d1a8e2b8673ca3ba27007a73b42ed4c6e35d05acab9ce9c7"
+    },
+    {
+      "file": "20260918090000_scp_interview_role_packs.sql",
+      "sha256": "1f36dbd391c63b747376ca047d11d4351f3e7ef6bb2bb0cba39ca4fcb18ce593"
+    },
+    {
+      "file": "20260919090000_scp_interview_intelligence_registries.sql",
+      "sha256": "87def564e886f24202cf2419613e5763553440ecb1b0128c8eaf730f91a0ec31"
+    },
+    {
+      "file": "20260920090000_scp_interview_runtime.sql",
+      "sha256": "73483cc204131fc3e30057579e43f6c70b8b9d44bcd3d50de8f6e46f7954c253"
+    },
+    {
+      "file": "20260921090000_scp_interview_integrity_hardening.sql",
+      "sha256": "4e14291a8990f6f344d6d2bdd4b3763ad1d16b631092d1a5778a884bb8042c11"
+    },
+    {
+      "file": "20260922090000_scp_trust_method.sql",
+      "sha256": "07640e43daa558aa8a0deca58f30031a2ed0d350426e6aa845f486648ca27c0c"
+    },
+    {
+      "file": "20260923090000_scp_trust_corrections.sql",
+      "sha256": "eed582375836b85690d0c4299eb1ab0304fcd60abda435232477d280ebb4ce52"
+    },
+    {
+      "file": "20260924090000_migration_ledger_seed_event_reconciliation.sql",
+      "sha256": "f736d9eb111015859fb2b677e6da76bd1ed92fe25b5c1d2406d497bf694743ae"
+    },
+    {
+      "file": "20260925090000_scp_interview_open_pilot_entitlement.sql",
+      "sha256": "004de3b0633cf334e5bbe99fad0c805a0923f7969eb15c8e38a6d7707a627490"
+    },
+    {
+      "file": "20260926090000_scp_interview_startable_contract.sql",
+      "sha256": "e8924cf8697521ff8c4841a2c1216d821c318b8bcb644c67e2faf3cbb00bd082"
+    },
+    {
+      "file": "20260927090000_scp_interview_ai_gate_and_provenance.sql",
+      "sha256": "4303afaf63361bc9ca79d5feeefb2dacebaf0b8232e6e28d71fee0f688680a94"
+    },
+    {
+      "file": "20260927124146_client_table_privilege_hardening.sql",
+      "sha256": "f2f01f83c3a6c6a8c74fd933fb34bc68737af0ec31059cc90323e666c3d1a89b"
+    },
+    {
+      "file": "20260928090000_scp_trust_stage_english_copy.sql",
+      "sha256": "7f2f44ddbfa134dd54b23ddcc04c055819d476747ab587bf86d440dc01c7fc9d"
+    },
+    {
+      "file": "20260929090000_scp_interview_english_guidance_copy.sql",
+      "sha256": "405b07afcdc3c43bbbe40a63e5c7b331c7649d51d2274382ff2b183d16a34cdc"
+    },
+    {
+      "file": "20260930090000_scp_interview_5e_evidence_structure.sql",
+      "sha256": "38ef60e76e70d73309222f7a49cd852cd5e3b3cc206c0810d5ad23ba0657b457"
+    },
+    {
+      "file": "20261001090000_scp_interview_rating_anchor_english_copy.sql",
+      "sha256": "70f8467c1ac8b88e754f462bf9d73a650b23c413bcb61cc0a9a6b0e4cbfd0fdd"
+    },
+    {
+      "file": "20261002090000_scp_interview_conduct_layer.sql",
+      "sha256": "4ea748a5471fb2d9f5009dde5fbe028a664dcced839f453d08a0d0fbf092b9de"
+    },
+    {
+      "file": "20261003090000_scp_interview_conduct_guidance.sql",
+      "sha256": "c61f47497cf19d6204d05cb255946b20b4c19f191b5efe6ff0122a236c3f32e0"
+    },
+    {
+      "file": "20261004090000_cd_v31_funnel_events_career_center.sql",
+      "sha256": "1c180e1fc5e240dda561de0484cf84cba43ea44e08ec3ad342dfa009eb136f82"
+    },
+    {
+      "file": "20261004164027_application_passport_verified_content_guard.sql",
+      "sha256": "348764bd54437c3b4a829c89538ce04bd0a64ac9d8717eba386b53b69544d5ee"
+    },
+    {
+      "file": "20261005090000_cd_v31_scoring_version_draft4_ranking.sql",
+      "sha256": "90261b1e11a14250a3eeb25e606621357ca8c52204c7a503cffee9f16dd567be"
+    },
+    {
+      "file": "20261006090000_cd_layer4_entry_gap_professions.sql",
+      "sha256": "2bf0acdde0af7e08b04cade1b554bc0aff9aa9cb3f6d074a7aefd5653626be83"
+    },
+    {
+      "file": "20261007090000_canonical_professional_profile.sql",
+      "sha256": "40fe10dcd5e549f41501d4a6c5a7a30da68258f83ed5bf6e738fe004f4229f33"
+    },
+    {
+      "file": "20261008090000_canonical_professional_profile_contract.sql",
+      "sha256": "19a7fdbaf507980a7b5a494dc0364ef6d2e3c9e07f33770f4c89896092e921c5"
+    },
+    {
+      "file": "20261009090000_scp_interview_assessment_supersede_order.sql",
+      "sha256": "642235e38b8a1d715f46396609db111d9286b87b045e53e8c43b567229e426be"
+    },
+    {
+      "file": "20261010090000_cv_documents.sql",
+      "sha256": "b48875fffc31cb232f2690dc2d35aa101b47f0fca80173de3697e2e343ab4b85"
+    },
+    {
+      "file": "20261011090000_cv_documents_editing_provenance.sql",
+      "sha256": "46842cb5dc2916700b7492334a598eb8db3a1fc1063398b7015a05583a2ef227"
+    },
+    {
+      "file": "20261012090000_sp_decision_requires_holder_message.sql",
+      "sha256": "b358c15c1cefa6fe4c29efc3db6920788ff79a1f22a19c72aabfa8a29d686f6e"
+    },
+    {
+      "file": "20261013090000_sp_trust_boundary_hardening.sql",
+      "sha256": "90681238ade25d7a71873dd70143e3edde2f9f9335155db73dbf3e19077a432b"
+    },
+    {
+      "file": "20261014090000_sp_reviewer_detail_and_note_privacy.sql",
+      "sha256": "67721e7bfd594f610f6f8404720a42b39e2155ce342ad639bb2cfcf7d61645d5"
+    },
+    {
+      "file": "20261015090000_sp_passport_verifier_role.sql",
+      "sha256": "b60cadaa764bbfaf5be40bbb066e9457330546168f147de0d39fd9a2a0ce0007"
+    },
+    {
+      "file": "20261016090000_sp_reviewer_least_privilege.sql",
+      "sha256": "32ebffb567fcb24e3435d148e9fdb32910e5c965673c1638091a142b40924fcf"
+    },
+    {
+      "file": "20261017090000_sp_employer_attestation_queue_task.sql",
+      "sha256": "2f2d73afaed67e16d149f88e92fef2aff51a918369c64f149021885a40f3431c"
+    },
+    {
+      "file": "20261018090000_job_application_cqrityjob_cv.sql",
+      "sha256": "eedae950054c47bc957c86177d6ccfa2233823631a07367bb9dcfc9f7f3fae2b"
+    },
+    {
+      "file": "20261019090000_sp_employer_attestation_eligible_org.sql",
+      "sha256": "d0446e6f263322e358a61141a6f7f3168c89078883b6c9f2ddbc6d458ca45a59"
+    },
+    {
+      "file": "20261020090000_scp_interview_evidence_reliability.sql",
+      "sha256": "3fe4399ae75402c8de9b1c2ca7b43e88679a55e68b856bb1cc829ac5afb7ce73"
+    },
+    {
+      "file": "20261028090000_admin_cancel_assignment_error_contract.sql",
+      "sha256": "891b052f1c4c433b30e7f331775aed76167438e1ea20ee8de2610fa49e475150"
+    },
+    {
+      "file": "20261030090000_sp_trust_source_containment.sql",
+      "sha256": "d2985765a7cf2be271e5898e7013c17541275b42a6c7626bde686601567a5130"
+    },
+    {
+      "file": "20261031090000_sp_passport_first_merit.sql",
+      "sha256": "f505b4e8498d460449bf86fe43cad6edc5d29b6a916a9d97b54d19dbba6011f2"
+    },
+    {
+      "file": "20261101090000_sp_selected_merit_sharing.sql",
+      "sha256": "d57f96f985abf7da220a5471f56bce55a43a0456668ba2dfb3e6309276df6627"
+    },
+    {
+      "file": "20261102090000_cv_documents_controlled_writes.sql",
+      "sha256": "a1646f89ab51eb0e689f14e246ca552d1e07972ffa809eda1ae4b11582d4a681"
+    },
+    {
+      "file": "20261103090000_cv_documents_lockdown.sql",
+      "sha256": "02b806e39d0796ba4b4cf8dfd9da799f30dc24cc0edb3034103274b02ff452f7"
+    },
+    {
+      "file": "20261104090000_passport_share_gateway.sql",
+      "sha256": "4440d3b36e2a6e8f0ba734c19cb3b7a1d3f49d1833606882e4719c7dd2f6b404"
+    },
+    {
+      "file": "20261105090000_scp_participant_report_issuer_preview.sql",
+      "sha256": "d5a3c3a5ddff18f7d391a898fe1fb95a730c72e909bf28651a0b9a234f3b11c5"
+    },
+    {
+      "file": "20261107090000_scp_iv_report_basis_integrity.sql",
+      "sha256": "f4198a7779d4babfd27210a0c1b9ad6908fc6d9949ab2163634dd1af4a4793bc"
+    },
+    {
+      "file": "20261108090000_beskt_governed_method_content.sql",
+      "sha256": "3620e558ee1a92e73e1f01d94f98180fe119d33079ef8a6322efd0749801fc04"
+    },
+    {
+      "file": "20261109090000_sp_pilot_catalogue_visibility.sql",
+      "sha256": "e328893dbe4346891c2adf006599c3b5a95dc9b6df0182cef91a2f18b38a9489"
+    },
+    {
+      "file": "20261110090000_bcp_candidate_preparation.sql",
+      "sha256": "90e8334058bb4395175b3db8bbdac10bfb88093a5e7d7a39b79d4b03aacfcee5"
+    },
+    {
+      "file": "20261111090000_sp_global_professional_certifications.sql",
+      "sha256": "d02c6f190c7c42698bf3531f5806d1863547702d4f41d36ee9517269b94bd31a"
+    },
+    {
+      "file": "20261112090000_bcp_interview_case_bridge.sql",
+      "sha256": "a5f4d65a4352fd4cea94aadc53c4cff03aa89ef02f78f72dc50d99eb5d4d70eb"
+    },
+    {
+      "file": "20261113090000_bcp_interview_conduct.sql",
+      "sha256": "2102c2bcf6481f2297250e25082ec36e93104e264558b914fb3b5c8c622b7800"
+    },
+    {
+      "file": "20261114090000_sp_global_certification_governed_issuer.sql",
+      "sha256": "43a0ed84b670712c19146593574672d69c8b34ff0940244e7fa10a3961e1f8c8"
+    },
+    {
+      "file": "20261115090000_scp_interview_method_library_tenant_read.sql",
+      "sha256": "9c6aaa4f6344e5184c28bda914b12d66ab7a470ad269823afbd9f2545be7258d"
+    },
+    {
+      "file": "20261116090000_cd_outstanding_reviews_operator_only.sql",
+      "sha256": "dc4f4bc6abc5acd301f7c8e51c24610df63e8344e0111c3b46e168456ee1c7d4"
+    },
+    {
+      "file": "20261117090000_bcp_conduct_prompts_and_report.sql",
+      "sha256": "f64e31c28facba1e6703c146fc39e5d4a54d0656bddcc5e0bf18b11f086a3f21"
+    },
+    {
+      "file": "20261118090000_beskt_governed_content_authoring.sql",
+      "sha256": "c79dd502bbbd1c1d605d239fb93aeef4f3f00ec20a42ab2caed0d3b22e680bd7"
+    },
+    {
+      "file": "20261118100000_sp_international_passport_foundation.sql",
+      "sha256": "89a6d170bea44f57f28fd63be7e9e7219de0bfb0f26f1ef8cf65bc03f1103a7c"
+    },
+    {
+      "file": "20261119090000_sp_international_credential_wallet.sql",
+      "sha256": "c9870a981d8e743fcada8eae8e1695fb6362e26db913f2895576cb7c5544f651"
+    },
+    {
+      "file": "20261120090000_sp_credential_selective_sharing_v2.sql",
+      "sha256": "717c8119a4f32b484db92af6e1c9b5a621387d90142768413d7108c3c152d817"
+    },
+    {
+      "file": "20261121090000_sp_closed_credential_catalogue.sql",
+      "sha256": "b22d3fa2955d42583e113f2ab8fc0d70c47f9448c0f6f0d5dc99596eb35a3785"
+    },
+    {
+      "file": "20261122090000_cv_owned_application_snapshot.sql",
+      "sha256": "b5bd06661fef9dd5266ab362553a68d77583b8a4c8fd5fdc430a5a21c8139936"
+    },
+    {
+      "file": "20261123090000_sp_credential_organisation_roles.sql",
+      "sha256": "c05fdadc1ad96543cbcb979a6c39d7b9866615ae957a8fa7925889723334db62"
+    },
+    {
+      "file": "20261124090000_sp_pilot_member_catalogue.sql",
+      "sha256": "31e6ba198c2fdc9c028f86273adc2dce5483adbf6db8fe8dffcb3ade331a975b"
+    },
+    {
+      "file": "20261125090000_sp_disclosure_definition_scope.sql",
+      "sha256": "65faac63fbcff6b603e8e3ef5057b59e3271a05cb10e6b152f3d8754e6141e0a"
+    },
+    {
+      "file": "20261126090000_sp_catalogue_scope_and_document_issuer.sql",
+      "sha256": "5f9b218b5a5363a58f064149220e575d9badb1045fc5afba0f29ea60e151ef23"
+    },
+    {
+      "file": "20261127090000_bcp_conduct_report_independence_boundary.sql",
+      "sha256": "ec228e749adc65f020849c31c6044f919c4c099841ce732daeb97d2da86b01cc"
+    },
+    {
+      "file": "20261128090000_scp_iv_case_candidate_binding.sql",
+      "sha256": "439ddc03339f572b2be6084fa91cbe307b895b960ce258259f2d501ce19da3a7"
+    },
+    {
+      "file": "20261129090000_bcp_internal_test_activation.sql",
+      "sha256": "d7bc5f0199ab565813724924cfbcdadbe44055f189dbfcbde7b6807f6e215f37"
+    },
+    {
+      "file": "20261130090000_bcp_beskt_complete.sql",
+      "sha256": "ad4593bb2c6de44904536b968ada814c0f2f2ae0a46d9e0c891b5849d85bf3ac"
+    },
+    {
+      "file": "20261201090000_scp_library_direct_access.sql",
+      "sha256": "57d2cead9f30924040ef3eb67b32134492b90a98e1c344923333b785cc2c4424"
+    },
+    {
+      "file": "20261202090000_scp_interview_starts.sql",
+      "sha256": "826b66a234484b17e2d85c8fc45f4be453f405579fbc4ae1489b84aec1036360"
+    },
+    {
+      "file": "20261203090000_scp_interview_case_vetting_read.sql",
+      "sha256": "a59cc9a74b27bf644fdcc406f3553fec33009d73100d6978463a042574a98881"
+    },
+    {
+      "file": "20261204090000_sp_hayat_assessments.sql",
+      "sha256": "e7c991c4f423074713baf959a3c4d8a02ef2732baf9df39921e047c90f3f2295"
+    },
+    {
+      "file": "20261205090000_employer_workforce_active_only.sql",
+      "sha256": "1017491d3064a13a711eec0c015eca451c24f412091807edb481c13822c9a418"
+    },
+    {
+      "file": "20261206090000_scp_training_assignment_person_context.sql",
+      "sha256": "7e2606f7825b4038f66543c54d95a84af10c024bc29b20928ef5e47c725a112a"
+    },
+    {
+      "file": "20261207090000_recruitment_workspace.sql",
+      "sha256": "89c7a38a4ec4e3342016f0dfebb10ba1523737ebde87b6dedcc48dffc13c9af9"
+    },
+    {
+      "file": "20261208090000_recruitment_workspace_backstops.sql",
+      "sha256": "0488cd3ceee49a75eb4aac705a8decbf9c003a63f3de298a19068457e4889127"
+    },
+    {
+      "file": "20261209090000_recruitment_assignment_idempotency.sql",
+      "sha256": "0ff112af5728f815e75435e0cb4d5c43ed79ba2a36813871798e0d3194558635"
+    },
+    {
+      "file": "20261210090000_security_work_foundation.sql",
+      "sha256": "aeebc54dc05bc6a6571b5e9fb5ca525aaa4d48b7f592af5517c7e76aebf22988"
+    },
+    {
+      "file": "20261211090000_security_work_analysis_contract.sql",
+      "sha256": "14538d97779c598a8b5490c719855f3e1ce4310c5dead594a8aef120c3f35323"
+    },
+    {
+      "file": "20261212090000_recruitment_candidate_view.sql",
+      "sha256": "11b440e1ed713834d9afea165770902a756a7a7242e98cf541ee872e04263ed8"
+    },
+    {
+      "file": "20261213090000_recruitment_application_receipts.sql",
+      "sha256": "b96e0440d5b0702228ab1ce1554ceeff2e17096ac99a5bbf0a5201ff25a69abc"
+    },
+    {
+      "file": "20261214090000_sp_india_national_qualifications.sql",
+      "sha256": "a3cb248830b0199126278faa07f1da002c500ccb2ad9c9bc461b16a5ca33290c"
+    },
+    {
+      "file": "20261215090000_candidate_location_and_destinations.sql",
+      "sha256": "d85fd9f173516e261ac0d8ca84c941f91f3bc4e8ca5ccaa37e9b1d40f4227d3d"
+    },
+    {
+      "file": "20261216090000_scp_security_manager_recruitment_content.sql",
+      "sha256": "04b6ea139fa76b2d10dc857de6174c22a6c41569c880865e26bfd701782158c9"
+    },
+    {
+      "file": "20261217090000_scp_security_manager_recruitment_activation.sql",
+      "sha256": "2e0557375af2b98594275703b67f4b1bd7495f7a7ad7b0065648d60ba0efa054"
+    },
+    {
+      "file": "20261218090000_client_table_privilege_hardening.sql",
+      "sha256": "480dcaf8b536efde69ce879de52f9c7a7ddb8161eadbd3390992a8c130b0fd4e"
+    },
+    {
+      "file": "20261219090000_assessment_draft_authoring.sql",
+      "sha256": "7b009f90e7afbc77a7e2946ca73da37e6de9e6548f4ff3295040bcfa5ed7eaf4"
+    },
+    {
+      "file": "20261220090000_sp_public_pilot_availability.sql",
+      "sha256": "19d495418749e4ce19a02875fb15263b0031404a8721e6a341ead4987ce63e3d"
+    },
+    {
+      "file": "20261221090000_sp_open_uk_dubai_public_pilot.sql",
+      "sha256": "80920b49612f4abf13ddf5bde170282127f4c234df119307fdc3eb3a20407ecf"
+    },
+    {
+      "file": "20261222090000_cd_access_policy.sql",
+      "sha256": "00161fb39ade78f61061fdb5e72b1ce1e8081f1bd6dba767d81c45e93d45f98f"
+    },
+    {
+      "file": "20261223090000_application_notes_employer_only.sql",
+      "sha256": "3a93c2f3da7f31a6868c8880b9b36832e2f7571ef9945ae2d7434dc34a2521fd"
+    },
+    {
+      "file": "20261224090000_candidate_application_context.sql",
+      "sha256": "e565cdc02c1f17471d7b44d7eee918f54372cd499cfa654467c7894e06971358"
+    },
+    {
+      "file": "20261225090000_assessment_assign_requires_open_application.sql",
+      "sha256": "f0b9fed2c375c9b6ac36e6bc96227b9395c6d496369b51528091899f205a5b58"
+    },
+    {
+      "file": "20261226090000_application_notes_column_privileges.sql",
+      "sha256": "89870eb8c003e98e229ce4006711586277b3cf9b3ceb5bd27d084b0c16372467"
+    },
+    {
+      "file": "20261227090000_sp_network_statistics.sql",
+      "sha256": "64d30119621522203c4dc43ba2436042df01821c8e6f54b196473384ae204297"
+    },
+    {
+      "file": "20261228090000_scp_response_option_ownership.sql",
+      "sha256": "c52868aac14242672b21960efd376e59ac9c4242c1934de29b96af5ad36eb6ba"
+    },
+    {
+      "file": "20261229090000_scp_delivery_answer_key_leak.sql",
+      "sha256": "11e83c25df166604ddbf2c8f7e485bb8942eb2a8c63dee99dde84485c53d28cd"
+    },
+    {
+      "file": "20261230090000_job_application_insert_boundary.sql",
+      "sha256": "67e014d3f82ceea41df2080f68748214652401b8a90cce9b3329f18e092b6e11"
+    },
+    {
+      "file": "20261231090000_scp_resolve_employment_owner_only.sql",
+      "sha256": "cb8c8a4338866be7c89a504923f68dd0d511010ed5cf414dab5ff559b23bb4bf"
+    },
+    {
+      "file": "20270101090000_catalogue_read_hardening.sql",
+      "sha256": "fe10c9dee3278cc296dbf08e2f89957ae4fdb4c499225e8c1ed4769a01a264dd"
+    },
+    {
+      "file": "20270102090000_scp_subject_progress_employer_scope.sql",
+      "sha256": "3dd8f9766b01b19c3ccb0282afb84bde962727f1fe91b99107d054bcb031b984"
+    },
+    {
+      "file": "20270103090000_scp_submit_assessment_only.sql",
+      "sha256": "0b2bbded2082b1b6d264bdd508f491cde4b73a9745dea9ab7abeae9e1115964d"
+    },
+    {
+      "file": "20270104090000_scp_development_recommendations_employer_scope.sql",
+      "sha256": "ab14ce29bbc747984ca24dcfce541c9f1a33905e2e02d9e19d08dce5292a2900"
+    },
+    {
+      "file": "20270105090000_suspended_employer_applicant_reads.sql",
+      "sha256": "548a0a1d17f81f03d3339d40f6c5c18e7884a710141bda181b303cae17f33dd9"
+    },
+    {
+      "file": "20270106090000_sp_evidence_and_request_writes_rpc_only.sql",
+      "sha256": "a46899c126807eb5c5535566e0bf0e4b9cf38fa440aaaf0f4ec91124f9de9cd2"
+    },
+    {
+      "file": "20270107090000_scp_iv_panel_reveal_boundary.sql",
+      "sha256": "cef93f602a348718268f03b07c3718e3a9456be51fac7b009bf545134f0f04cf"
+    },
+    {
+      "file": "20270108090000_employer_active_reads.sql",
+      "sha256": "3dbf7a10ec0cd97ad813b22aa48c73c4d1062ee0a1cc8aecedca7d28a84a7b6d"
+    },
+    {
+      "file": "20270109090000_candidate_identity_active_employer.sql",
+      "sha256": "a0817fec2d65fdb3a9fb866b0ba5cf5ab3c05a1e1fe52403f21e55d405261480"
+    },
+    {
+      "file": "20270110090000_assessment_actions_active_employer.sql",
+      "sha256": "e4df0c69b85e653f39af1b26c3ce9673903a4e99eae22d2d7863002f717b3df5"
+    },
+    {
+      "file": "20270111090000_interview_beskt_active_employer.sql",
+      "sha256": "b915996b2402787815b099e1b28505aa6b04122450b5da83d2d3bcce0932d65c"
+    },
+    {
+      "file": "20270112090000_passport_attestation_active_employer.sql",
+      "sha256": "a7bd7ad6a6dfca3d574da2e594fa97d5cee620ea922ab98e93dea169bc8f3322"
+    },
+    {
+      "file": "20270113090000_pending_employer_actions.sql",
+      "sha256": "5e79b6f777925bd277693a10b493183c6ab07ae04a8928d4c8ee0ab3ff325d3c"
+    },
+    {
+      "file": "20270114090000_sp_passport_target_holder.sql",
+      "sha256": "274c8222adf59a6eea5d42f722316d330e41041f070d87356692b5367a0bf663"
+    },
+    {
+      "file": "20270115090000_sp_claim_verification_stamp.sql",
+      "sha256": "5e940609bc29844a94cf55b6d4ede412cdc47a0fe636c414301143f275da8922"
+    },
+    {
+      "file": "20270116090000_scp_iv_findings_review_writes.sql",
+      "sha256": "87098536256c3ba96477df0947192eac2557c35f2e12160d9f8ede5aba79b24d"
+    },
+    {
+      "file": "20270117090000_security_work_programme.sql",
+      "sha256": "f8eef2877e2346e2ab447e015dac14cf6960880b0558ead052aec9662f4cbf0d"
+    },
+    {
+      "file": "20270118090000_assessment_assignment_insert_columns.sql",
+      "sha256": "f4ce788c56be681ef92d5c12084366e745258e69b8b76f0566f7942778fd020e"
+    },
+    {
+      "file": "20270119090000_sp_entry_frozen_under_review.sql",
+      "sha256": "64b7365e3ad52351a998784075be6c59e855f461d7adae0c08b1da9dfb3bf6d5"
+    },
+    {
+      "file": "20270120090000_access_request_no_role_escalation.sql",
+      "sha256": "b8670e637cbaf6bcbab29c4b8b61d83285857732dea3951f28637329b028d614"
+    },
+    {
+      "file": "20270121090000_scp_iv_erase_vetting_boundary.sql",
+      "sha256": "93fbe9f39b17fa3463711e2ec15ae93c50cd7fd222984cfdd74fdfb17bc3c8a9"
+    },
+    {
+      "file": "20270122090000_bcp_conduct_reopen_after_exposure.sql",
+      "sha256": "92c9baac0f131d667efe60986f00b283f674da020ea555b6bcef8b75c7091645"
+    },
+    {
+      "file": "20270123090000_employer_identity_rereview.sql",
+      "sha256": "d2e220495f06f6b219c950ef3e033ba535fb018396622a7a2f7c8461f706a44c"
+    },
+    {
+      "file": "20270124090000_bcp_conduct_exposure_is_durable.sql",
+      "sha256": "cf056d09f2fb0cc9d682af1450c17bfd8b8e432407c264a5497cfacf60fc528d"
+    },
+    {
+      "file": "20270125090000_sp_decision_bound_to_reviewed_content.sql",
+      "sha256": "2bd0397090f7cb87aa4c6d3cab5f74c4fe531776b5743876acfc8d035390ea00"
+    },
+    {
+      "file": "20270126090000_sp_evidence_change_under_review.sql",
+      "sha256": "a2f5fb55539b82508a0cb28fb7eaf8a1f47871abead29e94217046109b1b83db"
+    },
+    {
+      "file": "20270130090000_jobs_not_editable_in_place.sql",
+      "sha256": "07c9af491bb2d2db8d0430376389965a2180f10a734320446198b4dec02c1234"
+    },
+    {
+      "file": "20270131090000_jobs_publish_window_and_url_scheme.sql",
+      "sha256": "78004a1c08b1dc9ccff5fe6a8f91a7fe92b2529326e75059a78399dc61c609ba"
+    },
+    {
+      "file": "20270201090000_job_cvs_no_client_writes.sql",
+      "sha256": "00754e84ac91cb08ed5ef43de339b3873e044802257872477c37970293ba370e"
+    },
+    {
+      "file": "20270202090000_employer_membership_standing_not_bypassable.sql",
+      "sha256": "dfcb42310d9849dc66d692b415449dbbb97007c84d257c281606a6178c2cd05c"
+    },
+    {
+      "file": "20270203090000_employer_report_access_model.sql",
+      "sha256": "fba1e4de97816d72eea6e9722bb831b897885da73a0ac9f76bbe36dfe5266a97"
+    },
+    {
+      "file": "20270204090000_interview_case_access_model.sql",
+      "sha256": "79e575f2ae64ce5d407f956852141d8795168a1e6fed7e7ab83ff9b28ce85e08"
+    },
+    {
+      "file": "20270205090000_employer_new_application_notices.sql",
+      "sha256": "3e8814e11551ce44345733a046530d4ab06588a71ef90af44132ddbf6efef923"
+    },
+    {
+      "file": "20270206090000_interview_access_expand.sql",
+      "sha256": "d9826beca17b2c57ad70edf66fe8564f9e200b2b846fea7df6676c8601b4be00"
+    },
+    {
+      "file": "20270207090000_interview_ai_config_contract.sql",
+      "sha256": "f4902480f71021b0ab564f56e818050582d558ed351c12dd1b024c4c77b135a7"
+    },
+    {
+      "file": "20270208090000_account_erasure_credential_details.sql",
+      "sha256": "980fc0acbc184fde519b8b5ddaa192e6aa2d72c76a029fc0ee5f6ef383bf9c0c"
+    },
+    {
+      "file": "20270212090000_sp_catalogue_research_foundation.sql",
+      "sha256": "5980b67adb0f7b968bb29793fb0c65c36342aab647e9182d9516ecbdcc083700"
+    },
+    {
+      "file": "20270213090000_sp_catalogue_research_import.sql",
+      "sha256": "8714864cf32e9a5e6ae8142f73a83bfa487dc4641b4539b340ba5be46cb453cc"
+    },
+    {
+      "file": "20270214090000_sp_catalogue_research_publish.sql",
+      "sha256": "ff5afb02b159fc6684b0641e1327c90472263ffca25ea9f046fae1fb1b9272ce"
+    },
+    {
+      "file": "20270215090000_application_passport_verified_content_guard.sql",
+      "sha256": "0b492098ae86ff8ee19c97efe88de76058deb53ce67bda4dfffc337889d93f82"
+    },
+    {
+      "file": "20270216090000_participant_report_api_boundary.sql",
+      "sha256": "9b11fdd7ec747707a1b28e6105afc1ed09db695ff6999ba8b30e554ef0b91d0b"
+    },
+    {
+      "file": "20270217090000_sp_passport_number_and_social_share.sql",
+      "sha256": "8a30fa83610b76571c94c9b123318f5c551c8d4df765fd4cd301942f5efde308"
+    },
+    {
+      "file": "20270218090000_catalogue_internal_metadata_boundary.sql",
+      "sha256": "14294813f7c0e4d6249e8e6670207e1e26442c1b8e97468469354f59e7090c32"
+    },
+    {
+      "file": "20270219090000_sp_united_states_jurisdiction_and_destinations.sql",
+      "sha256": "2b81c28b493db859cf03e4bda380c258bdd5865e5d9a9d90f2de7ebe9d6c392f"
+    },
+    {
+      "file": "20270220090000_sp_open_abu_dhabi_public_pilot.sql",
+      "sha256": "17ae063f53a1fb1ad258a34814cefa7a53c3f5ebeb19552e1458c37b7c40f791"
+    },
+    {
+      "file": "20270301090000_sentinel_abstract_reasoning.sql",
+      "sha256": "5db1c4a59c6b37a13f7adf7d0222a67f0d57c018d5f37d7074ee3926338b7ac1"
+    },
+    {
+      "file": "20270305090000_application_retention_lifecycle.sql",
+      "sha256": "6995b7001b9c276a9f4c36ab2189d89c3b0f32bf0515a2f8c1ac4ba954124914"
+    },
+    {
+      "file": "20270306090000_recruiter_intelligence_interview_foundation.sql",
+      "sha256": "73d3b80c45dd3584ccf41e34e7c6e70480b77faf0c63efd4d9a1acdc8363827a"
+    },
+    {
+      "file": "20270307090000_interview_content_snapshot_lock.sql",
+      "sha256": "9c7de56e47c2217224d899ab5832a04357dd7b0bd427dcc9d34dfbb5cf10c6ba"
+    },
+    {
+      "file": "20270307100000_recruiter_domain_conflict_transport.sql",
+      "sha256": "aada322beb465a1a927c190eb4d81bafffd9a1f759263c8da4f94ddabf2c3fca"
+    },
+    {
+      "file": "20270308090000_recruiter_intelligence_requirements.sql",
+      "sha256": "7c93310a4eceb3346243a7a8f069b0e1d909eed5b9f8c4da35ce26e4094ec141"
+    }
+  ],
+  "authCreated": 104,
+  "actualReviewerSessions": [
+    "owner",
+    "bob"
+  ],
+  "beforeOriginals": {
+    "auth": 104,
+    "sw_ai": 0,
+    "messages": 0,
+    "confirmed": 104,
+    "ai_enabled": false,
+    "applications": 100,
+    "erasure_jobs": 0,
+    "generated_ai": 0,
+    "synthetic_ai": 0,
+    "erasure_queue": 0,
+    "mail_attempts": 0,
+    "receipt_enabled": 0,
+    "cron": 0
+  },
+  "storageBucket": {
+    "id": "job-application-cvs",
+    "public": false,
+    "fileSizeLimit": null,
+    "allowedMimeTypes": null
+  },
+  "actualOriginalObjects": 80,
+  "ownerSignedOriginalBytes": true,
+  "baseline": {
+    "gray": 35,
+    "green": 40,
+    "yellow": 25,
+    "decided": 0,
+    "archived": 0,
+    "filtered": 100,
+    "received": 100,
+    "reviewed": 27,
+    "remaining": 73,
+    "withdrawn": 0,
+    "notEstablished": 0,
+    "filteredReviewed": 27,
+    "filteredRemaining": 73
+  },
+  "canonicalHttpAssertions": 23,
+  "twoDistinctReviewerCas": true,
+  "apiBaseline": {
+    "received": 100,
+    "green": 40,
+    "yellow": 25,
+    "gray": 35,
+    "reviewed": 27,
+    "remaining": 73
+  },
+  "apiV2": {
+    "gray": 35,
+    "green": 30,
+    "yellow": 35,
+    "decided": 0,
+    "archived": 0,
+    "filtered": 100,
+    "received": 100,
+    "reviewed": 0,
+    "remaining": 100,
+    "withdrawn": 0,
+    "notEstablished": 0,
+    "filteredReviewed": 0,
+    "filteredRemaining": 100
+  },
+  "concurrentReviewerStatuses": [
+    200,
+    409
+  ],
+  "revokedSource": {
+    "gray": 40,
+    "green": 25,
+    "yellow": 35,
+    "decided": 0,
+    "archived": 0,
+    "filtered": 100,
+    "received": 100,
+    "reviewed": 0,
+    "remaining": 100,
+    "withdrawn": 0,
+    "notEstablished": 0,
+    "filteredReviewed": 0,
+    "filteredRemaining": 100
+  },
+  "replacementDoesNotRestoreOldAcceptance": true,
+  "aiProposalIsolation": {
+    "syntheticMockRows": 2,
+    "positiveAndNegativeDraftsLeaveGray": true,
+    "missingOriginalMetDenied": true,
+    "generatedAi": 0
+  },
+  "afterApi": {
+    "auth": 104,
+    "sw_ai": 0,
+    "messages": 0,
+    "confirmed": 104,
+    "ai_enabled": false,
+    "applications": 100,
+    "erasure_jobs": 0,
+    "generated_ai": 0,
+    "synthetic_ai": 2,
+    "erasure_queue": 0,
+    "mail_attempts": 0,
+    "receipt_enabled": 0,
+    "cron": 0
+  },
+  "jobCascadeRetainsSnapshots": true,
+  "browserBaseline": {
+    "gray": 35,
+    "green": 40,
+    "yellow": 25,
+    "decided": 0,
+    "archived": 0,
+    "filtered": 100,
+    "received": 100,
+    "reviewed": 27,
+    "remaining": 73,
+    "withdrawn": 0,
+    "notEstablished": 0,
+    "filteredReviewed": 27,
+    "filteredRemaining": 73
+  },
+  "browserDiagnostic": {
+    "stats": {
+      "expected": 5,
+      "unexpected": 0,
+      "flaky": 0,
+      "skipped": 0
+    },
+    "cases": [
+      {
+        "case": "global_review",
+        "status": "expected",
+        "attempts": 1,
+        "sourceLines": []
+      },
+      {
+        "case": "browser_direct_api",
+        "status": "expected",
+        "attempts": 1,
+        "sourceLines": []
+      },
+      {
+        "case": "explicit_peace_handoff",
+        "status": "expected",
+        "attempts": 1,
+        "sourceLines": []
+      },
+      {
+        "case": "cached_profile_target",
+        "status": "expected",
+        "attempts": 1,
+        "sourceLines": []
+      },
+      {
+        "case": "archive_only",
+        "status": "expected",
+        "attempts": 1,
+        "sourceLines": []
+      }
+    ]
+  },
+  "browser": {
+    "expected": 5,
+    "unexpected": 0,
+    "flaky": 0,
+    "skipped": 0
+  },
+  "serverSignedOriginalUiReads": 4,
+  "finalSafety": {
+    "auth": 104,
+    "sw_ai": 0,
+    "messages": 0,
+    "confirmed": 104,
+    "ai_enabled": false,
+    "applications": 100,
+    "erasure_jobs": 0,
+    "generated_ai": 0,
+    "synthetic_ai": 2,
+    "erasure_queue": 0,
+    "mail_attempts": 0,
+    "receipt_enabled": 0,
+    "cron": 0
+  },
+  "finishedAt": "2026-10-08T12:29:09.234Z",
+  "result": "PASS",
+  "images": [
+    {
+      "path": "images/en-desktop-remaining.png",
+      "bytes": 668610,
+      "sha256": "c6ff7cdfef4c2e1fff20cbd64cf9878bc0c37ab332f29ae04e1c0e56b2d81c6a"
+    },
+    {
+      "path": "images/en-emulated-375-archive-only-received.png",
+      "bytes": 507455,
+      "sha256": "2d92315e69f3f1e725381087fef3d2d5fa86a4b1e793adec1b4a45d0227b6a24"
+    },
+    {
+      "path": "images/en-emulated-375-remaining.png",
+      "bytes": 555317,
+      "sha256": "86039f4ac33f9503340514f62bb847c2461cd0cb731de94e44e8850fcba85604"
+    },
+    {
+      "path": "images/sv-desktop-archive-only-received.png",
+      "bytes": 608665,
+      "sha256": "76791c4f7b24ab576b8488a03f220a82650af853286675eea44fe7c9a3011e7f"
+    },
+    {
+      "path": "images/sv-desktop-cached-job-profile-target.png",
+      "bytes": 173181,
+      "sha256": "beb56a695fcfdf12237fe0f3cb246d78be6904bc85f7b994e92e960626c667da"
+    },
+    {
+      "path": "images/sv-desktop-concurrent-explicit-reload.png",
+      "bytes": 661708,
+      "sha256": "0de2ebe717e8aa00f1425d6618e9dcc0432609319ae5b699acedc8fdfc1df8c6"
+    },
+    {
+      "path": "images/sv-desktop-explicit-peace-handoff.png",
+      "bytes": 490787,
+      "sha256": "12288231a40975ae600c621ea31feffbb60b6e0f2568e92872554dacbda1367c"
+    },
+    {
+      "path": "images/sv-desktop-gray-human-reviewed.png",
+      "bytes": 675080,
+      "sha256": "4f38dc3d5a2c6ba9cd601e667e895e93139e6b7f5b2e18d0c03b440248e6720a"
+    },
+    {
+      "path": "images/sv-desktop-remaining.png",
+      "bytes": 644073,
+      "sha256": "6e6cde9f80efeac833c417db13c2ca8f5f688a364bb3312c77d35595ba5afe0e"
+    },
+    {
+      "path": "images/sv-emulated-375-remaining.png",
+      "bytes": 540456,
+      "sha256": "5e0a369cdcd3f3efbb2d1046cda5b942a7686414bc9571c2c46aca90ad86bf99"
+    }
+  ]
+}
