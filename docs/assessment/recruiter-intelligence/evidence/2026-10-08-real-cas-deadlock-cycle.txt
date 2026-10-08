@@ -1,0 +1,16 @@
+172.29.0.5 2026-10-08 07:30:31.526 UTC [5276] authenticator@postgres ERROR:  deadlock detected
+172.29.0.5 2026-10-08 07:30:31.526 UTC [5276] authenticator@postgres DETAIL:  Process 5276 waits for ShareLock on transaction 350609; blocked by process 3306.
+	Process 3306 waits for ShareLock on transaction 350608; blocked by process 5276.
+	Process 5276: WITH pgrst_source AS (SELECT pgrst_call.pgrst_scalar FROM (SELECT $1 AS json_data) pgrst_payload, LATERAL (SELECT "_session_id", "_status" FROM json_to_record(pgrst_payload.json_data) AS _("_session_id" uuid, "_status" text) LIMIT 1) pgrst_body , LATERAL (SELECT "public"."scp_iv_set_session_state"("_session_id" := pgrst_body."_session_id", "_status" := pgrst_body."_status") pgrst_scalar) pgrst_call) SELECT null::bigint AS total_result_set, 1 AS page_total, coalesce(json_agg(_postgrest_t.pgrst_scalar)->0, 'null') AS body, nullif(current_setting('response.headers', true), '') AS response_headers, nullif(current_setting('response.status', true), '') AS response_status, '' AS response_inserted FROM (SELECT "scp_iv_set_session_state".* FROM "pgrst_source" AS "scp_iv_set_session_state"   LIMIT $2 OFFSET $3) _postgrest_t
+	Process 3306: WITH pgrst_source AS (SELECT "pgrst_call".* FROM (SELECT $1 AS json_data) pgrst_payload, LATERAL (SELECT "_session_id", "_reflection", "_deviations", "_expected_updated_at" FROM json_to_record(pgrst_payload.json_data) AS _("_session_id" uuid, "_reflection" text, "_deviations" text, "_expected_updated_at" timestamp with time zone) LIMIT 1) pgrst_body , LATERAL "public"."scp_iv_save_session_process"("_session_id" := pgrst_body."_session_id", "_reflection" := pgrst_body."_reflection", "_deviations" := pgrst_body."_deviations", "_expected_updated_at" := pgrst_body."_expected_updated_at") pgrst_call) SELECT null::bigint AS total_result_set, pg_catalog.count(_postgrest_t) AS page_total, coalesce(json_agg(_postgrest_t)->0, 'null') AS body, nullif(current_setting('response.headers', true), '') AS response_headers, nullif(current_setting('response.status', true), '') AS response_status, '' AS response_inserted FROM (SELECT "record".* FROM "pgrst_source" AS "record"   LIMIT $2 OFFSET $3) _postgrest_t
+172.29.0.5 2026-10-08 07:30:31.526 UTC [5276] authenticator@postgres HINT:  See server log for query details.
+172.29.0.5 2026-10-08 07:30:31.526 UTC [5276] authenticator@postgres CONTEXT:  while locking tuple (0,5) in relation "scp_interview_cases"
+	SQL statement "SELECT 1 FROM ONLY "public"."scp_interview_cases" x WHERE "id" OPERATOR(pg_catalog.=) $1 FOR KEY SHARE OF x"
+	SQL statement "INSERT INTO public.scp_interview_case_events
+	    (case_id, event, actor_id, actor_kind, ai_run_id, previous_status, new_status, reason, metadata)
+	  VALUES (_case_id, _event, auth.uid(), _actor_kind, _ai_run_id,
+	          _previous_status, _new_status, _reason, coalesce(_metadata, '{}'::jsonb))
+	  RETURNING id"
+	PL/pgSQL function scp_iv_record_event(uuid,text,text,uuid,text,text,text,jsonb) line 4 at SQL statement
+	SQL statement "SELECT public.scp_iv_record_event(_case_id, 'interview_resumed', 'human', NULL, _old, _status)"
+	PL/pgSQL function scp_iv_set_session_state(uuid,text,text,text,text) line 25 at PERFORM
