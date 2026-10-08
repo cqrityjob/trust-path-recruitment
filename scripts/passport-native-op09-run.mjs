@@ -324,7 +324,9 @@ try {
   });
   await stage("actual_sdk_44", async () => {
     try {
-      output("bun", ["scripts/passport-native-op09-sdk.mjs"], "sdk", { timeout: 300_000 });
+      output("bun", ["--no-env-file", "scripts/passport-native-op09-sdk.mjs"], "sdk", {
+        timeout: 300_000,
+      });
     } catch {
       if (fs.existsSync(file("sdk-failure.json"))) {
         const data = readPrivateJson(file("sdk-failure.json"));
@@ -384,8 +386,13 @@ try {
     let raw;
     try {
       raw = output(
-        "bunx",
-        ["playwright", "test", "--config", "scripts/passport-native-op09-browser.config.ts"],
+        "node",
+        [
+          "node_modules/@playwright/test/cli.js",
+          "test",
+          "--config",
+          "scripts/passport-native-op09-browser.config.ts",
+        ],
         "browser",
         { timeout: 900_000, env: { ...process.env, E2E_BASE_URL: APP } },
       );

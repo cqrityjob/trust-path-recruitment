@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import {
   API,
   APP_SHA,
@@ -364,5 +364,65 @@ test("public12-image success records hashes while symlinks, bad signatures and s
     assert.throws(() => writePublic(context, passed), /UNCURATED_FILE/);
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+function isolatedConsumerLaunchers(source: string) {
+  assert.match(
+    source,
+    /output\(\s*"bun",\s*\["--no-env-file", "scripts\/passport-native-op09-sdk\.mjs"\]/,
+    "SDK launcher must disable dotenv before module execution",
+  );
+  assert.match(
+    source,
+    /raw = output\(\s*"node",\s*\[\s*"node_modules\/@playwright\/test\/cli\.js",/,
+    "browser runner uses installed Node CLI without Bun dotenv autoload",
+  );
+}
+test("real Bun subprocess reproduction: dotenv is refused, explicit no-env-file isolates file loading and inherited keys still fail", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "op09-dotenv-"));
+  try {
+    fs.writeFileSync(path.join(dir, ".env"), "VITE_SUPABASE_URL=https://hosted-canary.invalid\n", {
+      mode: 0o600,
+    });
+    fs.copyFileSync(
+      path.join(root, "scripts/passport-native-op09-contract.mjs"),
+      path.join(dir, "contract.mjs"),
+    );
+    fs.chmodSync(path.join(dir, "contract.mjs"), 0o600);
+    fs.writeFileSync(
+      path.join(dir, "probe.mjs"),
+      `import {validateTarget,APP_SHA} from './contract.mjs';const sha='a'.repeat(40);try{validateTarget({...process.env,GITHUB_ACTIONS:'true',CI:'true',RUNNER_OS:'Linux',RUNNER_ENVIRONMENT:'github-hosted',RI_OP09_NATIVE_DISPOSABLE:'1',GITHUB_WORKSPACE:'/tmp/nonexecuting-proof',RI_OP09_NATIVE_EVIDENCE_SHA:sha},sha,APP_SHA);console.log('accepted_without_calls')}catch(e){console.log(e.message)}`,
+      { mode: 0o600 },
+    );
+    const run = (flags: string[], env: Record<string, string | undefined> = {}) => {
+      const r = spawnSync("bun", [...flags, "probe.mjs"], {
+        cwd: dir,
+        env: { PATH: process.env.PATH, ...env },
+        encoding: "utf8",
+        timeout: 10000,
+      });
+      assert.equal(r.status, 0, "harmless subprocess must complete");
+      return r.stdout.trim();
+    };
+    assert.equal(run([]), "OP09_NATIVE_INHERITED_PROVIDER_CREDENTIAL_REFUSED");
+    assert.equal(run(["--no-env-file"]), "accepted_without_calls");
+    assert.equal(
+      run(["--no-env-file"], { SUPABASE_URL: "https://inherited-canary.invalid" }),
+      "OP09_NATIVE_INHERITED_PROVIDER_CREDENTIAL_REFUSED",
+    );
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+test("native consumers retain explicit environment isolation and reject removal controls", () => {
+  const runner = source("scripts/passport-native-op09-run.mjs");
+  isolatedConsumerLaunchers(runner);
+  for (const changed of [
+    runner.replace('"--no-env-file", ', ""),
+    runner.replace('"node_modules/@playwright/test/cli.js",', '"playwright",'),
+  ]) {
+    assert.notEqual(changed, runner);
+    assert.throws(() => isolatedConsumerLaunchers(changed));
   }
 });
