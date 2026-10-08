@@ -767,11 +767,28 @@ console.log("\n6 · structure: a request is not a definition, and a filter is no
       !/requiresJurisdiction|selectedCountry/.test(form),
     "6.9 an international certification is saved with no country, and no jurisdiction is asked for it",
   );
+  // An additional safety condition (for example an unresolved upload) must not
+  // make the existing mutex/retry contract fail. Check the save sequence itself:
+  // reject concurrent entry, acquire before any await, release in finally, and
+  // only create a claim while no saved claim ID exists.
+  const saveBody =
+    /async function save\(\) \{([\s\S]*?)\n {2}\}\n {2}const regulatorOf/.exec(form)?.[1] ?? "";
+  const acquireAt = saveBody.indexOf("saving.current = true;");
+  const firstAwaitAt = saveBody.search(/\bawait\b/);
   check(
-    /if \(!selected \|\| saving\.current\) return;/.test(form) &&
-      /saving\.current = true;/.test(form) &&
-      /if \(!savedId\.current\)/.test(form),
+    /^\s*if\s*\(\s*!selected\s*\|\|\s*saving\.current(?:\s*\|\|\s*uploadNeedsCheck)?\s*\)\s*return\s*;/.test(
+      saveBody,
+    ) &&
+      acquireAt >= 0 &&
+      firstAwaitAt > acquireAt &&
+      /finally\s*\{\s*saving\.current\s*=\s*false\s*;/.test(saveBody) &&
+      /if\s*\(!savedId\.current\)\s*savedId\.current\s*=\s*\(\s*await onSave\(/.test(saveBody) &&
+      !/savedId\.current\s*=\s*(?:null|undefined)\b/.test(saveBody),
     "6.10 saving cannot be started twice, and a saved claim is never saved again by a retry",
+  );
+  check(
+    /^\s*if\s*\([^)]*\|\|\s*uploadNeedsCheck\s*\)\s*return\s*;/.test(saveBody),
+    "6.10b an unresolved upload must be checked before the holder can retry saving",
   );
   check(
     !/<select[^>]*\n?[^>]*Godkänd merit|Approved credential/.test(form),
