@@ -26,6 +26,10 @@
           "object": "scp_iv_content_inventory"
         },
         {
+          "kind": "function",
+          "object": "scp_iv_case_frozen_labels"
+        },
+        {
           "kind": "table",
           "object": "interview_content_prior_functions"
         },
