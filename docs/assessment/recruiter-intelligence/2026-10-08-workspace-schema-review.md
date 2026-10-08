@@ -24,6 +24,36 @@ release-frontier, SQL-säkerhet och dubblettkontroll. Båda migrationerna är
 fortfarande ärligt `pending`. Full remote CI på PR:s slut-SHA återstår;
 ingen produktionsinstallation eller publicering har utförts.
 
+### Första CI och framåtriktad testintegration
+
+Draft #464:s första huvud `b7a077b78bf4d64a6ab6aa08d470c6be951aaaf8`
+gav faktiska FAIL; [observationen](evidence/2026-10-09-schema-first-attempt1.json)
+bevaras. Det äldre bildparets föreversion gällde #463:s bas, nativeworkflows
+krävde tidigare schema 387, och domänklonen behövde ta ned M1-beroendet före
+äldre snapshotlås. Dessa failureförsök räknas inte som PASS.
+
+[Historisk testnedtagning](2026-10-09-schema-historical-standdown-fix.md)
+rättas framåt i `9682e3ab6cdaaaddf67b30fada819b86c38700cf`. Produktens
+SQL, rollbackvägran och alla tidigare SQL-assertioner är oförändrade.
+Det [färska bildparet](../../../artifacts/employer-portal-ux/INDEX.md) avser
+main `55db1e3b` och schema-kandidat `b7a077b7`; samma portal-/instrumentbytes
+fotograferades i egna loopback-servrar. Ingen äldre bild märktes om.
+
+`f0a6d0b3e1086b195d29ba0530b649b907d21a49` uppdaterar tre nativekontrakt
+till exakt app `55db1e3b83ace033450899a93ca0961edde05217` och fryst schema
+`8dfec6c47e42074d808c30939cebf0c63defce55`. Hela 389-migrationshistoriken
+krävs; alla 387 tidigare blobs ska bevaras, båda tillkommande migrationer
+och deras SHA måste finnas. Gamla SHA, borttagning och ändrade nya SQL-filer
+vägras med faktiskt temporärt Git-objektprov. Inga scenario-/SDK-/browserprov
+tas bort. [Lokalt kontraktskvitto](evidence/2026-10-09-schema-native-pins-local.json):
+79 prov/221 Bun-assertioner plus Node-assertioner PASS, scripts-typer/lint/format
+PASS. Ett första Git-subprocesstimeout bevaras separat; batched ls-tree behåller
+samma 387 blob-assertioner. Dessa kontraktsprov är inte nya tjänste-/CI-bevis.
+
+Ny full CI på integrationens aktuella huvud återstår. När de tre nativejobben
+har passerat med dessa nya pinnar kan deras resultat beskrivas som app55db med
+schema8df; #463:s tidigare nativebevis för app40e ometiketteras inte.
+
 ## Förändring och kontrakt
 
 [20270310100000](../../../supabase/migrations/20270310100000_recruiter_profile_change_review.sql)
