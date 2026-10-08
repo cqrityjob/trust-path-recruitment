@@ -37,6 +37,12 @@ const env = {
 const read = (name: string) => fs.readFileSync(name, "utf8");
 
 describe("official real Supabase CI target", () => {
+  test("the revised application pin is exact and old native evidence cannot stand in for it", () => {
+    expect(APP_SHA).toBe("0eab408debbe660d22825c2ffaa8fcc60de0b68c");
+    expect(() =>
+      validateTarget(env, env.RI_REAL_SCHEMA_SHA, "a68f22d799769de32230781bba268632e57e796f"),
+    ).toThrow("REAL_CI_UNREVIEWED_APP_HEAD");
+  });
   test("allows only exact GitHub-hosted Linux workspace, schema SHA and reviewed app52", () => {
     expect(validateTarget(env, env.RI_REAL_SCHEMA_SHA, APP_SHA).stackRoot).toBe(
       env.RI_OPS_STACK_ROOT,

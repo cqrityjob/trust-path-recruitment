@@ -38,7 +38,7 @@ jobs:
       - name: Exact reviewed snapshot application
         uses: actions/checkout@v4
         with:
-          ref: a68f22d799769de32230781bba268632e57e796f
+          ref: 0eab408debbe660d22825c2ffaa8fcc60de0b68c
           path: app
           persist-credentials: false
       # The CLI composite installs its own Bun. Restore our reviewed test
