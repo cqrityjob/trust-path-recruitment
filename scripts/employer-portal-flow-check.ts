@@ -350,7 +350,20 @@ const UI = "src/components/employer/interview/InterviewUi.tsx";
       !/booking|interview/i.test(en["rec.error.applicationClosed"] ?? ""),
     "rec.error.applicationClosed is raised by more than bookings and must not talk about bookings only.",
   );
-  for (const k of ["archivedState", "archivedStateJob", "archivedNotice", "restoredNotice"]) {
+  expect(
+    /applicationId\s*\?\s*archived\s*\?\s*"rec\.lifecycle\.restoredNotice"\s*:\s*"rec\.lifecycle\.archivedNotice"\s*:\s*archived\s*\?\s*"rec\.lifecycle\.restoredNoticeJob"\s*:\s*"rec\.lifecycle\.archivedNoticeJob"/.test(
+      code("src/components/recruitment/MaterialLifecycle.tsx"),
+    ),
+    "MaterialLifecycle: the archive notice must name what was archived (application or recruitment).",
+  );
+  for (const k of [
+    "archivedState",
+    "archivedStateJob",
+    "archivedNotice",
+    "restoredNotice",
+    "archivedNoticeJob",
+    "restoredNoticeJob",
+  ]) {
     expect(
       Boolean(sv[`rec.lifecycle.${k}`]) && Boolean(en[`rec.lifecycle.${k}`]),
       `rec.lifecycle.${k} is missing in sv or en.`,
@@ -372,6 +385,19 @@ const UI = "src/components/employer/interview/InterviewUi.tsx";
       Boolean(sv["iiu.iv.process.savefailed"]) &&
       Boolean(en["iiu.iv.process.savefailed"]),
     "the closing panel must distinguish save failure with the existing frozen SV/EN key, without requiring new case copy.",
+  );
+}
+
+/* 8b · The draft row counts the population its link opens. */
+{
+  const ov = code(OVERVIEW);
+  expect(
+    /overview\.recruitments\.filter\(\(r\) => r\.phase === "draft" && !r\.archivedAt\)\.length/.test(
+      ov,
+    ) &&
+      /const draftCount = draftRecruitments \?\? data\.draftJobs;/.test(ov) &&
+      /count: draftCount,/.test(ov),
+    `${OVERVIEW}: the draft row must count the not-yet-published recruitments (phase=draft), the same population its link opens, with the dashboard count only as the fallback before the overview has answered.`,
   );
 }
 

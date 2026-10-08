@@ -25,6 +25,10 @@ export const recruitmentSv = {
     "Ansökan är arkiverad. Den ingår inte i de aktiva listorna eller i antalet nya ansökningar, men visas under Arkiverade och Alla mottagna.",
   "rec.lifecycle.archivedStateJob":
     "Rekryteringen är arkiverad. Den visas bara under Arkiverade i rekryteringslistan.",
+  "rec.lifecycle.archivedNoticeJob":
+    "Rekryteringen är arkiverad. Gallringsdatum är oförändrat. Den visas bara under Arkiverade i rekryteringslistan.",
+  "rec.lifecycle.restoredNoticeJob":
+    "Arkiveringen är upphävd. Rekryteringen visas åter i rekryteringslistan; gallringsdatum är oförändrat.",
   "rec.lifecycle.delete": "Radera ansökningsmaterial permanent",
   "rec.lifecycle.confirm": "Radera materialet permanent?",
   "rec.lifecycle.cancel": "Avbryt",
@@ -783,6 +787,10 @@ export const recruitmentEn: { [K in keyof typeof recruitmentSv]: string } = {
     "This application is archived. It is not in the active lists or the count of new applications, but shows under Archived and All received.",
   "rec.lifecycle.archivedStateJob":
     "This recruitment is archived. It shows only under Archived in the recruitment list.",
+  "rec.lifecycle.archivedNoticeJob":
+    "The recruitment is archived. The retention date is unchanged. It shows only under Archived in the recruitment list.",
+  "rec.lifecycle.restoredNoticeJob":
+    "Archiving lifted. The recruitment shows in the recruitment list again; the retention date is unchanged.",
   "rec.lifecycle.delete": "Permanently delete application material",
   "rec.lifecycle.confirm": "Permanently delete this material?",
   "rec.lifecycle.cancel": "Cancel",

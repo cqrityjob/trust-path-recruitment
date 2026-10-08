@@ -114,6 +114,13 @@ Avslut och stängda ansökningar:
 Hjälptexter: hänvisningen "Tester & bedömningar → Rekryteringsstöd" pekar nu på en väg
 som finns (Testbibliotek → Förbered intervju).
 
+Efter ägarens slutgranskning av `4fca58d` (icke-blockerande): att-göra-raden "utkast till
+annons" räknar nu samma population som `phase=draft` öppnar (opublicerade rekryteringar:
+utkast, väntar på granskning, avvisade; dashboardens `status=draft`-antal bara som
+fallback innan översikten svarat), och arkiveringsnotisen för en rekrytering använder en
+rekryteringstext (`rec.lifecycle.archivedNoticeJob`/`restoredNoticeJob`) i stället för
+ansökningstexten.
+
 Bevarat: Sentinel-layouten, avslutsrutan, autosparningen, "Till mina tester",
 RPC-typöverlagringen i `src/integrations/supabase/database.ts`, metodpaket, frågor,
 kompetensområden och poängregler. Inga serverbehörigheter, RPC:er eller migrationer
@@ -187,8 +194,8 @@ avbildhämtning i CI.
 | `ci.yml` (lint/typecheck/deterministiska guards inkl. `employer-portal-flow:check` och `playwright-mobile-presets`, `verify`, `public-entry-browser` med `e2e:employer-portal-ux`, P1-jobben, migrationsreplay) | PR-huvudet | Ja |
 | `recruitment-evidence.yml` (Supabase CLI-stack, riktig Auth/PostgREST, `e2e/recruitment-workspace.spec.ts`) | PR-huvudet | Ja: tre nya inloggade tester för stegnavigeringens bevarade vy, återlänken till kandidatlistan, översiktens förklaringar, flödesremsan och `phase=ready`, utöver de befintliga 15+ |
 | `e4-evidence.yml` (slutrapporten, riktig stack) | PR-huvudet | Regression på rapportsidan (CaseHeader-länk) |
-| `employer-portal-ux-evidence.yml` | bas `e4531c3b` (före) och PR-huvudet (efter), samma instrument (svit, fixture, harness, Playwright-config från huvudet) | Ja: syntetiska bilder, sv/en, 1440 och emulerad 375; paret kontrolleras av `employer-portal-evidence:check` före commit |
-| `recruiter-p1-native-ci.yml`, `recruiter-real-ci.yml`, `passport-native-op09-ci.yml` | pinnad app `40e5775d…` | **Nej.** Tidigare versionsbevis för Astras leverans; verifierar inte denna PR:s kod |
+| `employer-portal-ux-evidence.yml` | PR:ns bas `8c9b3138` (före; `e4531c3b` i de tidigare paren) och PR-huvudet (efter), samma instrument (svit, fixture, harness, Playwright-config från huvudet) | Ja: syntetiska bilder, sv/en, 1440 och emulerad 375; paret kontrolleras av `employer-portal-evidence:check` före commit |
+| `recruiter-p1-native-ci.yml`, `recruiter-real-ci.yml`, `passport-native-op09-ci.yml` | workflowen körs på PR-huvudet, men appen under test är pinnad till `40e5775de5195050571421827434ec2872a61506` (evidenshuvudet är alltså inte appversionen) | **Nej.** Regression på den tidigare appen; verifierar inte denna PR:s UX |
 
 Mobila kontroller är emulering (Chromium med iPhone 13 Mini-/iPhone 14-metrik), inte
 fysiska telefoner. Fram till denna PR var `mobile-375` i `playwright.config.ts` ett
@@ -271,8 +278,9 @@ Lanseringshinder (inte ändrade här, utanför UX-uppdraget):
 - Hosted Auth-fixture/B-matris är fortsatt BLOCKED och fysisk telefon NOT RUN enligt
   Astras r11; detta pass ändrar inte det.
 - `ci.yml`-jobben "Migration replay, RLS and rollback tests" och "Recruiter current
-  schema" föll på `322b8dc`, `0b961ff` och `9458cdb` efter att alla databasassertioner
-  passerat: `docker: toomanyrequests: Rate exceeded` vid hämtning av
+  schema" föll på `322b8dc`, `0b961ff` och `9458cdb` i avbildhämtningen före replay-/
+  HTTP-stegen, efter att de dessförinnan utförda SQL- och raceproven passerat:
+  `docker: toomanyrequests: Rate exceeded` vid hämtning av
   `public.ecr.aws/supabase/postgrest:v14.15` (samma orsak som #461:s röda jobb tidigare
   i dag). Infrastruktur, inte denna PR. Astra lade `a75f7dcf`
   (`scripts/registry-image-retry.mjs`): samma pinnade avbild hämtas högst tre gånger,
