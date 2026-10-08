@@ -1,0 +1,315 @@
+# The employer portal, before and after, photographed the same way.
+#
+# Two jobs run the SAME routed suite (e2e/employer-portal-ux-evidence.spec.ts,
+# taken from the head) against two checkouts: the pull request's base commit
+# and its head. Same synthetic organisation, same six areas, same languages
+# and widths. The two artifacts are the before/after pair a reviewer compares;
+# nothing here reaches a hosted backend (the harness refuses every Supabase
+# host and every unstubbed server function).
+#
+# The behaviour assertions describe the head, so the base run sets
+# UX_EVIDENCE_MODE=before and takes only the photographs.
+
+name: Employer portal UX evidence — before and after
+
+on:
+  pull_request:
+    branches: [main, "claude/**"]
+    paths:
+      - "src/components/employer/**"
+      - "src/components/recruitment/**"
+      - "src/components/academy/**"
+      - "src/routes/_authenticated.employer.*"
+      - "src/i18n/**"
+      - "e2e/employer-portal-ux-evidence.spec.ts"
+      - "e2e/support/employer-portal-fixture.ts"
+      - "e2e/support/public-entry-harness.ts"
+      - ".github/workflows/employer-portal-ux-evidence.yml"
+  workflow_dispatch:
+    inputs:
+      base_ref:
+        description: "Commit or branch to photograph as 'before' (default: main)"
+        required: false
+        default: "main"
+
+permissions:
+  contents: read
+
+# Concurrency sits on the photograph jobs, not the workflow: a push that
+# photographs nothing (see `changed` below) must not cancel a pair that is
+# being taken for the previous head.
+
+jobs:
+  # A pull_request path filter is matched against the WHOLE pull request's
+  # diff, not against the commits of the push that fired the event, so this
+  # workflow would run again for every push to a pull request that once
+  # touched a watched path -- including the image commit it pushes itself and
+  # a docs-only push. This job looks at the pushed range instead: the
+  # photograph jobs run when the push changed something they photograph, or
+  # when there is no range to look at (opened, reopened, workflow_dispatch).
+  changed:
+    name: Did this push change what is photographed?
+    runs-on: ubuntu-latest
+    outputs:
+      photograph: ${{ steps.decide.outputs.photograph }}
+    steps:
+      - name: Compare the pushed range
+        id: decide
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          ACTION: ${{ github.event.action }}
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.event.after }}
+        run: |
+          if [ "$EVENT" != "pull_request" ] || [ "$ACTION" != "synchronize" ] || [ -z "$BEFORE" ] || [ -z "$AFTER" ]; then
+            echo "no pushed range to compare ($EVENT/$ACTION): photographing"
+            echo "photograph=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          if ! files=$(gh api --paginate "repos/${GITHUB_REPOSITORY}/compare/${BEFORE}...${AFTER}" --jq '.files[].filename'); then
+            echo "the range could not be compared (rewritten history?): photographing"
+            echo "photograph=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          echo "files in ${BEFORE:0:7}..${AFTER:0:7}:"; printf '  %s\n' $files
+          if printf '%s\n' $files | grep -Eq '^src/components/(employer|recruitment|academy)/|^src/routes/_authenticated\.employer\.|^src/i18n/|^e2e/employer-portal-ux-evidence\.spec\.ts$|^e2e/support/(employer-portal-fixture|public-entry-harness)\.ts$'; then
+            echo "photograph=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "nothing photographed changed in this push: the committed pair still shows this code"
+            echo "photograph=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  before:
+    name: Before (base commit)
+    needs: changed
+    if: needs.changed.outputs.photograph == 'true'
+    runs-on: ubuntu-latest
+    # A new photograph of the same branch supersedes one still being taken.
+    concurrency:
+      group: employer-portal-ux-evidence-before-${{ github.head_ref || github.ref }}
+      cancel-in-progress: true
+    steps:
+      # The head commit itself (not the pull request's merge ref), so the
+      # "suite:" line in SOURCE.txt names a commit on the branch.
+      - name: Checkout the head (for the suite and its instrument)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          path: head
+
+      - name: Checkout the base
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha || github.event.inputs.base_ref || 'main' }}
+          path: base
+
+      # The suite, its fixture, the harness AND the Playwright config come from
+      # the head, so both photographs are taken with the same device
+      # configuration (the base's config once ran "mobile-375" as a narrow
+      # desktop window, which made the mobile before-images a different
+      # instrument from the after-images). Only the application under test is
+      # the base's.
+      - name: Carry the suite and its instrument into the base checkout
+        run: |
+          mkdir -p base/e2e/support base/scripts
+          cp head/e2e/employer-portal-ux-evidence.spec.ts base/e2e/
+          cp head/e2e/support/employer-portal-fixture.ts base/e2e/support/
+          cp head/e2e/support/public-entry-harness.ts base/e2e/support/
+          cp head/playwright.config.ts base/playwright.config.ts
+          cp head/scripts/recruiter-real-ci-mobile-preset.ts base/scripts/
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - name: Install dependencies
+        working-directory: base
+        run: bun install --frozen-lockfile
+
+      - name: Install Chromium
+        working-directory: base
+        run: |
+          grep -rlZ 'dl.google.com/linux/chrome' /etc/apt/sources.list.d 2>/dev/null | xargs -0r sudo rm -f
+          bunx playwright install --with-deps chromium
+
+      - name: Start the base application
+        working-directory: base
+        env:
+          VITE_EMPLOYER_PORTAL_ENABLED: "true"
+          VITE_JOBS_ENABLED: "true"
+        run: |
+          nohup bun run dev -- --port 3100 --strictPort > /tmp/dev-server.log 2>&1 &
+          disown
+          for i in $(seq 1 60); do
+            if curl -sfo /dev/null http://localhost:3100/; then echo "up after ${i}s"; exit 0; fi
+            sleep 1
+          done
+          echo "the dev server did not come up"; cat /tmp/dev-server.log; exit 1
+
+      - name: Photograph the base
+        working-directory: base
+        env:
+          E2E_BASE_URL: http://localhost:3100
+          UX_EVIDENCE_MODE: before
+          PUBLIC_ENTRY_EVIDENCE_DIR: ${{ github.workspace }}/out/before
+        run: bunx playwright test e2e/employer-portal-ux-evidence.spec.ts --project=chromium --project=mobile-375
+
+      - name: Record what was photographed
+        if: always()
+        run: |
+          mkdir -p out/before
+          {
+            echo "base: $(git -C base rev-parse HEAD)"
+            echo "suite: $(git -C head rev-parse HEAD)"
+            echo "instrument: head (spec, fixture, harness, playwright.config.ts)"
+            echo "src-tree: $(git -C base rev-parse HEAD:src)"
+            echo "mode: before"
+          } > out/before/SOURCE.txt
+
+      - name: Upload the before images
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: employer-portal-ux-before
+          path: out/before/
+
+  after:
+    name: After (head commit)
+    needs: changed
+    if: needs.changed.outputs.photograph == 'true'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: employer-portal-ux-evidence-after-${{ github.head_ref || github.ref }}
+      cancel-in-progress: true
+    steps:
+      # The head itself, not the pull request's merge ref: SOURCE.txt then
+      # names the commit the images show.
+      - name: Checkout the head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Install Chromium
+        run: |
+          grep -rlZ 'dl.google.com/linux/chrome' /etc/apt/sources.list.d 2>/dev/null | xargs -0r sudo rm -f
+          bunx playwright install --with-deps chromium
+
+      - name: Start the application
+        env:
+          VITE_EMPLOYER_PORTAL_ENABLED: "true"
+          VITE_JOBS_ENABLED: "true"
+        run: |
+          nohup bun run dev -- --port 3100 --strictPort > /tmp/dev-server.log 2>&1 &
+          disown
+          for i in $(seq 1 60); do
+            if curl -sfo /dev/null http://localhost:3100/; then echo "up after ${i}s"; exit 0; fi
+            sleep 1
+          done
+          echo "the dev server did not come up"; cat /tmp/dev-server.log; exit 1
+
+      - name: Photograph the head and assert the journey
+        env:
+          E2E_BASE_URL: http://localhost:3100
+          PUBLIC_ENTRY_EVIDENCE_DIR: ${{ github.workspace }}/out/after
+        run: bun run e2e:employer-portal-ux
+
+      - name: Record what was photographed
+        if: always()
+        run: |
+          mkdir -p out/after
+          {
+            echo "head: $(git rev-parse HEAD)"
+            echo "src-tree: $(git rev-parse HEAD:src)"
+            echo "mode: after"
+          } > out/after/SOURCE.txt
+
+      - name: Upload the after images
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: employer-portal-ux-after
+          path: out/after/
+
+      - name: Upload the failure traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: employer-portal-ux-traces
+          path: test-results/
+
+  # The two image sets, committed to the pull request's own branch so the
+  # before/after pair sits in the repository next to the change it documents
+  # (artifacts/employer-portal-ux/INDEX.md describes them). Same-repository
+  # pull requests only: a fork's branch cannot be pushed to with this token.
+  # The image commit does start this workflow again (the path filter is
+  # matched against the whole pull request), but it changes nothing that is
+  # photographed, so `changed` stops it there.
+  publish-images:
+    name: Commit the before/after images to the PR branch
+    needs: [before, after]
+    # Only a COMPLETE pair is committed: a cancelled, failed or skipped
+    # photograph job leaves a partial set, and a partial set committed over a
+    # complete one is worse than none. Artifacts of the failed run remain for
+    # diagnosis.
+    if: needs.before.result == 'success' && needs.after.result == 'success' && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    # Pushes to the branch queue behind each other rather than cancel.
+    concurrency:
+      group: employer-portal-ux-evidence-publish-${{ github.head_ref || github.ref }}
+      cancel-in-progress: false
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout the PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+
+      # A download that fails fails the job: a missing artifact must never
+      # become a half-committed pair.
+      - name: Download the before images
+        uses: actions/download-artifact@v4
+        with:
+          name: employer-portal-ux-before
+          path: artifacts/employer-portal-ux/before
+
+      - name: Download the after images
+        uses: actions/download-artifact@v4
+        with:
+          name: employer-portal-ux-after
+          path: artifacts/employer-portal-ux/after
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      # The pair is checked BEFORE it is committed: complete manifests, every
+      # listed file present, SOURCE.txt naming the commits photographed.
+      - name: Check the pair is complete
+        run: bun run scripts/employer-portal-evidence-check.ts
+
+      - name: Commit and push when anything changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add artifacts/employer-portal-ux
+          if git diff --cached --quiet; then
+            echo "no image changed"
+            exit 0
+          fi
+          git commit -m "evidence(employer): before/after images for ${{ github.event.pull_request.head.sha }}" \
+            -m "Photographed by employer-portal-ux-evidence.yml run ${{ github.run_id }}: the base commit (before) and the PR head (after) on the same synthetic fixture."
+          # The branch may have moved while the images were taken; rebase the
+          # one image commit onto it rather than fail on a non-fast-forward.
+          git pull --rebase origin ${{ github.event.pull_request.head.ref }}
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
+

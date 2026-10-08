@@ -148,6 +148,12 @@ type NavItem = {
   labelKey: TranslationKey;
   icon: React.ComponentType<{ className?: string }>;
   to: NavTarget;
+  /** One line under the label saying what the area is FOR. The four
+   *  recruitment items carry one, because "Rekryteringar" and "Ansökningar"
+   *  read as two names for the same pile until the difference is said:
+   *  one position's advert, requirements and decisions, versus every
+   *  application received. */
+  descKey?: TranslationKey;
 };
 
 type NavGroup = {
@@ -199,12 +205,14 @@ const NAV_GROUPS: NavGroup[] = [
         labelKey: "employer.nav.jobs",
         icon: Briefcase,
         to: "/employer/$employerSlug/jobs",
+        descKey: "employer.nav.jobs.desc",
       },
       {
         key: "applications",
         labelKey: "employer.nav.applications",
         icon: Inbox,
         to: "/employer/$employerSlug/applications",
+        descKey: "employer.nav.applications.desc",
       },
       // Tester & bedömningar (owner decision 2026-09-19): its Rekryteringsstöd
       // tab holds METHOD -> ROLE -> ENVIRONMENT -> SETUP.
@@ -213,6 +221,7 @@ const NAV_GROUPS: NavGroup[] = [
         labelKey: "employer.nav.assessments",
         icon: ClipboardCheck,
         to: "/employer/$employerSlug/assessments",
+        descKey: "employer.nav.assessments.desc",
       },
       // Interview Intelligence. Added only now that the landing route, the
       // permission checks and the whole journey behind it actually work --
@@ -223,6 +232,7 @@ const NAV_GROUPS: NavGroup[] = [
         icon: MessagesSquare,
         labelKey: "employer.nav.interviewIntelligence",
         to: "/employer/$employerSlug/interview-intelligence",
+        descKey: "employer.nav.interviewIntelligence.desc",
       },
     ],
   },
@@ -452,6 +462,11 @@ function NavLink({
       to={item.to}
       params={{ employerSlug }}
       onClick={onNavigate}
+      // The active item is the page's SECTION (Rapporter lights Intervjuer),
+      // which the router's own path matching cannot know; the router owns
+      // aria-current, so the section marker is a data attribute plus a
+      // visually hidden "you are here" inside the link's name.
+      data-active={active || undefined}
       className={cn(
         "flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium transition-colors",
         active
@@ -460,13 +475,21 @@ function NavLink({
       )}
     >
       <Icon className="h-4 w-4 shrink-0" />
+      {active && <span className="sr-only">({t("rec.flow.current")}) </span>}
       {/* `truncate` is visual only — the full label is still in the DOM
           for screen readers, but a sighted user reading
           "Kompetenser & certif…" has no way to finish the sentence.
           A native title costs no layout and works in both languages,
           where the Swedish labels are the longer ones. */}
-      <span className="min-w-0 truncate" title={t(item.labelKey)}>
-        {t(item.labelKey)}
+      <span className="min-w-0">
+        <span className="block truncate" title={t(item.labelKey)}>
+          {t(item.labelKey)}
+        </span>
+        {item.descKey && (
+          <span className="line-clamp-2 block whitespace-normal text-[11px] font-normal leading-tight text-muted-foreground/80">
+            {t(item.descKey)}
+          </span>
+        )}
       </span>
     </Link>
   );

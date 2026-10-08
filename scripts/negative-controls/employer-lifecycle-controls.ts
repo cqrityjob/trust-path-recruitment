@@ -123,7 +123,12 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "an interview work-list row goes back to linking at the unfiltered index, so a count lands on every case the organisation has",
     file: OVERVIEW,
-    find: '        search: { stage: "readyToInterview" as const },',
+    // The ready card also carries this stage. Mutate the work-list row only,
+    // so a correctly filtered card cannot hide a broken action destination.
+    find: `        // The exact cases, not the list they live in. The stage names the same
+        // statuses this count counted -- both read case-stage.ts -- so the
+        // number and the rows it opens cannot disagree.
+        search: { stage: "readyToInterview" as const },`,
     replace: "",
     guard: G,
     expect: "every interview work-list row carries a stage",

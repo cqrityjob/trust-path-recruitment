@@ -301,7 +301,10 @@ export function BookingsPanel({
                   {t("rec.booking.sendInvitation")}
                 </button>
               )}
-              {b.status === "planned" && (
+              {/* Editing a booking is refused by rec_save_booking once the
+                  application is closed (APPLICATION_NOT_OPEN); a button that
+                  leads to that refusal is hidden, like "Planera" above. */}
+              {b.status === "planned" && open && (
                 <button
                   type="button"
                   onClick={() => setEditing(b)}

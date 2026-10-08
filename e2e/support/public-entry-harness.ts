@@ -23,6 +23,7 @@
 import { expect, type Page, type Route } from "@playwright/test";
 import fs from "node:fs";
 import path from "node:path";
+import { fromJSON } from "seroval";
 
 export const BASE = process.env.E2E_BASE_URL ?? "http://localhost:3100";
 
@@ -85,7 +86,28 @@ export function exportOf(url: string): string | null {
   }
 }
 
-export type ServerFnTable = Record<string, unknown>;
+/** A stub is a value, or a function of the call's own arguments (the `data`
+ *  the client sent, decoded from TanStack Start's seroval envelope). A function
+ *  lets one export answer differently per request -- a paged list that must
+ *  honour the view it was asked for -- without the suite reaching a server. */
+export type ServerFnStub = unknown | ((data: Record<string, unknown>) => unknown);
+export type ServerFnTable = Record<string, ServerFnStub>;
+
+/** The arguments of a server-function call, as the handler would see them.
+ *  Unparseable or absent bodies read as `{}`, never as a thrown error inside
+ *  a route handler (which Playwright would report as a page failure). */
+function argumentsOf(route: Route): Record<string, unknown> {
+  const raw = route.request().postData();
+  if (!raw) return {};
+  try {
+    const decoded = fromJSON(JSON.parse(raw)) as { data?: unknown };
+    const data =
+      decoded && typeof decoded === "object" && "data" in decoded ? decoded.data : decoded;
+    return (data ?? {}) as Record<string, unknown>;
+  } catch {
+    return {};
+  }
+}
 
 /** Everything a scenario refused to answer. Asserted empty at the end of
  *  each test that installs the harness, so a route that grew a new server
@@ -191,10 +213,12 @@ export async function installBoundary(
       refusals.unstubbed.push(name);
       return route.fulfill({ status: 500, contentType: "text/plain", body: `unstubbed ${name}` });
     }
+    const stub = table[name];
+    const result = typeof stub === "function" ? stub(argumentsOf(route)) : stub;
     return route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify({ result: table[name] ?? null, error: null, context: {} }),
+      body: JSON.stringify({ result: result ?? null, error: null, context: {} }),
     });
   });
 

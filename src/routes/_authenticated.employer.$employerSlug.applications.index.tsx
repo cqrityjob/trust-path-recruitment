@@ -11,6 +11,7 @@ import {
   type EmployerStatus,
 } from "@/components/employer/EmployerAppShell";
 import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
+import { RecruitmentFlowStrip } from "@/components/employer/RecruitmentFlowStrip";
 import { EmployerAccessDenied } from "@/components/employer/EmployerAccessDenied";
 import { CandidateTable } from "@/components/recruitment/CandidateTable";
 import { listMyEmployerWorkspaces } from "@/lib/job-intelligence/membership.functions";
@@ -86,6 +87,14 @@ function ApplicationsList(props: {
   return (
     <EmployerAppShell {...props} activeSection="applications">
       <h1 className="text-2xl font-semibold">{t("employer.applications.heading")}</h1>
+      {/* With a review filter in the URL this list IS the requirement-review
+          station (the strip's own link lands here with review=remaining); the
+          marker follows the URL, never a candidate's progress. */}
+      <RecruitmentFlowStrip
+        employerSlug={props.employerSlug}
+        current={view.review ? "review" : "applications"}
+        className="mt-3"
+      />
       <p className="mt-2 text-sm text-muted-foreground">
         {lang === "sv"
           ? "Kravstatus, rekryteringssteg, teknisk analys och mänsklig granskning visas separat. Grupper och antal beräknas över hela urvalet före sidindelning."
