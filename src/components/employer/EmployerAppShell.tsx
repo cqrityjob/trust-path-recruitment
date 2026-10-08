@@ -480,7 +480,7 @@ function NavLink({
           {t(item.labelKey)}
         </span>
         {item.descKey && (
-          <span className="block truncate text-[11px] font-normal leading-tight text-muted-foreground/80">
+          <span className="line-clamp-2 block whitespace-normal text-[11px] font-normal leading-tight text-muted-foreground/80">
             {t(item.descKey)}
           </span>
         )}

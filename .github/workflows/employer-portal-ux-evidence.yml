@@ -120,8 +120,12 @@ jobs:
     name: After (head commit)
     runs-on: ubuntu-latest
     steps:
+      # The head itself, not the pull request's merge ref: SOURCE.txt then
+      # names the commit the images show.
       - name: Checkout the head
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
