@@ -1,0 +1,65 @@
+{
+  "kind": "static_integrated_source_witness_not_native_execution",
+  "appSha": "40e5775de5195050571421827434ec2872a61506",
+  "schemaSha": "1e5988c6f9c7121a0fefd22c0db06f6b573f0ae9",
+  "mergeParent": "eda5efe3b91e313bd4774a81d524a3c51f2f4078",
+  "appAndSchemaAreAncestors": true,
+  "sourceByteIdenticalToApp": true,
+  "migrationAndConfigByteIdenticalToSchema": true,
+  "sourceTree": "3d5feca97be01959778173fc3a0f0959fe62355c",
+  "appSourceTree": "3d5feca97be01959778173fc3a0f0959fe62355c",
+  "migrationTree": "eecc3229705f2c81f7ee8ff63eae032527bb6a38",
+  "schemaMigrationTree": "eecc3229705f2c81f7ee8ff63eae032527bb6a38",
+  "configBlob": "720daa8eda53adfba26e9ebde29284d7cfcd5931",
+  "schemaConfigBlob": "720daa8eda53adfba26e9ebde29284d7cfcd5931",
+  "handwrittenOverlayBlob": "b1373269002280eaf5862252ffd8c0db4decdf32",
+  "appHandwrittenOverlayBlob": "b1373269002280eaf5862252ffd8c0db4decdf32",
+  "handwrittenOverlayGroups": {
+    "EvidenceUploadFunctions": [
+      "sp_begin_evidence_upload",
+      "sp_reconcile_evidence_upload",
+      "sp_list_my_evidence_upload_attempts",
+      "sp_authorize_evidence_upload_cleanup",
+      "sp_confirm_evidence_upload_cleanup",
+      "sp_evidence_upload_storage_writable"
+    ],
+    "RecruitmentIntelligenceFunctions": [
+      "rec_ri_get_profile",
+      "rec_ri_get_review",
+      "rec_ri_confirm_profile",
+      "rec_ri_save_review",
+      "rec_ri_manual_reference",
+      "rec_ri_transfer_requirements",
+      "rec_ri_overview_counts",
+      "rec_ri_candidate_view"
+    ]
+  },
+  "sdkProbeSHA256": "d6c145b5dc2d25114d4f60cad22fb18e9a81ca84e3c0a14dcf1459954c0ac1fe",
+  "nativeSdkRequired": 44,
+  "nativeBrowserCasesRequired": 4,
+  "nativeResultForThisPin": "NOT_RUN",
+  "historicalNativePassInherited": false,
+  "productAndSchemaEdits": false,
+  "hosted0909Metadata": "pending at preparation; release-parity:gate correctly exits1",
+  "performedChecks": {
+    "fullScriptsTypecheck": 0,
+    "workflowEquivalentBrowserTypecheck": 0,
+    "nativeAndSchemaGuards": {
+      "passed": 38,
+      "failed": 0
+    },
+    "interviewEvidenceReliability": {
+      "passed": 143,
+      "failed": 0
+    },
+    "changedCodeLint": 0,
+    "diffCheck": 0
+  },
+  "excluded": [
+    "local service or database execution",
+    "hosted writing",
+    "new native PASS",
+    "published/runtime/CDN proof",
+    "physical-phone proof"
+  ]
+}
