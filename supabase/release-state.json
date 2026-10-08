@@ -7,6 +7,14 @@
   "$comment": "RELEASE PARITY STATE. Enforced by scripts/release-parity-check.ts, which runs in CI and before a release. This file records, for every canonical migration at the release frontier, whether it is believed applied on the hosted database, and which database objects it introduces. The guard fails when application code on this branch references an object whose migration is not applied -- the exact class of failure that stopped employers saving jobs during UAT. It NEVER connects to a database, holds no credentials and applies no migration; it compares this repository against itself. Edit it deliberately: every entry is an owner-level statement about production.", 
   "frontier": [
     {
+      "file": "20270310090000_interview_method_lifecycle_revocation.sql",
+      "hostedState": "pending",
+      "introduces": [],
+      "rollback": "supabase/rollback/20270310090000_interview_method_lifecycle_revocation_rollback.sql",
+      "note": "Schema-only forward correction of existing method/grant guards. Suspended/retired versions cannot start new cases; genuine grant revocation remains possible. Existing frozen cases, content versions and final reports are preserved. This migration is not installed or approved for production by the 2026-10-08 final-review assignment. A merge carrying this migration would trigger a production installation, so keep this PR unmerged pending a deployment decision. No AI, retention worker, candidate send or publication.",
+      "verify": "Run strict history, the 124 lifecycle SQL assertions including planted controls, the 13 actual two-session race assertions, snapshot/integrity regressions and data-preserving rollback refusal in an isolated database. Before any production installation, reverify exact CI head and current release dependencies, then record actual Auth/PostgREST start/revoke/suspend/retire and frozen-case/report readback; SQL fixtures are not real Auth or published runtime evidence."
+    },
+    {
       "file": "20270309090000_sp_evidence_upload_recovery.sql",
       "hostedState": "applied",
       "note": "Additive holder-owned upload intents and fenced recovery; no worker, email, AI or historical orphan backfill. Schema only; consumer must wait for official installation and readback. Preserve numeric installation order:07100000 then08090000 then09090000.",
