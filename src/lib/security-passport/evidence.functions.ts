@@ -25,7 +25,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { orNull } from "./rpc";
+import { uploadOwnedEvidence } from "./evidence-upload-adapter";
+import { requireSavedEvidence } from "./evidence-upload";
 import { withdrawAndDeleteEvidence, type WithdrawEvidenceResult } from "./evidence-withdrawal";
 
 export const EVIDENCE_BUCKET = "passport-evidence";
@@ -128,43 +129,23 @@ export const uploadEvidence = createServerFn({ method: "POST" })
     // filename is metadata, never part of the path — so a filename can never
     // traverse out of the folder the Storage policy pins.
     const ext = EXT_BY_MIME[data.mimeType] ?? "bin";
-    const storagePath = `${userId}/${randomUUID()}.${ext}`;
+    const attemptId = randomUUID();
+    const storagePath = `${userId}/${attemptId}.${ext}`;
 
-    const uploaded = await supabase.storage
-      .from(EVIDENCE_BUCKET)
-      .upload(storagePath, bytes, { contentType: data.mimeType, upsert: false });
-    if (uploaded.error) throw new Error(uploaded.error.message);
-
-    // sp_attach_evidence re-checks that the path's first segment is the
-    // caller, so a row can never point at another holder's object even if
-    // this function were called with a crafted path.
-    const { data: evidenceId, error } = await db.rpc("sp_attach_evidence", {
-      _claim_id: orNull(data.claimId),
-      _period_id: orNull(data.periodId),
-      _storage_path: storagePath,
-      _file_name: safeDisplayName(data.fileName),
-      _mime_type: data.mimeType,
-      _size_bytes: bytes.byteLength,
-      _sha256: sha256,
+    const outcome = await uploadOwnedEvidence({
+      supabase: db,
+      userId,
+      claimId: data.claimId,
+      periodId: data.periodId,
+      bucket: EVIDENCE_BUCKET,
+      attemptId,
+      storagePath,
+      bytes,
+      fileName: safeDisplayName(data.fileName),
+      mimeType: data.mimeType,
+      sha256,
     });
-
-    if (error) {
-      // The metadata row is what makes an object reachable. If it failed, the
-      // object is unreferenced — remove it rather than leave an orphan in a
-      // bucket the holder cannot see or clean up.
-      await supabase.storage.from(EVIDENCE_BUCKET).remove([storagePath]);
-      throw new Error(error.message);
-    }
-
-    const { data: row } = await db
-      .from("sp_evidence")
-      .select(
-        "id, claim_id, period_id, file_name, mime_type, size_bytes, uploaded_at, lifecycle_state",
-      )
-      .eq("id", evidenceId as unknown as string)
-      .single();
-
-    return toEvidence(row as EvidenceRow);
+    return requireSavedEvidence(outcome);
   });
 
 export const listMyEvidence = createServerFn({ method: "GET" })
