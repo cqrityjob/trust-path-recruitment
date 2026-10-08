@@ -446,6 +446,7 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // RI v0.3 P0 was installed by the official integration after #447. Read-only
 // ledger, body and privilege parity are recorded in the 2026-10-08 hosted proof.
 // The separately reviewed content-snapshot schema is the only pending entry.
+// #455 is installed and read-only parity-verified; no migration is rerun.
 const expectedPending: string[] = [];
 
 const hostedIdentities = [
