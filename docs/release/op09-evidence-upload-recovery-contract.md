@@ -25,3 +25,16 @@ Required release evidence:
 The app release must follow applied-schema proof. An app rollback can leave this private additive schema installed. Schema rollback refuses any nonempty journal (`SP_UPLOAD_ROLLBACK_REQUIRES_EMPTY_JOURNAL`) so a rollback cannot discard unresolved orphan intentions. Do not force-drop pending history to make rollback pass.
 
 Installation order is chronological and schema first: verified07100000 → P1’s08090000 → this09090000 → the recovery application. Do not install09090000 ahead of a lower-numbered pending08090000. This stacked preparation branch must merge fresh main and record the preceding applied states before release. Its current SQL suite remains NOT RUN until exact-head mandatory CI executes it.
+
+Integration observation 2026-10-08: installed071 metadata is normally merged
+from6039; hosted baseline is385 identities. Only080 and0909 remain pending,
+canonical full history has387 files. The strict runner preserves all41 recovery
+and95 P1 assertions before testing0909 rollback refusal on a transactional,
+nonempty synthetic journal. It requires the exact P0001 domain denial, rolls
+back the probe and verifies no probe Auth/journal rows remain. The existing
+empty-journal rollback then removes all10 new functions/table/Storage/attach
+fences before older080/071/snapshot/wallet rollback eras. It verifies the old
+attach/session functions remain. No CASCADE, ignored SQL error or shortened
+assertion floor replaces dependency ordering. Fourteen planted source-contract
+controls pass locally; actual SQL execution and native recovery remain pending.
+The mandatory workflow runs these controls and their separate typecheck.

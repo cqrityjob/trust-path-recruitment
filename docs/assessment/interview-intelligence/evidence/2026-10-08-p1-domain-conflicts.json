@@ -1,0 +1,152 @@
+{
+  "schemaVersion": "ri-p1-domain-conflicts-v1",
+  "createdAt": "2026-10-08T07:54:51.025Z",
+  "sourceSha": "7820076953468073c21adfa8a9d6f137e0ae8bcc",
+  "migration": "20270308090000_recruiter_intelligence_requirements.sql",
+  "migrationSha256": "c06b75bd109e420df76477c3cce4af42af0cdc25b030747d56fc9a0d712949f0",
+  "environment": "Owned disposable PostgreSQL loopback55687; own PostgREST55688/gateway55689. No actual Auth55690/55691 mutation.",
+  "scope": "Strict full migration replay, actual SQL 100-application oracle and actual PostgREST HTTP domain-CAS/concurrency. Auth and Storage gateway are substitutes; application runtime/browser/hosted publication not run.",
+  "serviceVersions": {
+    "postgres": "17.11 (Debian 17.11-1.pgdg13+2)",
+    "apiPostgrest": "PostgREST 14.15",
+    "uiPostgrest": "not_run"
+  },
+  "verification": {
+    "bootstrap": "passed",
+    "replay": "passed",
+    "oracle": "passed",
+    "gateway": "passed",
+    "api": "passed",
+    "runtime": "intentionally_not_run",
+    "browser": "intentionally_not_run"
+  },
+  "executedAssertions": {
+    "sql": 93,
+    "api": 23,
+    "browserCasesPassed": 0
+  },
+  "baseline": {
+    "received": 100,
+    "green": 40,
+    "yellow": 25,
+    "gray": 35,
+    "reviewed": 27,
+    "remaining": 73
+  },
+  "concurrentStatuses": [
+    200,
+    409
+  ],
+  "domainConflicts": [
+    {
+      "status": 409,
+      "code": "PT409",
+      "message": "STALE_VERSION",
+      "elapsedMs": 10.87
+    },
+    {
+      "status": 409,
+      "code": "PT409",
+      "message": "STALE_VERSION",
+      "elapsedMs": 11.52
+    },
+    {
+      "status": 409,
+      "code": "PT409",
+      "message": "RI_STALE_VERSION",
+      "elapsedMs": 9.55
+    },
+    {
+      "status": 409,
+      "code": "PT409",
+      "message": "RI_SOURCE_STALE",
+      "elapsedMs": 6.78
+    },
+    {
+      "status": 409,
+      "code": "PT409",
+      "message": "RI_SOURCE_STALE",
+      "elapsedMs": 7.69
+    },
+    {
+      "status": 409,
+      "code": "PT409",
+      "message": "RI_SOURCE_STALE",
+      "elapsedMs": 8.78
+    },
+    {
+      "status": 409,
+      "code": "PT409",
+      "message": "RI_STALE_VERSION",
+      "elapsedMs": 16.46
+    },
+    {
+      "status": 409,
+      "code": "PT409",
+      "message": "RI_SOURCE_STALE",
+      "elapsedMs": 11.31
+    }
+  ],
+  "v2": {
+    "gray": 35,
+    "green": 30,
+    "yellow": 35,
+    "decided": 0,
+    "archived": 0,
+    "filtered": 100,
+    "received": 100,
+    "reviewed": 0,
+    "remaining": 100,
+    "withdrawn": 0,
+    "notEstablished": 0,
+    "filteredReviewed": 0,
+    "filteredRemaining": 100
+  },
+  "sourceInputsSha256": "1bb53ac67d2c833a81765a2888615fcbe7f6cb41edfd9c0a0369259af6a7d3bb",
+  "publicFiles": [
+    {
+      "path": "stages.log",
+      "bytes": 167,
+      "sha256": "6ae5ada2dbaf477ea8b7ccb14443babfc8caf7df3ca241fe37270d902140a472"
+    },
+    {
+      "path": "postgres-version.log",
+      "bytes": 32,
+      "sha256": "412cbe116971701e23d1a6a6081b50c3a71e032e130c911fdabe7d74f170a3ef"
+    },
+    {
+      "path": "api-postgrest-version.log",
+      "bytes": 16,
+      "sha256": "90a93bd17365cfc57bdf4cad96cb02c81a68ba079abae4148d6052c678ef93e6"
+    },
+    {
+      "path": "bootstrap.log",
+      "bytes": 1102,
+      "sha256": "03f8b81f295b3f749bc18b5329d311ff244f51f06b28909ed791bc25f4759271"
+    },
+    {
+      "path": "replay.log",
+      "bytes": 129551,
+      "sha256": "276be5fc335a3e2ef45105a08fb057e2aa3bc53526cd870db8d672b67e1e4b82"
+    },
+    {
+      "path": "sql-oracle.log",
+      "bytes": 83598,
+      "sha256": "023346efd7015236042471cbb5590cf165ddf1a9f32bc706628f1e34da00fbda"
+    },
+    {
+      "path": "http-api.log",
+      "bytes": 2970,
+      "sha256": "4969d096fcac0cf14e23e22f46e511e0c6b8f12d569bdf391ab520d55e3791bc"
+    }
+  ],
+  "excluded": [
+    "JWT and passwords",
+    "private harness SQL/configuration",
+    "app HTTP server-function status conversion",
+    "genuine GoTrue/Storage/CDN/browser proof",
+    "P0 forward migration (owned and tested separately)",
+    "genuine PostgreSQL serialization_failure interception: no catch/rewrite was added"
+  ],
+  "schemaBase": "40a5f0c87a293bf692366b0bd56803d2cb843a80"
+}

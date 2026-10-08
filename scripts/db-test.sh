@@ -232,6 +232,57 @@ RI_UPLOAD_PASSED="$(echo "$RI_UPLOAD_OUT" | command grep -c 'NOTICE:  ok ' || tr
 [ "$RI_UPLOAD_PASSED" -ge 41 ] || { echo "$RI_UPLOAD_OUT"; echo "FAIL:41 upload assertions required" >&2; exit 1; }
 echo "    ok  ${RI_UPLOAD_PASSED} durable upload SQL assertions"
 
+# P1 runs against the fully migrated schema (including permanent case content
+# snapshots) before historical-era rollback tests. Its synthetic fixture rolls
+# back; stand down only the EMPTY additive schema, keeping old assertions exact.
+echo "==> Running Recruiter Intelligence P1 authoritative 100-application oracle"
+set +e
+RI_P1_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/recruiter_intelligence_p1_test.sql 2>&1)"
+RI_P1_RC=$?
+set -e
+RI_P1_PASSED="$(echo "$RI_P1_OUT" | grep -c "NOTICE:  ok " || true)"
+if [ "$RI_P1_RC" -ne 0 ] || [ "$RI_P1_PASSED" -lt 95 ]; then
+  echo "$RI_P1_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "Recruiter Intelligence authoritative requirements"
+else
+  echo "    ok  ${RI_P1_PASSED} actual P1 counts, sources, CAS, access and handoff assertions"
+fi
+# Both current-schema suites have run. Stand down the newest EMPTY additive
+# journal before080/071 and the older Passport era. Its own-read policy depends
+# on sp_passport_session_active(), which the historical wallet rollback drops.
+# Do not change that old rollback or use CASCADE to hide a surviving consumer.
+echo "==> Proving upload journal rollback refuses any unresolved intention"
+set +e
+RI_UPLOAD_NONEMPTY_OUT="$(psql -v ON_ERROR_STOP=1 -v VERBOSITY=verbose -q -d "$TEST_DB" <<'SQL' 2>&1
+BEGIN;
+INSERT INTO auth.users(id,email) VALUES
+ ('a709ffff-0000-4000-8000-000000000001','op09-rollback@synthetic.invalid');
+-- A deleted-target intention is valid by design: no journal target FK.
+INSERT INTO public.sp_evidence_upload_attempts
+ (id,holder_user_id,claim_id,storage_path,file_name,mime_type,size_bytes,sha256)
+ VALUES('a709ffff-3000-4000-8000-000000000001',
+ 'a709ffff-0000-4000-8000-000000000001','a709ffff-1000-4000-8000-000000000001',
+ 'a709ffff-0000-4000-8000-000000000001/a709ffff-3000-4000-8000-000000000001.pdf',
+ 'proof.pdf','application/pdf',4,repeat('a',64));
+\i supabase/rollback/20270309090000_sp_evidence_upload_recovery_rollback.sql
+SQL
+)"
+RI_UPLOAD_NONEMPTY_RC=$?
+set -e
+if [ "$RI_UPLOAD_NONEMPTY_RC" -eq 0 ] || ! echo "$RI_UPLOAD_NONEMPTY_OUT" | grep -E 'ERROR:  *P0001: SP_UPLOAD_ROLLBACK_REQUIRES_EMPTY_JOURNAL' >/dev/null; then
+  echo "$RI_UPLOAD_NONEMPTY_OUT" >&2
+  echo "FAIL: upload rollback must refuse the nonempty journal before any DROP." >&2
+  exit 1
+fi
+# ON_ERROR_STOP closed the failed transaction: this probe must leave no row.
+RI_UPLOAD_EMPTY="$(psql_q -d "$TEST_DB" -Atc "SELECT (NOT EXISTS(SELECT 1 FROM public.sp_evidence_upload_attempts) AND NOT EXISTS(SELECT 1 FROM auth.users WHERE id='a709ffff-0000-4000-8000-000000000001'))::text")"
+[ "$RI_UPLOAD_EMPTY" = "true" ] || { echo "FAIL: upload rollback probe persisted fixture state." >&2; exit 1; }
+psql_q -d "$TEST_DB" -f supabase/rollback/20270309090000_sp_evidence_upload_recovery_rollback.sql >/dev/null
+RI_UPLOAD_STOOD_DOWN="$(psql_q -d "$TEST_DB" -Atc "SELECT (to_regclass('public.sp_evidence_upload_attempts') IS NULL AND NOT EXISTS(SELECT 1 FROM pg_policies WHERE schemaname='storage' AND tablename='objects' AND policyname IN('sp_evidence_upload_insert_fence','sp_evidence_upload_update_fence')) AND NOT EXISTS(SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public' AND p.proname IN('sp_evidence_upload_payload','sp_begin_evidence_upload','sp_reconcile_evidence_upload','sp_list_my_evidence_upload_attempts','sp_authorize_evidence_upload_cleanup','sp_confirm_evidence_upload_cleanup','sp_evidence_upload_attachment_guard','sp_evidence_upload_storage_writable','sp_evidence_upload_intent_immutable','sp_evidence_upload_erasure_manifest')) AND to_regprocedure('public.sp_attach_evidence(uuid,uuid,text,text,text,integer,text)') IS NOT NULL AND to_regprocedure('public.sp_passport_session_active()') IS NOT NULL)::text")"
+[ "$RI_UPLOAD_STOOD_DOWN" = "true" ] || { echo "FAIL: upload rollback left a consumer or removed a pre-existing Passport function." >&2; exit 1; }
+echo "    ok  nonempty journal refused, probe rolled back, empty journal/fences stood down before historical consumers"
+psql_q -d "$TEST_DB" -f supabase/rollback/20270308090000_recruiter_intelligence_requirements_rollback.sql >/dev/null
+
 # Full-current-schema conflicts must be tested before historical rollback.
 # The independent clone runs PT409 foundation/snapshot/SQL checks, reproduces
 # the old deadlock, verifies real PostgREST14 and witnesses exact rollback.
