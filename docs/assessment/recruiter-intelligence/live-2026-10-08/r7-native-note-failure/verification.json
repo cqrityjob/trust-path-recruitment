@@ -1,0 +1,25 @@
+{
+  "kind": "actual_native_paused_q8_blank",
+  "runId": 37767817371,
+  "jobId": 113279660928,
+  "artifactId": 11545977943,
+  "artifactZipSha256": "289db7f32b84704027f82e63ce2c4907fe1f2cef0f6d6d7453a7bc2664454bb4",
+  "evidenceCodeSha": "b6d8c1a4d4d414e311154c0146f0e15239d95c9e",
+  "appSha": "a68f22d799769de32230781bba268632e57e796f",
+  "releaseSchemaSha": "250623cfb677c931caf70a2354daf774f72f443a",
+  "stats": {
+    "expected": 0,
+    "unexpected": 12,
+    "flaky": 0,
+    "skipped": 0
+  },
+  "fixedFailureCode": "REAL_CI_NOTE_READBACK_PAUSED_Q8_BLANK",
+  "curatedImageCount": 12,
+  "allCuratedImageSizesAndHashesVerified": true,
+  "manifestBytes": 75186,
+  "manifestSha256": "2e1a33a955e09b448681634ed34b209cb0376e06e24a12563566532e4934627b",
+  "errorsSha256": "2b8694702d85bfbb0b5f42f600fddce61ce6bc2d8c0f6a9bdb646f1a00e219f6",
+  "productRelease": "HOLD",
+  "exactMutationCause": "not_established",
+  "privateLogsCopied": false
+}

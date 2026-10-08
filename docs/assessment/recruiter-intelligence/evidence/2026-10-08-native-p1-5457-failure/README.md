@@ -1,0 +1,7 @@
+# Native P1 5457: actual stack/Auth PASS, application fixture FAIL
+
+[Run 37765935803](https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37765935803) used evidence `5457d237ddc4e7edd201209ea57bdc723185996f`, schema `fd48827b79f3e09c1dc9ccb4a8720e18692d68a1` and app `ac25b3befbfb87ed5eb682679a929708d6dfbebf`. [manifest.json](manifest.json) is the unchanged redacted original artifact byte stream; [verification.json](verification.json) binds its hash/size and the original ZIP hash. No private SQL log or credentials are copied.
+
+The official stack, strict 386-migration replay and 104 real Admin Auth accounts passed. Owner/Bob real sessions were obtained. `application_fixture_receipts_off` failed before its safety readback. All later 80-Storage-original, 100-review, 23-API, source-revoke/replace, AI and five-browser stages remained `not_run`; there are no images. This is neither complete native100 acceptance nor hosted runtime evidence.
+
+The raw SQL exception was excluded from the original artifact and has not been recovered. [Independent source diagnosis and prepared correction](../../2026-10-08-p1-native-fixture-failure.md) identifies the retained explicit publication timestamp after removal of fabricated JWT/admin context, plus a separate later bcrypt-prefix escaping defect. That diagnosis is consistent with the failing boundary; it is not the recovered exception. Corrected evidence head `67a5311ef06efafed1b9f531ffbe342475cf8b9b` needs a new actual native run.

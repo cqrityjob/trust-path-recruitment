@@ -1,0 +1,28 @@
+[
+  {
+    "stage": "twelve_real_password_ui_journeys",
+    "code": "REAL_CI_BROWSER_PRIMARY_FAILED",
+    "browserFailure": {
+      "code": "parsed",
+      "stats": {
+        "expected": 11,
+        "unexpected": 1,
+        "flaky": 0,
+        "skipped": 0
+      },
+      "failures": [
+        {
+          "project": "mobile-375",
+          "scenario": "guard-standalone-sv",
+          "resultStatus": "failed",
+          "category": "unclassified",
+          "location": {
+            "file": "e2e/recruiter-real-ci-browser.spec.ts",
+            "line": 676,
+            "column": 25
+          }
+        }
+      ]
+    }
+  }
+]

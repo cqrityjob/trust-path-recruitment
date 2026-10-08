@@ -1,0 +1,934 @@
+strict full-history replay
+supabase/migrations/20260716153446_41bff585-4ff3-4abc-9d86-1f11c2927006.sql
+supabase/migrations/20260716153527_4de906eb-a9ff-4e82-a77a-18a3f02b1604.sql
+supabase/migrations/20260717052749_cb7bcd11-d09e-495e-bc50-eedd84567c2c.sql
+supabase/migrations/20260717064956_c64dae88-e0d2-4ce7-aa34-50414c49d1ef.sql
+psql:supabase/migrations/20260717064956_c64dae88-e0d2-4ce7-aa34-50414c49d1ef.sql:552: NOTICE:  policy "cig read published" for relation "public.cig_profession_families" does not exist, skipping
+psql:supabase/migrations/20260717064956_c64dae88-e0d2-4ce7-aa34-50414c49d1ef.sql:552: NOTICE:  policy "cig read published" for relation "public.cig_professions" does not exist, skipping
+psql:supabase/migrations/20260717064956_c64dae88-e0d2-4ce7-aa34-50414c49d1ef.sql:552: NOTICE:  policy "cig read published" for relation "public.cig_profession_aliases" does not exist, skipping
+psql:supabase/migrations/20260717064956_c64dae88-e0d2-4ce7-aa34-50414c49d1ef.sql:552: NOTICE:  policy "cig read published" for relation "public.cig_profession_specialisations" does not exist, skipping
+psql:supabase/migrations/20260717064956_c64dae88-e0d2-4ce7-aa34-50414c49d1ef.sql:552: NOTICE:  policy "cig read published" for relation "public.cig_sectors" does not exist, skipping
+psql:supabase/migrations/20260717064956_c64dae88-e0d2-4ce7-aa34-50414c49d1ef.sql:552: NOTICE:  policy "cig read published" for relation "public.cig_employer_types" does not exist, skipping
+psql:supabase/migrations/20260717064956_c64dae88-e0d2-4ce7-aa34-50414c49d1ef.sql:552: NOTICE:  policy "cig read published" for relation "public.cig_work_environments" does not exist, skipping
+psql:supabase/migrations/20260717064956_c64dae88-e0d2-4ce7-aa34-50414c49d1ef.sql:552: NOTICE:  policy "cig read published" for relation "public.cig_competencies" does not exist, skipping
+psql:supabase/migrations/20260717064956_c64dae88-e0d2-4ce7-aa34-50414c49d1ef.sql:552: NOTICE:  policy "cig read published" for relation "public.cig_skills" does not exist, skipping
+psql:supabase/migrations/20260717064956_c64dae88-e0d2-4ce7-aa34-50414c49d1ef.sql:552: NOTICE:  policy "cig read published" for relation "public.cig_knowledge_areas" does not exist, skipping
+psql:supabase/migrations/20260717064956_c64dae88-e0d2-4ce7-aa34-50414c49d1ef.sql:552: NOTICE:  policy "cig read published" for relation "public.cig_work_preferences" does not exist, skipping
+psql:supabase/migrations/20260717064956_c64dae88-e0d2-4ce7-aa34-50414c49d1ef.sql:552: NOTICE:  policy "cig read published" for relation "public.cig_assessment_dimensions" does not exist, skipping
+psql:supabase/migrations/20260717064956_c64dae88-e0d2-4ce7-aa34-50414c49d1ef.sql:552: NOTICE:  policy "cig read published" for relation "public.cig_formal_requirements" does not exist, skipping
+psql:supabase/migrations/20260717064956_c64dae88-e0d2-4ce7-aa34-50414c49d1ef.sql:552: NOTICE:  policy "cig read published" for relation "public.cig_education_pathways" does not exist, skipping
+psql:supabase/migrations/20260717064956_c64dae88-e0d2-4ce7-aa34-50414c49d1ef.sql:552: NOTICE:  policy "cig read published" for relation "public.cig_certifications" does not exist, skipping
+psql:supabase/migrations/20260717064956_c64dae88-e0d2-4ce7-aa34-50414c49d1ef.sql:552: NOTICE:  policy "cig read published" for relation "public.cig_experience_types" does not exist, skipping
+psql:supabase/migrations/20260717064956_c64dae88-e0d2-4ce7-aa34-50414c49d1ef.sql:552: NOTICE:  policy "cig read published" for relation "public.cig_assessment_signals" does not exist, skipping
+psql:supabase/migrations/20260717064956_c64dae88-e0d2-4ce7-aa34-50414c49d1ef.sql:552: NOTICE:  policy "cig read published" for relation "public.cig_source_references" does not exist, skipping
+psql:supabase/migrations/20260717064956_c64dae88-e0d2-4ce7-aa34-50414c49d1ef.sql:552: NOTICE:  policy "cig read published" for relation "public.cig_career_transitions" does not exist, skipping
+psql:supabase/migrations/20260717064956_c64dae88-e0d2-4ce7-aa34-50414c49d1ef.sql:552: NOTICE:  policy "cig read published" for relation "public.cig_profession_family_rel" does not exist, skipping
+psql:supabase/migrations/20260717064956_c64dae88-e0d2-4ce7-aa34-50414c49d1ef.sql:552: NOTICE:  policy "cig read published" for relation "public.cig_profession_sector_rel" does not exist, skipping
+psql:supabase/migrations/20260717064956_c64dae88-e0d2-4ce7-aa34-50414c49d1ef.sql:552: NOTICE:  policy "cig read published" for relation "public.cig_profession_employer_type_rel" does not exist, skipping
+psql:supabase/migrations/20260717064956_c64dae88-e0d2-4ce7-aa34-50414c49d1ef.sql:552: NOTICE:  policy "cig read published" for relation "public.cig_profession_work_environment_rel" does not exist, skipping
+psql:supabase/migrations/20260717064956_c64dae88-e0d2-4ce7-aa34-50414c49d1ef.sql:552: NOTICE:  policy "cig read published" for relation "public.cig_profession_competency_req" does not exist, skipping
+psql:supabase/migrations/20260717064956_c64dae88-e0d2-4ce7-aa34-50414c49d1ef.sql:552: NOTICE:  policy "cig read published" for relation "public.cig_profession_skill_req" does not exist, skipping
+psql:supabase/migrations/20260717064956_c64dae88-e0d2-4ce7-aa34-50414c49d1ef.sql:552: NOTICE:  policy "cig read published" for relation "public.cig_profession_knowledge_req" does not exist, skipping
+psql:supabase/migrations/20260717064956_c64dae88-e0d2-4ce7-aa34-50414c49d1ef.sql:552: NOTICE:  policy "cig read published" for relation "public.cig_profession_work_preferences" does not exist, skipping
+psql:supabase/migrations/20260717064956_c64dae88-e0d2-4ce7-aa34-50414c49d1ef.sql:552: NOTICE:  policy "cig read published" for relation "public.cig_profession_assessment_signals" does not exist, skipping
+psql:supabase/migrations/20260717064956_c64dae88-e0d2-4ce7-aa34-50414c49d1ef.sql:552: NOTICE:  policy "cig read published" for relation "public.cig_profession_formal_requirements" does not exist, skipping
+psql:supabase/migrations/20260717064956_c64dae88-e0d2-4ce7-aa34-50414c49d1ef.sql:552: NOTICE:  policy "cig read published" for relation "public.cig_profession_education_pathways" does not exist, skipping
+psql:supabase/migrations/20260717064956_c64dae88-e0d2-4ce7-aa34-50414c49d1ef.sql:552: NOTICE:  policy "cig read published" for relation "public.cig_profession_certification_rel" does not exist, skipping
+psql:supabase/migrations/20260717064956_c64dae88-e0d2-4ce7-aa34-50414c49d1ef.sql:552: NOTICE:  policy "cig read published" for relation "public.cig_profession_experience_req" does not exist, skipping
+psql:supabase/migrations/20260717064956_c64dae88-e0d2-4ce7-aa34-50414c49d1ef.sql:552: NOTICE:  policy "cig read published" for relation "public.cig_profession_source_references" does not exist, skipping
+psql:supabase/migrations/20260717064956_c64dae88-e0d2-4ce7-aa34-50414c49d1ef.sql:583: NOTICE:  trigger "set_updated_at" for relation "public.cig_profession_families" does not exist, skipping
+psql:supabase/migrations/20260717064956_c64dae88-e0d2-4ce7-aa34-50414c49d1ef.sql:583: NOTICE:  trigger "set_updated_at" for relation "public.cig_professions" does not exist, skipping
+psql:supabase/migrations/20260717064956_c64dae88-e0d2-4ce7-aa34-50414c49d1ef.sql:583: NOTICE:  trigger "set_updated_at" for relation "public.cig_profession_aliases" does not exist, skipping
+psql:supabase/migrations/20260717064956_c64dae88-e0d2-4ce7-aa34-50414c49d1ef.sql:583: NOTICE:  trigger "set_updated_at" for relation "public.cig_profession_specialisations" does not exist, skipping
+psql:supabase/migrations/20260717064956_c64dae88-e0d2-4ce7-aa34-50414c49d1ef.sql:583: NOTICE:  trigger "set_updated_at" for relation "public.cig_sectors" does not exist, skipping
+psql:supabase/migrations/20260717064956_c64dae88-e0d2-4ce7-aa34-50414c49d1ef.sql:583: NOTICE:  trigger "set_updated_at" for relation "public.cig_employer_types" does not exist, skipping
+psql:supabase/migrations/20260717064956_c64dae88-e0d2-4ce7-aa34-50414c49d1ef.sql:583: NOTICE:  trigger "set_updated_at" for relation "public.cig_work_environments" does not exist, skipping
+psql:supabase/migrations/20260717064956_c64dae88-e0d2-4ce7-aa34-50414c49d1ef.sql:583: NOTICE:  trigger "set_updated_at" for relation "public.cig_competencies" does not exist, skipping
+psql:supabase/migrations/20260717064956_c64dae88-e0d2-4ce7-aa34-50414c49d1ef.sql:583: NOTICE:  trigger "set_updated_at" for relation "public.cig_skills" does not exist, skipping
+psql:supabase/migrations/20260717064956_c64dae88-e0d2-4ce7-aa34-50414c49d1ef.sql:583: NOTICE:  trigger "set_updated_at" for relation "public.cig_knowledge_areas" does not exist, skipping
+psql:supabase/migrations/20260717064956_c64dae88-e0d2-4ce7-aa34-50414c49d1ef.sql:583: NOTICE:  trigger "set_updated_at" for relation "public.cig_work_preferences" does not exist, skipping
+psql:supabase/migrations/20260717064956_c64dae88-e0d2-4ce7-aa34-50414c49d1ef.sql:583: NOTICE:  trigger "set_updated_at" for relation "public.cig_assessment_dimensions" does not exist, skipping
+psql:supabase/migrations/20260717064956_c64dae88-e0d2-4ce7-aa34-50414c49d1ef.sql:583: NOTICE:  trigger "set_updated_at" for relation "public.cig_formal_requirements" does not exist, skipping
+psql:supabase/migrations/20260717064956_c64dae88-e0d2-4ce7-aa34-50414c49d1ef.sql:583: NOTICE:  trigger "set_updated_at" for relation "public.cig_education_pathways" does not exist, skipping
+psql:supabase/migrations/20260717064956_c64dae88-e0d2-4ce7-aa34-50414c49d1ef.sql:583: NOTICE:  trigger "set_updated_at" for relation "public.cig_certifications" does not exist, skipping
+psql:supabase/migrations/20260717064956_c64dae88-e0d2-4ce7-aa34-50414c49d1ef.sql:583: NOTICE:  trigger "set_updated_at" for relation "public.cig_experience_types" does not exist, skipping
+psql:supabase/migrations/20260717064956_c64dae88-e0d2-4ce7-aa34-50414c49d1ef.sql:583: NOTICE:  trigger "set_updated_at" for relation "public.cig_assessment_signals" does not exist, skipping
+psql:supabase/migrations/20260717064956_c64dae88-e0d2-4ce7-aa34-50414c49d1ef.sql:583: NOTICE:  trigger "set_updated_at" for relation "public.cig_source_references" does not exist, skipping
+psql:supabase/migrations/20260717064956_c64dae88-e0d2-4ce7-aa34-50414c49d1ef.sql:583: NOTICE:  trigger "set_updated_at" for relation "public.cig_career_transitions" does not exist, skipping
+psql:supabase/migrations/20260717064956_c64dae88-e0d2-4ce7-aa34-50414c49d1ef.sql:583: NOTICE:  trigger "set_updated_at" for relation "public.cig_profession_family_rel" does not exist, skipping
+psql:supabase/migrations/20260717064956_c64dae88-e0d2-4ce7-aa34-50414c49d1ef.sql:583: NOTICE:  trigger "set_updated_at" for relation "public.cig_profession_sector_rel" does not exist, skipping
+psql:supabase/migrations/20260717064956_c64dae88-e0d2-4ce7-aa34-50414c49d1ef.sql:583: NOTICE:  trigger "set_updated_at" for relation "public.cig_profession_employer_type_rel" does not exist, skipping
+psql:supabase/migrations/20260717064956_c64dae88-e0d2-4ce7-aa34-50414c49d1ef.sql:583: NOTICE:  trigger "set_updated_at" for relation "public.cig_profession_work_environment_rel" does not exist, skipping
+psql:supabase/migrations/20260717064956_c64dae88-e0d2-4ce7-aa34-50414c49d1ef.sql:583: NOTICE:  trigger "set_updated_at" for relation "public.cig_profession_competency_req" does not exist, skipping
+psql:supabase/migrations/20260717064956_c64dae88-e0d2-4ce7-aa34-50414c49d1ef.sql:583: NOTICE:  trigger "set_updated_at" for relation "public.cig_profession_skill_req" does not exist, skipping
+psql:supabase/migrations/20260717064956_c64dae88-e0d2-4ce7-aa34-50414c49d1ef.sql:583: NOTICE:  trigger "set_updated_at" for relation "public.cig_profession_knowledge_req" does not exist, skipping
+psql:supabase/migrations/20260717064956_c64dae88-e0d2-4ce7-aa34-50414c49d1ef.sql:583: NOTICE:  trigger "set_updated_at" for relation "public.cig_profession_work_preferences" does not exist, skipping
+psql:supabase/migrations/20260717064956_c64dae88-e0d2-4ce7-aa34-50414c49d1ef.sql:583: NOTICE:  trigger "set_updated_at" for relation "public.cig_profession_assessment_signals" does not exist, skipping
+psql:supabase/migrations/20260717064956_c64dae88-e0d2-4ce7-aa34-50414c49d1ef.sql:583: NOTICE:  trigger "set_updated_at" for relation "public.cig_profession_formal_requirements" does not exist, skipping
+psql:supabase/migrations/20260717064956_c64dae88-e0d2-4ce7-aa34-50414c49d1ef.sql:583: NOTICE:  trigger "set_updated_at" for relation "public.cig_profession_education_pathways" does not exist, skipping
+psql:supabase/migrations/20260717064956_c64dae88-e0d2-4ce7-aa34-50414c49d1ef.sql:583: NOTICE:  trigger "set_updated_at" for relation "public.cig_profession_certification_rel" does not exist, skipping
+psql:supabase/migrations/20260717064956_c64dae88-e0d2-4ce7-aa34-50414c49d1ef.sql:583: NOTICE:  trigger "set_updated_at" for relation "public.cig_profession_experience_req" does not exist, skipping
+psql:supabase/migrations/20260717064956_c64dae88-e0d2-4ce7-aa34-50414c49d1ef.sql:583: NOTICE:  trigger "set_updated_at" for relation "public.cig_profession_source_references" does not exist, skipping
+supabase/migrations/20260717071442_7fe7e558-d6a7-4ef6-946f-e68017ba2d08.sql
+supabase/migrations/20260717073316_2bb2b7a4-e12a-4024-8e35-cb69452f6cec.sql
+supabase/migrations/20260717073758_a3d931d5-63b3-4227-90de-e3468d3a6f32.sql
+supabase/migrations/20260717074139_4feb6c1b-9035-4a3d-a696-49b2280be31f.sql
+supabase/migrations/20260717113432_d50ef104-1f91-4f59-9607-4a38cd187e83.sql
+supabase/migrations/20260717143604_f1d977b5-3bae-4317-abcd-f74ff5a961f5.sql
+psql:supabase/migrations/20260717143604_f1d977b5-3bae-4317-abcd-f74ff5a961f5.sql:180: NOTICE:  trigger "cig_professions_validate_before_write_tg" for relation "public.cig_professions" does not exist, skipping
+supabase/migrations/20260717165835_1264dd66-dd6e-4b79-ae08-17d960b99cb6.sql
+supabase/migrations/20260717172039_2633ba0f-b467-4c57-83a4-08b68a1f7984.sql
+psql:supabase/migrations/20260717172039_2633ba0f-b467-4c57-83a4-08b68a1f7984.sql:15: NOTICE:  policy "legacy_family_backup_admin_all" for relation "public.cig_profession_families_legacy_backup" does not exist, skipping
+supabase/migrations/20260718083056_security_career_profiles.sql
+supabase/migrations/20260718182544_dbec41a3-8985-4aaa-bc19-30cf337ef376.sql
+supabase/migrations/20260718190227_0dc8d8a9-077e-4d87-be34-b2a9b8e2bdd0.sql
+supabase/migrations/20260718193035_8fbbcd18-7977-4c9c-afec-17c5aba48eca.sql
+supabase/migrations/20260719100000_employer_memberships.sql
+supabase/migrations/20260719173615_a71beb5d-e303-4dcb-8938-d87c1d982bd4.sql
+psql:supabase/migrations/20260719173615_a71beb5d-e303-4dcb-8938-d87c1d982bd4.sql:31: NOTICE:  constraint "jobs_salary_range_check" of relation "jobs" does not exist, skipping
+psql:supabase/migrations/20260719173615_a71beb5d-e303-4dcb-8938-d87c1d982bd4.sql:36: NOTICE:  constraint "jobs_salary_currency_check" of relation "jobs" does not exist, skipping
+psql:supabase/migrations/20260719173615_a71beb5d-e303-4dcb-8938-d87c1d982bd4.sql:41: NOTICE:  constraint "jobs_salary_period_check" of relation "jobs" does not exist, skipping
+psql:supabase/migrations/20260719173615_a71beb5d-e303-4dcb-8938-d87c1d982bd4.sql:46: NOTICE:  constraint "jobs_seniority_check" of relation "jobs" does not exist, skipping
+psql:supabase/migrations/20260719173615_a71beb5d-e303-4dcb-8938-d87c1d982bd4.sql:51: NOTICE:  constraint "jobs_education_requirements_len_check" of relation "jobs" does not exist, skipping
+psql:supabase/migrations/20260719173615_a71beb5d-e303-4dcb-8938-d87c1d982bd4.sql:56: NOTICE:  constraint "jobs_work_environment_check" of relation "jobs" does not exist, skipping
+psql:supabase/migrations/20260719173615_a71beb5d-e303-4dcb-8938-d87c1d982bd4.sql:61: NOTICE:  constraint "jobs_source_type_check" of relation "jobs" does not exist, skipping
+psql:supabase/migrations/20260719173615_a71beb5d-e303-4dcb-8938-d87c1d982bd4.sql:215: NOTICE:  policy "jobs_employer_select_own" for relation "public.jobs" does not exist, skipping
+psql:supabase/migrations/20260719173615_a71beb5d-e303-4dcb-8938-d87c1d982bd4.sql:223: NOTICE:  policy "jobs_employer_insert_draft" for relation "public.jobs" does not exist, skipping
+psql:supabase/migrations/20260719173615_a71beb5d-e303-4dcb-8938-d87c1d982bd4.sql:232: NOTICE:  policy "jobs_employer_update_editable" for relation "public.jobs" does not exist, skipping
+psql:supabase/migrations/20260719173615_a71beb5d-e303-4dcb-8938-d87c1d982bd4.sql:308: NOTICE:  trigger "job_applications_stamp_employer_id_trigger" for relation "public.job_applications" does not exist, skipping
+psql:supabase/migrations/20260719173615_a71beb5d-e303-4dcb-8938-d87c1d982bd4.sql:313: NOTICE:  trigger "job_applications_set_updated_at" for relation "public.job_applications" does not exist, skipping
+psql:supabase/migrations/20260719173615_a71beb5d-e303-4dcb-8938-d87c1d982bd4.sql:320: NOTICE:  policy "job_applications_owner_select" for relation "public.job_applications" does not exist, skipping
+psql:supabase/migrations/20260719173615_a71beb5d-e303-4dcb-8938-d87c1d982bd4.sql:325: NOTICE:  policy "job_applications_owner_insert" for relation "public.job_applications" does not exist, skipping
+psql:supabase/migrations/20260719173615_a71beb5d-e303-4dcb-8938-d87c1d982bd4.sql:330: NOTICE:  policy "job_applications_employer_select" for relation "public.job_applications" does not exist, skipping
+psql:supabase/migrations/20260719173615_a71beb5d-e303-4dcb-8938-d87c1d982bd4.sql:338: NOTICE:  policy "job_applications_admin_select" for relation "public.job_applications" does not exist, skipping
+psql:supabase/migrations/20260719173615_a71beb5d-e303-4dcb-8938-d87c1d982bd4.sql:345: NOTICE:  policy "job_applications_admin_update" for relation "public.job_applications" does not exist, skipping
+psql:supabase/migrations/20260719173615_a71beb5d-e303-4dcb-8938-d87c1d982bd4.sql:373: NOTICE:  policy "job_analytics_events_admin_select" for relation "public.job_analytics_events" does not exist, skipping
+supabase/migrations/20260719173654_4efae4c1-4aa6-4c3b-87d7-4ecf8a2371db.sql
+supabase/migrations/20260719180509_f897a9d9-28c9-41ed-b398-05030b81ec40.sql
+psql:supabase/migrations/20260719180509_f897a9d9-28c9-41ed-b398-05030b81ec40.sql:6: NOTICE:  policy "job_cvs_owner_select" for relation "storage.objects" does not exist, skipping
+psql:supabase/migrations/20260719180509_f897a9d9-28c9-41ed-b398-05030b81ec40.sql:7: NOTICE:  policy "job_cvs_owner_insert" for relation "storage.objects" does not exist, skipping
+psql:supabase/migrations/20260719180509_f897a9d9-28c9-41ed-b398-05030b81ec40.sql:8: NOTICE:  policy "job_cvs_owner_update" for relation "storage.objects" does not exist, skipping
+psql:supabase/migrations/20260719180509_f897a9d9-28c9-41ed-b398-05030b81ec40.sql:9: NOTICE:  policy "job_cvs_owner_delete" for relation "storage.objects" does not exist, skipping
+supabase/migrations/20260719181557_f3038432-81c6-4331-802a-62a30ec97775.sql
+supabase/migrations/20260719190845_h3_1_candidate_employer_portal.sql
+supabase/migrations/20260719221351_7481e40f-5d24-4e2f-bf06-1f697abada0d.sql
+supabase/migrations/20260720064743_h3_2_employer_settings.sql
+supabase/migrations/20260720114043_h3_3_platform_admin_employer_moderation.sql
+supabase/migrations/20260720140000_h3_3_employer_status_transition_guard.sql
+supabase/migrations/20260720150000_h3_4a_candidate_application_core.sql
+supabase/migrations/20260720153228_f907bf88-0e75-4ff2-af66-bdbc63995640.sql
+supabase/migrations/20260720160000_h3_4b_beta_feedback.sql
+supabase/migrations/20260720170000_h3_4_job_rejection_note_guard.sql
+supabase/migrations/20260720180001_assessment_run_reports_canonical_home.sql
+supabase/migrations/20260721085020_796e7c92-8234-4081-87b4-0b57dce9f35d.sql
+psql:supabase/migrations/20260721085020_796e7c92-8234-4081-87b4-0b57dce9f35d.sql:9: NOTICE:  policy "job_cvs_applicant_select" for relation "storage.objects" does not exist, skipping
+psql:supabase/migrations/20260721085020_796e7c92-8234-4081-87b4-0b57dce9f35d.sql:10: NOTICE:  policy "job_cvs_applicant_insert" for relation "storage.objects" does not exist, skipping
+psql:supabase/migrations/20260721085020_796e7c92-8234-4081-87b4-0b57dce9f35d.sql:11: NOTICE:  policy "job_cvs_applicant_update" for relation "storage.objects" does not exist, skipping
+psql:supabase/migrations/20260721085020_796e7c92-8234-4081-87b4-0b57dce9f35d.sql:12: NOTICE:  policy "job_cvs_applicant_delete" for relation "storage.objects" does not exist, skipping
+psql:supabase/migrations/20260721085020_796e7c92-8234-4081-87b4-0b57dce9f35d.sql:13: NOTICE:  policy "job_cvs_employer_select" for relation "storage.objects" does not exist, skipping
+supabase/migrations/20260721090000_public_assessment_v2.sql
+supabase/migrations/20260721110000_assessment_catalog_public_career_assessment.sql
+supabase/migrations/20260721110100_assessment_catalog_security_guard_foundation.sql
+supabase/migrations/20260721120000_employer_assessment_catalog_visibility.sql
+supabase/migrations/20260722090000_employer_workforce_employees.sql
+supabase/migrations/20260724090000_employer_assessment_assignments.sql
+supabase/migrations/20260724120000_admin_audit_job_publish_requires_active_employer.sql
+supabase/migrations/20260724130000_admin_portal_operational_scope.sql
+supabase/migrations/20260725090000_assignment_email_delivery_tracking.sql
+supabase/migrations/20260725100000_assignment_duplicate_send_guard.sql
+supabase/migrations/20260727120000_scp_a1_security_competency_platform_domain.sql
+supabase/migrations/20260727130000_scp_a2_scoring_versions_and_publication_gates.sql
+supabase/migrations/20260727140000_scp_a3_close_high_findings.sql
+supabase/migrations/20260727150000_scp_a4_scoring_visibility.sql
+supabase/migrations/20260728120000_career_discovery_v3_phase1.sql
+supabase/migrations/20260728130000_career_discovery_v3_phase1_hardening.sql
+supabase/migrations/20260729090000_career_discovery_v3_internal_test.sql
+supabase/migrations/20260729140000_retire_legacy_public_career_assessment.sql
+psql:supabase/migrations/20260729140000_retire_legacy_public_career_assessment.sql:36: NOTICE:  function public.cd_complete_session(uuid) does not exist, skipping
+psql:supabase/migrations/20260729140000_retire_legacy_public_career_assessment.sql:81: NOTICE:  trigger "assessment_runs_block_retired_definition_trg" for relation "public.assessment_runs" does not exist, skipping
+psql:supabase/migrations/20260729140000_retire_legacy_public_career_assessment.sql:110: NOTICE:  Legacy retired for new runs. 0 historical run(s) preserved and readable.
+supabase/migrations/20260729150000_normalise_cd_complete_session_contract.sql
+psql:supabase/migrations/20260729150000_normalise_cd_complete_session_contract.sql:136: NOTICE:  function public.cd_complete_session(uuid) does not exist, skipping
+psql:supabase/migrations/20260729150000_normalise_cd_complete_session_contract.sql:198: NOTICE:  cd_complete_session canonicalised: 1 overload, SECURITY DEFINER, search_path pinned, CD_SESSION_NOT_FOUND.
+supabase/migrations/20260730090000_career_discovery_v3_1_schema.sql
+psql:supabase/migrations/20260730090000_career_discovery_v3_1_schema.sql:79: NOTICE:  constraint "cd_definition_items_v31_kinds_are_scored" of relation "cd_definition_items" does not exist, skipping
+psql:supabase/migrations/20260730090000_career_discovery_v3_1_schema.sql:143: NOTICE:  trigger "cd_sessions_option_seed_immutable_trg" for relation "public.cd_sessions" does not exist, skipping
+psql:supabase/migrations/20260730090000_career_discovery_v3_1_schema.sql:165: NOTICE:  constraint "cd_evidence_option_presence" of relation "cd_evidence" does not exist, skipping
+psql:supabase/migrations/20260730090000_career_discovery_v3_1_schema.sql:176: NOTICE:  constraint "cd_evidence_display_order_requires_option" of relation "cd_evidence" does not exist, skipping
+psql:supabase/migrations/20260730090000_career_discovery_v3_1_schema.sql:185: NOTICE:  constraint "cd_evidence_display_order_range" of relation "cd_evidence" does not exist, skipping
+psql:supabase/migrations/20260730090000_career_discovery_v3_1_schema.sql:231: NOTICE:  trigger "cd_report_snapshots_v31_immutable_trg" for relation "public.cd_report_snapshots" does not exist, skipping
+psql:supabase/migrations/20260730090000_career_discovery_v3_1_schema.sql:487: NOTICE:  trigger "cd_professions_ranking_approval_trg" for relation "public.cd_professions" does not exist, skipping
+psql:supabase/migrations/20260730090000_career_discovery_v3_1_schema.sql:529: NOTICE:  policy "cd_shared_reports_owner_select" for relation "public.cd_shared_reports" does not exist, skipping
+psql:supabase/migrations/20260730090000_career_discovery_v3_1_schema.sql:534: NOTICE:  policy "cd_shared_reports_owner_insert" for relation "public.cd_shared_reports" does not exist, skipping
+psql:supabase/migrations/20260730090000_career_discovery_v3_1_schema.sql:549: NOTICE:  policy "cd_shared_reports_owner_delete" for relation "public.cd_shared_reports" does not exist, skipping
+psql:supabase/migrations/20260730090000_career_discovery_v3_1_schema.sql:556: NOTICE:  policy "cd_shared_reports_owner_revoke" for relation "public.cd_shared_reports" does not exist, skipping
+psql:supabase/migrations/20260730090000_career_discovery_v3_1_schema.sql:585: NOTICE:  trigger "cd_shared_reports_revocation_trg" for relation "public.cd_shared_reports" does not exist, skipping
+psql:supabase/migrations/20260730090000_career_discovery_v3_1_schema.sql:648: NOTICE:  policy "cd_option_loadings_read" for relation "public.cd_option_loadings" does not exist, skipping
+psql:supabase/migrations/20260730090000_career_discovery_v3_1_schema.sql:652: NOTICE:  policy "cd_professions_read" for relation "public.cd_professions" does not exist, skipping
+psql:supabase/migrations/20260730090000_career_discovery_v3_1_schema.sql:656: NOTICE:  policy "cd_profession_profiles_read" for relation "public.cd_profession_profiles" does not exist, skipping
+psql:supabase/migrations/20260730090000_career_discovery_v3_1_schema.sql:705: NOTICE:  Career Discovery v3.1 PR1 schema applied and verified.
+supabase/migrations/20260730100000_career_discovery_v3_1_instrument.sql
+psql:supabase/migrations/20260730100000_career_discovery_v3_1_instrument.sql:497: NOTICE:  Career Discovery v3.1 instrument seeded and verified: 20 items, 164 loadings.
+supabase/migrations/20260730110000_career_discovery_v3_1_completion.sql
+psql:supabase/migrations/20260730110000_career_discovery_v3_1_completion.sql:348: NOTICE:  Career Discovery v3.1 completion layer installed and verified.
+supabase/migrations/20260731053218_ebac47bc-fefb-457c-add0-71b0d6e6d768.sql
+supabase/migrations/20260731054144_3d28abeb-16ff-4324-b3b5-51897f2e0ac8.sql
+psql:supabase/migrations/20260731054144_3d28abeb-16ff-4324-b3b5-51897f2e0ac8.sql:32: NOTICE:  column "option_order_seed" of relation "cd_sessions" already exists, skipping
+psql:supabase/migrations/20260731054144_3d28abeb-16ff-4324-b3b5-51897f2e0ac8.sql:58: NOTICE:  column "option_id" of relation "cd_evidence" already exists, skipping
+psql:supabase/migrations/20260731054144_3d28abeb-16ff-4324-b3b5-51897f2e0ac8.sql:58: NOTICE:  column "display_order" of relation "cd_evidence" already exists, skipping
+psql:supabase/migrations/20260731054144_3d28abeb-16ff-4324-b3b5-51897f2e0ac8.sql:90: NOTICE:  column "pattern_definition_version" of relation "cd_report_snapshots" already exists, skipping
+psql:supabase/migrations/20260731054144_3d28abeb-16ff-4324-b3b5-51897f2e0ac8.sql:90: NOTICE:  column "patterns" of relation "cd_report_snapshots" already exists, skipping
+psql:supabase/migrations/20260731054144_3d28abeb-16ff-4324-b3b5-51897f2e0ac8.sql:90: NOTICE:  column "candidate_story" of relation "cd_report_snapshots" already exists, skipping
+psql:supabase/migrations/20260731054144_3d28abeb-16ff-4324-b3b5-51897f2e0ac8.sql:138: NOTICE:  relation "cd_option_loadings" already exists, skipping
+psql:supabase/migrations/20260731054144_3d28abeb-16ff-4324-b3b5-51897f2e0ac8.sql:142: NOTICE:  relation "cd_option_loadings_lookup_idx" already exists, skipping
+psql:supabase/migrations/20260731054144_3d28abeb-16ff-4324-b3b5-51897f2e0ac8.sql:208: NOTICE:  relation "cd_professions" already exists, skipping
+psql:supabase/migrations/20260731054144_3d28abeb-16ff-4324-b3b5-51897f2e0ac8.sql:235: NOTICE:  relation "cd_profession_profiles" already exists, skipping
+psql:supabase/migrations/20260731054144_3d28abeb-16ff-4324-b3b5-51897f2e0ac8.sql:287: NOTICE:  relation "cd_shared_reports" already exists, skipping
+psql:supabase/migrations/20260731054144_3d28abeb-16ff-4324-b3b5-51897f2e0ac8.sql:291: NOTICE:  relation "cd_shared_reports_owner_idx" already exists, skipping
+psql:supabase/migrations/20260731054144_3d28abeb-16ff-4324-b3b5-51897f2e0ac8.sql:439: NOTICE:  Career Discovery v3.1 PR1 schema applied and verified.
+supabase/migrations/20260731054522_843ecd41-0bbe-44af-8bcd-fa15549c2c12.sql
+psql:supabase/migrations/20260731054522_843ecd41-0bbe-44af-8bcd-fa15549c2c12.sql:445: NOTICE:  Career Discovery v3.1 instrument seeded and verified: 20 items, 164 loadings.
+supabase/migrations/20260731054640_7c8e5c25-8fdc-4930-b9ef-d4e0f3e177ae.sql
+psql:supabase/migrations/20260731054640_7c8e5c25-8fdc-4930-b9ef-d4e0f3e177ae.sql:253: NOTICE:  Career Discovery v3.1 completion layer installed and verified.
+supabase/migrations/20260731054834_c14b01f8-c876-4d74-bb36-e94df4f4ab69.sql
+psql:supabase/migrations/20260731054834_c14b01f8-c876-4d74-bb36-e94df4f4ab69.sql:77: NOTICE:  view "cd_outstanding_reviews" does not exist, skipping
+psql:supabase/migrations/20260731054834_c14b01f8-c876-4d74-bb36-e94df4f4ab69.sql:133: NOTICE:  Career Discovery v3.1 is ACTIVE. 7 review(s) still open.
+supabase/migrations/20260731100000_career_discovery_v31_launch.sql
+psql:supabase/migrations/20260731100000_career_discovery_v31_launch.sql:177: NOTICE:  Career Discovery v3.1 is ACTIVE. 7 review(s) still open and tracked in cd_outstanding_reviews.
+supabase/migrations/20260801090000_career_discovery_v31_personal_layer.sql
+supabase/migrations/20260801100000_scp_restore_scoring_lineage_readability.sql
+supabase/migrations/20260802090000_scp_phase0_competency_graph.sql
+supabase/migrations/20260803090000_scp_phase1a_programmes_and_modes.sql
+supabase/migrations/20260803100000_scp_phase1b_rubrics_attempts_responses.sql
+supabase/migrations/20260803110000_scp_phase1c_ai_scoring_review_reports.sql
+supabase/migrations/20260803114922_9ee0e932-5bae-4e63-88f6-8a0c36369ca2.sql
+psql:supabase/migrations/20260803114922_9ee0e932-5bae-4e63-88f6-8a0c36369ca2.sql:50: NOTICE:  policy "audit logs admin select" for relation "public.audit_logs" does not exist, skipping
+psql:supabase/migrations/20260803114922_9ee0e932-5bae-4e63-88f6-8a0c36369ca2.sql:62: NOTICE:  policy "assessment run reports service write" for relation "public.assessment_run_reports" does not exist, skipping
+supabase/migrations/20260803115001_5ecf4be3-9090-45b9-bd90-e19e0c45cade.sql
+supabase/migrations/20260803120000_scp_phase1d_security_guard_draft_content.sql
+supabase/migrations/20260804061230_19f031e1-16f3-4eb5-983d-7a2231155eba.sql
+psql:supabase/migrations/20260804061230_19f031e1-16f3-4eb5-983d-7a2231155eba.sql:77: NOTICE:  relation "scp_subjects" already exists, skipping
+psql:supabase/migrations/20260804061230_19f031e1-16f3-4eb5-983d-7a2231155eba.sql:89: NOTICE:  relation "scp_subject_identities" already exists, skipping
+psql:supabase/migrations/20260804061230_19f031e1-16f3-4eb5-983d-7a2231155eba.sql:104: NOTICE:  relation "scp_jurisdictions" already exists, skipping
+psql:supabase/migrations/20260804061230_19f031e1-16f3-4eb5-983d-7a2231155eba.sql:115: NOTICE:  relation "scp_evidence_source_types" already exists, skipping
+psql:supabase/migrations/20260804061230_19f031e1-16f3-4eb5-983d-7a2231155eba.sql:133: NOTICE:  relation "scp_processing_purposes" already exists, skipping
+psql:supabase/migrations/20260804061230_19f031e1-16f3-4eb5-983d-7a2231155eba.sql:154: NOTICE:  relation "scp_purpose_versions" already exists, skipping
+psql:supabase/migrations/20260804061230_19f031e1-16f3-4eb5-983d-7a2231155eba.sql:165: NOTICE:  relation "scp_roles" already exists, skipping
+psql:supabase/migrations/20260804061230_19f031e1-16f3-4eb5-983d-7a2231155eba.sql:189: NOTICE:  relation "scp_role_versions" already exists, skipping
+psql:supabase/migrations/20260804061230_19f031e1-16f3-4eb5-983d-7a2231155eba.sql:195: NOTICE:  relation "scp_observable_behaviours" already exists, skipping
+psql:supabase/migrations/20260804061230_19f031e1-16f3-4eb5-983d-7a2231155eba.sql:220: NOTICE:  relation "scp_behaviour_versions" already exists, skipping
+psql:supabase/migrations/20260804061230_19f031e1-16f3-4eb5-983d-7a2231155eba.sql:232: NOTICE:  relation "scp_behaviour_competency_map" already exists, skipping
+psql:supabase/migrations/20260804061230_19f031e1-16f3-4eb5-983d-7a2231155eba.sql:244: NOTICE:  relation "scp_role_competency_map" already exists, skipping
+psql:supabase/migrations/20260804061230_19f031e1-16f3-4eb5-983d-7a2231155eba.sql:247: NOTICE:  relation "scp_behaviour_competency_map_comp_idx" already exists, skipping
+psql:supabase/migrations/20260804061230_19f031e1-16f3-4eb5-983d-7a2231155eba.sql:249: NOTICE:  relation "scp_role_competency_map_role_idx" already exists, skipping
+psql:supabase/migrations/20260804061230_19f031e1-16f3-4eb5-983d-7a2231155eba.sql:336: NOTICE:  relation "scp_competency_evidence" already exists, skipping
+psql:supabase/migrations/20260804061230_19f031e1-16f3-4eb5-983d-7a2231155eba.sql:356: NOTICE:  relation "scp_evidence_subject_idx" already exists, skipping
+psql:supabase/migrations/20260804061230_19f031e1-16f3-4eb5-983d-7a2231155eba.sql:358: NOTICE:  relation "scp_evidence_behaviour_idx" already exists, skipping
+psql:supabase/migrations/20260804061230_19f031e1-16f3-4eb5-983d-7a2231155eba.sql:360: NOTICE:  relation "scp_evidence_issuer_idx" already exists, skipping
+psql:supabase/migrations/20260804061230_19f031e1-16f3-4eb5-983d-7a2231155eba.sql:363: NOTICE:  relation "scp_evidence_live_idx" already exists, skipping
+psql:supabase/migrations/20260804061230_19f031e1-16f3-4eb5-983d-7a2231155eba.sql:366: NOTICE:  relation "scp_evidence_review_queue_idx" already exists, skipping
+psql:supabase/migrations/20260804061230_19f031e1-16f3-4eb5-983d-7a2231155eba.sql:455: NOTICE:  relation "scp_maturity_thresholds" already exists, skipping
+psql:supabase/migrations/20260804061230_19f031e1-16f3-4eb5-983d-7a2231155eba.sql:562: NOTICE:  relation "scp_contract_versions" already exists, skipping
+supabase/migrations/20260804061440_9b082372-366c-49e5-b555-260e4e01941b.sql
+psql:supabase/migrations/20260804061440_9b082372-366c-49e5-b555-260e4e01941b.sql:6: NOTICE:  relation "scp_programs" already exists, skipping
+psql:supabase/migrations/20260804061440_9b082372-366c-49e5-b555-260e4e01941b.sql:35: NOTICE:  relation "scp_program_versions" already exists, skipping
+psql:supabase/migrations/20260804061440_9b082372-366c-49e5-b555-260e4e01941b.sql:41: NOTICE:  relation "scp_modules" already exists, skipping
+psql:supabase/migrations/20260804061440_9b082372-366c-49e5-b555-260e4e01941b.sql:64: NOTICE:  relation "scp_module_versions" already exists, skipping
+psql:supabase/migrations/20260804061440_9b082372-366c-49e5-b555-260e4e01941b.sql:74: NOTICE:  relation "scp_module_behaviour_map" already exists, skipping
+psql:supabase/migrations/20260804061440_9b082372-366c-49e5-b555-260e4e01941b.sql:84: NOTICE:  relation "scp_scenarios" already exists, skipping
+psql:supabase/migrations/20260804061440_9b082372-366c-49e5-b555-260e4e01941b.sql:102: NOTICE:  relation "scp_scenario_versions" already exists, skipping
+psql:supabase/migrations/20260804061440_9b082372-366c-49e5-b555-260e4e01941b.sql:105: NOTICE:  relation "scp_module_versions_program_idx" already exists, skipping
+psql:supabase/migrations/20260804061440_9b082372-366c-49e5-b555-260e4e01941b.sql:107: NOTICE:  relation "scp_scenario_versions_module_idx" already exists, skipping
+psql:supabase/migrations/20260804061440_9b082372-366c-49e5-b555-260e4e01941b.sql:129: NOTICE:  column "primary_behaviour_id" of relation "scp_item_versions" already exists, skipping
+psql:supabase/migrations/20260804061440_9b082372-366c-49e5-b555-260e4e01941b.sql:138: NOTICE:  column "mode" of relation "scp_item_versions" already exists, skipping
+supabase/migrations/20260804061624_2dae3b4e-4e96-4a3f-94f9-0964a4a456a0.sql
+psql:supabase/migrations/20260804061624_2dae3b4e-4e96-4a3f-94f9-0964a4a456a0.sql:5: NOTICE:  relation "scp_rubrics" already exists, skipping
+psql:supabase/migrations/20260804061624_2dae3b4e-4e96-4a3f-94f9-0964a4a456a0.sql:24: NOTICE:  relation "scp_rubric_versions" already exists, skipping
+psql:supabase/migrations/20260804061624_2dae3b4e-4e96-4a3f-94f9-0964a4a456a0.sql:39: NOTICE:  relation "scp_rubric_dimensions" already exists, skipping
+psql:supabase/migrations/20260804061624_2dae3b4e-4e96-4a3f-94f9-0964a4a456a0.sql:50: NOTICE:  relation "scp_rubric_levels" already exists, skipping
+psql:supabase/migrations/20260804061624_2dae3b4e-4e96-4a3f-94f9-0964a4a456a0.sql:63: NOTICE:  relation "scp_anchor_responses" already exists, skipping
+psql:supabase/migrations/20260804061624_2dae3b4e-4e96-4a3f-94f9-0964a4a456a0.sql:146: NOTICE:  relation "scp_attempts" already exists, skipping
+psql:supabase/migrations/20260804061624_2dae3b4e-4e96-4a3f-94f9-0964a4a456a0.sql:195: NOTICE:  relation "scp_candidate_responses" already exists, skipping
+psql:supabase/migrations/20260804061624_2dae3b4e-4e96-4a3f-94f9-0964a4a456a0.sql:237: NOTICE:  relation "scp_attempts_subject_idx" already exists, skipping
+psql:supabase/migrations/20260804061624_2dae3b4e-4e96-4a3f-94f9-0964a4a456a0.sql:238: NOTICE:  relation "scp_attempts_org_idx" already exists, skipping
+psql:supabase/migrations/20260804061624_2dae3b4e-4e96-4a3f-94f9-0964a4a456a0.sql:240: NOTICE:  relation "scp_responses_attempt_idx" already exists, skipping
+psql:supabase/migrations/20260804061624_2dae3b4e-4e96-4a3f-94f9-0964a4a456a0.sql:248: NOTICE:  relation "scp_item_exposure" already exists, skipping
+psql:supabase/migrations/20260804061624_2dae3b4e-4e96-4a3f-94f9-0964a4a456a0.sql:261: NOTICE:  relation "scp_integrity_flags" already exists, skipping
+supabase/migrations/20260804061750_26a3790b-e8ad-4e8d-8682-c6bce42b4d1f.sql
+psql:supabase/migrations/20260804061750_26a3790b-e8ad-4e8d-8682-c6bce42b4d1f.sql:8: NOTICE:  relation "scp_ai_providers" already exists, skipping
+psql:supabase/migrations/20260804061750_26a3790b-e8ad-4e8d-8682-c6bce42b4d1f.sql:56: NOTICE:  relation "scp_prompt_versions" already exists, skipping
+psql:supabase/migrations/20260804061750_26a3790b-e8ad-4e8d-8682-c6bce42b4d1f.sql:81: NOTICE:  relation "scp_ai_scoring_runs" already exists, skipping
+psql:supabase/migrations/20260804061750_26a3790b-e8ad-4e8d-8682-c6bce42b4d1f.sql:99: NOTICE:  relation "scp_ai_scoring_dimensions" already exists, skipping
+psql:supabase/migrations/20260804061750_26a3790b-e8ad-4e8d-8682-c6bce42b4d1f.sql:169: NOTICE:  relation "scp_human_reviews" already exists, skipping
+psql:supabase/migrations/20260804061750_26a3790b-e8ad-4e8d-8682-c6bce42b4d1f.sql:178: NOTICE:  relation "scp_human_reviews_queue_idx" already exists, skipping
+psql:supabase/migrations/20260804061750_26a3790b-e8ad-4e8d-8682-c6bce42b4d1f.sql:216: NOTICE:  relation "scp_report_versions" already exists, skipping
+supabase/migrations/20260804063418_06f72e92-e195-482f-a19a-0a113806c9e7.sql
+psql:supabase/migrations/20260804063418_06f72e92-e195-482f-a19a-0a113806c9e7.sql:23: NOTICE:  column "observable_behavior" of relation "scp_item_versions" already exists, skipping
+psql:supabase/migrations/20260804063418_06f72e92-e195-482f-a19a-0a113806c9e7.sql:23: NOTICE:  column "response_process" of relation "scp_item_versions" already exists, skipping
+psql:supabase/migrations/20260804063418_06f72e92-e195-482f-a19a-0a113806c9e7.sql:23: NOTICE:  column "context_note" of relation "scp_item_versions" already exists, skipping
+psql:supabase/migrations/20260804063418_06f72e92-e195-482f-a19a-0a113806c9e7.sql:23: NOTICE:  column "market" of relation "scp_item_versions" already exists, skipping
+psql:supabase/migrations/20260804063418_06f72e92-e195-482f-a19a-0a113806c9e7.sql:23: NOTICE:  column "legal_source" of relation "scp_item_versions" already exists, skipping
+psql:supabase/migrations/20260804063418_06f72e92-e195-482f-a19a-0a113806c9e7.sql:23: NOTICE:  column "legal_reviewed_by" of relation "scp_item_versions" already exists, skipping
+psql:supabase/migrations/20260804063418_06f72e92-e195-482f-a19a-0a113806c9e7.sql:23: NOTICE:  column "legal_reviewed_at" of relation "scp_item_versions" already exists, skipping
+psql:supabase/migrations/20260804063418_06f72e92-e195-482f-a19a-0a113806c9e7.sql:23: NOTICE:  column "legal_review_expires_at" of relation "scp_item_versions" already exists, skipping
+supabase/migrations/20260804063710_e62eb18e-fc2a-4a42-bd86-64a6f97b071b.sql
+psql:supabase/migrations/20260804063710_e62eb18e-fc2a-4a42-bd86-64a6f97b071b.sql:48: NOTICE:  trigger "scp_item_versions_learning_counterpart" for relation "public.scp_item_versions" does not exist, skipping
+psql:supabase/migrations/20260804063710_e62eb18e-fc2a-4a42-bd86-64a6f97b071b.sql:91: NOTICE:  trigger "scp_item_options_best_worst" for relation "public.scp_item_options" does not exist, skipping
+psql:supabase/migrations/20260804063710_e62eb18e-fc2a-4a42-bd86-64a6f97b071b.sql:120: NOTICE:  policy "scp_review_requirements_author_only" for relation "public.scp_review_requirements" does not exist, skipping
+supabase/migrations/20260804090000_scp_phase1f_content_schema.sql
+psql:supabase/migrations/20260804090000_scp_phase1f_content_schema.sql:35: NOTICE:  column "difficulty" of relation "scp_item_versions" already exists, skipping
+psql:supabase/migrations/20260804090000_scp_phase1f_content_schema.sql:35: NOTICE:  column "cognitive_demand" of relation "scp_item_versions" already exists, skipping
+psql:supabase/migrations/20260804090000_scp_phase1f_content_schema.sql:35: NOTICE:  column "information_available_sv" of relation "scp_item_versions" already exists, skipping
+psql:supabase/migrations/20260804090000_scp_phase1f_content_schema.sql:35: NOTICE:  column "information_withheld_sv" of relation "scp_item_versions" already exists, skipping
+psql:supabase/migrations/20260804090000_scp_phase1f_content_schema.sql:35: NOTICE:  column "work_context_sv" of relation "scp_item_versions" already exists, skipping
+psql:supabase/migrations/20260804090000_scp_phase1f_content_schema.sql:35: NOTICE:  column "is_safety_critical" of relation "scp_item_versions" already exists, skipping
+psql:supabase/migrations/20260804090000_scp_phase1f_content_schema.sql:35: NOTICE:  column "requires_human_review" of relation "scp_item_versions" already exists, skipping
+psql:supabase/migrations/20260804090000_scp_phase1f_content_schema.sql:35: NOTICE:  column "learning_counterpart_id" of relation "scp_item_versions" already exists, skipping
+psql:supabase/migrations/20260804090000_scp_phase1f_content_schema.sql:35: NOTICE:  column "cognitive_review_status" of relation "scp_item_versions" already exists, skipping
+psql:supabase/migrations/20260804090000_scp_phase1f_content_schema.sql:35: NOTICE:  column "language_review_status" of relation "scp_item_versions" already exists, skipping
+psql:supabase/migrations/20260804090000_scp_phase1f_content_schema.sql:35: NOTICE:  column "accessibility_review_status" of relation "scp_item_versions" already exists, skipping
+psql:supabase/migrations/20260804090000_scp_phase1f_content_schema.sql:35: NOTICE:  column "jurisdiction_id" of relation "scp_item_versions" already exists, skipping
+psql:supabase/migrations/20260804090000_scp_phase1f_content_schema.sql:86: NOTICE:  column "is_preferred" of relation "scp_item_options" already exists, skipping
+psql:supabase/migrations/20260804090000_scp_phase1f_content_schema.sql:86: NOTICE:  column "is_best_key" of relation "scp_item_options" already exists, skipping
+psql:supabase/migrations/20260804090000_scp_phase1f_content_schema.sql:86: NOTICE:  column "is_worst_key" of relation "scp_item_options" already exists, skipping
+psql:supabase/migrations/20260804090000_scp_phase1f_content_schema.sql:86: NOTICE:  column "distractor_error_type" of relation "scp_item_options" already exists, skipping
+psql:supabase/migrations/20260804090000_scp_phase1f_content_schema.sql:86: NOTICE:  column "learning_feedback_sv" of relation "scp_item_options" already exists, skipping
+psql:supabase/migrations/20260804090000_scp_phase1f_content_schema.sql:86: NOTICE:  column "learning_feedback_en" of relation "scp_item_options" already exists, skipping
+psql:supabase/migrations/20260804090000_scp_phase1f_content_schema.sql:135: NOTICE:  relation "scp_review_requirements" already exists, skipping
+supabase/migrations/20260804100000_scp_phase1f_sjt_content.sql
+supabase/migrations/20260804110000_scp_phase1f_bestworst_cr_rubrics.sql
+supabase/migrations/20260805055146_315b28d2-1824-42d7-85ab-417db7974667.sql
+supabase/migrations/20260805090000_scp_phase1g_content_correction.sql
+psql:supabase/migrations/20260805090000_scp_phase1g_content_correction.sql:46: NOTICE:  trigger "scp_item_versions_construct_honesty" for relation "public.scp_item_versions" does not exist, skipping
+supabase/migrations/20260805100000_scp_phase1g_learning_and_anchors.sql
+supabase/migrations/20260806090000_scp_phase1h_foundation_corrections.sql
+psql:supabase/migrations/20260806090000_scp_phase1h_foundation_corrections.sql:75: NOTICE:  constraint "assessment_assignments_single_lineage" of relation "assessment_assignments" does not exist, skipping
+psql:supabase/migrations/20260806090000_scp_phase1h_foundation_corrections.sql:169: NOTICE:  trigger "scp_assignments_target_published_trg" for relation "public.assessment_assignments" does not exist, skipping
+supabase/migrations/20260807090000_scp_phase2_read_models_and_identity_rpc.sql
+supabase/migrations/20260808090000_scp_phase2b_fixture_and_delivery.sql
+psql:supabase/migrations/20260808090000_scp_phase2b_fixture_and_delivery.sql:114: NOTICE:  trigger "scp_report_snapshots_immutable" for relation "public.scp_report_snapshots" does not exist, skipping
+psql:supabase/migrations/20260808090000_scp_phase2b_fixture_and_delivery.sql:122: NOTICE:  policy "scp_report_snapshots_own" for relation "public.scp_report_snapshots" does not exist, skipping
+psql:supabase/migrations/20260808090000_scp_phase2b_fixture_and_delivery.sql:134: NOTICE:  policy "scp_report_snapshots_employer" for relation "public.scp_report_snapshots" does not exist, skipping
+supabase/migrations/20260808100000_scp_phase2c_test_fixture_programme.sql
+supabase/migrations/20260809090000_scp_phase2e_employer_learning_progress.sql
+supabase/migrations/20260809100000_scp_phase2f_learning_fixture.sql
+supabase/migrations/20260810090000_scp_phase2h_staging_corrections.sql
+psql:supabase/migrations/20260810090000_scp_phase2h_staging_corrections.sql:105: NOTICE:  trigger "scp_item_options_no_learning_feedback" for relation "public.scp_item_options" does not exist, skipping
+supabase/migrations/20260811090000_scp_phase2i_seed_processing_purpose_version.sql
+supabase/migrations/20260811100000_scp_phase2j_assign_token_without_pgcrypto.sql
+supabase/migrations/20260812090000_scp_phase2k_partial_bestworst_while_open.sql
+supabase/migrations/20260812100000_scp_phase2l_submit_requires_every_item.sql
+supabase/migrations/20260813090000_scp_phase2m_fixture_internal_only.sql
+supabase/migrations/20260814090000_jobs_archive_lifecycle.sql
+psql:supabase/migrations/20260814090000_jobs_archive_lifecycle.sql:220: NOTICE:  trigger "jobs_stamp_archived_at_trg" for relation "public.jobs" does not exist, skipping
+supabase/migrations/20260814171100_cd_profession_layer4_content_fields.sql
+supabase/migrations/20260814180000_cd_layer4_first_wave_professions.sql
+supabase/migrations/20260815090000_cd_v31_feedback_analytics_goals.sql
+psql:supabase/migrations/20260815090000_cd_v31_feedback_analytics_goals.sql:53: NOTICE:  policy "cd_v31_funnel_events_insert" for relation "public.cd_v31_funnel_events" does not exist, skipping
+psql:supabase/migrations/20260815090000_cd_v31_feedback_analytics_goals.sql:57: NOTICE:  policy "cd_v31_funnel_events_admin_read" for relation "public.cd_v31_funnel_events" does not exist, skipping
+psql:supabase/migrations/20260815090000_cd_v31_feedback_analytics_goals.sql:88: NOTICE:  policy "cd_test_feedback_insert" for relation "public.cd_test_feedback" does not exist, skipping
+psql:supabase/migrations/20260815090000_cd_v31_feedback_analytics_goals.sql:92: NOTICE:  policy "cd_test_feedback_admin_read" for relation "public.cd_test_feedback" does not exist, skipping
+psql:supabase/migrations/20260815090000_cd_v31_feedback_analytics_goals.sql:120: NOTICE:  policy "cd_career_goals_owner_all" for relation "public.cd_career_goals" does not exist, skipping
+supabase/migrations/20260815120000_cd_profession_rationale_softening.sql
+supabase/migrations/20260815130000_cd_profession_calibration_operational_signal.sql
+supabase/migrations/20260815140000_cd_career_context_fields.sql
+supabase/migrations/20260816083319_cd_layer4_polis_operational_central.sql
+supabase/migrations/20260816105618_cd_v31_option_matrix_v2_cid02_leadership.sql
+supabase/migrations/20260816150000_cd_v31_content_v2_compliance_dimension.sql
+supabase/migrations/20260816160000_cd_v31_option_matrix_v3_scoring_version_sync.sql
+supabase/migrations/20260816161000_cd_guard_profession_ranking_approval_17_dims.sql
+supabase/migrations/20260816162000_cd_v31_funnel_event_result_downloaded.sql
+supabase/migrations/20260816170000_cd_profession_profiles_current_view.sql
+supabase/migrations/20260816180000_cd_v31_rationale_evidence_consistency.sql
+supabase/migrations/20260816190000_cd_v31_activate_first_wave_professions.sql
+supabase/migrations/20260817090000_sp_phase2_live_foundation.sql
+psql:supabase/migrations/20260817090000_sp_phase2_live_foundation.sql:349: NOTICE:  trigger "sp_claims_trust_immutable" for relation "public.sp_claims" does not exist, skipping
+psql:supabase/migrations/20260817090000_sp_phase2_live_foundation.sql:354: NOTICE:  trigger "sp_periods_trust_immutable" for relation "public.sp_experience_periods" does not exist, skipping
+psql:supabase/migrations/20260817090000_sp_phase2_live_foundation.sql:394: NOTICE:  trigger "sp_events_append_only" for relation "public.sp_passport_events" does not exist, skipping
+psql:supabase/migrations/20260817090000_sp_phase2_live_foundation.sql:401: NOTICE:  trigger "sp_profiles_set_updated_at" for relation "public.sp_passport_profiles" does not exist, skipping
+psql:supabase/migrations/20260817090000_sp_phase2_live_foundation.sql:406: NOTICE:  trigger "sp_periods_set_updated_at" for relation "public.sp_experience_periods" does not exist, skipping
+psql:supabase/migrations/20260817090000_sp_phase2_live_foundation.sql:411: NOTICE:  trigger "sp_claims_set_updated_at" for relation "public.sp_claims" does not exist, skipping
+psql:supabase/migrations/20260817090000_sp_phase2_live_foundation.sql:436: NOTICE:  policy "sp_jurisdictions_read" for relation "public.sp_jurisdictions" does not exist, skipping
+psql:supabase/migrations/20260817090000_sp_phase2_live_foundation.sql:440: NOTICE:  policy "sp_recognition_policies_read" for relation "public.sp_recognition_policies" does not exist, skipping
+psql:supabase/migrations/20260817090000_sp_phase2_live_foundation.sql:445: NOTICE:  policy "sp_profiles_self_select" for relation "public.sp_passport_profiles" does not exist, skipping
+psql:supabase/migrations/20260817090000_sp_phase2_live_foundation.sql:449: NOTICE:  policy "sp_profiles_self_insert" for relation "public.sp_passport_profiles" does not exist, skipping
+psql:supabase/migrations/20260817090000_sp_phase2_live_foundation.sql:453: NOTICE:  policy "sp_profiles_self_update" for relation "public.sp_passport_profiles" does not exist, skipping
+psql:supabase/migrations/20260817090000_sp_phase2_live_foundation.sql:462: NOTICE:  policy "sp_periods_self_select" for relation "public.sp_experience_periods" does not exist, skipping
+psql:supabase/migrations/20260817090000_sp_phase2_live_foundation.sql:466: NOTICE:  policy "sp_periods_self_insert" for relation "public.sp_experience_periods" does not exist, skipping
+psql:supabase/migrations/20260817090000_sp_phase2_live_foundation.sql:474: NOTICE:  policy "sp_periods_self_update" for relation "public.sp_experience_periods" does not exist, skipping
+psql:supabase/migrations/20260817090000_sp_phase2_live_foundation.sql:484: NOTICE:  policy "sp_claims_self_select" for relation "public.sp_claims" does not exist, skipping
+psql:supabase/migrations/20260817090000_sp_phase2_live_foundation.sql:488: NOTICE:  policy "sp_claims_self_insert" for relation "public.sp_claims" does not exist, skipping
+psql:supabase/migrations/20260817090000_sp_phase2_live_foundation.sql:498: NOTICE:  policy "sp_claims_self_update" for relation "public.sp_claims" does not exist, skipping
+psql:supabase/migrations/20260817090000_sp_phase2_live_foundation.sql:509: NOTICE:  policy "sp_events_self_select" for relation "public.sp_passport_events" does not exist, skipping
+psql:supabase/migrations/20260817090000_sp_phase2_live_foundation.sql:513: NOTICE:  policy "sp_events_self_insert" for relation "public.sp_passport_events" does not exist, skipping
+supabase/migrations/20260817113707_7564d753-411c-45bf-9f56-67c74e910c83.sql
+supabase/migrations/20260817115635_ae62ad64-ba93-4027-8fe3-dfaa1953dd32.sql
+supabase/migrations/20260817120000_sp_phase3_verification_and_sharing.sql
+psql:supabase/migrations/20260817120000_sp_phase3_verification_and_sharing.sql:245: NOTICE:  policy "sp_evidence_self" for relation "public.sp_evidence" does not exist, skipping
+psql:supabase/migrations/20260817120000_sp_phase3_verification_and_sharing.sql:251: NOTICE:  policy "sp_evidence_verifier_read" for relation "public.sp_evidence" does not exist, skipping
+psql:supabase/migrations/20260817120000_sp_phase3_verification_and_sharing.sql:265: NOTICE:  policy "sp_vr_self" for relation "public.sp_verification_requests" does not exist, skipping
+psql:supabase/migrations/20260817120000_sp_phase3_verification_and_sharing.sql:269: NOTICE:  policy "sp_vr_self_insert" for relation "public.sp_verification_requests" does not exist, skipping
+psql:supabase/migrations/20260817120000_sp_phase3_verification_and_sharing.sql:274: NOTICE:  policy "sp_vr_verifier_read" for relation "public.sp_verification_requests" does not exist, skipping
+psql:supabase/migrations/20260817120000_sp_phase3_verification_and_sharing.sql:279: NOTICE:  policy "sp_vr_employer_read" for relation "public.sp_verification_requests" does not exist, skipping
+psql:supabase/migrations/20260817120000_sp_phase3_verification_and_sharing.sql:289: NOTICE:  policy "sp_vd_read" for relation "public.sp_verification_decisions" does not exist, skipping
+psql:supabase/migrations/20260817120000_sp_phase3_verification_and_sharing.sql:297: NOTICE:  policy "sp_disclosures_self" for relation "public.sp_disclosures" does not exist, skipping
+psql:supabase/migrations/20260817120000_sp_phase3_verification_and_sharing.sql:301: NOTICE:  policy "sp_disclosures_self_revoke" for relation "public.sp_disclosures" does not exist, skipping
+psql:supabase/migrations/20260817120000_sp_phase3_verification_and_sharing.sql:306: NOTICE:  policy "sp_da_self" for relation "public.sp_disclosure_accesses" does not exist, skipping
+psql:supabase/migrations/20260817120000_sp_phase3_verification_and_sharing.sql:329: NOTICE:  trigger "sp_decisions_append_only" for relation "public.sp_verification_decisions" does not exist, skipping
+supabase/migrations/20260817140000_sp_phase5_storage_public_boundary_and_workflow.sql
+psql:supabase/migrations/20260817140000_sp_phase5_storage_public_boundary_and_workflow.sql:94: NOTICE:  policy "sp_evidence_holder_select" for relation "storage.objects" does not exist, skipping
+psql:supabase/migrations/20260817140000_sp_phase5_storage_public_boundary_and_workflow.sql:95: NOTICE:  policy "sp_evidence_holder_insert" for relation "storage.objects" does not exist, skipping
+psql:supabase/migrations/20260817140000_sp_phase5_storage_public_boundary_and_workflow.sql:96: NOTICE:  policy "sp_evidence_holder_update" for relation "storage.objects" does not exist, skipping
+psql:supabase/migrations/20260817140000_sp_phase5_storage_public_boundary_and_workflow.sql:97: NOTICE:  policy "sp_evidence_holder_delete" for relation "storage.objects" does not exist, skipping
+psql:supabase/migrations/20260817140000_sp_phase5_storage_public_boundary_and_workflow.sql:98: NOTICE:  policy "sp_evidence_verifier_select" for relation "storage.objects" does not exist, skipping
+supabase/migrations/20260817150000_sp_phase5b_pgcrypto_search_path_fix.sql
+psql:supabase/migrations/20260817150000_sp_phase5b_pgcrypto_search_path_fix.sql:43: NOTICE:  extension "pgcrypto" already exists, skipping
+supabase/migrations/20260817160000_sp_phase6_credential_taxonomy.sql
+psql:supabase/migrations/20260817160000_sp_phase6_credential_taxonomy.sql:110: NOTICE:  policy "sp_credential_types_read" for relation "public.sp_credential_types" does not exist, skipping
+psql:supabase/migrations/20260817160000_sp_phase6_credential_taxonomy.sql:207: NOTICE:  trigger "sp_claims_credential_rules_trg" for relation "public.sp_claims" does not exist, skipping
+supabase/migrations/20260817170000_sp_phase6b_correction_preserves_credential.sql
+supabase/migrations/20260817180000_sp_phase7_disclosure_credential_presentation.sql
+supabase/migrations/20260817190000_sp_phase7b_revoke_trigger_function_execute.sql
+supabase/migrations/20260817200000_sp_phase9_single_credential_share.sql
+supabase/migrations/20260817210000_sp_phase9b_revoke_delete_grants.sql
+supabase/migrations/20260818090000_sp_phase10_self_review_and_decision_events.sql
+supabase/migrations/20260818100000_cd_ranking_guard_per_match.sql
+supabase/migrations/20260818120000_sp_phase11_languages_and_practical_skills.sql
+psql:supabase/migrations/20260818120000_sp_phase11_languages_and_practical_skills.sql:106: NOTICE:  policy "sp_skill_types_read" for relation "public.sp_skill_types" does not exist, skipping
+psql:supabase/migrations/20260818120000_sp_phase11_languages_and_practical_skills.sql:296: NOTICE:  trigger "sp_claims_skill_rules_trg" for relation "public.sp_claims" does not exist, skipping
+supabase/migrations/20260818162445_scp_closed_test_governance.sql
+psql:supabase/migrations/20260818162445_scp_closed_test_governance.sql:270: NOTICE:  trigger "scp_guard_governance_lineage_immutable_trg" for relation "public.scp_attempts" does not exist, skipping
+supabase/migrations/20260819090000_employer_people_model.sql
+supabase/migrations/20260819100000_scp_governed_assignment.sql
+supabase/migrations/20260819110000_sg_sjt_option_labels.sql
+supabase/migrations/20260819120000_scp_safety_critical_requires_review.sql
+supabase/migrations/20260819130000_scp_library_reflects_governance.sql
+supabase/migrations/20260819140000_scp_reviewer_workspace_context.sql
+psql:supabase/migrations/20260819140000_scp_reviewer_workspace_context.sql:66: NOTICE:  function public.scp_review_queue(text) does not exist, skipping
+supabase/migrations/20260820090000_scp_governed_purpose_selection.sql
+psql:supabase/migrations/20260820090000_scp_governed_purpose_selection.sql:442: NOTICE:  purpose governance: mapping total, development purpose present, recruitment and reassessment intentionally closed
+supabase/migrations/20260820100000_scp_report_audience_payloads.sql
+psql:supabase/migrations/20260820100000_scp_report_audience_payloads.sql:95: NOTICE:  policy "scp_followup_prompts_read" for relation "public.scp_followup_prompts" does not exist, skipping
+psql:supabase/migrations/20260820100000_scp_report_audience_payloads.sql:99: NOTICE:  policy "scp_followup_prompts_author_write" for relation "public.scp_followup_prompts" does not exist, skipping
+supabase/migrations/20260820110000_scp_report_context.sql
+supabase/migrations/20260820120000_scp_employer_report_decisions.sql
+psql:supabase/migrations/20260820120000_scp_employer_report_decisions.sql:84: NOTICE:  policy "scp_employer_decisions_member_read" for relation "public.scp_employer_report_decisions" does not exist, skipping
+psql:supabase/migrations/20260820120000_scp_employer_report_decisions.sql:109: NOTICE:  trigger "scp_employer_decisions_append_only" for relation "public.scp_employer_report_decisions" does not exist, skipping
+supabase/migrations/20260820130000_scp_report_attempt_scoped_evidence.sql
+supabase/migrations/20260821090000_scp_pilot_security_gate.sql
+psql:supabase/migrations/20260821090000_scp_pilot_security_gate.sql:201: NOTICE:  trigger "assessment_assignments_scp_open_set" for relation "public.assessment_assignments" does not exist, skipping
+psql:supabase/migrations/20260821090000_scp_pilot_security_gate.sql:230: NOTICE:  trigger "scp_attempts_clear_assignment_open" for relation "public.scp_attempts" does not exist, skipping
+psql:supabase/migrations/20260821090000_scp_pilot_security_gate.sql:295: NOTICE:  trigger "assessment_assignments_one_open" for relation "public.assessment_assignments" does not exist, skipping
+psql:supabase/migrations/20260821090000_scp_pilot_security_gate.sql:356: NOTICE:  trigger "assessment_assignments_scp_terminal_sync" for relation "public.assessment_assignments" does not exist, skipping
+psql:supabase/migrations/20260821090000_scp_pilot_security_gate.sql:408: NOTICE:  pilot security gate: direct writes closed, assignment roles narrowed, maturity execution revoked, SCP duplicate protection keyed on real lineage
+supabase/migrations/20260822090000_scp_followup_prompts_explicit_grants.sql
+supabase/migrations/20260822091000_trust_findings_least_privilege.sql
+supabase/migrations/20260822092000_cd_profession_bands_accessor.sql
+supabase/migrations/20260823090000_scp_governed_evidence_model.sql
+psql:supabase/migrations/20260823090000_scp_governed_evidence_model.sql:117: NOTICE:  constraint "scp_evidence_severity_matches_finding" of relation "scp_competency_evidence" does not exist, skipping
+psql:supabase/migrations/20260823090000_scp_governed_evidence_model.sql:220: NOTICE:  trigger "scp_review_rubric_scores_append_only" for relation "public.scp_review_rubric_scores" does not exist, skipping
+psql:supabase/migrations/20260823090000_scp_governed_evidence_model.sql:233: NOTICE:  policy "scp_review_rubric_scores_author_read" for relation "public.scp_review_rubric_scores" does not exist, skipping
+supabase/migrations/20260823100000_scp_sg_v1_content_governance_corrections.sql
+supabase/migrations/20260824090000_scp_review_concurrency_and_legacy_removal.sql
+supabase/migrations/20260825090000_scp_content_tenancy.sql
+supabase/migrations/20260825091000_scp_training_maturity_isolation.sql
+supabase/migrations/20260825092000_scp_content_library_read_model.sql
+supabase/migrations/20260826090000_scp_training_delivery.sql
+psql:supabase/migrations/20260826090000_scp_training_delivery.sql:99: NOTICE:  trigger "scp_module_versions_form_is_learning" for relation "public.scp_module_versions" does not exist, skipping
+psql:supabase/migrations/20260826090000_scp_training_delivery.sql:242: NOTICE:  trigger "scp_training_assignments_target_assignable" for relation "public.scp_training_assignments" does not exist, skipping
+psql:supabase/migrations/20260826090000_scp_training_delivery.sql:269: NOTICE:  trigger "scp_training_progress_in_programme" for relation "public.scp_training_module_progress" does not exist, skipping
+psql:supabase/migrations/20260826090000_scp_training_delivery.sql:278: NOTICE:  trigger "scp_training_assignments_touch" for relation "public.scp_training_assignments" does not exist, skipping
+psql:supabase/migrations/20260826090000_scp_training_delivery.sql:283: NOTICE:  trigger "scp_training_progress_touch" for relation "public.scp_training_module_progress" does not exist, skipping
+psql:supabase/migrations/20260826090000_scp_training_delivery.sql:300: NOTICE:  policy "scp_training_assignments_read" for relation "public.scp_training_assignments" does not exist, skipping
+psql:supabase/migrations/20260826090000_scp_training_delivery.sql:313: NOTICE:  policy "scp_training_progress_read" for relation "public.scp_training_module_progress" does not exist, skipping
+supabase/migrations/20260826091000_scp_training_delivery_rpcs.sql
+supabase/migrations/20260826092000_scp_internal_training_fixture.sql
+supabase/migrations/20260827090000_scp_training_closed_test_assignability.sql
+supabase/migrations/20260828090000_scp_sg_situational_awareness_assessment.sql
+psql:supabase/migrations/20260828090000_scp_sg_situational_awareness_assessment.sql:407: NOTICE:  Batch 1: Situationsmedvetenhet & observation — 12 items authored
+supabase/migrations/20260828091000_scp_sg_conflict_deescalation_assessment.sql
+psql:supabase/migrations/20260828091000_scp_sg_conflict_deescalation_assessment.sql:364: NOTICE:  Konflikthantering & nedtrappning — 12 items authored
+supabase/migrations/20260828092000_scp_sg_reporting_documentation_assessment.sql
+psql:supabase/migrations/20260828092000_scp_sg_reporting_documentation_assessment.sql:338: NOTICE:  Rapportering & dokumentation — 11 items authored
+supabase/migrations/20260828093000_scp_sg_access_control_assessment.sql
+psql:supabase/migrations/20260828093000_scp_sg_access_control_assessment.sql:366: NOTICE:  Tillträde, behörighet & access control — 12 items authored
+supabase/migrations/20260828094000_scp_sg_incident_response_assessment.sql
+psql:supabase/migrations/20260828094000_scp_sg_incident_response_assessment.sql:373: NOTICE:  Incidenthantering & första åtgärder — 12 items authored
+supabase/migrations/20260828095000_scp_sg_module_learning_content.sql
+psql:supabase/migrations/20260828095000_scp_sg_module_learning_content.sql:332: NOTICE:  Batch 6: six Security Guard modules now carry learning activity
+supabase/migrations/20260828096000_scp_standalone_development_programmes.sql
+psql:supabase/migrations/20260828096000_scp_standalone_development_programmes.sql:369: NOTICE:  Batch 7: six standalone development programmes created
+supabase/migrations/20260828097000_scp_library_programmes_need_modules.sql
+supabase/migrations/20260829090000_scp_employer_response_reviewers.sql
+psql:supabase/migrations/20260829090000_scp_employer_response_reviewers.sql:92: NOTICE:  policy "scp_employer_reviewers_read" for relation "public.scp_employer_reviewers" does not exist, skipping
+psql:supabase/migrations/20260829090000_scp_employer_response_reviewers.sql:99: NOTICE:  policy "scp_employer_reviewers_write" for relation "public.scp_employer_reviewers" does not exist, skipping
+psql:supabase/migrations/20260829090000_scp_employer_response_reviewers.sql:131: NOTICE:  trigger "scp_employer_reviewers_member_guard" for relation "public.scp_employer_reviewers" does not exist, skipping
+supabase/migrations/20260829091000_scp_employer_team.sql
+supabase/migrations/20260829092000_scp_employee_subject_spine.sql
+supabase/migrations/20260829093000_scp_lifecycle_projections.sql
+supabase/migrations/20260829094000_scp_pipeline_supersedes_participants.sql
+supabase/migrations/20260829095000_scp_review_workload.sql
+supabase/migrations/20260829096000_scp_lifecycle_started_signal.sql
+supabase/migrations/20260829097000_scp_bind_known_employee_on_assign.sql
+supabase/migrations/20260830090000_scp_self_reported_evidence.sql
+psql:supabase/migrations/20260830090000_scp_self_reported_evidence.sql:157: NOTICE:  trigger "scp_item_versions_evidence_source_honesty" for relation "public.scp_item_versions" does not exist, skipping
+psql:supabase/migrations/20260830090000_scp_self_reported_evidence.sql:388: NOTICE:  self_report isolation proven: maturity stayed consistent_evidence with self-report evidence present
+psql:supabase/migrations/20260830090000_scp_self_reported_evidence.sql:448: NOTICE:  self_report authoring guard proven: three dishonest declarations refused
+supabase/migrations/20260830091000_scp_form_modules.sql
+psql:supabase/migrations/20260830091000_scp_form_modules.sql:90: NOTICE:  policy "scp_form_blocks_read" for relation "public.scp_form_blocks" does not exist, skipping
+psql:supabase/migrations/20260830091000_scp_form_modules.sql:151: NOTICE:  trigger "scp_form_items_block_asks_agrees" for relation "public.scp_form_items" does not exist, skipping
+psql:supabase/migrations/20260830091000_scp_form_modules.sql:326: NOTICE:  delivery signature proven: block_key added, no scoring column present
+supabase/migrations/20260830092000_scp_recruitment_assessment_metadata.sql
+psql:supabase/migrations/20260830092000_scp_recruitment_assessment_metadata.sql:271: NOTICE:  design-intent separation proven: the governance function does not read the label
+supabase/migrations/20260830093000_scp_candidate_brief_and_interview_guide.sql
+psql:supabase/migrations/20260830093000_scp_candidate_brief_and_interview_guide.sql:237: NOTICE:  policy "scp_interview_guide_prompts_read" for relation "public.scp_interview_guide_prompts" does not exist, skipping
+psql:supabase/migrations/20260830093000_scp_candidate_brief_and_interview_guide.sql:300: NOTICE:  trigger "scp_interview_notes_append_only" for relation "public.scp_interview_notes" does not exist, skipping
+psql:supabase/migrations/20260830093000_scp_candidate_brief_and_interview_guide.sql:307: NOTICE:  policy "scp_interview_notes_employer_read" for relation "public.scp_interview_notes" does not exist, skipping
+psql:supabase/migrations/20260830093000_scp_candidate_brief_and_interview_guide.sql:1257: NOTICE:  release vocabulary proven: no decision, no ranking, no score; observed/self-report boundary present
+supabase/migrations/20260830094000_scp_security_officer_recruitment_assessment.sql
+psql:supabase/migrations/20260830094000_scp_security_officer_recruitment_assessment.sql:408: NOTICE:  security-officer-recruitment scaffolding ready
+psql:supabase/migrations/20260830094000_scp_security_officer_recruitment_assessment.sql:1202: NOTICE:  security-officer-recruitment: 50 items authored
+psql:supabase/migrations/20260830094000_scp_security_officer_recruitment_assessment.sql:1391: NOTICE:  security-officer-recruitment proven: 50 items, 26 observed / 24 self-reported, 5 sections, bilingual, all gates outstanding
+supabase/migrations/20260831090000_scp_closed_test_recruitment_purpose.sql
+psql:supabase/migrations/20260831090000_scp_closed_test_recruitment_purpose.sql:206: NOTICE:  trigger "scp_attempts_closed_test_purpose_agrees" for relation "public.scp_attempts" does not exist, skipping
+supabase/migrations/20260831091000_scp_participant_invitations.sql
+psql:supabase/migrations/20260831091000_scp_participant_invitations.sql:136: NOTICE:  policy "scp_assessment_invitations_employer_read" for relation "public.scp_assessment_invitations" does not exist, skipping
+supabase/migrations/20260831092000_scp_recruitment_read_models.sql
+psql:supabase/migrations/20260831092000_scp_recruitment_read_models.sql:317: NOTICE:  recruitment read models proven: no response, option, key or rubric in any return type
+supabase/migrations/20260831093000_scp_brief_executive_summary.sql
+psql:supabase/migrations/20260831093000_scp_brief_executive_summary.sql:216: NOTICE:  trigger "scp_report_snapshots_executive_summary" for relation "public.scp_report_snapshots" does not exist, skipping
+psql:supabase/migrations/20260831093000_scp_brief_executive_summary.sql:282: NOTICE:  executive summary proven (en): The candidate showed consistent observed evidence in Communication. Evidence was more mixed around Professional judgement, where answers differed between comparable tasks. Teamwork was touched too little by the assessment to say anything, which should not be read as a weakness. Self-reported answers describe a consistent way of working around active scanning. Answers varied across related questions about execution discipline — worth exploring in interview. This rests on one assessment occasion and is decision support ahead of an interview, not an employment decision.
+psql:supabase/migrations/20260831093000_scp_brief_executive_summary.sql:282: NOTICE:  executive summary proven (sv, no self-report): Kandidaten visade sammanhållet observerat underlag inom Kommunikation. Underlaget kommer från ett bedömningstillfälle och är beslutsstöd inför intervju, inte ett anställningsbeslut.
+supabase/migrations/20260831094000_scp_recruit_from_application.sql
+supabase/migrations/20260901090000_scp_purpose_display_names.sql
+supabase/migrations/20260902090000_scp_library_assessment_area_count.sql
+supabase/migrations/20260903090000_scp_candidate_from_application.sql
+psql:supabase/migrations/20260903090000_scp_candidate_from_application.sql:138: NOTICE:  candidate read model proven: no test material, no auth identity, no storage path
+supabase/migrations/20260903091000_sp_application_scoped_disclosure.sql
+supabase/migrations/20260903092000_scp_hired_becomes_employee.sql
+supabase/migrations/20260903100000_scp_review_conflict_disclosure.sql
+psql:supabase/migrations/20260903100000_scp_review_conflict_disclosure.sql:208: NOTICE:  trigger "scp_human_reviews_disclose_conflict" for relation "public.scp_human_reviews" does not exist, skipping
+supabase/migrations/20260903110000_scp_stamp_trigger_least_privilege.sql
+supabase/migrations/20260903120000_scp_sg_reporting_documentation_rubrics.sql
+psql:supabase/migrations/20260903120000_scp_sg_reporting_documentation_rubrics.sql:294: NOTICE:  sg-reporting-documentation: 3 rubrics, 12 dimensions, 60 levels; no constructed response on any form is now without a rubric
+supabase/migrations/20260904090000_sp_application_submission_with_passport.sql
+supabase/migrations/20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql
+supabase/migrations/20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql
+psql:supabase/migrations/20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql:247: NOTICE:  SCP_R2A_CONTINUITY: 0 released snapshot(s) reference a template row that does not exist in this database; all of them are readable again.
+supabase/migrations/20260904174903_scp_trust_evidence_report_r2a_contract.sql
+supabase/migrations/20260904190901_scp_trust_evidence_report_r1_provenance.sql
+supabase/migrations/20260905053344_scp_option_order_per_attempt.sql
+psql:supabase/migrations/20260905053344_scp_option_order_per_attempt.sql:118: NOTICE:  trigger "scp_attempts_assign_option_seed" for relation "public.scp_attempts" does not exist, skipping
+psql:supabase/migrations/20260905053344_scp_option_order_per_attempt.sql:147: NOTICE:  trigger "scp_attempts_option_seed_immutable" for relation "public.scp_attempts" does not exist, skipping
+supabase/migrations/20260905053809_scp_release_facet_resolution.sql
+psql:supabase/migrations/20260905053809_scp_release_facet_resolution.sql:683: NOTICE:  facet resolution proven: guide facets resolve by (competency_id, slug) bound to the prompt; output contract and grants unchanged
+supabase/migrations/20260905054603_scp_trust_evidence_report_r1_provenance.sql
+psql:supabase/migrations/20260905054603_scp_trust_evidence_report_r1_provenance.sql:251: NOTICE:  trigger "scp_report_computation_manifests_immutable" for relation "public.scp_report_computation_manifests" does not exist, skipping
+psql:supabase/migrations/20260905054603_scp_trust_evidence_report_r1_provenance.sql:273: NOTICE:  constraint "scp_report_snapshots_manifest_pair" of relation "scp_report_snapshots" does not exist, skipping
+psql:supabase/migrations/20260905054603_scp_trust_evidence_report_r1_provenance.sql:1613: NOTICE:  PR-R1 provenance proven: private immutable manifest, one calculated_at, canonical hash pinned, audience contracts untouched
+supabase/migrations/20260905090000_scp_standard_recruitment_availability.sql
+psql:supabase/migrations/20260905090000_scp_standard_recruitment_availability.sql:82: NOTICE:  constraint "scp_standard_recruitment_requires_recruitment_design" of relation "scp_assessment_definitions" does not exist, skipping
+supabase/migrations/20260906090000_jobs_bilingual_candidate_requirements.sql
+supabase/migrations/20260906091000_jobs_employer_self_publish.sql
+supabase/migrations/20260906100000_jobs_self_publish_admin_member_fix.sql
+supabase/migrations/20260906125945_scp_trust_evidence_report_r3a_contract.sql
+psql:supabase/migrations/20260906125945_scp_trust_evidence_report_r3a_contract.sql:993: NOTICE:  PR-R3A contract proven: one process-step rule; the employer V3 projection reads through the audience contract, takes counts from the frozen manifest, recomputes nothing, projects no internal key, keeps the three dimensions apart and the addenda outside the frozen report
+supabase/migrations/20260907064303_f8efc1c3-def4-4147-9db1-45a68b1f6a69.sql
+supabase/migrations/20260907064513_19c76abb-f1fd-40e5-aa50-b008b7de38bf.sql
+supabase/migrations/20260907064849_0bb96516-c1eb-4178-8e9e-60bde13071dd.sql
+supabase/migrations/20260907071826_6c070461-aa51-4d78-8ed0-a82294f12489.sql
+psql:supabase/migrations/20260907071826_6c070461-aa51-4d78-8ed0-a82294f12489.sql:80: NOTICE:  LEDGER_REPAIR_NOOP: supabase_migrations.schema_migrations does not exist on this database; nothing to repair
+supabase/migrations/20260907090000_sp_three_market_foundation.sql
+psql:supabase/migrations/20260907090000_sp_three_market_foundation.sql:873: NOTICE:  trigger "sp_professional_title_rule_integrity_trg" for relation "public.sp_professional_titles" does not exist, skipping
+psql:supabase/migrations/20260907090000_sp_three_market_foundation.sql:909: NOTICE:  policy "sp_sub_jurisdictions_read" for relation "public.sp_sub_jurisdictions" does not exist, skipping
+psql:supabase/migrations/20260907090000_sp_three_market_foundation.sql:920: NOTICE:  policy "sp_market_packs_read" for relation "public.sp_market_packs" does not exist, skipping
+psql:supabase/migrations/20260907090000_sp_three_market_foundation.sql:924: NOTICE:  policy "sp_profession_families_read" for relation "public.sp_profession_families" does not exist, skipping
+psql:supabase/migrations/20260907090000_sp_three_market_foundation.sql:928: NOTICE:  policy "sp_authorities_read" for relation "public.sp_authorities" does not exist, skipping
+psql:supabase/migrations/20260907090000_sp_three_market_foundation.sql:932: NOTICE:  policy "sp_regulated_roles_read" for relation "public.sp_regulated_roles" does not exist, skipping
+psql:supabase/migrations/20260907090000_sp_three_market_foundation.sql:936: NOTICE:  policy "sp_regulatory_sources_read" for relation "public.sp_regulatory_sources" does not exist, skipping
+psql:supabase/migrations/20260907090000_sp_three_market_foundation.sql:940: NOTICE:  policy "sp_professional_titles_read" for relation "public.sp_professional_titles" does not exist, skipping
+psql:supabase/migrations/20260907090000_sp_three_market_foundation.sql:981: NOTICE:  trigger "sp_market_packs_set_updated_at" for relation "public.sp_market_packs" does not exist, skipping
+psql:supabase/migrations/20260907090000_sp_three_market_foundation.sql:986: NOTICE:  trigger "sp_regulatory_sources_set_updated_at" for relation "public.sp_regulatory_sources" does not exist, skipping
+supabase/migrations/20260907091000_sp_sweden_truth_model.sql
+supabase/migrations/20260907092000_sp_uk_market_pack.sql
+supabase/migrations/20260907092500_sp_uk_title_rules_correction.sql
+psql:supabase/migrations/20260907092500_sp_uk_title_rules_correction.sql:195: NOTICE:  ok  19 canonical GB title rules (6 active_title, 7 local_eligibility, 6 education_completed); GB still inactive/pending
+supabase/migrations/20260907093000_sp_uae_dubai_market_pack.sql
+supabase/migrations/20260908043205_b315714c-89df-4610-9dd0-7b55207229a7.sql
+supabase/migrations/20260908090000_sp_legacy_scope_correctable.sql
+supabase/migrations/20260908091000_sp_title_country_and_training_label.sql
+supabase/migrations/20260908092000_sp_disclosure_scope_boundary.sql
+supabase/migrations/20260908093000_sp_profile_work_country.sql
+supabase/migrations/20260908094000_sp_disclosure_holder_sub_jurisdiction.sql
+supabase/migrations/20260909090000_jobs_delete_unpublished_draft.sql
+supabase/migrations/20260909092000_jobs_other_profession_selection.sql
+psql:supabase/migrations/20260909092000_jobs_other_profession_selection.sql:80: NOTICE:  constraint "jobs_family_other_excludes_id" of relation "jobs" does not exist, skipping
+psql:supabase/migrations/20260909092000_jobs_other_profession_selection.sql:86: NOTICE:  constraint "jobs_profession_other_excludes_slug" of relation "jobs" does not exist, skipping
+psql:supabase/migrations/20260909092000_jobs_other_profession_selection.sql:94: NOTICE:  constraint "jobs_family_other_text_needs_choice" of relation "jobs" does not exist, skipping
+psql:supabase/migrations/20260909092000_jobs_other_profession_selection.sql:100: NOTICE:  constraint "jobs_profession_other_text_needs_choice" of relation "jobs" does not exist, skipping
+psql:supabase/migrations/20260909092000_jobs_other_profession_selection.sql:109: NOTICE:  constraint "jobs_family_other_text_length" of relation "jobs" does not exist, skipping
+psql:supabase/migrations/20260909092000_jobs_other_profession_selection.sql:115: NOTICE:  constraint "jobs_profession_other_text_length" of relation "jobs" does not exist, skipping
+supabase/migrations/20260909093000_application_status_notifications.sql
+psql:supabase/migrations/20260909093000_application_status_notifications.sql:65: NOTICE:  constraint "jase_notified_xor_error" of relation "job_application_status_events" does not exist, skipping
+supabase/migrations/20260909094000_job_audit_vocabulary_lifecycle.sql
+supabase/migrations/20260910090000_sp_pilot_bugfix_1.sql
+supabase/migrations/20260910091000_cd_v31_content_v3_question_refinement.sql
+supabase/migrations/20260911090000_admin_control_center_lifecycle.sql
+psql:supabase/migrations/20260911090000_admin_control_center_lifecycle.sql:125: NOTICE:  trigger "jobs_employer_operational_guard" for relation "public.jobs" does not exist, skipping
+psql:supabase/migrations/20260911090000_admin_control_center_lifecycle.sql:130: NOTICE:  trigger "employees_employer_operational_guard" for relation "public.employees" does not exist, skipping
+psql:supabase/migrations/20260911090000_admin_control_center_lifecycle.sql:135: NOTICE:  trigger "assessment_assignments_employer_operational_guard" for relation "public.assessment_assignments" does not exist, skipping
+psql:supabase/migrations/20260911090000_admin_control_center_lifecycle.sql:140: NOTICE:  trigger "scp_assessment_invitations_employer_operational_guard" for relation "public.scp_assessment_invitations" does not exist, skipping
+psql:supabase/migrations/20260911090000_admin_control_center_lifecycle.sql:145: NOTICE:  trigger "scp_training_assignments_employer_operational_guard" for relation "public.scp_training_assignments" does not exist, skipping
+supabase/migrations/20260912090000_cd_ranking_guard_recommendation.sql
+supabase/migrations/20260913090000_cd_v31_content_v4_context_intent_separation.sql
+supabase/migrations/20260913091000_cd_career_context_other_profession.sql
+psql:supabase/migrations/20260913091000_cd_career_context_other_profession.sql:52: NOTICE:  constraint "cd_sessions_current_profession_other_check" of relation "cd_sessions" does not exist, skipping
+supabase/migrations/20260913092000_cig_security_leadership_professions.sql
+supabase/migrations/20260914090000_sp_uk_vehicle_immobilisation.sql
+supabase/migrations/20260914091000_sp_uae_dubai_cadre_catalogue.sql
+supabase/migrations/20260914092000_sp_uae_abu_dhabi_market_pack.sql
+supabase/migrations/20260915090000_sp_market_pilot_entitlement.sql
+psql:supabase/migrations/20260915090000_sp_market_pilot_entitlement.sql:96: NOTICE:  constraint "sp_market_pack_pilot_state_known" of relation "sp_market_packs" does not exist, skipping
+psql:supabase/migrations/20260915090000_sp_market_pilot_entitlement.sql:137: NOTICE:  constraint "sp_credential_type_pilot_state_known" of relation "sp_credential_types" does not exist, skipping
+psql:supabase/migrations/20260915090000_sp_market_pilot_entitlement.sql:191: NOTICE:  policy "sp pilot members see own entitlement" for relation "public.sp_pilot_members" does not exist, skipping
+supabase/migrations/20260916090000_security_hardening_expand.sql
+psql:supabase/migrations/20260916090000_security_hardening_expand.sql:295: NOTICE:  security hardening: EXECUTE revoked on 83 trigger function(s)
+psql:supabase/migrations/20260916090000_security_hardening_expand.sql:709: NOTICE:  policy "legacy_family_backup_admin_read" for relation "public.cig_profession_families_legacy_backup" does not exist, skipping
+psql:supabase/migrations/20260916090000_security_hardening_expand.sql:832: NOTICE:  security hardening (expand): all five post-conditions hold
+supabase/migrations/20260916091000_security_hardening_contract.sql
+psql:supabase/migrations/20260916091000_security_hardening_contract.sql:162: NOTICE:  security hardening (contract): the legacy write path is closed, both entry points live
+supabase/migrations/20260916155430_sp_international_passport_foundation.sql
+supabase/migrations/20260916155456_sp_international_credential_wallet.sql
+supabase/migrations/20260916155521_sp_credential_selective_sharing_v2.sql
+supabase/migrations/20260916155551_sp_closed_credential_catalogue.sql
+supabase/migrations/20260916155620_cv_owned_application_snapshot.sql
+supabase/migrations/20260916190510_sp_credential_organisation_roles.sql
+supabase/migrations/20260917090000_superadmin_permanent_account_deletion.sql
+psql:supabase/migrations/20260917090000_superadmin_permanent_account_deletion.sql:98: NOTICE:  policy "deleted_accounts_admin_select" for relation "public.deleted_accounts" does not exist, skipping
+supabase/migrations/20260918090000_scp_interview_role_packs.sql
+psql:supabase/migrations/20260918090000_scp_interview_role_packs.sql:2753: NOTICE:  SCP_INTERVIEW_SEED: vaktare-se v1 imported as draft/pilot_hypothesis, content_hash=0393cf93d29c5a85a98bf588c67ca9bc
+psql:supabase/migrations/20260918090000_scp_interview_role_packs.sql:2851: NOTICE:  SCP_INTERVIEW_ASSERT: Vaktare v1 import verified; 10 blocking reasons prevent publication, as intended.
+supabase/migrations/20260919090000_scp_interview_intelligence_registries.sql
+psql:supabase/migrations/20260919090000_scp_interview_intelligence_registries.sql:1190: NOTICE:  SCP_IIR_ASSERT: registries seeded; 216 graph edges.
+supabase/migrations/20260920090000_scp_interview_runtime.sql
+psql:supabase/migrations/20260920090000_scp_interview_runtime.sql:2994: NOTICE:  SCP_IV_ASSERT: runtime domain created; 39 tables.
+supabase/migrations/20260921090000_scp_interview_integrity_hardening.sql
+psql:supabase/migrations/20260921090000_scp_interview_integrity_hardening.sql:110: NOTICE:  trigger "scp_research_claims_not_ahead_of_source" for relation "public.scp_research_claims" does not exist, skipping
+psql:supabase/migrations/20260921090000_scp_interview_integrity_hardening.sql:164: NOTICE:  trigger "scp_research_implications_not_ahead_of_claim" for relation "public.scp_research_implications" does not exist, skipping
+psql:supabase/migrations/20260921090000_scp_interview_integrity_hardening.sql:358: NOTICE:  trigger "scp_intel_edges_assurance" for relation "public.scp_intel_edges" does not exist, skipping
+psql:supabase/migrations/20260921090000_scp_interview_integrity_hardening.sql:444: NOTICE:  constraint "scp_interview_pilot_usage_mode_check" of relation "scp_interview_pack_pilot_grants" does not exist, skipping
+psql:supabase/migrations/20260921090000_scp_interview_integrity_hardening.sql:450: NOTICE:  constraint "scp_interview_pilot_environment_check" of relation "scp_interview_pack_pilot_grants" does not exist, skipping
+psql:supabase/migrations/20260921090000_scp_interview_integrity_hardening.sql:456: NOTICE:  constraint "scp_interview_pilot_revocation_check" of relation "scp_interview_pack_pilot_grants" does not exist, skipping
+psql:supabase/migrations/20260921090000_scp_interview_integrity_hardening.sql:470: NOTICE:  constraint "scp_interview_pilot_window_check" of relation "scp_interview_pack_pilot_grants" does not exist, skipping
+psql:supabase/migrations/20260921090000_scp_interview_integrity_hardening.sql:540: NOTICE:  trigger "scp_interview_pack_pilot_grants_guard" for relation "public.scp_interview_pack_pilot_grants" does not exist, skipping
+psql:supabase/migrations/20260921090000_scp_interview_integrity_hardening.sql:699: NOTICE:  trigger "scp_interview_pack_pilot_grants_audit" for relation "public.scp_interview_pack_pilot_grants" does not exist, skipping
+psql:supabase/migrations/20260921090000_scp_interview_integrity_hardening.sql:796: NOTICE:  SCP_IIH_ASSERT: integrity hardening verified. 216 knowledge edges carry assurance; 3 sources read of 7.
+psql:supabase/migrations/20260921090000_scp_interview_integrity_hardening.sql:860: NOTICE:  trigger "scp_intel_edges_prohibition_coverage" for relation "public.scp_intel_edges" does not exist, skipping
+psql:supabase/migrations/20260921090000_scp_interview_integrity_hardening.sql:894: NOTICE:  SCP_IIH_ASSERT: prohibition graph complete -- 14 areas x 11 tasks = 154 restricts edges; 271 knowledge edges total.
+psql:supabase/migrations/20260921090000_scp_interview_integrity_hardening.sql:931: NOTICE:  constraint "scp_interview_ai_runs_withheld_is_array" of relation "scp_interview_ai_runs" does not exist, skipping
+psql:supabase/migrations/20260921090000_scp_interview_integrity_hardening.sql:1157: NOTICE:  SCP_IIH_ASSERT: ledger entries name what happened; report blockers own the state precondition.
+psql:supabase/migrations/20260921090000_scp_interview_integrity_hardening.sql:1408: NOTICE:  constraint "scp_interview_ai_runs_provider_mode_check" of relation "scp_interview_ai_runs" does not exist, skipping
+psql:supabase/migrations/20260921090000_scp_interview_integrity_hardening.sql:1527: NOTICE:  trigger "scp_interview_case_sources_no_career_discovery" for relation "public.scp_interview_case_sources" does not exist, skipping
+psql:supabase/migrations/20260921090000_scp_interview_integrity_hardening.sql:1606: NOTICE:  trigger "scp_interview_case_sources_passport_disclosure" for relation "public.scp_interview_case_sources" does not exist, skipping
+psql:supabase/migrations/20260921090000_scp_interview_integrity_hardening.sql:1634: NOTICE:  trigger "sp_claims_no_interview_write" for relation "public.sp_claims" does not exist, skipping
+psql:supabase/migrations/20260921090000_scp_interview_integrity_hardening.sql:1662: NOTICE:  constraint "scp_intel_edges_assurance_check" of relation "scp_intel_edges" does not exist, skipping
+psql:supabase/migrations/20260921090000_scp_interview_integrity_hardening.sql:1693: NOTICE:  constraint "scp_intel_edges_assurance_check" of relation "scp_intel_edges" does not exist, skipping
+psql:supabase/migrations/20260921090000_scp_interview_integrity_hardening.sql:1798: NOTICE:  SCP_IIH_ASSERT: assurance split -- 224 structural, 4 source_read, 14 provisional, 5 hypothesis, 24 pending.
+psql:supabase/migrations/20260921090000_scp_interview_integrity_hardening.sql:1954: NOTICE:  policy "scp_iv_corrections_candidate" for relation "public.scp_interview_candidate_corrections" does not exist, skipping
+psql:supabase/migrations/20260921090000_scp_interview_integrity_hardening.sql:1975: NOTICE:  policy "scp_iv_corrections_candidate_insert" for relation "public.scp_interview_candidate_corrections" does not exist, skipping
+psql:supabase/migrations/20260921090000_scp_interview_integrity_hardening.sql:1981: NOTICE:  policy "scp_iv_corrections_employer" for relation "public.scp_interview_candidate_corrections" does not exist, skipping
+psql:supabase/migrations/20260921090000_scp_interview_integrity_hardening.sql:2070: NOTICE:  policy "scp_iv_panels_read" for relation "public.scp_interview_panels" does not exist, skipping
+psql:supabase/migrations/20260921090000_scp_interview_integrity_hardening.sql:2074: NOTICE:  policy "scp_iv_panel_members_read" for relation "public.scp_interview_panel_members" does not exist, skipping
+psql:supabase/migrations/20260921090000_scp_interview_integrity_hardening.sql:2305: NOTICE:  trigger "scp_interview_assessments_preserve_individual" for relation "public.scp_interview_assessments" does not exist, skipping
+supabase/migrations/20260922090000_scp_trust_method.sql
+psql:supabase/migrations/20260922090000_scp_trust_method.sql:203: NOTICE:  policy "scp_trust_stages_read" for relation "public.scp_trust_stages" does not exist, skipping
+psql:supabase/migrations/20260922090000_scp_trust_method.sql:207: NOTICE:  policy "scp_trust_stage_ai_tasks_read" for relation "public.scp_trust_stage_ai_tasks" does not exist, skipping
+psql:supabase/migrations/20260922090000_scp_trust_method.sql:211: NOTICE:  policy "scp_trust_stage_prohibitions_read" for relation "public.scp_trust_stage_prohibitions" does not exist, skipping
+psql:supabase/migrations/20260922090000_scp_trust_method.sql:218: NOTICE:  policy "scp_trust_stage_claims_read" for relation "public.scp_trust_stage_claims" does not exist, skipping
+psql:supabase/migrations/20260922090000_scp_trust_method.sql:718: NOTICE:  SCP_TRUST_ASSERT: TRUST v1 registered as draft — 5 stages, 11 AI bindings, 14 prohibitions, 15 claim links; Understand permits no AI task.
+supabase/migrations/20260923090000_scp_trust_corrections.sql
+psql:supabase/migrations/20260923090000_scp_trust_corrections.sql:49: NOTICE:  policy "scp_trust_stages_admin" for relation "public.scp_trust_stages" does not exist, skipping
+psql:supabase/migrations/20260923090000_scp_trust_corrections.sql:53: NOTICE:  policy "scp_trust_stage_ai_tasks_admin" for relation "public.scp_trust_stage_ai_tasks" does not exist, skipping
+psql:supabase/migrations/20260923090000_scp_trust_corrections.sql:57: NOTICE:  policy "scp_trust_stage_prohibitions_admin" for relation "public.scp_trust_stage_prohibitions" does not exist, skipping
+psql:supabase/migrations/20260923090000_scp_trust_corrections.sql:162: NOTICE:  index "scp_interview_methods_slug_key" does not exist, skipping
+psql:supabase/migrations/20260923090000_scp_trust_corrections.sql:359: NOTICE:  trigger "scp_interview_cases_trust_pin_immutable" for relation "public.scp_interview_cases" does not exist, skipping
+psql:supabase/migrations/20260923090000_scp_trust_corrections.sql:529: NOTICE:  SCP_TRUST_FIX: disclosure closed, stage enforcement live, versioning made possible.
+supabase/migrations/20260924090000_migration_ledger_seed_event_reconciliation.sql
+supabase/migrations/20260925090000_scp_interview_open_pilot_entitlement.sql
+supabase/migrations/20260926090000_scp_interview_startable_contract.sql
+psql:supabase/migrations/20260926090000_scp_interview_startable_contract.sql:312: NOTICE:  SCP_IV_START_CONTRACT: the new-interview list and scp_iv_create_case share one entitlement definition.
+supabase/migrations/20260927090000_scp_interview_ai_gate_and_provenance.sql
+psql:supabase/migrations/20260927090000_scp_interview_ai_gate_and_provenance.sql:128: NOTICE:  trigger "scp_interview_ai_runs_disabled_guard" for relation "public.scp_interview_ai_runs" does not exist, skipping
+psql:supabase/migrations/20260927090000_scp_interview_ai_gate_and_provenance.sql:406: NOTICE:  SCP_IV_AI_GATE: ai_enabled enforced at start, settle and table; model provenance separated from provider.
+psql:supabase/migrations/20260927090000_scp_interview_ai_gate_and_provenance.sql:492: NOTICE:  SCP_IV_AI_GATE: the structured interview is reachable with AI disabled.
+supabase/migrations/20260927124146_client_table_privilege_hardening.sql
+supabase/migrations/20260928090000_scp_trust_stage_english_copy.sql
+psql:supabase/migrations/20260928090000_scp_trust_stage_english_copy.sql:112: NOTICE:  SCP_TRUST_EN: 14 prohibition translations offered.
+psql:supabase/migrations/20260928090000_scp_trust_stage_english_copy.sql:206: NOTICE:  SCP_TRUST_EN: every TRUST responsibility and prohibition reads in both languages.
+supabase/migrations/20260929090000_scp_interview_english_guidance_copy.sql
+psql:supabase/migrations/20260929090000_scp_interview_english_guidance_copy.sql:97: NOTICE:  SCP_IV_EN: 14 prohibited area(s) translated.
+psql:supabase/migrations/20260929090000_scp_interview_english_guidance_copy.sql:148: NOTICE:  SCP_IV_EN: 17 method practice(s) translated.
+psql:supabase/migrations/20260929090000_scp_interview_english_guidance_copy.sql:204: NOTICE:  SCP_IV_EN: 39 evidence dimension(s) translated.
+psql:supabase/migrations/20260929090000_scp_interview_english_guidance_copy.sql:328: NOTICE:  SCP_IV_EN: guidance and boundaries read in both languages; locked pack content untouched.
+supabase/migrations/20260930090000_scp_interview_5e_evidence_structure.sql
+psql:supabase/migrations/20260930090000_scp_interview_5e_evidence_structure.sql:288: NOTICE:  SCP_IV_5E: 5E persists as description on proposals and confirmed evidence; nothing counts it.
+supabase/migrations/20261001090000_scp_interview_rating_anchor_english_copy.sql
+psql:supabase/migrations/20261001090000_scp_interview_rating_anchor_english_copy.sql:130: NOTICE:  SCP_IV_ANCHOR_EN: 38 translations offered.
+psql:supabase/migrations/20261001090000_scp_interview_rating_anchor_english_copy.sql:161: NOTICE:  SCP_IV_ANCHOR_EN: every behavioural anchor reads in both languages.
+supabase/migrations/20261002090000_scp_interview_conduct_layer.sql
+psql:supabase/migrations/20261002090000_scp_interview_conduct_layer.sql:257: NOTICE:  SCP_IV_CONDUCT: six ordered conduct steps and eight named prohibitions on 6 method(s), in both languages, generated by nothing.
+supabase/migrations/20261003090000_scp_interview_conduct_guidance.sql
+psql:supabase/migrations/20261003090000_scp_interview_conduct_guidance.sql:223: NOTICE:  SCP_IV_GUIDANCE: 180 governed guidance rows across Target, Ready and Trace, in both languages, generated by nothing.
+supabase/migrations/20261004090000_cd_v31_funnel_events_career_center.sql
+supabase/migrations/20261004164027_application_passport_verified_content_guard.sql
+supabase/migrations/20261005090000_cd_v31_scoring_version_draft4_ranking.sql
+supabase/migrations/20261006090000_cd_layer4_entry_gap_professions.sql
+supabase/migrations/20261007090000_canonical_professional_profile.sql
+psql:supabase/migrations/20261007090000_canonical_professional_profile.sql:214: NOTICE:  policy "own scp reconciliation select" for relation "public.security_career_profile_reconciliations" does not exist, skipping
+psql:supabase/migrations/20261007090000_canonical_professional_profile.sql:224: NOTICE:  policy "own scp reconciliation resolve" for relation "public.security_career_profile_reconciliations" does not exist, skipping
+psql:supabase/migrations/20261007090000_canonical_professional_profile.sql:329: NOTICE:  trigger "career_profile_mirror_profession_trg" for relation "public.security_career_profiles" does not exist, skipping
+psql:supabase/migrations/20261007090000_canonical_professional_profile.sql:382: NOTICE:  trigger "career_profile_seed_passport_profession_trg" for relation "public.sp_passport_profiles" does not exist, skipping
+psql:supabase/migrations/20261007090000_canonical_professional_profile.sql:465: NOTICE:  trigger "career_profile_adopt_passport_profession_trg" for relation "public.sp_passport_profiles" does not exist, skipping
+supabase/migrations/20261008090000_canonical_professional_profile_contract.sql
+supabase/migrations/20261009090000_scp_interview_assessment_supersede_order.sql
+supabase/migrations/20261010090000_cv_documents.sql
+psql:supabase/migrations/20261010090000_cv_documents.sql:207: NOTICE:  policy "own cv select" for relation "public.cv_documents" does not exist, skipping
+psql:supabase/migrations/20261010090000_cv_documents.sql:213: NOTICE:  policy "own cv insert" for relation "public.cv_documents" does not exist, skipping
+psql:supabase/migrations/20261010090000_cv_documents.sql:219: NOTICE:  policy "own cv update" for relation "public.cv_documents" does not exist, skipping
+psql:supabase/migrations/20261010090000_cv_documents.sql:230: NOTICE:  policy "own cv delete" for relation "public.cv_documents" does not exist, skipping
+psql:supabase/migrations/20261010090000_cv_documents.sql:243: NOTICE:  trigger "cv_documents_set_updated_at" for relation "public.cv_documents" does not exist, skipping
+supabase/migrations/20261011090000_cv_documents_editing_provenance.sql
+supabase/migrations/20261012090000_sp_decision_requires_holder_message.sql
+supabase/migrations/20261013090000_sp_trust_boundary_hardening.sql
+psql:supabase/migrations/20261013090000_sp_trust_boundary_hardening.sql:177: NOTICE:  constraint "sp_vr_employer_attestation_is_employment_only" of relation "sp_verification_requests" does not exist, skipping
+supabase/migrations/20261014090000_sp_reviewer_detail_and_note_privacy.sql
+supabase/migrations/20261015090000_sp_passport_verifier_role.sql
+supabase/migrations/20261016090000_sp_reviewer_least_privilege.sql
+psql:supabase/migrations/20261016090000_sp_reviewer_least_privilege.sql:249: NOTICE:  sp_ tables hardened: 23
+supabase/migrations/20261017090000_sp_employer_attestation_queue_task.sql
+supabase/migrations/20261018090000_job_application_cqrityjob_cv.sql
+psql:supabase/migrations/20261018090000_job_application_cqrityjob_cv.sql:119: NOTICE:  constraint "job_applications_cv_source_check" of relation "job_applications" does not exist, skipping
+psql:supabase/migrations/20261018090000_job_application_cqrityjob_cv.sql:129: NOTICE:  constraint "job_applications_cv_document_id_fkey" of relation "job_applications" does not exist, skipping
+psql:supabase/migrations/20261018090000_job_application_cqrityjob_cv.sql:147: NOTICE:  constraint "job_applications_cv_source_shape_check" of relation "job_applications" does not exist, skipping
+supabase/migrations/20261019090000_sp_employer_attestation_eligible_org.sql
+supabase/migrations/20261020090000_scp_interview_evidence_reliability.sql
+psql:supabase/migrations/20261020090000_scp_interview_evidence_reliability.sql:145: NOTICE:  trigger "scp_interview_evidence_proposals_origin_in_case" for relation "public.scp_interview_evidence_proposals" does not exist, skipping
+psql:supabase/migrations/20261020090000_scp_interview_evidence_reliability.sql:149: NOTICE:  trigger "scp_interview_evidence_origin_in_case" for relation "public.scp_interview_evidence" does not exist, skipping
+psql:supabase/migrations/20261020090000_scp_interview_evidence_reliability.sql:153: NOTICE:  trigger "scp_interview_findings_origin_in_case" for relation "public.scp_interview_findings" does not exist, skipping
+psql:supabase/migrations/20261020090000_scp_interview_evidence_reliability.sql:778: NOTICE:  SCP_IV_ER_ASSERT: evidence is case-bound, writers are idempotent, assessments cover the material that existed when they were made.
+supabase/migrations/20261028090000_admin_cancel_assignment_error_contract.sql
+psql:supabase/migrations/20261028090000_admin_cancel_assignment_error_contract.sql:229: NOTICE:  ADMIN_CANCEL_ERROR_CONTRACT_PROOF ok
+supabase/migrations/20261030090000_sp_trust_source_containment.sql
+psql:supabase/migrations/20261030090000_sp_trust_source_containment.sql:95: NOTICE:  SP_TRUST_SOURCE_CONTAINMENT: 0 historical approval(s) carry a source-confirmation method with CQrityjob as decider. Left unchanged; presented as a CQrityjob review by the application. Report: scripts/passport-legacy-provenance-report.sql
+supabase/migrations/20261031090000_sp_passport_first_merit.sql
+psql:supabase/migrations/20261031090000_sp_passport_first_merit.sql:159: NOTICE:  SP_FIRST_MERIT: 0 existing event(s) carry an operation_id (expected 0).
+psql:supabase/migrations/20261031090000_sp_passport_first_merit.sql:257: NOTICE:  constraint "sp_profile_draft_revision_non_negative" of relation "sp_passport_profiles" does not exist, skipping
+supabase/migrations/20261101090000_sp_selected_merit_sharing.sql
+psql:supabase/migrations/20261101090000_sp_selected_merit_sharing.sql:196: NOTICE:  constraint "sp_disclosures_locale_check" of relation "sp_disclosures" does not exist, skipping
+psql:supabase/migrations/20261101090000_sp_selected_merit_sharing.sql:265: NOTICE:  policy "sp_disclosure_items_self" for relation "public.sp_disclosure_items" does not exist, skipping
+psql:supabase/migrations/20261101090000_sp_selected_merit_sharing.sql:729: NOTICE:  function public.sp_assert_share_inputs(pg_catalog.int4,text) does not exist, skipping
+supabase/migrations/20261102090000_cv_documents_controlled_writes.sql
+supabase/migrations/20261103090000_cv_documents_lockdown.sql
+supabase/migrations/20261104090000_passport_share_gateway.sql
+supabase/migrations/20261105090000_scp_participant_report_issuer_preview.sql
+psql:supabase/migrations/20261105090000_scp_participant_report_issuer_preview.sql:222: NOTICE:  SCP_ISSUER_PREVIEW_PROOF ok
+supabase/migrations/20261107090000_scp_iv_report_basis_integrity.sql
+psql:supabase/migrations/20261107090000_scp_iv_report_basis_integrity.sql:1051: NOTICE:  SCP_IV_REPORT_BASIS_PROOF ok
+supabase/migrations/20261108090000_beskt_governed_method_content.sql
+psql:supabase/migrations/20261108090000_beskt_governed_method_content.sql:4779: NOTICE:  BESKT_GOVERNED_CONTENT_PROOF ok
+supabase/migrations/20261109090000_sp_pilot_catalogue_visibility.sql
+psql:supabase/migrations/20261109090000_sp_pilot_catalogue_visibility.sql:285: NOTICE:  SP_PILOT_CATALOGUE_VISIBILITY_PROOF ok
+supabase/migrations/20261110090000_bcp_candidate_preparation.sql
+psql:supabase/migrations/20261110090000_bcp_candidate_preparation.sql:3336: NOTICE:  BESKT_CANDIDATE_PREPARATION_PROOF ok
+supabase/migrations/20261111090000_sp_global_professional_certifications.sql
+psql:supabase/migrations/20261111090000_sp_global_professional_certifications.sql:462: NOTICE:  trigger "sp_certification_definition_rules_trg" for relation "public.sp_certification_definitions" does not exist, skipping
+psql:supabase/migrations/20261111090000_sp_global_professional_certifications.sql:484: NOTICE:  trigger "sp_certification_issuer_code_immutable_trg" for relation "public.sp_certification_issuers" does not exist, skipping
+psql:supabase/migrations/20261111090000_sp_global_professional_certifications.sql:656: NOTICE:  trigger "sp_certification_lifecycle_rules_trg" for relation "public.sp_claim_certification_lifecycle" does not exist, skipping
+psql:supabase/migrations/20261111090000_sp_global_professional_certifications.sql:895: NOTICE:  trigger "sp_claim_certification_lifecycle_set_updated_at" for relation "public.sp_claim_certification_lifecycle" does not exist, skipping
+psql:supabase/migrations/20261111090000_sp_global_professional_certifications.sql:901: NOTICE:  trigger "sp_certification_issuers_set_updated_at" for relation "public.sp_certification_issuers" does not exist, skipping
+psql:supabase/migrations/20261111090000_sp_global_professional_certifications.sql:907: NOTICE:  trigger "sp_certification_definitions_set_updated_at" for relation "public.sp_certification_definitions" does not exist, skipping
+psql:supabase/migrations/20261111090000_sp_global_professional_certifications.sql:1303: NOTICE:  SP_GLOBAL_CERT_BACKFILL: 0 definition(s) left with an undeclared scope (unchanged, by design)
+psql:supabase/migrations/20261111090000_sp_global_professional_certifications.sql:1684: NOTICE:  policy "sp_credential_scopes_read" for relation "public.sp_credential_scopes" does not exist, skipping
+psql:supabase/migrations/20261111090000_sp_global_professional_certifications.sql:1691: NOTICE:  policy "sp_certification_issuers_read" for relation "public.sp_certification_issuers" does not exist, skipping
+psql:supabase/migrations/20261111090000_sp_global_professional_certifications.sql:1701: NOTICE:  policy "sp_certification_issuer_aliases_read" for relation "public.sp_certification_issuer_aliases" does not exist, skipping
+psql:supabase/migrations/20261111090000_sp_global_professional_certifications.sql:1706: NOTICE:  policy "sp_certification_sources_read" for relation "public.sp_certification_sources" does not exist, skipping
+psql:supabase/migrations/20261111090000_sp_global_professional_certifications.sql:1715: NOTICE:  policy "sp_certification_definitions_read" for relation "public.sp_certification_definitions" does not exist, skipping
+psql:supabase/migrations/20261111090000_sp_global_professional_certifications.sql:1733: NOTICE:  policy "sp_claim_certification_lifecycle_owner" for relation "public.sp_claim_certification_lifecycle" does not exist, skipping
+psql:supabase/migrations/20261111090000_sp_global_professional_certifications.sql:2022: NOTICE:  SP_GLOBAL_CERTIFICATION_PROOF ok: 14 definitions, 5 issuers (ASIS 4, ISC2 5, ISACA 3, ACFE 1, ACAMS 1), no market changed, no claim touched
+supabase/migrations/20261112090000_bcp_interview_case_bridge.sql
+psql:supabase/migrations/20261112090000_bcp_interview_case_bridge.sql:1067: NOTICE:  BESKT_INTERVIEW_CASE_BRIDGE_PROOF ok
+supabase/migrations/20261113090000_bcp_interview_conduct.sql
+psql:supabase/migrations/20261113090000_bcp_interview_conduct.sql:2347: NOTICE:  BESKT_INTERVIEW_CONDUCT_PROOF ok
+supabase/migrations/20261114090000_sp_global_certification_governed_issuer.sql
+supabase/migrations/20261115090000_scp_interview_method_library_tenant_read.sql
+psql:supabase/migrations/20261115090000_scp_interview_method_library_tenant_read.sql:263: NOTICE:  SCP_IV_METHOD_LIBRARY_TENANT_READ_PROOF ok
+supabase/migrations/20261116090000_cd_outstanding_reviews_operator_only.sql
+psql:supabase/migrations/20261116090000_cd_outstanding_reviews_operator_only.sql:163: NOTICE:  CD_OUTSTANDING_REVIEWS_OPERATOR_ONLY_PROOF ok
+supabase/migrations/20261117090000_bcp_conduct_prompts_and_report.sql
+psql:supabase/migrations/20261117090000_bcp_conduct_prompts_and_report.sql:1199: NOTICE:  BESKT_CONDUCT_PROMPTS_AND_REPORT_PROOF ok
+supabase/migrations/20261118090000_beskt_governed_content_authoring.sql
+psql:supabase/migrations/20261118090000_beskt_governed_content_authoring.sql:1410: NOTICE:  BESKT_GOVERNED_CONTENT_AUTHORING_PROOF ok
+supabase/migrations/20261118100000_sp_international_passport_foundation.sql
+supabase/migrations/20261119090000_sp_international_credential_wallet.sql
+supabase/migrations/20261120090000_sp_credential_selective_sharing_v2.sql
+supabase/migrations/20261121090000_sp_closed_credential_catalogue.sql
+supabase/migrations/20261122090000_cv_owned_application_snapshot.sql
+supabase/migrations/20261123090000_sp_credential_organisation_roles.sql
+supabase/migrations/20261124090000_sp_pilot_member_catalogue.sql
+supabase/migrations/20261125090000_sp_disclosure_definition_scope.sql
+supabase/migrations/20261126090000_sp_catalogue_scope_and_document_issuer.sql
+supabase/migrations/20261127090000_bcp_conduct_report_independence_boundary.sql
+supabase/migrations/20261128090000_scp_iv_case_candidate_binding.sql
+psql:supabase/migrations/20261128090000_scp_iv_case_candidate_binding.sql:221: NOTICE:  SCP_IV_CANDIDATE_BINDING_PROOF ok
+supabase/migrations/20261129090000_bcp_internal_test_activation.sql
+psql:supabase/migrations/20261129090000_bcp_internal_test_activation.sql:849: NOTICE:  BCP_INTERNAL_TEST_ACTIVATION_PROOF ok
+supabase/migrations/20261130090000_bcp_beskt_complete.sql
+psql:supabase/migrations/20261130090000_bcp_beskt_complete.sql:4405: NOTICE:  BCP_BESKT_COMPLETE_PROOF ok
+supabase/migrations/20261201090000_scp_library_direct_access.sql
+psql:supabase/migrations/20261201090000_scp_library_direct_access.sql:1077: NOTICE:  SCP_LIBRARY_DIRECT_ACCESS_PROOF ok
+supabase/migrations/20261202090000_scp_interview_starts.sql
+psql:supabase/migrations/20261202090000_scp_interview_starts.sql:767: NOTICE:  SCP_INTERVIEW_STARTS_PROOF ok
+supabase/migrations/20261203090000_scp_interview_case_vetting_read.sql
+psql:supabase/migrations/20261203090000_scp_interview_case_vetting_read.sql:201: NOTICE:  SCP_CASE_VETTING_READ_PROOF ok
+supabase/migrations/20261204090000_sp_hayat_assessments.sql
+supabase/migrations/20261205090000_employer_workforce_active_only.sql
+psql:supabase/migrations/20261205090000_employer_workforce_active_only.sql:212: NOTICE:  WORKFORCE_ACTIVE_GATE: no auth.users row on this database; the executed half of the proof is skipped. The read-back assertions above did run.
+supabase/migrations/20261206090000_scp_training_assignment_person_context.sql
+psql:supabase/migrations/20261206090000_scp_training_assignment_person_context.sql:228: NOTICE:  SCP_ASSIGN_TRAINING: one definition, _employee_id defaulted, anon revoked.
+supabase/migrations/20261207090000_recruitment_workspace.sql
+supabase/migrations/20261208090000_recruitment_workspace_backstops.sql
+supabase/migrations/20261209090000_recruitment_assignment_idempotency.sql
+supabase/migrations/20261210090000_security_work_foundation.sql
+supabase/migrations/20261211090000_security_work_analysis_contract.sql
+supabase/migrations/20261212090000_recruitment_candidate_view.sql
+supabase/migrations/20261213090000_recruitment_application_receipts.sql
+psql:supabase/migrations/20261213090000_recruitment_application_receipts.sql:354: NOTICE:  trigger "job_applications_zz_receipt" for relation "public.job_applications" does not exist, skipping
+supabase/migrations/20261214090000_sp_india_national_qualifications.sql
+supabase/migrations/20261215090000_candidate_location_and_destinations.sql
+supabase/migrations/20261216090000_scp_security_manager_recruitment_content.sql
+psql:supabase/migrations/20261216090000_scp_security_manager_recruitment_content.sql:520: NOTICE:  security-manager-recruitment scaffolding ready
+psql:supabase/migrations/20261216090000_scp_security_manager_recruitment_content.sql:1154: NOTICE:  security-manager-recruitment: 37 items authored
+psql:supabase/migrations/20261216090000_scp_security_manager_recruitment_content.sql:1813: NOTICE:  SCP_SM_SEED: security-manager-se v1 authored as draft/pilot_hypothesis/restricted, content_hash=7c0418592d3fc9f98f46c67a9a6bf47e
+psql:supabase/migrations/20261216090000_scp_security_manager_recruitment_content.sql:1849: NOTICE:  SCP_SM_SEED: prohibition graph complete -- 28 areas x 11 tasks = 308 restricts edges.
+psql:supabase/migrations/20261216090000_scp_security_manager_recruitment_content.sql:2019: NOTICE:  security-manager-recruitment proven: 37 items (21 observed / 16 self-reported), 5 sections, bilingual, 3 rubrics, all gates outstanding, NOT designated; security-manager-se pack v1 draft/restricted, linked as the strategic setup
+supabase/migrations/20261217090000_scp_security_manager_recruitment_activation.sql
+supabase/migrations/20261218090000_client_table_privilege_hardening.sql
+supabase/migrations/20261219090000_assessment_draft_authoring.sql
+supabase/migrations/20261220090000_sp_public_pilot_availability.sql
+psql:supabase/migrations/20261220090000_sp_public_pilot_availability.sql:710: NOTICE:  SP_PUBLIC_PILOT_AVAILABILITY_PROOF ok
+supabase/migrations/20261221090000_sp_open_uk_dubai_public_pilot.sql
+psql:supabase/migrations/20261221090000_sp_open_uk_dubai_public_pilot.sql:222: NOTICE:  SP_OPEN_UK_DUBAI_PROOF ok: 3 packs and 44 definitions in public pilot; approval, legal review, claims, titles and grants unchanged; Abu Dhabi closed
+supabase/migrations/20261222090000_cd_access_policy.sql
+psql:supabase/migrations/20261222090000_cd_access_policy.sql:170: NOTICE:  CD_ACCESS_POLICY_PROOF ok: internal_test, table closed to client roles, admin-only change
+supabase/migrations/20261223090000_application_notes_employer_only.sql
+psql:supabase/migrations/20261223090000_application_notes_employer_only.sql:206: NOTICE:  JB02_EXPAND_PROOF ok: employer reads exist, membership-or-admin checked; no privilege changed
+supabase/migrations/20261224090000_candidate_application_context.sql
+psql:supabase/migrations/20261224090000_candidate_application_context.sql:72: NOTICE:  JB01_PROOF ok: rec_my_application_context() present, authenticated only
+supabase/migrations/20261225090000_assessment_assign_requires_open_application.sql
+psql:supabase/migrations/20261225090000_assessment_assign_requires_open_application.sql:341: NOTICE:  AS01_PROOF ok: scp_employer_assign refuses closed applications and completed recruitments
+supabase/migrations/20261226090000_application_notes_column_privileges.sql
+psql:supabase/migrations/20261226090000_application_notes_column_privileges.sql:75: NOTICE:  JB02_PROOF ok: notes are not granted to authenticated; employer reads are membership-or-admin checked
+supabase/migrations/20261227090000_sp_network_statistics.sql
+supabase/migrations/20261228090000_scp_response_option_ownership.sql
+psql:supabase/migrations/20261228090000_scp_response_option_ownership.sql:204: NOTICE:  SCP_OPTION_OWNERSHIP_PROOF ok: an answer can name only options of its own item, at the save path and in the table
+supabase/migrations/20261229090000_scp_delivery_answer_key_leak.sql
+psql:supabase/migrations/20261229090000_scp_delivery_answer_key_leak.sql:200: NOTICE:  SCP_DELIVERY_KEY: 0 unanswered seedless attempt(s) moved onto the per-attempt order
+psql:supabase/migrations/20261229090000_scp_delivery_answer_key_leak.sql:240: NOTICE:  SCP_DELIVERY_KEY_PROOF ok: a served option is {option_id, label}; no unanswered attempt on a randomised form is served the authored order
+supabase/migrations/20261230090000_job_application_insert_boundary.sql
+psql:supabase/migrations/20261230090000_job_application_insert_boundary.sql:156: NOTICE:  JOB_APPLICATION_INSERT_PROOF ok: a candidate creates only the initial state of their own application
+supabase/migrations/20261231090000_scp_resolve_employment_owner_only.sql
+psql:supabase/migrations/20261231090000_scp_resolve_employment_owner_only.sql:81: NOTICE:  SCP_RESOLVE_EMPLOYMENT_PROOF ok: the binding helper is owner-only; assignment still reaches it
+supabase/migrations/20270101090000_catalogue_read_hardening.sql
+psql:supabase/migrations/20270101090000_catalogue_read_hardening.sql:190: NOTICE:  CATALOGUE_HARDENING_PROOF ok: drafts and unapproved professions are author/admin-only, the interviewer guide is author-only, and three catalogues carry no client write privilege
+supabase/migrations/20270102090000_scp_subject_progress_employer_scope.sql
+psql:supabase/migrations/20270102090000_scp_subject_progress_employer_scope.sql:104: NOTICE:  SCP_PROGRESS_SCOPE_PROOF ok: the progress series returns only snapshots the caller may read
+supabase/migrations/20270103090000_scp_submit_assessment_only.sql
+psql:supabase/migrations/20270103090000_scp_submit_assessment_only.sql:216: NOTICE:  SCP_SUBMIT_ASSESSMENT_ONLY_PROOF ok: only assessment runs are scored by scp_submit_attempt
+supabase/migrations/20270104090000_scp_development_recommendations_employer_scope.sql
+psql:supabase/migrations/20270104090000_scp_development_recommendations_employer_scope.sql:206: NOTICE:  SCP_RECOMMENDATIONS_SCOPE_PROOF ok: an employer's recommendations are built only from its own evidence
+supabase/migrations/20270105090000_suspended_employer_applicant_reads.sql
+psql:supabase/migrations/20270105090000_suspended_employer_applicant_reads.sql:199: NOTICE:  SUSPENDED_EMPLOYER_READS_PROOF ok: the three applicant reads require an active organisation
+supabase/migrations/20270106090000_sp_evidence_and_request_writes_rpc_only.sql
+psql:supabase/migrations/20270106090000_sp_evidence_and_request_writes_rpc_only.sql:128: NOTICE:  SP_WRITES_RPC_ONLY_PROOF ok: Passport evidence and requests are written only through their functions
+supabase/migrations/20270107090000_scp_iv_panel_reveal_boundary.sql
+psql:supabase/migrations/20270107090000_scp_iv_panel_reveal_boundary.sql:213: NOTICE:  SCP_IV_PANEL_REVEAL_PROOF ok: before the reveal a reviewer reads only their own assessments
+supabase/migrations/20270108090000_employer_active_reads.sql
+psql:supabase/migrations/20270108090000_employer_active_reads.sql:632: NOTICE:  EMPLOYER_ACTIVE_READS_PROOF ok: 13 functions and 4 policies require an active organisation
+supabase/migrations/20270109090000_candidate_identity_active_employer.sql
+psql:supabase/migrations/20270109090000_candidate_identity_active_employer.sql:305: NOTICE:  CANDIDATE_IDENTITY_ACTIVE_PROOF ok: 5 functions and 1 policy require an active organisation
+supabase/migrations/20270110090000_assessment_actions_active_employer.sql
+psql:supabase/migrations/20270110090000_assessment_actions_active_employer.sql:895: NOTICE:  ASSESSMENT_ACTIONS_ACTIVE_PROOF ok: 5 functions and 1 policy require an active organisation
+supabase/migrations/20270111090000_interview_beskt_active_employer.sql
+psql:supabase/migrations/20270111090000_interview_beskt_active_employer.sql:1171: NOTICE:  INTERVIEW_BESKT_ACTIVE_PROOF ok: 19 functions and 2 policies require an active organisation
+supabase/migrations/20270112090000_passport_attestation_active_employer.sql
+psql:supabase/migrations/20270112090000_passport_attestation_active_employer.sql:239: NOTICE:  PASSPORT_ATTESTATION_ACTIVE_PROOF ok: 2 functions and 1 policy require an active organisation
+supabase/migrations/20270113090000_pending_employer_actions.sql
+psql:supabase/migrations/20270113090000_pending_employer_actions.sql:914: NOTICE:  PENDING_EMPLOYER_ACTIONS_PROOF ok: 7 functions require an active organisation
+supabase/migrations/20270114090000_sp_passport_target_holder.sql
+psql:supabase/migrations/20270114090000_sp_passport_target_holder.sql:364: NOTICE:  SP_TARGET_HOLDER_PROOF ok: every request and evidence row names one entry, its holder's own
+supabase/migrations/20270115090000_sp_claim_verification_stamp.sql
+psql:supabase/migrations/20270115090000_sp_claim_verification_stamp.sql:139: NOTICE:  SP_VERIFICATION_STAMP_PROOF ok: the verification stamp changes only through the verification workflow
+supabase/migrations/20270116090000_scp_iv_findings_review_writes.sql
+psql:supabase/migrations/20270116090000_scp_iv_findings_review_writes.sql:100: NOTICE:  trigger "scp_interview_findings_review_stamp" for relation "public.scp_interview_findings" does not exist, skipping
+psql:supabase/migrations/20270116090000_scp_iv_findings_review_writes.sql:135: NOTICE:  SCP_IV_FINDINGS_PROOF ok: only owners/admins review findings, only the review columns, and the database records who
+supabase/migrations/20270117090000_security_work_programme.sql
+supabase/migrations/20270118090000_assessment_assignment_insert_columns.sql
+psql:supabase/migrations/20270118090000_assessment_assignment_insert_columns.sql:78: NOTICE:  ASSIGNMENT_INSERT_COLUMNS_PROOF ok: an employer creates an invitation; the lifecycle and result columns are the server's
+supabase/migrations/20270119090000_sp_entry_frozen_under_review.sql
+psql:supabase/migrations/20270119090000_sp_entry_frozen_under_review.sql:110: NOTICE:  trigger "sp_claims_frozen_under_review" for relation "public.sp_claims" does not exist, skipping
+psql:supabase/migrations/20270119090000_sp_entry_frozen_under_review.sql:114: NOTICE:  trigger "sp_periods_frozen_under_review" for relation "public.sp_experience_periods" does not exist, skipping
+psql:supabase/migrations/20270119090000_sp_entry_frozen_under_review.sql:129: NOTICE:  SP_ENTRY_REVIEW_PROOF ok: an entry in review is frozen; a clarification answer returns it to review
+supabase/migrations/20270120090000_access_request_no_role_escalation.sql
+psql:supabase/migrations/20270120090000_access_request_no_role_escalation.sql:169: NOTICE:  ACCESS_REQUEST_ESCALATION_PROOF ok: an approval admits a person; it cannot make an owner or change a live role
+supabase/migrations/20270121090000_scp_iv_erase_vetting_boundary.sql
+psql:supabase/migrations/20270121090000_scp_iv_erase_vetting_boundary.sql:100: NOTICE:  SCP_IV_ERASE_VETTING_PROOF ok: only the security function erases material on a security vetting
+supabase/migrations/20270122090000_bcp_conduct_reopen_after_exposure.sql
+psql:supabase/migrations/20270122090000_bcp_conduct_reopen_after_exposure.sql:144: NOTICE:  BCP_CONDUCT_REOPEN_PROOF ok: no position is reopened once the others are readable
+supabase/migrations/20270123090000_employer_identity_rereview.sql
+psql:supabase/migrations/20270123090000_employer_identity_rereview.sql:98: NOTICE:  EMPLOYER_IDENTITY_REREVIEW_PROOF ok: an approved organisation that changes its identity goes back to review
+supabase/migrations/20270124090000_bcp_conduct_exposure_is_durable.sql
+psql:supabase/migrations/20270124090000_bcp_conduct_exposure_is_durable.sql:78: NOTICE:  trigger "bcp_conduct_position_exposures_append_only" for relation "public.bcp_conduct_position_exposures" does not exist, skipping
+psql:supabase/migrations/20270124090000_bcp_conduct_exposure_is_durable.sql:135: NOTICE:  trigger "bcp_conduct_positions_exposure_guard" for relation "public.bcp_conduct_positions" does not exist, skipping
+psql:supabase/migrations/20270124090000_bcp_conduct_exposure_is_durable.sql:140: NOTICE:  trigger "bcp_conduct_positions_exposure_record" for relation "public.bcp_conduct_positions" does not exist, skipping
+psql:supabase/migrations/20270124090000_bcp_conduct_exposure_is_durable.sql:171: NOTICE:  BCP_CONDUCT_EXPOSURE_PROOF ok: an exposed position is never reopened, whoever joins later
+supabase/migrations/20270125090000_sp_decision_bound_to_reviewed_content.sql
+psql:supabase/migrations/20270125090000_sp_decision_bound_to_reviewed_content.sql:253: NOTICE:  SP_REVIEWED_CONTENT_PROOF ok: a decision is bound to the content its decider loaded
+supabase/migrations/20270126090000_sp_evidence_change_under_review.sql
+psql:supabase/migrations/20270126090000_sp_evidence_change_under_review.sql:106: NOTICE:  SP_EVIDENCE_UNDER_REVIEW_PROOF ok: evidence added under review binds the decision
+supabase/migrations/20270130090000_jobs_not_editable_in_place.sql
+psql:supabase/migrations/20270130090000_jobs_not_editable_in_place.sql:347: NOTICE:  JOBS_NOT_EDITABLE_IN_PLACE ok: a client-role write cannot edit a non-draft job in place
+supabase/migrations/20270131090000_jobs_publish_window_and_url_scheme.sql
+psql:supabase/migrations/20270131090000_jobs_publish_window_and_url_scheme.sql:391: NOTICE:  JOBS_PUBLISH_WINDOW ok: 0 stored job(s) hold an application_url that is not an http(s) address; they are left as they are (validated when written or published)
+supabase/migrations/20270201090000_job_cvs_no_client_writes.sql
+psql:supabase/migrations/20270201090000_job_cvs_no_client_writes.sql:92: NOTICE:  JOB_CVS_NO_CLIENT_WRITES_PROOF ok: no client role can write, replace, delete or list a CV object through the API
+supabase/migrations/20270202090000_employer_membership_standing_not_bypassable.sql
+psql:supabase/migrations/20270202090000_employer_membership_standing_not_bypassable.sql:93: NOTICE:  trigger "employer_access_requests_standing_guard" for relation "public.employer_access_requests" does not exist, skipping
+psql:supabase/migrations/20270202090000_employer_membership_standing_not_bypassable.sql:279: NOTICE:  trigger "employer_memberships_revoke_reviewer_grants" for relation "public.employer_memberships" does not exist, skipping
+psql:supabase/migrations/20270202090000_employer_membership_standing_not_bypassable.sql:298: NOTICE:  MEMBERSHIP_STANDING: 0 reviewer grant(s) of a suspended, removed or missing membership revoked
+psql:supabase/migrations/20270202090000_employer_membership_standing_not_bypassable.sql:333: NOTICE:  MEMBERSHIP_STANDING_PROOF ok: no request can restore a suspended or removed membership; reviewer grants end with the membership
+supabase/migrations/20270203090000_employer_report_access_model.sql
+psql:supabase/migrations/20270203090000_employer_report_access_model.sql:938: NOTICE:  EMPLOYER_REPORT_ACCESS_PROOF ok: 14 functions and 7 policies ask the one definition; membership alone no longer reads
+supabase/migrations/20270204090000_interview_case_access_model.sql
+psql:supabase/migrations/20270204090000_interview_case_access_model.sql:183: NOTICE:  INTERVIEW_CASE_ACCESS_PROOF ok: three case gates and the corrections policy ask the one definition; the vetting restriction is intact
+supabase/migrations/20270205090000_employer_new_application_notices.sql
+supabase/migrations/20270206090000_interview_access_expand.sql
+supabase/migrations/20270207090000_interview_ai_config_contract.sql
+supabase/migrations/20270208090000_account_erasure_credential_details.sql
+supabase/migrations/20270212090000_sp_catalogue_research_foundation.sql
+psql:supabase/migrations/20270212090000_sp_catalogue_research_foundation.sql:280: NOTICE:  trigger "sp_catalogue_research_provenance_immutable_trg" for relation "public.sp_catalogue_research_records" does not exist, skipping
+supabase/migrations/20270213090000_sp_catalogue_research_import.sql
+supabase/migrations/20270214090000_sp_catalogue_research_publish.sql
+supabase/migrations/20270215090000_application_passport_verified_content_guard.sql
+supabase/migrations/20270216090000_participant_report_api_boundary.sql
+supabase/migrations/20270217090000_sp_passport_number_and_social_share.sql
+supabase/migrations/20270218090000_catalogue_internal_metadata_boundary.sql
+supabase/migrations/20270219090000_sp_united_states_jurisdiction_and_destinations.sql
+psql:supabase/migrations/20270219090000_sp_united_states_jurisdiction_and_destinations.sql:202: NOTICE:  SP_UNITED_STATES_JURISDICTION_PROOF ok: US stated and wanted, nothing opened
+supabase/migrations/20270220090000_sp_open_abu_dhabi_public_pilot.sql
+psql:supabase/migrations/20270220090000_sp_open_abu_dhabi_public_pilot.sql:312: NOTICE:  SP_OPEN_ABU_DHABI_PROOF ok: 4 packs and 51 definitions in public pilot; Abu Dhabi active as a region with 14 Ministry roles; approval, legal review, claims, titles, grants, sources and authorities unchanged
+supabase/migrations/20270301090000_sentinel_abstract_reasoning.sql
+supabase/migrations/20270305090000_application_retention_lifecycle.sql
+supabase/migrations/20270306090000_recruiter_intelligence_interview_foundation.sql
+supabase/migrations/20270307090000_interview_content_snapshot_lock.sql
+supabase/migrations/20270307100000_recruiter_domain_conflict_transport.sql
+supabase/migrations/20270308090000_recruiter_intelligence_requirements.sql

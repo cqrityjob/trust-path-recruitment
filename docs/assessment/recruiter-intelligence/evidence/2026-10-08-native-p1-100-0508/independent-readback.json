@@ -1,0 +1,170 @@
+{
+  "runId": 37776071458,
+  "jobId": 113307130529,
+  "artifactId": 11550496476,
+  "zipSha256": "6517505d0d81ff2bf1e1fd39f777eef24685c8bf253a1c064f62d2fb61b5df2b",
+  "manifestSha256": "7e6ef0c65e2fe34efac5cb8a908bbceeb60747d4107a7eec5c39eab362568d8b",
+  "evidenceSha": "0508192b9f554260471a19d456385ee72469fe19",
+  "appSha": "3e0aa8552b7d45f99c5de881320d4e6c773e59cf",
+  "schemaSha": "6039fbc685cad255aae4a4e39c1035e933af883d",
+  "result": "PASS",
+  "allPhasesPassed": true,
+  "stages": {
+    "official_native_stack": "passed",
+    "strict_complete_schema": "passed",
+    "auth_104_admin_api_fixed_ids": "passed",
+    "application_fixture_receipts_off": "passed",
+    "storage_80_actual_pdf_bytes": "passed",
+    "baseline_100_human_session_rpc": "passed",
+    "canonical_23_http_two_real_reviewers": "passed",
+    "actual_source_revoke_replace": "passed",
+    "historical_synthetic_ai_never_green": "passed",
+    "owned_job_cascade_fresh_browser_baseline": "passed",
+    "actual_password_browser_five_cases": "passed"
+  },
+  "migrationHashesVerified": 386,
+  "imageHashesVerified": 10,
+  "canonicalAppSourcesVerified": {
+    "sql": "45db1d33d64f1fc1c424f2a22090105694daecdb079cf2eaee5afa277a1f98ce",
+    "api": "b650ce6987192c88404cc65bca63bad4f23983fd711e2af7c89cb3327ae4b3a4",
+    "browser": "3ac000be5fbaf613e11ef8393ce51f0e4f0da0adafee5d69d45173fe25f8988b"
+  },
+  "schemaMigrationConfigZeroDiff": true,
+  "authCreated": 104,
+  "actualOriginalObjects": 80,
+  "storageSetupAuthority": "local_service_role_setup_80_original_pdf_objects_not_candidate_upload_acl",
+  "ownerSignedOriginalBytes": true,
+  "baseline": {
+    "gray": 35,
+    "green": 40,
+    "yellow": 25,
+    "decided": 0,
+    "archived": 0,
+    "filtered": 100,
+    "received": 100,
+    "reviewed": 27,
+    "remaining": 73,
+    "withdrawn": 0,
+    "notEstablished": 0,
+    "filteredReviewed": 27,
+    "filteredRemaining": 73
+  },
+  "apiAssertions": 23,
+  "twoDistinctReviewerCas": true,
+  "concurrentReviewerStatuses": [
+    200,
+    409
+  ],
+  "apiV2": {
+    "gray": 35,
+    "green": 30,
+    "yellow": 35,
+    "decided": 0,
+    "archived": 0,
+    "filtered": 100,
+    "received": 100,
+    "reviewed": 0,
+    "remaining": 100,
+    "withdrawn": 0,
+    "notEstablished": 0,
+    "filteredReviewed": 0,
+    "filteredRemaining": 100
+  },
+  "revokedSource": {
+    "gray": 40,
+    "green": 25,
+    "yellow": 35,
+    "decided": 0,
+    "archived": 0,
+    "filtered": 100,
+    "received": 100,
+    "reviewed": 0,
+    "remaining": 100,
+    "withdrawn": 0,
+    "notEstablished": 0,
+    "filteredReviewed": 0,
+    "filteredRemaining": 100
+  },
+  "replacementDoesNotRestoreOldAcceptance": true,
+  "aiProposalIsolation": {
+    "syntheticMockRows": 2,
+    "positiveAndNegativeDraftsLeaveGray": true,
+    "missingOriginalMetDenied": true,
+    "generatedAi": 0
+  },
+  "jobCascadeRetainsSnapshots": true,
+  "browserBaseline": {
+    "gray": 35,
+    "green": 40,
+    "yellow": 25,
+    "decided": 0,
+    "archived": 0,
+    "filtered": 100,
+    "received": 100,
+    "reviewed": 27,
+    "remaining": 73,
+    "withdrawn": 0,
+    "notEstablished": 0,
+    "filteredReviewed": 27,
+    "filteredRemaining": 73
+  },
+  "browserDiagnostic": {
+    "stats": {
+      "expected": 5,
+      "unexpected": 0,
+      "flaky": 0,
+      "skipped": 0
+    },
+    "cases": [
+      {
+        "case": "global_review",
+        "status": "expected",
+        "attempts": 1,
+        "sourceLines": []
+      },
+      {
+        "case": "browser_direct_api",
+        "status": "expected",
+        "attempts": 1,
+        "sourceLines": []
+      },
+      {
+        "case": "explicit_peace_handoff",
+        "status": "expected",
+        "attempts": 1,
+        "sourceLines": []
+      },
+      {
+        "case": "cached_profile_target",
+        "status": "expected",
+        "attempts": 1,
+        "sourceLines": []
+      },
+      {
+        "case": "archive_only",
+        "status": "expected",
+        "attempts": 1,
+        "sourceLines": []
+      }
+    ]
+  },
+  "serverSignedOriginalUiReads": 4,
+  "finalSafety": {
+    "auth": 104,
+    "sw_ai": 0,
+    "messages": 0,
+    "confirmed": 104,
+    "ai_enabled": false,
+    "applications": 100,
+    "erasure_jobs": 0,
+    "generated_ai": 0,
+    "synthetic_ai": 2,
+    "erasure_queue": 0,
+    "mail_attempts": 0,
+    "receipt_enabled": 0,
+    "cron": 0
+  },
+  "stopErrorRecorded": false,
+  "scope": "ephemeral official native integration; not hosted/published runtime, physical phone or candidate upload ACL proof",
+  "archivedBrowserPopulation": "all100 deliberately archived by final browser regression; received100 persists; initial/restored27/73 is not a final active population claim"
+}

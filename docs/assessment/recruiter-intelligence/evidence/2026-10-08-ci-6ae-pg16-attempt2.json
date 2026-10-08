@@ -1,0 +1,126 @@
+{
+  "format_version": 1,
+  "observation": "Completed core CI attempt2; one owner-triggered job rerun on unchanged head",
+  "repository": "cqrityjob/trust-path-recruitment",
+  "pull_request": 461,
+  "head_sha": "6ae933c68da56121cdf02d4a7d4e301510a0709e",
+  "run_id": 37796851285,
+  "run_attempt": 2,
+  "workflow_status": "completed",
+  "workflow_conclusion": "failure",
+  "workflow_updated_at": "2026-10-08T15:53:59Z",
+  "failed_job_id": 113404368298,
+  "failure": {
+    "classification": "Container registry image-pull rate limit",
+    "image": "public.ecr.aws/supabase/postgrest:v14.15",
+    "http_status_not_captured": true,
+    "allowed_fatal_log_lines": [
+      "2026-10-08T15:53:54.8808933Z docker: toomanyrequests: Rate exceeded",
+      "2026-10-08T15:53:54.8816093Z       at /home/runner/work/trust-path-recruitment/trust-path-recruitment/scripts/recruiter-domain-conflict-check.mjs:276:6",
+      "2026-10-08T15:53:54.9151191Z ##[error]Process completed with exit code 1."
+    ]
+  },
+  "partial_completed_proof": {
+    "allowed_log_lines": [
+      "2026-10-08T15:53:36.1656499Z     ok  387 migrations applied cleanly, in filename order",
+      "2026-10-08T15:53:36.8107554Z     ok  35 Sentinel pilot assertions passed",
+      "2026-10-08T15:53:36.9340391Z     ok  41 durable upload SQL assertions",
+      "2026-10-08T15:53:40.6885139Z     ok  95 actual P1 counts, sources, CAS, access and handoff assertions",
+      "2026-10-08T15:53:42.2239887Z     ok  CONFLICT current-foundation mandatory 56 assertions",
+      "2026-10-08T15:53:42.4619141Z     ok  CONFLICT current-snapshot mandatory 94 assertions",
+      "2026-10-08T15:53:42.5357351Z     ok  CONFLICT current-domain mandatory 31 assertions",
+      "2026-10-08T15:53:42.7452614Z     ok  CONFLICT negative control wrong SQLSTATE is rejected",
+      "2026-10-08T15:53:43.2644322Z     ok  CONFLICT rollback restores all12 exact prior definitions",
+      "2026-10-08T15:53:43.3144303Z     ok  CONFLICT rollback preserves immutable reports/snapshots/locks byte for byte",
+      "2026-10-08T15:53:43.3912376Z     ok  CONFLICT reapply preserves function definitions/defaults/owners/ACL/config",
+      "2026-10-08T15:53:46.8300114Z     ok  CONFLICT prior-session-case reproduces exact prior deadlock",
+      "2026-10-08T15:53:49.0013982Z     ok  CONFLICT forward-case-session waits then returns finite stale conflict",
+      "2026-10-08T15:53:51.1156848Z     ok  CONFLICT direct-rpc-finding waits then returns finite stale conflict",
+      "2026-10-08T15:53:53.2068988Z     ok  CONFLICT engine-serialization preserves genuine engine40001"
+    ],
+    "remaining_actual_postgrest14_and_whole_historical_suite_not_claimed": true
+  },
+  "latest_jobs_api_view": [
+    {
+      "id": 113404368298,
+      "name": "Migration replay, RLS and rollback tests",
+      "status": "completed",
+      "conclusion": "failure"
+    },
+    {
+      "id": 113404370053,
+      "name": "CV export — PDF and ATS proof",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 113404371307,
+      "name": "Recruiter Intelligence P1 — full SQL, HTTP and browser proof",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 113404371716,
+      "name": "Public entry browser — homepage, employers and the employer journey",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 113404412230,
+      "name": "Recruiter current schema — PostgreSQL 17 and PostgREST 14",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 113404416593,
+      "name": "Recruiter Intelligence P1 — PostgreSQL 17 and concurrent HTTP API",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 113404421755,
+      "name": "Lint, typecheck and deterministic checks",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 113404426961,
+      "name": "CV browser — the signed-in journey",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 113404441536,
+      "name": "Passport three-market browser — catalogue, cards, pilot access",
+      "status": "completed",
+      "conclusion": "success"
+    }
+  ],
+  "latest_jobs_summary": {
+    "success": 8,
+    "failure": 1
+  },
+  "rerun_scope": "Only PG16 migration/RLS/rollback job was retried by owner. Eight SUCCESS entries in latest jobs API are retained results; no claim all jobs reran.",
+  "separate_native_proof": {
+    "head_sha": "6ae933c68da56121cdf02d4a7d4e301510a0709e",
+    "run_id": 37796851340,
+    "job_id": 113378429798,
+    "conclusion": "success",
+    "independent_verification_path": "/private/tmp/ri-op09-native-current-6ae-20261008/independent-verification.json",
+    "sha256": "779239f30e16dd35d720e3ed743f45bccb80b7999238dfbfdf652f4e3daae6b9",
+    "scope": "Ephemeral actual Auth8 / SDK44 / browser4 / schema387; does not change core workflow failure"
+  },
+  "preserved_first_attempt": {
+    "path": "/private/tmp/ri-live-20261008/op09-6ae-ci-first-attempt-failure.json",
+    "sha256": "c97a99c45c721326646231da8b3ded6bcdde1eafaafdb1744fc380b025a74872"
+  },
+  "limits": {
+    "whole_core_ci_pass": false,
+    "hosted_operational_pass": false,
+    "physical_phone_tested": false,
+    "raw_logs_exported": false,
+    "secrets_exported": false,
+    "agent_triggered_retry": false
+  },
+  "retry_history_note": "Owner's earlier preterminal rerun request returned GitHub403 and executed no retry. This run_attempt2 is the first executed owner retry. No future retry is asserted."
+}

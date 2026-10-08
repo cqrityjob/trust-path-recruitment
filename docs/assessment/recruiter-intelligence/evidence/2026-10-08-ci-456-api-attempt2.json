@@ -1,0 +1,149 @@
+{
+  "schemaVersion": "ri-e341-p1-api-attempt2-readback-v1",
+  "head": "e3418b3b7f0c82af74e38a276fd7b897d9d07a2c",
+  "runId": 37800119402,
+  "runAttempt": 2,
+  "jobId": 113410073851,
+  "ownerRetryAcceptedAt": "2026-10-08T16:04:35Z",
+  "startedAt": "2026-10-08T16:04:39Z",
+  "completedAt": "2026-10-08T16:05:48Z",
+  "conclusion": "success",
+  "artifact": {
+    "id": 11562642426,
+    "bytes": 27159,
+    "sha256": "37d28541ba42f3724507beaf9e21d52cfbaf22feadb09db6d0a2c504dfecd615",
+    "originalManifestSha256": "d51d67ee10f0ea7ae3e8cd5ad34a222619cc1381aeed865dd9f902659e072c52"
+  },
+  "checkoutSha": "c3f9b9153db9aafe39070c761dda5c97a1ab73b7",
+  "runMode": "api_only",
+  "verification": {
+    "bootstrap": "passed",
+    "replay": "passed",
+    "oracle": "passed",
+    "gateway": "passed",
+    "api": "passed",
+    "runtime": "intentionally_not_run",
+    "browser": "intentionally_not_run"
+  },
+  "serviceVersions": {
+    "postgres": "17.11 (Debian 17.11-1.pgdg13+2)",
+    "apiPostgrest": "PostgREST 14.15",
+    "uiPostgrest": "not_run"
+  },
+  "executedAssertions": {
+    "sql": 95,
+    "api": 23,
+    "browserCasesPassed": 0
+  },
+  "oracle": {
+    "received": 100,
+    "green": 40,
+    "yellow": 25,
+    "gray": 35,
+    "reviewed": 27,
+    "remaining": 73
+  },
+  "independent": {
+    "migrationLines": 387,
+    "sqlOkNotices": 95,
+    "httpOkLines": 23,
+    "httpKind": "executed-local-postgrest-api",
+    "httpAssertions": 23,
+    "concurrentStatuses": [
+      200,
+      409
+    ],
+    "domainConflicts": [
+      {
+        "status": 409,
+        "code": "PT409",
+        "message": "STALE_VERSION",
+        "elapsedMs": 9.28
+      },
+      {
+        "status": 409,
+        "code": "PT409",
+        "message": "STALE_VERSION",
+        "elapsedMs": 8.63
+      },
+      {
+        "status": 409,
+        "code": "PT409",
+        "message": "RI_STALE_VERSION",
+        "elapsedMs": 6.01
+      },
+      {
+        "status": 409,
+        "code": "PT409",
+        "message": "RI_SOURCE_STALE",
+        "elapsedMs": 4.78
+      },
+      {
+        "status": 409,
+        "code": "PT409",
+        "message": "RI_SOURCE_STALE",
+        "elapsedMs": 6.36
+      },
+      {
+        "status": 409,
+        "code": "PT409",
+        "message": "RI_SOURCE_STALE",
+        "elapsedMs": 6.95
+      },
+      {
+        "status": 409,
+        "code": "PT409",
+        "message": "RI_STALE_VERSION",
+        "elapsedMs": 14.84
+      },
+      {
+        "status": 409,
+        "code": "PT409",
+        "message": "RI_SOURCE_STALE",
+        "elapsedMs": 10.75
+      }
+    ],
+    "baseline": {
+      "received": 100,
+      "green": 40,
+      "yellow": 25,
+      "gray": 35,
+      "reviewed": 27,
+      "remaining": 73
+    },
+    "v2": {
+      "gray": 35,
+      "green": 30,
+      "yellow": 35,
+      "decided": 0,
+      "archived": 0,
+      "filtered": 100,
+      "received": 100,
+      "reviewed": 0,
+      "remaining": 100,
+      "withdrawn": 0,
+      "notEstablished": 0,
+      "filteredReviewed": 0,
+      "filteredRemaining": 100
+    },
+    "presentManifestFileHashesMatched": 5,
+    "manifestFilesOmittedByWorkflow": [
+      "postgres-version.log",
+      "api-postgrest-version.log"
+    ],
+    "privateLogsRead": false
+  },
+  "limits": [
+    "API-only: application runtime and browser intentionally_not_run",
+    "Auth/Storage are local substitutes, distinct from separate corrected-native12+2 proof",
+    "Successful retry does not establish why original gateway readiness failed",
+    "Only owner reran the failed API job; other completed jobs retained original run timings",
+    "First failed API artifact/readback and first terminal status are preserved unchanged"
+  ],
+  "agentActions": {
+    "readOnly": true,
+    "noRetry": true,
+    "noHeadChange": true,
+    "noServiceRun": true
+  }
+}

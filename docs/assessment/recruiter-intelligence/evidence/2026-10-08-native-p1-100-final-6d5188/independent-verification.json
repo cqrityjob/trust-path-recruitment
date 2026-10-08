@@ -1,0 +1,252 @@
+{
+  "formatVersion": 1,
+  "kind": "independent-read-only-final-native-p1-100-validation",
+  "result": "PASS",
+  "evidenceSha": "6d518880aaa9aa0ad96aac75cad7b667145712ff",
+  "appSha": "40e5775de5195050571421827434ec2872a61506",
+  "schemaSha": "1e5988c6f9c7121a0fefd22c0db06f6b573f0ae9",
+  "runId": 37790811759,
+  "jobId": 113357388444,
+  "artifactId": 11556599285,
+  "startedAt": "2026-10-08T14:24:33.598Z",
+  "finishedAt": "2026-10-08T14:29:17.137Z",
+  "artifactZipSha256": "023819c618702424fc28b895a0faf6cfc28a17231ed3b3f77e1e8b1c96246561",
+  "originalManifestSha256": "af04c653c1c6200ea467612751880953c647acafc9ed9a726ef5ced1196764ef",
+  "peerVerificationSha256": "02bd6d0b87958825dae16d199a47a3070481ebc2715ff17d1fcab2473d103ec9",
+  "manifestBytesEqualZip": true,
+  "sourceTrees": {
+    "appSrc": "3d5feca97be01959778173fc3a0f0959fe62355c",
+    "appAndSchemaMigrations": "eecc3229705f2c81f7ee8ff63eae032527bb6a38",
+    "schemaConfig": "720daa8eda53adfba26e9ebde29284d7cfcd5931"
+  },
+  "migrationHashesCompared": 387,
+  "canonicalSources": {
+    "sql": {
+      "path": "supabase/tests/recruiter_intelligence_p1_test.sql",
+      "sha256": "45db1d33d64f1fc1c424f2a22090105694daecdb079cf2eaee5afa277a1f98ce",
+      "authority": "40e5775de5195050571421827434ec2872a61506"
+    },
+    "api": {
+      "path": "scripts/recruiter-intelligence-p1-api-check.mjs",
+      "sha256": "b650ce6987192c88404cc65bca63bad4f23983fd711e2af7c89cb3327ae4b3a4",
+      "authority": "40e5775de5195050571421827434ec2872a61506"
+    },
+    "browser": {
+      "path": "e2e/recruiter-intelligence-p1.spec.ts",
+      "sha256": "3ac000be5fbaf613e11ef8393ce51f0e4f0da0adafee5d69d45173fe25f8988b",
+      "authority": "40e5775de5195050571421827434ec2872a61506"
+    }
+  },
+  "allImageHashesCompared": 10,
+  "images": [
+    {
+      "path": "images/en-desktop-remaining.png",
+      "bytes": 668876,
+      "sha256": "58b318307776d4bf0ec5c0338514c28fbd77b34b3780ff9f02765db51659309d",
+      "width": 1440,
+      "height": 3450,
+      "zipBytesEqual": true
+    },
+    {
+      "path": "images/en-emulated-375-archive-only-received.png",
+      "bytes": 507455,
+      "sha256": "2d92315e69f3f1e725381087fef3d2d5fa86a4b1e793adec1b4a45d0227b6a24",
+      "width": 375,
+      "height": 7732,
+      "zipBytesEqual": true
+    },
+    {
+      "path": "images/en-emulated-375-remaining.png",
+      "bytes": 555317,
+      "sha256": "86039f4ac33f9503340514f62bb847c2461cd0cb731de94e44e8850fcba85604",
+      "width": 375,
+      "height": 8756,
+      "zipBytesEqual": true
+    },
+    {
+      "path": "images/sv-desktop-archive-only-received.png",
+      "bytes": 608905,
+      "sha256": "660463803d07e5420a2ef1926017f55c4ba065a165c9f29bf478ee0c2543a3e5",
+      "width": 1280,
+      "height": 3670,
+      "zipBytesEqual": true
+    },
+    {
+      "path": "images/sv-desktop-cached-job-profile-target.png",
+      "bytes": 173610,
+      "sha256": "bcdd025ea7823708aa3574532131e94fe70c44a32c4a90d7d47b0333b8cb1256",
+      "width": 1280,
+      "height": 1773,
+      "zipBytesEqual": true
+    },
+    {
+      "path": "images/sv-desktop-concurrent-explicit-reload.png",
+      "bytes": 662346,
+      "sha256": "fde0f75bd3c8068679936ef58a19b4bee04a18d58f1074491858de9a1031358e",
+      "width": 1440,
+      "height": 8325,
+      "zipBytesEqual": true
+    },
+    {
+      "path": "images/sv-desktop-explicit-peace-handoff.png",
+      "bytes": 571344,
+      "sha256": "13a2c8c5cccb20fad8139c4620b5bcd19994c858f67b171bfd5875b3c7175599",
+      "width": 1280,
+      "height": 5337,
+      "zipBytesEqual": true
+    },
+    {
+      "path": "images/sv-desktop-gray-human-reviewed.png",
+      "bytes": 675813,
+      "sha256": "6f78e482f23f16ee16da7f2f0d9f605aa5056758f6a333218298156c5ffe1920",
+      "width": 1440,
+      "height": 8323,
+      "zipBytesEqual": true
+    },
+    {
+      "path": "images/sv-desktop-remaining.png",
+      "bytes": 644337,
+      "sha256": "f80ee910347adc01dcefc0befe1c12401ad751560fcbfbc76e5cdff7679533ac",
+      "width": 1440,
+      "height": 3450,
+      "zipBytesEqual": true
+    },
+    {
+      "path": "images/sv-emulated-375-remaining.png",
+      "bytes": 540456,
+      "sha256": "5e0a369cdcd3f3efbb2d1046cda5b942a7686414bc9571c2c46aca90ad86bf99",
+      "width": 375,
+      "height": 9154,
+      "zipBytesEqual": true
+    }
+  ],
+  "stagesPassed": 11,
+  "authAccounts": 104,
+  "actualOriginalObjects": 80,
+  "baseline": {
+    "received": 100,
+    "green": 40,
+    "yellow": 25,
+    "gray": 35,
+    "reviewed": 27,
+    "remaining": 73
+  },
+  "apiV2": {
+    "received": 100,
+    "green": 30,
+    "yellow": 35,
+    "gray": 35,
+    "reviewed": 0,
+    "remaining": 100
+  },
+  "revokedSource": {
+    "received": 100,
+    "green": 25,
+    "yellow": 35,
+    "gray": 40,
+    "reviewed": 0,
+    "remaining": 100
+  },
+  "replacementDoesNotRestoreOldAcceptance": true,
+  "httpAssertions": 23,
+  "distinctReviewerCasStatuses": [
+    200,
+    409
+  ],
+  "browser": {
+    "expected": 5,
+    "unexpected": 0,
+    "flaky": 0,
+    "skipped": 0
+  },
+  "browserCases": [
+    {
+      "case": "global_review",
+      "status": "expected",
+      "attempts": 1,
+      "sourceLines": []
+    },
+    {
+      "case": "browser_direct_api",
+      "status": "expected",
+      "attempts": 1,
+      "sourceLines": []
+    },
+    {
+      "case": "explicit_peace_handoff",
+      "status": "expected",
+      "attempts": 1,
+      "sourceLines": []
+    },
+    {
+      "case": "cached_profile_target",
+      "status": "expected",
+      "attempts": 1,
+      "sourceLines": []
+    },
+    {
+      "case": "archive_only",
+      "status": "expected",
+      "attempts": 1,
+      "sourceLines": []
+    }
+  ],
+  "serverSignedOriginalUiReads": 4,
+  "jobCascadeRetainsSnapshots": true,
+  "aiProposalIsolation": {
+    "syntheticMockRows": 2,
+    "positiveAndNegativeDraftsLeaveGray": true,
+    "missingOriginalMetDenied": true,
+    "generatedAi": 0
+  },
+  "finalSafety": {
+    "auth": 104,
+    "sw_ai": 0,
+    "messages": 0,
+    "confirmed": 104,
+    "ai_enabled": false,
+    "applications": 100,
+    "erasure_jobs": 0,
+    "generated_ai": 0,
+    "synthetic_ai": 2,
+    "erasure_queue": 0,
+    "mail_attempts": 0,
+    "receipt_enabled": 0,
+    "cron": 0
+  },
+  "remoteReadOnlyCorroboration": {
+    "jobCompletedSuccess": true,
+    "artifactDigestEqualsLocalZip": true,
+    "artifactHeadEqualsEvidenceSha": true
+  },
+  "imagesVisuallyInspected": [
+    "images/sv-desktop-explicit-peace-handoff.png",
+    "images/en-emulated-375-remaining.png"
+  ],
+  "visualObservations": {
+    "svDesktopHandoff": "Synthetic guard preparation shows explicit selected neutral question/source/next action and saved case source separately, frozen draft/pilot content status, no approved plan yet. This saved brief is not confirmed interview evidence. No raw requirement JSON is rendered.",
+    "enEmulated375": "English applications display received100/humanReviewed27/remaining73, green40/yellow25/gray35, filtered73/reviewed0/remaining73, distinct requirement/stage/review/analysis axes, cards and page1of3. Synthetic job title and human next-action text remain Swedish source text. No physical-phone or full translation claim."
+  },
+  "canonicalBrowserAssertionsRead": {
+    "handoff": "Atomic real caller start, eight frozen questions/six competencies, semantic duplicate transfer prevented, full frozen content equality before/after, evidence=[]; no live role hash assertion manufactured.",
+    "humanGrayReview": "Explicit draft/acknowledgement leaves gray, then review reviewed; later28/72 differs from initial27/73.",
+    "archive": "Explicit synthetic reject/archive100 then received100/archived100 and open nonarchived total0, plus four25pages and received/archive filters; finalSafety itself does not export archive counts."
+  },
+  "scope": {
+    "auth": "local_admin_createUser_email_confirm_true_fixed_104_ids",
+    "storage": "local_service_role_setup_80_original_pdf_objects_not_candidate_upload_acl",
+    "applicationDml": "disposable_local_postgres_own_fixture_only",
+    "judgment": "signed_in_owner_and_admin_http_rpc",
+    "browser": "real_password_sessions_sv_en_desktop_emulated_mobile_not_physical_phone"
+  },
+  "limitations": [
+    "Actual fresh isolated GitHub CI GoTrue/Storage/PostgREST stack, not hosted runtime, production/CDN, or authenticated hosted B-matrix.",
+    "80 Storage PDF originals were created by privileged local fixture admin; candidate upload ACL/MIME/size enforcement is NOT tested.",
+    "Source removal/reupload is controlled fixture-admin deletion of five CV objects; no candidate consent-withdrawal endpoint or immediate old signed-URL expiry claim.",
+    "375px is Chromium emulation, not a physical phone; functional evidence does not establish full accessibility, performance or polished mobile layout.",
+    "Draft/pilot method content, zero approvals and English role-guide gaps are not changed by native PASS.",
+    "Two mock synthetic AI history rows, generatedAI0/cost activation absent, mail/receipt/workercron0; fixture data is not model execution.",
+    "Historical0508,3ac,67a,2dd and other failures/passes remain immutable with their earlier pins/limits.",
+    "No tests/reruns/services/DB/Auth/production writes or repo changes were performed in this read-only validation; only original-byte review and this standalone evidence file."
+  ]
+}

@@ -1,0 +1,363 @@
+{
+  "schemaVersion": 1,
+  "sourceSha": "ea43ad734e80347d56957794f56cd483595fce4a",
+  "environment": "cqj-ri-real-20261008b: actual local GoTrue/Storage/PostgREST14.15",
+  "primaryJourneys": [
+    {
+      "scenario": "manager-application-sv",
+      "project": "chromium",
+      "caseId": "8bbdb3d2-aeeb-42bb-9808-7ca3544941e5",
+      "applicationId": "e8050000-3333-4000-8000-000000000001",
+      "status": "PASS",
+      "manifestHash": "2e8384b85a0cf4f2c63c9366398c231ff179b079ee89b507d9be3f834a0bc435",
+      "frozenProvenance": "case_created",
+      "packContentStatus": "draft",
+      "methodApprovalState": "draft",
+      "reportContentHash": "131c304cba040a6ad29ce406a9ca98a76aac6cf88f4217e703116828ef6125cb",
+      "extraStressProbes": false,
+      "at": "2026-10-08T07:23:01.786Z",
+      "uiPasswordLogin": "real GoTrue",
+      "physicalPhone": false
+    },
+    {
+      "scenario": "guard-standalone-sv",
+      "project": "chromium",
+      "caseId": "3db1403c-574b-40c3-ab92-bb21b7e10836",
+      "applicationId": null,
+      "status": "PASS",
+      "manifestHash": "ee41ba1ae7d63273e31f7ade6b827d9fbd928c8c698d75d671336f3c9d34d729",
+      "frozenProvenance": "case_created",
+      "packContentStatus": "draft",
+      "methodApprovalState": "draft",
+      "reportContentHash": "14f0466c7ecaeccd60b660926f007cd34c185577fe015373a602d416c11bfe90",
+      "extraStressProbes": false,
+      "at": "2026-10-08T07:24:15.362Z",
+      "uiPasswordLogin": "real GoTrue",
+      "physicalPhone": false
+    },
+    {
+      "scenario": "manager-standalone-en",
+      "project": "chromium",
+      "caseId": "8cacc32d-a317-456f-b900-6c4e82927b5d",
+      "applicationId": null,
+      "status": "PASS",
+      "manifestHash": "2e8384b85a0cf4f2c63c9366398c231ff179b079ee89b507d9be3f834a0bc435",
+      "frozenProvenance": "case_created",
+      "packContentStatus": "draft",
+      "methodApprovalState": "draft",
+      "reportContentHash": "c26d1b8b8556ff06cd7963f80756dab209512b63fececb01bd7b7bcbb9913a5d",
+      "extraStressProbes": false,
+      "at": "2026-10-08T07:24:41.891Z",
+      "uiPasswordLogin": "real GoTrue",
+      "physicalPhone": false
+    },
+    {
+      "scenario": "guard-application-en",
+      "project": "chromium",
+      "caseId": "d1cfcbd8-8001-4ed2-a260-a211ae876b94",
+      "applicationId": "e8050000-3333-4000-8000-000000000004",
+      "status": "PASS",
+      "manifestHash": "ee41ba1ae7d63273e31f7ade6b827d9fbd928c8c698d75d671336f3c9d34d729",
+      "frozenProvenance": "case_created",
+      "packContentStatus": "draft",
+      "methodApprovalState": "draft",
+      "reportContentHash": "65e56a4da8afefb1300d8dcf3ad268165fb95dc641d20b32ea8820cafc244cd9",
+      "extraStressProbes": false,
+      "at": "2026-10-08T07:25:12.589Z",
+      "uiPasswordLogin": "real GoTrue",
+      "physicalPhone": false
+    },
+    {
+      "scenario": "guard-standalone-sv",
+      "project": "mobile-375",
+      "caseId": "3415f7a4-c424-417b-b5a0-7cd310f515b4",
+      "applicationId": null,
+      "status": "PASS",
+      "manifestHash": "ee41ba1ae7d63273e31f7ade6b827d9fbd928c8c698d75d671336f3c9d34d729",
+      "frozenProvenance": "case_created",
+      "packContentStatus": "draft",
+      "methodApprovalState": "draft",
+      "reportContentHash": "a4f66d462410e5681d8327041bee1962a90f99c52440e5fc4573f87134ed0715",
+      "extraStressProbes": false,
+      "at": "2026-10-08T07:25:57.686Z",
+      "uiPasswordLogin": "real GoTrue",
+      "physicalPhone": false
+    },
+    {
+      "scenario": "manager-application-sv",
+      "project": "mobile-375",
+      "caseId": "1fb219e1-3196-4daf-ad54-3d2d28da1d78",
+      "applicationId": "e8050000-3333-4000-8000-000000000005",
+      "status": "PASS",
+      "manifestHash": "2e8384b85a0cf4f2c63c9366398c231ff179b079ee89b507d9be3f834a0bc435",
+      "frozenProvenance": "case_created",
+      "packContentStatus": "draft",
+      "methodApprovalState": "draft",
+      "reportContentHash": "d82a1001650f9f6de5e58b2e9af53dc3d93cadfb557627f60566a76511b1e73e",
+      "extraStressProbes": false,
+      "at": "2026-10-08T07:26:22.668Z",
+      "uiPasswordLogin": "real GoTrue",
+      "physicalPhone": false
+    },
+    {
+      "scenario": "manager-standalone-en",
+      "project": "mobile-375",
+      "caseId": "9e01531b-6391-401d-8ff3-84ae532e1ac9",
+      "applicationId": null,
+      "status": "PASS",
+      "manifestHash": "2e8384b85a0cf4f2c63c9366398c231ff179b079ee89b507d9be3f834a0bc435",
+      "frozenProvenance": "case_created",
+      "packContentStatus": "draft",
+      "methodApprovalState": "draft",
+      "reportContentHash": "19c6bd3c1399b95d7e2b9a7578c56f2aebfa7f71e9fff149c2231eeccd580b8b",
+      "extraStressProbes": false,
+      "at": "2026-10-08T07:26:42.623Z",
+      "uiPasswordLogin": "real GoTrue",
+      "physicalPhone": false
+    },
+    {
+      "scenario": "guard-application-en",
+      "project": "mobile-375",
+      "caseId": "596bf133-8f1b-4b65-8165-ca657512a378",
+      "applicationId": "e8050000-3333-4000-8000-000000000008",
+      "status": "PASS",
+      "manifestHash": "ee41ba1ae7d63273e31f7ade6b827d9fbd928c8c698d75d671336f3c9d34d729",
+      "frozenProvenance": "case_created",
+      "packContentStatus": "draft",
+      "methodApprovalState": "draft",
+      "reportContentHash": "8bcee062067ff22b1f3f40388f735ac51d1ba3a16a35319aa5e3437e324f189c",
+      "extraStressProbes": false,
+      "at": "2026-10-08T07:27:03.255Z",
+      "uiPasswordLogin": "real GoTrue",
+      "physicalPhone": false
+    },
+    {
+      "scenario": "guard-standalone-sv",
+      "project": "mobile-390",
+      "caseId": "e378f2be-4e03-4b7b-9273-8e8dabdd4c30",
+      "applicationId": null,
+      "status": "PASS",
+      "manifestHash": "ee41ba1ae7d63273e31f7ade6b827d9fbd928c8c698d75d671336f3c9d34d729",
+      "frozenProvenance": "case_created",
+      "packContentStatus": "draft",
+      "methodApprovalState": "draft",
+      "reportContentHash": "ffc00af172fbf4edc05c969e0a9a52979091d969e5a8b7ff77fd8a8b5dcc8cbe",
+      "extraStressProbes": false,
+      "at": "2026-10-08T07:27:24.668Z",
+      "uiPasswordLogin": "real GoTrue",
+      "physicalPhone": false
+    },
+    {
+      "scenario": "manager-application-sv",
+      "project": "mobile-390",
+      "caseId": "41055aa1-2389-41e5-abdd-c94c671f0c9d",
+      "applicationId": "e8050000-3333-4000-8000-000000000009",
+      "status": "PASS",
+      "manifestHash": "2e8384b85a0cf4f2c63c9366398c231ff179b079ee89b507d9be3f834a0bc435",
+      "frozenProvenance": "case_created",
+      "packContentStatus": "draft",
+      "methodApprovalState": "draft",
+      "reportContentHash": "059b18b176035eb9ed92943656e011e50ebfd4e19acd83408996ef7db70856d5",
+      "extraStressProbes": false,
+      "at": "2026-10-08T07:27:53.170Z",
+      "uiPasswordLogin": "real GoTrue",
+      "physicalPhone": false
+    },
+    {
+      "scenario": "manager-standalone-en",
+      "project": "mobile-390",
+      "caseId": "04314d37-0047-4a90-8e35-aaa41abe8c01",
+      "applicationId": null,
+      "status": "PASS",
+      "manifestHash": "2e8384b85a0cf4f2c63c9366398c231ff179b079ee89b507d9be3f834a0bc435",
+      "frozenProvenance": "case_created",
+      "packContentStatus": "draft",
+      "methodApprovalState": "draft",
+      "reportContentHash": "d5a2f6eaab8cad9e85d0c34142ca0e1727bd0787df0fc535856af00702b601f4",
+      "extraStressProbes": false,
+      "at": "2026-10-08T07:28:29.046Z",
+      "uiPasswordLogin": "real GoTrue",
+      "physicalPhone": false
+    },
+    {
+      "scenario": "guard-application-en",
+      "project": "mobile-390",
+      "caseId": "e6f76633-8c06-460b-a91d-4180c2a2fbf7",
+      "applicationId": "e8050000-3333-4000-8000-000000000012",
+      "status": "PASS",
+      "manifestHash": "ee41ba1ae7d63273e31f7ade6b827d9fbd928c8c698d75d671336f3c9d34d729",
+      "frozenProvenance": "case_created",
+      "packContentStatus": "draft",
+      "methodApprovalState": "draft",
+      "reportContentHash": "f52c98a85f4d391b3b63b15a6bfec46968fe5721bb235490f8c532a448900f8a",
+      "extraStressProbes": false,
+      "at": "2026-10-08T07:28:55.253Z",
+      "uiPasswordLogin": "real GoTrue",
+      "physicalPhone": false
+    }
+  ],
+  "readback": {
+    "at": "2026-10-08T07:29:54.366149+00:00",
+    "jobs": 12,
+    "cases": 14,
+    "ai_runs": 0,
+    "reports": 12,
+    "ai_enabled": false,
+    "auth_users": 8,
+    "sw_ai_runs": 0,
+    "memberships": [
+      {
+        "role": "admin",
+        "status": "active",
+        "user_id": "fe720a3a-05c6-4a8e-8f47-e768fc4161cf",
+        "employer_id": "e8050000-1111-4000-8000-000000000001"
+      },
+      {
+        "role": "member",
+        "status": "active",
+        "user_id": "1d41763d-73d3-45e1-beff-86731047e02c",
+        "employer_id": "e8050000-1111-4000-8000-000000000001"
+      },
+      {
+        "role": "member",
+        "status": "active",
+        "user_id": "3b5f3272-6459-46e2-b15c-5f4b4aeb4e58",
+        "employer_id": "e8050000-1111-4000-8000-000000000001"
+      },
+      {
+        "role": "owner",
+        "status": "active",
+        "user_id": "c01b3872-2802-44d7-9cd8-19b864bda33a",
+        "employer_id": "e8050000-1111-4000-8000-000000000001"
+      },
+      {
+        "role": "owner",
+        "status": "active",
+        "user_id": "972340b6-cea1-4017-8ee0-510881398132",
+        "employer_id": "e8050000-1111-4000-8000-000000000002"
+      }
+    ],
+    "applications": 12,
+    "erasure_jobs": 0,
+    "role_versions": [
+      {
+        "id": "722b79ba-6ccb-47bb-80e2-0f002da5a6b9",
+        "slug": "security-manager-se",
+        "status": "draft",
+        "version": 1,
+        "questions": 8,
+        "stored_hash": "85b45fb7e778080fc1c2a6ec772cba30",
+        "competencies": 6,
+        "pilot_availability": "open"
+      },
+      {
+        "id": "7d62a1e7-1442-4d07-87de-559e6b9820d2",
+        "slug": "vaktare-se",
+        "status": "draft",
+        "version": 1,
+        "questions": 8,
+        "stored_hash": "266a4c71dd4c10aec40efc9fc46e5715",
+        "competencies": 6,
+        "pilot_availability": "open"
+      }
+    ],
+    "email_attempts": 0,
+    "platform_roles": [
+      {
+        "role": "passport_verifier",
+        "user_id": "2f6d1505-c627-4cf9-a528-afaba59acb9a"
+      }
+    ],
+    "server_version": "17.6",
+    "migration_count": 384,
+    "reviewer_grants": [
+      {
+        "revoked": false,
+        "user_id": "1d41763d-73d3-45e1-beff-86731047e02c",
+        "allowed_use_cases": ["recruitment"]
+      }
+    ],
+    "receipts_enabled": 0,
+    "migration_frontier": "20270307090000",
+    "transcript_enabled": false,
+    "recruitment_messages": 0,
+    "storage_erasure_queue": 0,
+    "auth_confirmed_invalid_bcrypt": 8,
+    "createdAt": "2026-10-08T07:29:54.286Z",
+    "environment": "cqj-ri-real-20261008b: loopback55690/55691"
+  },
+  "frozenLanguageCounts": [
+    {
+      "role": "security-manager-se",
+      "probes": 48,
+      "status": "draft",
+      "practices": 0,
+      "questions": 8,
+      "competencies": 6,
+      "en_probe_gaps": 48,
+      "method_status": "draft",
+      "en_prompt_gaps": 8,
+      "en_competency_name_gaps": 6,
+      "en_competency_definition_gaps": 6
+    },
+    {
+      "role": "vaktare-se",
+      "probes": 48,
+      "status": "draft",
+      "practices": 0,
+      "questions": 8,
+      "competencies": 6,
+      "en_probe_gaps": 48,
+      "method_status": "draft",
+      "en_prompt_gaps": 8,
+      "en_competency_name_gaps": 6,
+      "en_competency_definition_gaps": 6
+    }
+  ],
+  "screenshots": [
+    {
+      "path": "docs/assessment/recruiter-intelligence/evidence/2026-10-08-real-chromium-guard-standalone-sv-prepare.png",
+      "sha256": "b443adf698960fd67c7f0d27cdd461972d951ed34f96d77ce1bf9ca6f10488ef",
+      "bytes": 506730
+    },
+    {
+      "path": "docs/assessment/recruiter-intelligence/evidence/2026-10-08-real-chromium-manager-standalone-en-resumed.png",
+      "sha256": "eede80ebe206f6299df06e3980400626a999bd7880ebe1bee8fc1aec62e95dcc",
+      "bytes": 427186
+    },
+    {
+      "path": "docs/assessment/recruiter-intelligence/evidence/2026-10-08-real-mobile-375-guard-application-en-report.png",
+      "sha256": "02d3612790c2c9990b86aa517d4f2cb581c64e9a7c81d1eab94df4136faa127f",
+      "bytes": 772289
+    }
+  ],
+  "preservedFailures": [
+    {
+      "caseId": "49ccb60b-22d5-403a-bfb3-f9ed9988f6b3",
+      "stage": "extra genuine two-tab process CAS",
+      "result": "FAIL",
+      "observation": "Other tab remained Saving. Actual custom40001CAS retry storm onPostgREST14.15; underlying request had not returned. First tab reflection committed; no finalreport."
+    },
+    {
+      "caseId": "49ad3519-ffb6-4222-9fdc-36ab0ba9a947",
+      "stage": "first primary guard standalone evidence navigation",
+      "result": "FAIL",
+      "observation": "URL changed before old question UI disappeared; test interacted before evidence route heading. Adding explicit heading-wait allowed fresh-case full PASS; incomplete historical case preserved."
+    },
+    {
+      "caseId": "49ccb60b-22d5-403a-bfb3-f9ed9988f6b3",
+      "at": "2026-10-08T07:30:31.526Z",
+      "stage": "targeted extra CAS follow-up, beforeCAS resume",
+      "result": "FAIL",
+      "observation": "Real server deadlock detected between stale process CAS retry and set_session_state eventFK case lock; targeted test stopped before retryingCAS."
+    }
+  ],
+  "limitations": [
+    "No hosted action",
+    "No physical phone: Chromium touch emulation only",
+    "No claim of complete role-guide English translation",
+    "No AI or transcription",
+    "Extra CAS/lock-order defect unresolved in measured source; forward repair required",
+    "No100application claim in this P0suite"
+  ]
+}

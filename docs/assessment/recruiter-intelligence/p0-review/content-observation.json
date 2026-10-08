@@ -1,0 +1,699 @@
+{
+  "schema_version": 1,
+  "audit": "RI P0 content release review",
+  "reviewed_local_sha": "20dd01e7c73017dd44e250ebbefd7c02995f043c",
+  "main_base_sha": "7fb66dcdaf22b7e0aec31b95c0cd4f220b0b873d",
+  "project_ref": "wrygicdfxwjnrugduxnt",
+  "observation": "current_installed_governed_content_metadata_only",
+  "candidate_data_read": false,
+  "hosted_writes": false,
+  "observations": [
+    {
+      "query": "\nSELECT jsonb_build_object(\n 'packs', (SELECT jsonb_agg(jsonb_build_object(\n   'slug',p.slug,'version_id',v.id,'version',v.version_number,'content_status',v.content_status,\n   'validation_label',v.validation_label,'published_at',v.published_at,'stored_hash',v.content_hash,\n   'recomputed_hash',public.scp_interview_pack_content_hash(v.id),\n   'reviews',(SELECT coalesce(jsonb_agg(jsonb_build_object('gate',r.gate,'decision',r.decision,'hash',r.content_hash_at_review)), '[]') FROM public.scp_interview_pack_reviews r WHERE r.pack_version_id=v.id),\n   'competencies',(SELECT jsonb_build_object('rows',count(*),'name_en_missing',count(*) FILTER(WHERE nullif(btrim(c.name_en),'') IS NULL),'definition_en_missing',count(*) FILTER(WHERE nullif(btrim(c.definition_en),'') IS NULL)) FROM public.scp_interview_pack_competencies c WHERE c.pack_version_id=v.id),\n   'questions',(SELECT jsonb_build_object('rows',count(*),'prompt_en_missing',count(*) FILTER(WHERE nullif(btrim(q.prompt_en),'') IS NULL),'types',jsonb_agg(jsonb_build_object('code',q.code,'type',q.question_type) ORDER BY q.display_order)) FROM public.scp_interview_core_questions q WHERE q.pack_version_id=v.id),\n   'probes',(SELECT jsonb_build_object('rows',count(*),'wording_en_missing',count(*) FILTER(WHERE nullif(btrim(a.wording_en),'') IS NULL)) FROM public.scp_interview_approved_probes a WHERE a.pack_version_id=v.id),\n   'dimensions',(SELECT jsonb_build_object('rows',count(*),'label_en_missing',count(*) FILTER(WHERE nullif(btrim(d.label_en),'') IS NULL)) FROM public.scp_interview_evidence_dimensions d JOIN public.scp_interview_core_questions q ON q.id=d.question_id WHERE q.pack_version_id=v.id),\n   'anchors',(SELECT jsonb_build_object('rows',count(*),'label_en_missing',count(*) FILTER(WHERE nullif(btrim(a.label_en),'') IS NULL),'anchor_en_missing',count(*) FILTER(WHERE nullif(btrim(a.anchor_en),'') IS NULL)) FROM public.scp_interview_rating_anchors a LEFT JOIN public.scp_interview_core_questions q ON q.id=a.question_id LEFT JOIN public.scp_interview_pack_competencies c ON c.id=a.pack_competency_id WHERE coalesce(q.pack_version_id,c.pack_version_id)=v.id),\n   'prohibitions',(SELECT jsonb_build_object('rows',count(*),'statement_en_missing',count(*) FILTER(WHERE nullif(btrim(a.statement_en),'') IS NULL)) FROM public.scp_interview_prohibited_areas a WHERE a.pack_version_id=v.id)\n ) ORDER BY p.slug,v.version_number) FROM public.scp_interview_packs p JOIN public.scp_interview_pack_versions v ON v.pack_id=p.id WHERE p.slug IN('vaktare-se','security-manager-se')),\n 'methods',(SELECT jsonb_agg(jsonb_build_object('id',m.id,'slug',m.slug,'version',m.version_number,'state',m.approval_state,'approved_at',m.approved_at,\n 'practices',(SELECT jsonb_build_object('rows',count(*),'statement_en_missing',count(*) FILTER(WHERE nullif(btrim(x.statement_en),'') IS NULL)) FROM public.scp_interview_method_practices x WHERE x.method_id=m.id),\n 'conduct_steps',(SELECT jsonb_build_object('rows',count(*),'label_en_missing',count(*) FILTER(WHERE nullif(btrim(x.label_en),'') IS NULL),'guidance_en_missing',count(*) FILTER(WHERE nullif(btrim(x.guidance_en),'') IS NULL)) FROM public.scp_interview_conduct_steps x WHERE x.method_id=m.id),\n 'conduct_guidance',(SELECT jsonb_build_object('rows',count(*),'statement_en_missing',count(*) FILTER(WHERE nullif(btrim(x.statement_en),'') IS NULL)) FROM public.scp_interview_conduct_guidance x WHERE x.method_id=m.id),\n 'conduct_prohibitions',(SELECT jsonb_build_object('rows',count(*),'statement_en_missing',count(*) FILTER(WHERE nullif(btrim(x.statement_en),'') IS NULL)) FROM public.scp_interview_conduct_prohibitions x WHERE x.method_id=m.id)\n ) ORDER BY m.slug,m.version_number) FROM public.scp_interview_methods m),\n 'unpaired_sv_columns',(SELECT jsonb_agg(jsonb_build_object('table',c.table_name,'column',c.column_name) ORDER BY c.table_name,c.ordinal_position) FROM information_schema.columns c WHERE c.table_schema='public' AND c.table_name IN('scp_interview_pack_versions','scp_interview_pack_competencies','scp_interview_core_questions','scp_interview_approved_probes','scp_interview_evidence_dimensions','scp_interview_rating_anchors','scp_interview_verification_rules','scp_interview_prohibited_areas','scp_trust_stages','scp_trust_prohibitions') AND c.column_name LIKE '%_sv' AND NOT EXISTS(SELECT 1 FROM information_schema.columns e WHERE e.table_schema=c.table_schema AND e.table_name=c.table_name AND e.column_name=regexp_replace(c.column_name,'_sv$','_en')))\n) AS content_review",
+      "result": [
+        {
+          "content_review": {
+            "packs": [
+              {
+                "slug": "security-manager-se",
+                "probes": {
+                  "rows": 48,
+                  "wording_en_missing": 48
+                },
+                "anchors": {
+                  "rows": 40,
+                  "label_en_missing": 40,
+                  "anchor_en_missing": 40
+                },
+                "reviews": [],
+                "version": 1,
+                "questions": {
+                  "rows": 8,
+                  "types": [
+                    {
+                      "code": "Q1",
+                      "type": "behavioural"
+                    },
+                    {
+                      "code": "Q2",
+                      "type": "behavioural"
+                    },
+                    {
+                      "code": "Q3",
+                      "type": "behavioural"
+                    },
+                    {
+                      "code": "Q4",
+                      "type": "behavioural"
+                    },
+                    {
+                      "code": "Q5",
+                      "type": "behavioural"
+                    },
+                    {
+                      "code": "Q6",
+                      "type": "behavioural"
+                    },
+                    {
+                      "code": "Q7",
+                      "type": "situational"
+                    },
+                    {
+                      "code": "Q8",
+                      "type": "situational"
+                    }
+                  ],
+                  "prompt_en_missing": 8
+                },
+                "dimensions": {
+                  "rows": 40,
+                  "label_en_missing": 40
+                },
+                "version_id": "9fb47b91-3c5a-466b-ab42-8dee1e25d154",
+                "stored_hash": "06d58c640dce2ddb4455ac07239d4803",
+                "competencies": {
+                  "rows": 6,
+                  "name_en_missing": 6,
+                  "definition_en_missing": 6
+                },
+                "prohibitions": {
+                  "rows": 14,
+                  "statement_en_missing": 14
+                },
+                "published_at": null,
+                "content_status": "draft",
+                "recomputed_hash": "06d58c640dce2ddb4455ac07239d4803",
+                "validation_label": "pilot_hypothesis"
+              },
+              {
+                "slug": "vaktare-se",
+                "probes": {
+                  "rows": 48,
+                  "wording_en_missing": 48
+                },
+                "anchors": {
+                  "rows": 40,
+                  "label_en_missing": 0,
+                  "anchor_en_missing": 0
+                },
+                "reviews": [],
+                "version": 1,
+                "questions": {
+                  "rows": 8,
+                  "types": [
+                    {
+                      "code": "Q1",
+                      "type": "behavioural"
+                    },
+                    {
+                      "code": "Q2",
+                      "type": "behavioural"
+                    },
+                    {
+                      "code": "Q3",
+                      "type": "behavioural"
+                    },
+                    {
+                      "code": "Q4",
+                      "type": "behavioural"
+                    },
+                    {
+                      "code": "Q5",
+                      "type": "behavioural"
+                    },
+                    {
+                      "code": "Q6",
+                      "type": "behavioural"
+                    },
+                    {
+                      "code": "Q7",
+                      "type": "situational"
+                    },
+                    {
+                      "code": "Q8",
+                      "type": "situational"
+                    }
+                  ],
+                  "prompt_en_missing": 8
+                },
+                "dimensions": {
+                  "rows": 40,
+                  "label_en_missing": 0
+                },
+                "version_id": "a5acdaeb-fdd2-4d43-bd74-cb36a4e9b829",
+                "stored_hash": "6b0ace21db962486d791da79a55be19b",
+                "competencies": {
+                  "rows": 6,
+                  "name_en_missing": 6,
+                  "definition_en_missing": 6
+                },
+                "prohibitions": {
+                  "rows": 14,
+                  "statement_en_missing": 0
+                },
+                "published_at": null,
+                "content_status": "draft",
+                "recomputed_hash": "2f1e15e0c303da31942a4d2040bc8bc8",
+                "validation_label": "pilot_hypothesis"
+              }
+            ],
+            "methods": [
+              {
+                "id": "15738d5a-d601-4546-8715-e82a4cf1741f",
+                "slug": "cqrity-trust",
+                "state": "draft",
+                "version": 1,
+                "practices": {
+                  "rows": 0,
+                  "statement_en_missing": 0
+                },
+                "approved_at": null,
+                "conduct_steps": {
+                  "rows": 6,
+                  "label_en_missing": 0,
+                  "guidance_en_missing": 0
+                },
+                "conduct_guidance": {
+                  "rows": 30,
+                  "statement_en_missing": 0
+                },
+                "conduct_prohibitions": {
+                  "rows": 8,
+                  "statement_en_missing": 0
+                }
+              },
+              {
+                "id": "bd094cb5-b810-4cc8-a801-35adc3f095da",
+                "slug": "evidence-oriented-probing",
+                "state": "draft",
+                "version": 1,
+                "practices": {
+                  "rows": 0,
+                  "statement_en_missing": 0
+                },
+                "approved_at": null,
+                "conduct_steps": {
+                  "rows": 6,
+                  "label_en_missing": 0,
+                  "guidance_en_missing": 0
+                },
+                "conduct_guidance": {
+                  "rows": 30,
+                  "statement_en_missing": 0
+                },
+                "conduct_prohibitions": {
+                  "rows": 8,
+                  "statement_en_missing": 0
+                }
+              },
+              {
+                "id": "4ba4f11c-38c6-48d5-a1c6-44a6eb55a768",
+                "slug": "orbit-interviewer-conduct",
+                "state": "draft",
+                "version": 1,
+                "practices": {
+                  "rows": 4,
+                  "statement_en_missing": 0
+                },
+                "approved_at": null,
+                "conduct_steps": {
+                  "rows": 6,
+                  "label_en_missing": 0,
+                  "guidance_en_missing": 0
+                },
+                "conduct_guidance": {
+                  "rows": 30,
+                  "statement_en_missing": 0
+                },
+                "conduct_prohibitions": {
+                  "rows": 8,
+                  "statement_en_missing": 0
+                }
+              },
+              {
+                "id": "17ee1d56-e2db-4241-a9d7-40f0ac34ae7a",
+                "slug": "peace-recruitment",
+                "state": "draft",
+                "version": 1,
+                "practices": {
+                  "rows": 13,
+                  "statement_en_missing": 0
+                },
+                "approved_at": null,
+                "conduct_steps": {
+                  "rows": 6,
+                  "label_en_missing": 0,
+                  "guidance_en_missing": 0
+                },
+                "conduct_guidance": {
+                  "rows": 30,
+                  "statement_en_missing": 0
+                },
+                "conduct_prohibitions": {
+                  "rows": 8,
+                  "statement_en_missing": 0
+                }
+              },
+              {
+                "id": "9f4764f3-68c8-4983-ada2-ca5f07edd81c",
+                "slug": "prohibited-interview-practice",
+                "state": "draft",
+                "version": 1,
+                "practices": {
+                  "rows": 0,
+                  "statement_en_missing": 0
+                },
+                "approved_at": null,
+                "conduct_steps": {
+                  "rows": 6,
+                  "label_en_missing": 0,
+                  "guidance_en_missing": 0
+                },
+                "conduct_guidance": {
+                  "rows": 30,
+                  "statement_en_missing": 0
+                },
+                "conduct_prohibitions": {
+                  "rows": 8,
+                  "statement_en_missing": 0
+                }
+              },
+              {
+                "id": "e972c156-ed55-4928-8977-296ade415941",
+                "slug": "structured-behavioural-vaktare",
+                "state": "draft",
+                "version": 1,
+                "practices": {
+                  "rows": 0,
+                  "statement_en_missing": 0
+                },
+                "approved_at": null,
+                "conduct_steps": {
+                  "rows": 6,
+                  "label_en_missing": 0,
+                  "guidance_en_missing": 0
+                },
+                "conduct_guidance": {
+                  "rows": 30,
+                  "statement_en_missing": 0
+                },
+                "conduct_prohibitions": {
+                  "rows": 8,
+                  "statement_en_missing": 0
+                }
+              }
+            ],
+            "unpaired_sv_columns": [
+              {
+                "table": "scp_interview_core_questions",
+                "column": "evidence_source_note_sv"
+              },
+              {
+                "table": "scp_interview_evidence_dimensions",
+                "column": "description_sv"
+              },
+              {
+                "table": "scp_interview_pack_competencies",
+                "column": "observable_indicators_sv"
+              },
+              {
+                "table": "scp_interview_pack_versions",
+                "column": "summary_sv"
+              },
+              {
+                "table": "scp_interview_prohibited_areas",
+                "column": "rationale_sv"
+              },
+              {
+                "table": "scp_interview_verification_rules",
+                "column": "requirement_sv"
+              },
+              {
+                "table": "scp_interview_verification_rules",
+                "column": "interview_action_sv"
+              },
+              {
+                "table": "scp_interview_verification_rules",
+                "column": "subsequent_verification_sv"
+              },
+              {
+                "table": "scp_interview_verification_rules",
+                "column": "passport_boundary_sv"
+              },
+              {
+                "table": "scp_trust_stages",
+                "column": "output_sv"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "query": "SELECT jsonb_build_object(\n 'observed_at', now(), 'packs', (\n SELECT jsonb_agg(jsonb_build_object('slug',p.slug,'name_en_missing',CASE WHEN nullif(btrim(p.name_en),'') IS NULL THEN 1 ELSE 0 END,\n 'summary_sv_nonblank',(CASE WHEN nullif(btrim(v.summary_sv),'') IS NULL THEN 0 ELSE 1 END),\n 'sv_only_fields',jsonb_build_object(\n 'observable_indicators_sv',(SELECT count(*) FROM public.scp_interview_pack_competencies c WHERE c.pack_version_id=v.id AND cardinality(c.observable_indicators_sv)>0),\n 'evidence_source_note_sv',(SELECT count(*) FROM public.scp_interview_core_questions c WHERE c.pack_version_id=v.id AND nullif(btrim(c.evidence_source_note_sv),'') IS NOT NULL),\n 'description_sv',(SELECT count(*) FROM public.scp_interview_evidence_dimensions d JOIN public.scp_interview_core_questions q ON q.id=d.question_id WHERE q.pack_version_id=v.id AND nullif(btrim(d.description_sv),'') IS NOT NULL),\n 'mapping_rationale_sv',(SELECT count(*) FROM public.scp_interview_pack_competency_map m JOIN public.scp_interview_pack_competencies c ON c.id=m.pack_competency_id WHERE c.pack_version_id=v.id AND nullif(btrim(m.rationale_sv),'') IS NOT NULL),\n 'verification_rule_requirement_sv',(SELECT count(*) FROM public.scp_interview_verification_rules r WHERE r.pack_version_id=v.id AND nullif(btrim(r.requirement_sv),'') IS NOT NULL),\n 'verification_rule_interview_action_sv',(SELECT count(*) FROM public.scp_interview_verification_rules r WHERE r.pack_version_id=v.id AND nullif(btrim(r.interview_action_sv),'') IS NOT NULL),\n 'verification_rule_subsequent_verification_sv',(SELECT count(*) FROM public.scp_interview_verification_rules r WHERE r.pack_version_id=v.id AND nullif(btrim(r.subsequent_verification_sv),'') IS NOT NULL),\n 'verification_rule_passport_boundary_sv',(SELECT count(*) FROM public.scp_interview_verification_rules r WHERE r.pack_version_id=v.id AND nullif(btrim(r.passport_boundary_sv),'') IS NOT NULL),\n 'prohibition_rationale_sv',(SELECT count(*) FROM public.scp_interview_prohibited_areas r WHERE r.pack_version_id=v.id AND nullif(btrim(r.rationale_sv),'') IS NOT NULL)\n )\n ) ORDER BY p.slug) FROM public.scp_interview_packs p JOIN public.scp_interview_pack_versions v ON v.pack_id=p.id WHERE p.slug IN('vaktare-se','security-manager-se')),\n 'trust',(SELECT jsonb_build_object(\n 'stage_rows',count(*),\n 'name_en_missing',count(*) FILTER(WHERE nullif(btrim(s.name_en),'') IS NULL),\n 'purpose_en_missing',count(*) FILTER(WHERE nullif(btrim(s.purpose_en),'') IS NULL),\n 'human_responsibility_en_missing',count(*) FILTER(WHERE nullif(btrim(s.human_responsibility_en),'') IS NULL),\n 'output_sv_nonblank',count(*) FILTER(WHERE nullif(btrim(s.output_sv),'') IS NOT NULL)\n ) FROM public.scp_trust_stages s JOIN public.scp_interview_methods m ON m.id=s.method_id WHERE m.slug='cqrity-trust' AND m.version_number=1),\n 'unpaired_sv_columns',(SELECT jsonb_agg(jsonb_build_object('table',c.table_name,'column',c.column_name) ORDER BY c.table_name,c.ordinal_position) FROM information_schema.columns c WHERE c.table_schema='public'\n AND c.table_name IN('scp_interview_pack_competency_map','scp_interview_core_questions','scp_interview_evidence_dimensions','scp_interview_pack_competencies','scp_interview_pack_versions','scp_interview_prohibited_areas','scp_interview_verification_rules','scp_trust_stages','scp_trust_stage_prohibitions')\n AND right(c.column_name,3)='_sv' AND NOT EXISTS(SELECT 1 FROM information_schema.columns e WHERE e.table_schema=c.table_schema AND e.table_name=c.table_name AND e.column_name=regexp_replace(c.column_name,'_sv$','_en'))),\n 'current_content_triggers',(SELECT jsonb_agg(jsonb_build_object('table',n.nspname||'.'||t.relname,'trigger',g.tgname,'function',p.proname) ORDER BY t.relname,g.tgname)\n FROM pg_trigger g JOIN pg_class t ON t.oid=g.tgrelid JOIN pg_namespace n ON n.oid=t.relnamespace JOIN pg_proc p ON p.oid=g.tgfoid\n WHERE NOT g.tgisinternal AND n.nspname='public' AND t.relname IN('scp_interview_methods','scp_interview_method_practices','scp_interview_conduct_steps','scp_interview_conduct_guidance','scp_interview_conduct_prohibitions','scp_trust_stages','scp_trust_stage_prohibitions','scp_interview_pack_versions','scp_interview_core_questions')),\n 'method_write_policies',(SELECT jsonb_agg(to_jsonb(p) ORDER BY tablename,policyname) FROM pg_policies p WHERE schemaname='public' AND tablename IN('scp_interview_methods','scp_interview_method_practices') AND cmd IN('INSERT','UPDATE','ALL'))\n) AS release_details",
+      "result": [
+        {
+          "release_details": {
+            "packs": [
+              {
+                "slug": "security-manager-se",
+                "sv_only_fields": {
+                  "description_sv": 0,
+                  "mapping_rationale_sv": 11,
+                  "evidence_source_note_sv": 8,
+                  "observable_indicators_sv": 6,
+                  "prohibition_rationale_sv": 14,
+                  "verification_rule_requirement_sv": 5,
+                  "verification_rule_interview_action_sv": 5,
+                  "verification_rule_passport_boundary_sv": 5,
+                  "verification_rule_subsequent_verification_sv": 5
+                },
+                "name_en_missing": 0,
+                "summary_sv_nonblank": 1
+              },
+              {
+                "slug": "vaktare-se",
+                "sv_only_fields": {
+                  "description_sv": 0,
+                  "mapping_rationale_sv": 11,
+                  "evidence_source_note_sv": 8,
+                  "observable_indicators_sv": 6,
+                  "prohibition_rationale_sv": 14,
+                  "verification_rule_requirement_sv": 5,
+                  "verification_rule_interview_action_sv": 5,
+                  "verification_rule_passport_boundary_sv": 5,
+                  "verification_rule_subsequent_verification_sv": 5
+                },
+                "name_en_missing": 0,
+                "summary_sv_nonblank": 1
+              }
+            ],
+            "trust": {
+              "stage_rows": 5,
+              "name_en_missing": 0,
+              "output_sv_nonblank": 5,
+              "purpose_en_missing": 0,
+              "human_responsibility_en_missing": 0
+            },
+            "observed_at": "2026-10-07T19:56:47.529715+00:00",
+            "unpaired_sv_columns": [
+              {
+                "table": "scp_interview_core_questions",
+                "column": "evidence_source_note_sv"
+              },
+              {
+                "table": "scp_interview_evidence_dimensions",
+                "column": "description_sv"
+              },
+              {
+                "table": "scp_interview_pack_competencies",
+                "column": "observable_indicators_sv"
+              },
+              {
+                "table": "scp_interview_pack_competency_map",
+                "column": "rationale_sv"
+              },
+              {
+                "table": "scp_interview_pack_versions",
+                "column": "summary_sv"
+              },
+              {
+                "table": "scp_interview_prohibited_areas",
+                "column": "rationale_sv"
+              },
+              {
+                "table": "scp_interview_verification_rules",
+                "column": "requirement_sv"
+              },
+              {
+                "table": "scp_interview_verification_rules",
+                "column": "interview_action_sv"
+              },
+              {
+                "table": "scp_interview_verification_rules",
+                "column": "subsequent_verification_sv"
+              },
+              {
+                "table": "scp_interview_verification_rules",
+                "column": "passport_boundary_sv"
+              },
+              {
+                "table": "scp_trust_stages",
+                "column": "output_sv"
+              }
+            ],
+            "method_write_policies": [
+              {
+                "cmd": "UPDATE",
+                "qual": "scp_interview_can_edit(auth.uid())",
+                "roles": ["authenticated"],
+                "tablename": "scp_interview_method_practices",
+                "permissive": "PERMISSIVE",
+                "policyname": "scp_interview_method_practices_update",
+                "schemaname": "public",
+                "with_check": "scp_interview_can_edit(auth.uid())"
+              },
+              {
+                "cmd": "INSERT",
+                "qual": null,
+                "roles": ["authenticated"],
+                "tablename": "scp_interview_method_practices",
+                "permissive": "PERMISSIVE",
+                "policyname": "scp_interview_method_practices_write",
+                "schemaname": "public",
+                "with_check": "scp_interview_can_edit(auth.uid())"
+              },
+              {
+                "cmd": "UPDATE",
+                "qual": "scp_interview_can_edit(auth.uid())",
+                "roles": ["authenticated"],
+                "tablename": "scp_interview_methods",
+                "permissive": "PERMISSIVE",
+                "policyname": "scp_interview_methods_update",
+                "schemaname": "public",
+                "with_check": "scp_interview_can_edit(auth.uid())"
+              },
+              {
+                "cmd": "INSERT",
+                "qual": null,
+                "roles": ["authenticated"],
+                "tablename": "scp_interview_methods",
+                "permissive": "PERMISSIVE",
+                "policyname": "scp_interview_methods_write",
+                "schemaname": "public",
+                "with_check": "scp_interview_can_edit(auth.uid())"
+              }
+            ],
+            "current_content_triggers": [
+              {
+                "table": "public.scp_interview_core_questions",
+                "trigger": "scp_interview_core_questions_locked",
+                "function": "scp_interview_guard_child_of_locked_parent"
+              },
+              {
+                "table": "public.scp_interview_pack_versions",
+                "trigger": "scp_interview_pack_versions_no_delete",
+                "function": "scp_interview_guard_no_version_delete"
+              },
+              {
+                "table": "public.scp_interview_pack_versions",
+                "trigger": "scp_interview_pack_versions_role_interview_only",
+                "function": "beskt_guard_role_interview_version"
+              },
+              {
+                "table": "public.scp_interview_pack_versions",
+                "trigger": "scp_interview_pack_versions_starts_as_draft",
+                "function": "scp_interview_guard_version_starts_as_draft"
+              },
+              {
+                "table": "public.scp_interview_pack_versions",
+                "trigger": "scp_interview_pack_versions_transition",
+                "function": "scp_interview_guard_version_transition"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "query": "SELECT jsonb_build_object(\n'observed_at',now(),\n'trust_prohibitions',(SELECT jsonb_build_object('rows',count(*),'statement_en_missing',count(*) FILTER(WHERE nullif(btrim(p.statement_en),'') IS NULL))\n FROM public.scp_trust_stage_prohibitions p JOIN public.scp_trust_stages s ON s.id=p.stage_id JOIN public.scp_interview_methods m ON m.id=s.method_id WHERE m.slug='cqrity-trust' AND m.version_number=1),\n'method_text_columns',(SELECT jsonb_agg(jsonb_build_object('column',column_name,'type',data_type) ORDER BY ordinal_position) FROM information_schema.columns WHERE table_schema='public' AND table_name='scp_interview_methods' AND data_type IN('text','ARRAY')),\n'method_summary',(SELECT jsonb_agg(jsonb_build_object('slug',m.slug,'name',m.name,'version',m.version_number,'supported_behaviours',m.supported_behaviours,'product_implementation',m.product_implementation) ORDER BY m.slug) FROM public.scp_interview_methods m),\n'pack_mapping_states',(SELECT jsonb_agg(jsonb_build_object('slug',p.slug,'rows',z.rows,'provisional',z.provisional,'confirmed',z.confirmed) ORDER BY p.slug) FROM public.scp_interview_packs p JOIN public.scp_interview_pack_versions v ON v.pack_id=p.id CROSS JOIN LATERAL(SELECT count(*) rows,count(*) FILTER(WHERE cm.mapping_state='provisional') provisional,count(*) FILTER(WHERE cm.mapping_state='confirmed') confirmed FROM public.scp_interview_pack_competency_map cm JOIN public.scp_interview_pack_competencies c ON c.id=cm.pack_competency_id WHERE c.pack_version_id=v.id)z WHERE p.slug IN('vaktare-se','security-manager-se'))\n) AS method_details",
+      "result": [
+        {
+          "method_details": {
+            "observed_at": "2026-10-07T19:57:50.750621+00:00",
+            "method_summary": [
+              {
+                "name": "CQrity TRUST Interview Method",
+                "slug": "cqrity-trust",
+                "version": 1,
+                "supported_behaviours": [
+                  "Samma versionspinnade kärnfrågor i samma ordning för alla kandidater i samma roll",
+                  "Styrda, purpose-labelled följdfrågor",
+                  "Autonomistödjande, accepterande, anpassad, empatisk och evokativ intervjuarstil",
+                  "Källbunden AI-förberedelse och AI-evidensförslag med citat",
+                  "Mänsklig bekräftelse av varje evidens innan bedömning",
+                  "Enskild bedömning före paneldiskussion",
+                  "Immutable rapport och mänskligt beslut"
+                ],
+                "product_implementation": "Fem stage definitions med tillåtna AI-uppgifter, mänskliga gates, förbjudna tolkningar och forskningsspårbarhet. Stegen härleds ur befintligt case-tillstånd; ingen andra statuskolumn införs."
+              },
+              {
+                "name": "Evidence-oriented probing",
+                "slug": "evidence-oriented-probing",
+                "version": 1,
+                "supported_behaviours": [
+                  "Probe against a named evidence dimension",
+                  "Use the pack's approved wording",
+                  "Record which probe was used"
+                ],
+                "product_implementation": "Approved probes selected from the pinned pack, probe_usages recording what was actually asked, and a bounded contextual clarification path."
+              },
+              {
+                "name": "ORBIT-informed interviewer conduct",
+                "slug": "orbit-interviewer-conduct",
+                "version": 1,
+                "supported_behaviours": [
+                  "Build rapport before the account",
+                  "Support the candidate's autonomy",
+                  "Listen actively and reflect back",
+                  "Clarify without judgement",
+                  "Adapt within approved bounds"
+                ],
+                "product_implementation": "Stage-scoped interviewer guidance rendered in the workspace, permitted-probe purposes, and the process_reflection field which is about the interviewer."
+              },
+              {
+                "name": "PEACE (recruitment adaptation)",
+                "slug": "peace-recruitment",
+                "version": 1,
+                "supported_behaviours": [
+                  "Plan against the approved brief",
+                  "Explain the process and the AI role",
+                  "Take an uninterrupted account first",
+                  "Read the facts back for correction",
+                  "Evaluate individually against anchors after the account"
+                ],
+                "product_implementation": "The session state machine (planning, engage_explain, account, closure, evaluation), the standardised opening, the read-back closure with a candidate_correction field, and interviewer self-evaluation at the end."
+              },
+              {
+                "name": "Prohibited interviewing practice",
+                "slug": "prohibited-interview-practice",
+                "version": 1,
+                "supported_behaviours": [],
+                "product_implementation": "Prohibited areas from the pinned pack rendered as workspace warnings, and a policy validator that rejects AI output attempting any of them."
+              },
+              {
+                "name": "Structured behavioural interviewing",
+                "slug": "structured-behavioural-vaktare",
+                "version": 1,
+                "supported_behaviours": [
+                  "Same questions, same order",
+                  "Past behaviour described by the candidate",
+                  "Rating against described behaviour, not impression"
+                ],
+                "product_implementation": "Q1-Q8 pinned from the pack version, rendered verbatim, with per-question anchors 0-4 and no aggregation anywhere."
+              }
+            ],
+            "trust_prohibitions": {
+              "rows": 14,
+              "statement_en_missing": 0
+            },
+            "method_text_columns": [
+              {
+                "type": "text",
+                "column": "slug"
+              },
+              {
+                "type": "text",
+                "column": "name"
+              },
+              {
+                "type": "text",
+                "column": "method_family"
+              },
+              {
+                "type": "text",
+                "column": "purpose"
+              },
+              {
+                "type": "text",
+                "column": "intended_context"
+              },
+              {
+                "type": "ARRAY",
+                "column": "supported_behaviours"
+              },
+              {
+                "type": "ARRAY",
+                "column": "prohibited_interpretations"
+              },
+              {
+                "type": "text",
+                "column": "product_implementation"
+              },
+              {
+                "type": "text",
+                "column": "required_reviewer_qualification"
+              },
+              {
+                "type": "text",
+                "column": "locale_notes"
+              },
+              {
+                "type": "text",
+                "column": "jurisdiction_code"
+              },
+              {
+                "type": "text",
+                "column": "approval_state"
+              }
+            ],
+            "pack_mapping_states": [
+              {
+                "rows": 11,
+                "slug": "security-manager-se",
+                "confirmed": 0,
+                "provisional": 11
+              },
+              {
+                "rows": 11,
+                "slug": "vaktare-se",
+                "confirmed": 0,
+                "provisional": 11
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "query": "SELECT p.slug,v.version_number,v.pilot_availability,v.content_status,public.scp_iv_open_pilot_available(v.id) open_pilot_available FROM public.scp_interview_packs p JOIN public.scp_interview_pack_versions v ON v.pack_id=p.id WHERE p.slug IN('vaktare-se','security-manager-se') ORDER BY p.slug",
+      "result": [
+        {
+          "slug": "security-manager-se",
+          "version_number": 1,
+          "pilot_availability": "open",
+          "content_status": "draft",
+          "open_pilot_available": true
+        },
+        {
+          "slug": "vaktare-se",
+          "version_number": 1,
+          "pilot_availability": "open",
+          "content_status": "draft",
+          "open_pilot_available": true
+        }
+      ]
+    },
+    {
+      "query": "SELECT now() observed_at,(SELECT count(*) FROM supabase_migrations.schema_migrations) migration_count,(SELECT max(version) FROM supabase_migrations.schema_migrations) migration_frontier,to_regprocedure('public.scp_iv_case_content_manifest(uuid)') foundation_manifest_rpc",
+      "result": [
+        {
+          "observed_at": "2026-10-07 20:00:23.965549+00",
+          "migration_count": 382,
+          "migration_frontier": "20270305090000",
+          "foundation_manifest_rpc": null
+        }
+      ]
+    }
+  ]
+}

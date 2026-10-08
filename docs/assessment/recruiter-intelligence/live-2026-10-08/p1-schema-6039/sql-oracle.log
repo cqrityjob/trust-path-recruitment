@@ -1,0 +1,551 @@
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:23: NOTICE:  ok source acceptance runs with pgcrypto outside public
+ ok 
+----
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:68: NOTICE:  ok UTF8 source SHA256 matches fixed independent bytes and preserves absent source NULL
+ ok 
+----
+ 
+(1 row)
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       rec_ri_confirm_profile                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ {"jobId": "ee100000-2222-4000-8000-000000000001", "rules": [{"kind": "mandatory", "labelEn": "Criterion R1", "labelSv": "Krav R1", "position": 1, "questionId": "20000000-0000-4000-8000-000000000001", "decisionRule": "boolean_yes", "instructionEn": "Check criterion R1 against agreed original", "instructionSv": "Kontrollera R1 mot beslutad källa", "requirementId": "10000000-0000-4000-8000-000000000001", "acceptedSources": ["application_answer"]}, {"kind": "mandatory", "labelEn": "Criterion R2", "labelSv": "Krav R2", "position": 2, "questionId": "20000000-0000-4000-8000-000000000002", "decisionRule": "valid_at_start", "instructionEn": "Check criterion R2 against agreed original", "instructionSv": "Kontrollera R2 mot beslutad källa", "requirementId": "10000000-0000-4000-8000-000000000002", "acceptedSources": ["application_cv", "interview_source"]}, {"kind": "mandatory", "labelEn": "Criterion R3", "labelSv": "Krav R3", "position": 3, "questionId": "20000000-0000-4000-8000-000000000003", "decisionRule": "boolean_yes", "instructionEn": "Check criterion R3 against agreed original", "instructionSv": "Kontrollera R3 mot beslutad källa", "requirementId": "10000000-0000-4000-8000-000000000003", "acceptedSources": ["application_answer"]}, {"kind": "mandatory", "labelEn": "Criterion R4", "labelSv": "Krav R4", "position": 4, "questionId": "20000000-0000-4000-8000-000000000004", "decisionRule": "boolean_yes", "instructionEn": "Check criterion R4 against agreed original", "instructionSv": "Kontrollera R4 mot beslutad källa", "requirementId": "10000000-0000-4000-8000-000000000004", "acceptedSources": ["application_answer"]}, {"kind": "desirable", "labelEn": "Criterion R5", "labelSv": "Krav R5", "position": 5, "questionId": "20000000-0000-4000-8000-000000000005", "decisionRule": "boolean_yes", "instructionEn": "Check criterion R5 against agreed original", "instructionSv": "Kontrollera R5 mot beslutad källa", "requirementId": "10000000-0000-4000-8000-000000000005", "acceptedSources": ["application_answer"]}, {"kind": "desirable", "labelEn": "Criterion R6", "labelSv": "Krav R6", "position": 6, "questionId": "20000000-0000-4000-8000-000000000006", "decisionRule": "boolean_yes", "instructionEn": "Check criterion R6 against agreed original", "instructionSv": "Kontrollera R6 mot beslutad källa", "requirementId": "10000000-0000-4000-8000-000000000006", "acceptedSources": ["application_answer"]}], "version": 1, "canManage": true, "profileId": "ae11952a-1f55-4cfa-8699-d251721a1053", "questions": [{"id": "20000000-0000-4000-8000-000000000001", "promptEn": "Do you hold R1?", "promptSv": "Har du R1?", "answerKind": "yes_no", "requirementId": "10000000-0000-4000-8000-000000000001"}, {"id": "20000000-0000-4000-8000-000000000002", "promptEn": "Do you hold R2?", "promptSv": "Har du R2?", "answerKind": "yes_no", "requirementId": "10000000-0000-4000-8000-000000000002"}, {"id": "20000000-0000-4000-8000-000000000003", "promptEn": "Do you hold R3?", "promptSv": "Har du R3?", "answerKind": "yes_no", "requirementId": "10000000-0000-4000-8000-000000000003"}, {"id": "20000000-0000-4000-8000-000000000004", "promptEn": "Do you hold R4?", "promptSv": "Har du R4?", "answerKind": "yes_no", "requirementId": "10000000-0000-4000-8000-000000000004"}, {"id": "20000000-0000-4000-8000-000000000005", "promptEn": "Do you hold R5?", "promptSv": "Har du R5?", "answerKind": "yes_no", "requirementId": "10000000-0000-4000-8000-000000000005"}, {"id": "20000000-0000-4000-8000-000000000006", "promptEn": "Do you hold R6?", "promptSv": "Har du R6?", "answerKind": "yes_no", "requirementId": "10000000-0000-4000-8000-000000000006"}], "startDate": "2026-11-01", "confirmedAt": "2026-10-08T10:30:02.228705+00:00", "confirmedBy": "ee100000-0000-4000-8000-000000000001", "requirements": [{"id": "10000000-0000-4000-8000-000000000001", "kind": "mandatory", "labelEn": "Criterion R1", "labelSv": "Krav R1", "position": 1}, {"id": "10000000-0000-4000-8000-000000000002", "kind": "mandatory", "labelEn": "Criterion R2", "labelSv": "Krav R2", "position": 2}, {"id": "10000000-0000-4000-8000-000000000003", "kind": "mandatory", "labelEn": "Criterion R3", "labelSv": "Krav R3", "position": 3}, {"id": "10000000-0000-4000-8000-000000000004", "kind": "mandatory", "labelEn": "Criterion R4", "labelSv": "Krav R4", "position": 4}, {"id": "10000000-0000-4000-8000-000000000005", "kind": "desirable", "labelEn": "Criterion R5", "labelSv": "Krav R5", "position": 5}, {"id": "10000000-0000-4000-8000-000000000006", "kind": "desirable", "labelEn": "Criterion R6", "labelSv": "Krav R6", "position": 6}]}
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:92: NOTICE:  ok 100 applications: 40 green / 25 yellow / 35 gray, 27 reviewed / 73 remaining
+ ok 
+----
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:102: NOTICE:  ok profile CAS has exact PT409 domain response
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:102: NOTICE:  ok replaced profile CAS has exact PT409 domain response
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:102: NOTICE:  ok source binding CAS has exact PT409 domain response
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:102: NOTICE:  ok selected source CAS has exact PT409 domain response
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:105: NOTICE:  ok four pages: exactly 100 distinct rows
+ ok 
+----
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:106: NOTICE:  ok global color/date/id order precedes pagination
+ ok 
+----
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:107: NOTICE:  ok yellow unreviewed applications remain visible
+ ok 
+----
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:108: NOTICE:  ok remaining pages are 25, 25, 23
+ ok 
+----
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:109: NOTICE:  ok global search sees A099 before paging
+ ok 
+----
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:110: NOTICE:  ok owner filter applies globally
+ ok 
+----
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:111: NOTICE:  ok overview and candidate list share authoritative counts
+ ok 
+----
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:112: NOTICE:  ok neighbors cross a page edge in same global ordering
+ ok 
+----
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:113: NOTICE:  ok explicit no dominates missing accepted document
+ ok 
+----
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:114: NOTICE:  ok missing originals never become met from positive draft assumptions
+ ok 
+----
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:119: NOTICE:  ok empty requirement profile is never green
+ ok 
+----
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:125: NOTICE:  ok active stage counts exclude twenty archived submitted applications
+ ok 
+----
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:126: NOTICE:  ok received counts keep archived history and explicit received link includes all hundred
+ ok 
+----
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:127: NOTICE:  ok new stage chip and clicked global list agree
+ ok 
+----
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:133: NOTICE:  ok an accepted original explicit no dominates a human clarify draft
+ ok 
+----
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:139: NOTICE:  ok direct profile RPC normalizes missing nullable rule keys to explicit JSON null
+ ok 
+----
+ 
+(1 row)
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       rec_ri_confirm_profile                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ {"jobId": "ee100000-2222-4000-8000-000000000001", "rules": [{"kind": "mandatory", "labelEn": "Criterion R1", "labelSv": "Krav R1", "position": 1, "questionId": "20000000-0000-4000-8000-000000000001", "decisionRule": "boolean_yes", "instructionEn": "Check criterion R1 against agreed original", "instructionSv": "Kontrollera R1 mot beslutad källa", "requirementId": "10000000-0000-4000-8000-000000000001", "acceptedSources": ["application_answer"]}, {"kind": "mandatory", "labelEn": "Criterion R2", "labelSv": "Krav R2", "position": 2, "questionId": "20000000-0000-4000-8000-000000000002", "decisionRule": "valid_at_start", "instructionEn": "Check criterion R2 against agreed original", "instructionSv": "Kontrollera R2 mot beslutad källa", "requirementId": "10000000-0000-4000-8000-000000000002", "acceptedSources": ["application_cv", "interview_source"]}, {"kind": "mandatory", "labelEn": "Criterion R3", "labelSv": "Krav R3", "position": 3, "questionId": "20000000-0000-4000-8000-000000000003", "decisionRule": "boolean_yes", "instructionEn": "Check criterion R3 against agreed original", "instructionSv": "Kontrollera R3 mot beslutad källa", "requirementId": "10000000-0000-4000-8000-000000000003", "acceptedSources": ["application_answer"]}, {"kind": "mandatory", "labelEn": "Criterion R4", "labelSv": "Krav R4", "position": 4, "questionId": "20000000-0000-4000-8000-000000000004", "decisionRule": "boolean_yes", "instructionEn": "Check criterion R4 against agreed original", "instructionSv": "Kontrollera R4 mot beslutad källa", "requirementId": "10000000-0000-4000-8000-000000000004", "acceptedSources": ["application_answer"]}, {"kind": "desirable", "labelEn": "Criterion R5", "labelSv": "Krav R5", "position": 5, "questionId": "20000000-0000-4000-8000-000000000005", "decisionRule": "boolean_yes", "instructionEn": "Check criterion R5 against agreed original", "instructionSv": "Kontrollera R5 mot beslutad källa", "requirementId": "10000000-0000-4000-8000-000000000005", "acceptedSources": ["application_answer"]}, {"kind": "desirable", "labelEn": "Criterion R6", "labelSv": "Krav R6", "position": 6, "questionId": "20000000-0000-4000-8000-000000000006", "decisionRule": "boolean_yes", "instructionEn": "Check criterion R6 against agreed original", "instructionSv": "Kontrollera R6 mot beslutad källa", "requirementId": "10000000-0000-4000-8000-000000000006", "acceptedSources": ["application_answer"]}], "version": 2, "canManage": true, "profileId": "bf88df9a-8dca-4e8e-bd4d-3dd3413f07ec", "questions": [{"id": "20000000-0000-4000-8000-000000000001", "promptEn": "Do you hold R1?", "promptSv": "Har du R1?", "answerKind": "yes_no", "requirementId": "10000000-0000-4000-8000-000000000001"}, {"id": "20000000-0000-4000-8000-000000000002", "promptEn": "Do you hold R2?", "promptSv": "Har du R2?", "answerKind": "yes_no", "requirementId": "10000000-0000-4000-8000-000000000002"}, {"id": "20000000-0000-4000-8000-000000000003", "promptEn": "Do you hold R3?", "promptSv": "Har du R3?", "answerKind": "yes_no", "requirementId": "10000000-0000-4000-8000-000000000003"}, {"id": "20000000-0000-4000-8000-000000000004", "promptEn": "Do you hold R4?", "promptSv": "Har du R4?", "answerKind": "yes_no", "requirementId": "10000000-0000-4000-8000-000000000004"}, {"id": "20000000-0000-4000-8000-000000000005", "promptEn": "Do you hold R5?", "promptSv": "Har du R5?", "answerKind": "yes_no", "requirementId": "10000000-0000-4000-8000-000000000005"}, {"id": "20000000-0000-4000-8000-000000000006", "promptEn": "Do you hold R6?", "promptSv": "Har du R6?", "answerKind": "yes_no", "requirementId": "10000000-0000-4000-8000-000000000006"}], "startDate": "2026-12-01", "confirmedAt": "2026-10-08T10:30:02.228705+00:00", "confirmedBy": "ee100000-0000-4000-8000-000000000001", "requirements": [{"id": "10000000-0000-4000-8000-000000000001", "kind": "mandatory", "labelEn": "Criterion R1", "labelSv": "Krav R1", "position": 1}, {"id": "10000000-0000-4000-8000-000000000002", "kind": "mandatory", "labelEn": "Criterion R2", "labelSv": "Krav R2", "position": 2}, {"id": "10000000-0000-4000-8000-000000000003", "kind": "mandatory", "labelEn": "Criterion R3", "labelSv": "Krav R3", "position": 3}, {"id": "10000000-0000-4000-8000-000000000004", "kind": "mandatory", "labelEn": "Criterion R4", "labelSv": "Krav R4", "position": 4}, {"id": "10000000-0000-4000-8000-000000000005", "kind": "desirable", "labelEn": "Criterion R5", "labelSv": "Krav R5", "position": 5}, {"id": "10000000-0000-4000-8000-000000000006", "kind": "desirable", "labelEn": "Criterion R6", "labelSv": "Krav R6", "position": 6}]}
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:145: NOTICE:  ok V1 to V2 date change: 30/35/35, no prior review silently current
+ ok 
+----
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:146: NOTICE:  ok direct profile mutation denied
+ fails 
+-------
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:152: NOTICE:  ok U1 revoked current source invalidates five accepted decisions and reviews immediately
+ ok 
+----
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:153: NOTICE:  ok no new product source choice after revocation
+ ok 
+----
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:159: NOTICE:  ok U2 replacement original does not reuse stale accepted facts
+ ok 
+----
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:161: NOTICE:  ok U2 accepted new facts restore green but explicit whole-case review remains stale
+ ok 
+----
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:163: NOTICE:  ok U2 five explicit re-confirmations restore current reviewed count
+ ok 
+----
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:170: NOTICE:  ok U3 replacement invalidates old confirmation and basis
+ ok 
+----
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:172: NOTICE:  ok new human-accepted expiry is yellow and explicitly reviewed
+ ok 
+----
+ 
+(1 row)
+
+ rec_set_application_responsible 
+---------------------------------
+                               3
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:180: NOTICE:  ok responsible reassignment alone does not stale current requirement review
+ ok 
+----
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:181: NOTICE:  ok stale review cannot overwrite newly assigned responsible person
+ fails 
+-------
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:182: NOTICE:  ok assignment CAS is checked even if responsible selection now matches
+ fails 
+-------
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:183: NOTICE:  ok stale assignment requests leave responsible, decisions and next action unchanged
+ ok 
+----
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:185: NOTICE:  ok failed assignment CAS creates no review event
+ ok 
+----
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:195: NOTICE:  ok two readers share revision seven
+ ok 
+----
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:196: NOTICE:  ok CAS winner is revision eight
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:196: NOTICE:  ok retry of same operation is idempotent
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:197: NOTICE:  ok CAS stale reader is rejected and draft not applied
+ fails 
+-------
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:198: NOTICE:  ok no double counting after winner/retry/stale loser
+ ok 
+----
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:214: NOTICE:  ok explicitly selected two requirements transferred to same application case
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:214: NOTICE:  ok handoff operation retry is idempotent
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:214: NOTICE:  ok repeated same selection with new operation reuses sources
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:214: NOTICE:  ok handoff itself does not invalidate current human review
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:214: NOTICE:  ok stale handoff revision is refused
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:214: NOTICE:  ok handoff refuses another application case
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:216: NOTICE:  ok handoff does not copy entire CV or create evidence
+ ok 
+----
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:217: NOTICE:  ok selected requirements are preparation sources, never automatically confirmed evidence
+ ok 
+----
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:220: NOTICE:  ok ordinary member handoff direct RPC denied
+ fails 
+-------
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:228: NOTICE:  ok application membership does not reveal private interview source choices
+ ok 
+----
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:229: NOTICE:  ok private source citation and human text are redacted in public review RPC
+ ok 
+----
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:230: NOTICE:  ok raw audit payload cannot bypass private case permission
+ fails 
+-------
+ 
+(1 row)
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       rec_ri_confirm_profile                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ {"jobId": "ee100000-2222-4000-8000-000000000001", "rules": [{"kind": "mandatory", "labelEn": "Criterion R1", "labelSv": "Krav R1", "position": 1, "questionId": "20000000-0000-4000-8000-000000000001", "decisionRule": "boolean_yes", "instructionEn": "Check criterion R1 against agreed original", "instructionSv": "Kontrollera R1 mot beslutad källa", "requirementId": "10000000-0000-4000-8000-000000000001", "acceptedSources": ["application_answer"]}, {"kind": "mandatory", "labelEn": "Criterion R2", "labelSv": "Krav R2", "position": 2, "questionId": "20000000-0000-4000-8000-000000000002", "decisionRule": "valid_at_start", "instructionEn": "Check criterion R2 against agreed original", "instructionSv": "Kontrollera R2 mot beslutad källa", "requirementId": "10000000-0000-4000-8000-000000000002", "acceptedSources": ["application_cv", "interview_source"]}, {"kind": "mandatory", "labelEn": "Criterion R3", "labelSv": "Krav R3", "position": 3, "questionId": "20000000-0000-4000-8000-000000000003", "decisionRule": "boolean_yes", "instructionEn": "Check criterion R3 against agreed original", "instructionSv": "Kontrollera R3 mot beslutad källa", "requirementId": "10000000-0000-4000-8000-000000000003", "acceptedSources": ["application_answer"]}, {"kind": "mandatory", "labelEn": "Criterion R4", "labelSv": "Krav R4", "position": 4, "questionId": "20000000-0000-4000-8000-000000000004", "decisionRule": "boolean_yes", "instructionEn": "Check criterion R4 against agreed original", "instructionSv": "Kontrollera R4 mot beslutad källa", "requirementId": "10000000-0000-4000-8000-000000000004", "acceptedSources": ["application_answer"]}, {"kind": "desirable", "labelEn": "Criterion R5", "labelSv": "Krav R5", "position": 5, "questionId": "20000000-0000-4000-8000-000000000005", "decisionRule": "boolean_yes", "instructionEn": "Check criterion R5 against agreed original", "instructionSv": "Kontrollera R5 mot beslutad källa", "requirementId": "10000000-0000-4000-8000-000000000005", "acceptedSources": ["application_answer"]}, {"kind": "desirable", "labelEn": "Criterion R6", "labelSv": "Krav R6", "position": 6, "questionId": "20000000-0000-4000-8000-000000000006", "decisionRule": "boolean_yes", "instructionEn": "Check criterion R6 against agreed original", "instructionSv": "Kontrollera R6 mot beslutad källa", "requirementId": "10000000-0000-4000-8000-000000000006", "acceptedSources": ["application_answer"]}], "version": 2, "canManage": true, "profileId": "84a063c9-4619-4125-8f57-50b2572c9235", "questions": [{"id": "20000000-0000-4000-8000-000000000001", "promptEn": "Do you hold R1?", "promptSv": "Har du R1?", "answerKind": "yes_no", "requirementId": "10000000-0000-4000-8000-000000000001"}, {"id": "20000000-0000-4000-8000-000000000002", "promptEn": "Do you hold R2?", "promptSv": "Har du R2?", "answerKind": "yes_no", "requirementId": "10000000-0000-4000-8000-000000000002"}, {"id": "20000000-0000-4000-8000-000000000003", "promptEn": "Do you hold R3?", "promptSv": "Har du R3?", "answerKind": "yes_no", "requirementId": "10000000-0000-4000-8000-000000000003"}, {"id": "20000000-0000-4000-8000-000000000004", "promptEn": "Do you hold R4?", "promptSv": "Har du R4?", "answerKind": "yes_no", "requirementId": "10000000-0000-4000-8000-000000000004"}, {"id": "20000000-0000-4000-8000-000000000005", "promptEn": "Do you hold R5?", "promptSv": "Har du R5?", "answerKind": "yes_no", "requirementId": "10000000-0000-4000-8000-000000000005"}, {"id": "20000000-0000-4000-8000-000000000006", "promptEn": "Do you hold R6?", "promptSv": "Har du R6?", "answerKind": "yes_no", "requirementId": "10000000-0000-4000-8000-000000000006"}], "startDate": "2026-12-01", "confirmedAt": "2026-10-08T10:30:02.228705+00:00", "confirmedBy": "ee100000-0000-4000-8000-000000000001", "requirements": [{"id": "10000000-0000-4000-8000-000000000001", "kind": "mandatory", "labelEn": "Criterion R1", "labelSv": "Krav R1", "position": 1}, {"id": "10000000-0000-4000-8000-000000000002", "kind": "mandatory", "labelEn": "Criterion R2", "labelSv": "Krav R2", "position": 2}, {"id": "10000000-0000-4000-8000-000000000003", "kind": "mandatory", "labelEn": "Criterion R3", "labelSv": "Krav R3", "position": 3}, {"id": "10000000-0000-4000-8000-000000000004", "kind": "mandatory", "labelEn": "Criterion R4", "labelSv": "Krav R4", "position": 4}, {"id": "10000000-0000-4000-8000-000000000005", "kind": "desirable", "labelEn": "Criterion R5", "labelSv": "Krav R5", "position": 5}, {"id": "10000000-0000-4000-8000-000000000006", "kind": "desirable", "labelEn": "Criterion R6", "labelSv": "Krav R6", "position": 6}]}
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:244: NOTICE:  ok later profile/source change preserves final report byte-for-byte
+ ok 
+----
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:245: NOTICE:  ok even table owner cannot rewrite finalized report
+ fails 
+-------
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:257: NOTICE:  ok actual positive and negative AI drafts without original never create met or not_met
+ ok 
+----
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:258: NOTICE:  ok direct API positive assertion without accepted original is rejected
+ fails 
+-------
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:260: NOTICE:  ok AI and transcript switches stay off; historical synthetic proposal rows do not execute AI
+ ok 
+----
+ 
+(1 row)
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 rec_ri_confirm_profile                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ {"jobId": "ee100000-2222-4000-8000-000000000001", "rules": [{"kind": "mandatory", "labelEn": "Criterion R1", "labelSv": "Krav R1", "position": 1, "questionId": "20000000-0000-4000-8000-000000000001", "decisionRule": "boolean_yes", "instructionEn": "Check criterion R1 against agreed original", "instructionSv": "Kontrollera R1 mot beslutad källa", "requirementId": "10000000-0000-4000-8000-000000000001", "acceptedSources": ["application_answer", "interview_source"]}, {"kind": "mandatory", "labelEn": "Criterion R2", "labelSv": "Krav R2", "position": 2, "questionId": "20000000-0000-4000-8000-000000000002", "decisionRule": "valid_at_start", "instructionEn": "Check criterion R2 against agreed original", "instructionSv": "Kontrollera R2 mot beslutad källa", "requirementId": "10000000-0000-4000-8000-000000000002", "acceptedSources": ["application_cv", "interview_source"]}, {"kind": "mandatory", "labelEn": "Criterion R3", "labelSv": "Krav R3", "position": 3, "questionId": "20000000-0000-4000-8000-000000000003", "decisionRule": "boolean_yes", "instructionEn": "Check criterion R3 against agreed original", "instructionSv": "Kontrollera R3 mot beslutad källa", "requirementId": "10000000-0000-4000-8000-000000000003", "acceptedSources": ["application_answer"]}, {"kind": "mandatory", "labelEn": "Criterion R4", "labelSv": "Krav R4", "position": 4, "questionId": "20000000-0000-4000-8000-000000000004", "decisionRule": "boolean_yes", "instructionEn": "Check criterion R4 against agreed original", "instructionSv": "Kontrollera R4 mot beslutad källa", "requirementId": "10000000-0000-4000-8000-000000000004", "acceptedSources": ["application_answer"]}, {"kind": "desirable", "labelEn": "Criterion R5", "labelSv": "Krav R5", "position": 5, "questionId": "20000000-0000-4000-8000-000000000005", "decisionRule": "boolean_yes", "instructionEn": "Check criterion R5 against agreed original", "instructionSv": "Kontrollera R5 mot beslutad källa", "requirementId": "10000000-0000-4000-8000-000000000005", "acceptedSources": ["application_answer"]}, {"kind": "desirable", "labelEn": "Criterion R6", "labelSv": "Krav R6", "position": 6, "questionId": "20000000-0000-4000-8000-000000000006", "decisionRule": "boolean_yes", "instructionEn": "Check criterion R6 against agreed original", "instructionSv": "Kontrollera R6 mot beslutad källa", "requirementId": "10000000-0000-4000-8000-000000000006", "acceptedSources": ["application_answer"]}], "version": 2, "canManage": true, "profileId": "545e39cf-8373-40f0-a378-3dea86bde66c", "questions": [{"id": "20000000-0000-4000-8000-000000000001", "promptEn": "Do you hold R1?", "promptSv": "Har du R1?", "answerKind": "yes_no", "requirementId": "10000000-0000-4000-8000-000000000001"}, {"id": "20000000-0000-4000-8000-000000000002", "promptEn": "Do you hold R2?", "promptSv": "Har du R2?", "answerKind": "yes_no", "requirementId": "10000000-0000-4000-8000-000000000002"}, {"id": "20000000-0000-4000-8000-000000000003", "promptEn": "Do you hold R3?", "promptSv": "Har du R3?", "answerKind": "yes_no", "requirementId": "10000000-0000-4000-8000-000000000003"}, {"id": "20000000-0000-4000-8000-000000000004", "promptEn": "Do you hold R4?", "promptSv": "Har du R4?", "answerKind": "yes_no", "requirementId": "10000000-0000-4000-8000-000000000004"}, {"id": "20000000-0000-4000-8000-000000000005", "promptEn": "Do you hold R5?", "promptSv": "Har du R5?", "answerKind": "yes_no", "requirementId": "10000000-0000-4000-8000-000000000005"}, {"id": "20000000-0000-4000-8000-000000000006", "promptEn": "Do you hold R6?", "promptSv": "Har du R6?", "answerKind": "yes_no", "requirementId": "10000000-0000-4000-8000-000000000006"}], "startDate": "2026-11-01", "confirmedAt": "2026-10-08T10:30:02.228705+00:00", "confirmedBy": "ee100000-0000-4000-8000-000000000001", "requirements": [{"id": "10000000-0000-4000-8000-000000000001", "kind": "mandatory", "labelEn": "Criterion R1", "labelSv": "Krav R1", "position": 1}, {"id": "10000000-0000-4000-8000-000000000002", "kind": "mandatory", "labelEn": "Criterion R2", "labelSv": "Krav R2", "position": 2}, {"id": "10000000-0000-4000-8000-000000000003", "kind": "mandatory", "labelEn": "Criterion R3", "labelSv": "Krav R3", "position": 3}, {"id": "10000000-0000-4000-8000-000000000004", "kind": "mandatory", "labelEn": "Criterion R4", "labelSv": "Krav R4", "position": 4}, {"id": "10000000-0000-4000-8000-000000000005", "kind": "desirable", "labelEn": "Criterion R5", "labelSv": "Krav R5", "position": 5}, {"id": "10000000-0000-4000-8000-000000000006", "kind": "desirable", "labelEn": "Criterion R6", "labelSv": "Krav R6", "position": 6}]}
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:292: NOTICE:  ok public explicit-NO fallback preserves original answer but hides private human text
+ ok 
+----
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:293: NOTICE:  ok public review never exposes internal opaque provenance
+ ok 
+----
+ 
+(1 row)
+
+ scp_iv_erase_source 
+---------------------
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:297: NOTICE:  ok erased original source does not publish retained private human text
+ ok 
+----
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:301: NOTICE:  ok current case permission allows private human text even with public fallback
+ ok 
+----
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:305: NOTICE:  ok revoked case permission immediately redacts private human text
+ ok 
+----
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:309: NOTICE:  ok deleting source and case preserves opaque human-text provenance without FK loss
+ ok 
+----
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:312: NOTICE:  ok deleted original case cannot make historical private text readable
+ ok 
+----
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:316: NOTICE:  ok handoff refuses erased private origin even when current explicit-NO source is public
+ fails 
+-------
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:318: NOTICE:  ok refused private-origin handoff writes no preparation source
+ ok 
+----
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:323: NOTICE:  ok direct actor-null cannot disguise a profile edit as user erasure
+ fails 
+-------
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:324: NOTICE:  ok confirmed profile cannot be deleted while its job exists
+ fails 
+-------
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:325: NOTICE:  ok direct actor-null cannot disguise an audit edit as user erasure
+ fails 
+-------
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:326: NOTICE:  ok review audit cannot be directly deleted
+ fails 
+-------
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:327: NOTICE:  ok idempotency result cannot be rewritten
+ fails 
+-------
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:328: NOTICE:  ok idempotency history cannot be directly deleted
+ fails 
+-------
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:329: NOTICE:  truncate cascades to table "rec_requirement_review_heads"
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:329: NOTICE:  truncate cascades to table "rec_requirement_decisions"
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:329: NOTICE:  truncate cascades to table "rec_requirement_review_events"
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:329: NOTICE:  ok TRUNCATE cannot erase profile history through cascade
+ fails 
+-------
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:330: NOTICE:  ok TRUNCATE cannot erase current review heads
+ fails 
+-------
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:331: NOTICE:  ok TRUNCATE cannot erase accepted decisions
+ fails 
+-------
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:332: NOTICE:  ok TRUNCATE cannot erase audit events
+ fails 
+-------
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:333: NOTICE:  ok TRUNCATE cannot erase idempotency operations
+ fails 
+-------
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:334: NOTICE:  truncate cascades to table "recruitment_questions"
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:334: NOTICE:  truncate cascades to table "job_application_answers"
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:334: NOTICE:  ok TRUNCATE cannot remove requirement IDs pinned by a profile
+ fails 
+-------
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:335: NOTICE:  truncate cascades to table "job_application_answers"
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:335: NOTICE:  ok TRUNCATE cannot remove question IDs pinned by a profile
+ fails 
+-------
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:336: NOTICE:  ok service role has no raw table bypass on canonical P1 records
+ ok 
+----
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:338: NOTICE:  ok RLS-bypassing service role cannot mutate confirmed profiles
+ fails 
+-------
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:339: NOTICE:  ok RLS-bypassing service role cannot delete review audit
+ fails 
+-------
+ 
+(1 row)
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       rec_ri_confirm_profile                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ {"jobId": "ee100000-2222-4000-8000-000000000001", "rules": [{"kind": "mandatory", "labelEn": "Criterion R1", "labelSv": "Krav R1", "position": 1, "questionId": "20000000-0000-4000-8000-000000000001", "decisionRule": "boolean_yes", "instructionEn": "Check criterion R1 against agreed original", "instructionSv": "Kontrollera R1 mot beslutad källa", "requirementId": "10000000-0000-4000-8000-000000000001", "acceptedSources": ["application_answer"]}, {"kind": "mandatory", "labelEn": "Criterion R2", "labelSv": "Krav R2", "position": 2, "questionId": "20000000-0000-4000-8000-000000000002", "decisionRule": "valid_at_start", "instructionEn": "Check criterion R2 against agreed original", "instructionSv": "Kontrollera R2 mot beslutad källa", "requirementId": "10000000-0000-4000-8000-000000000002", "acceptedSources": ["application_cv", "interview_source"]}, {"kind": "mandatory", "labelEn": "Criterion R3", "labelSv": "Krav R3", "position": 3, "questionId": "20000000-0000-4000-8000-000000000003", "decisionRule": "boolean_yes", "instructionEn": "Check criterion R3 against agreed original", "instructionSv": "Kontrollera R3 mot beslutad källa", "requirementId": "10000000-0000-4000-8000-000000000003", "acceptedSources": ["application_answer"]}, {"kind": "mandatory", "labelEn": "Criterion R4", "labelSv": "Krav R4", "position": 4, "questionId": "20000000-0000-4000-8000-000000000004", "decisionRule": "boolean_yes", "instructionEn": "Check criterion R4 against agreed original", "instructionSv": "Kontrollera R4 mot beslutad källa", "requirementId": "10000000-0000-4000-8000-000000000004", "acceptedSources": ["application_answer"]}, {"kind": "desirable", "labelEn": "Criterion R5", "labelSv": "Krav R5", "position": 5, "questionId": "20000000-0000-4000-8000-000000000005", "decisionRule": "boolean_yes", "instructionEn": "Check criterion R5 against agreed original", "instructionSv": "Kontrollera R5 mot beslutad källa", "requirementId": "10000000-0000-4000-8000-000000000005", "acceptedSources": ["application_answer"]}, {"kind": "desirable", "labelEn": "Criterion R6", "labelSv": "Krav R6", "position": 6, "questionId": "20000000-0000-4000-8000-000000000006", "decisionRule": "boolean_yes", "instructionEn": "Check criterion R6 against agreed original", "instructionSv": "Kontrollera R6 mot beslutad källa", "requirementId": "10000000-0000-4000-8000-000000000006", "acceptedSources": ["application_answer"]}], "version": 2, "canManage": true, "profileId": "724a7eb5-52f0-4ee5-8bf8-f9080bdc3b44", "questions": [{"id": "20000000-0000-4000-8000-000000000001", "promptEn": "Do you hold R1?", "promptSv": "Har du R1?", "answerKind": "yes_no", "requirementId": "10000000-0000-4000-8000-000000000001"}, {"id": "20000000-0000-4000-8000-000000000002", "promptEn": "Do you hold R2?", "promptSv": "Har du R2?", "answerKind": "yes_no", "requirementId": "10000000-0000-4000-8000-000000000002"}, {"id": "20000000-0000-4000-8000-000000000003", "promptEn": "Do you hold R3?", "promptSv": "Har du R3?", "answerKind": "yes_no", "requirementId": "10000000-0000-4000-8000-000000000003"}, {"id": "20000000-0000-4000-8000-000000000004", "promptEn": "Do you hold R4?", "promptSv": "Har du R4?", "answerKind": "yes_no", "requirementId": "10000000-0000-4000-8000-000000000004"}, {"id": "20000000-0000-4000-8000-000000000005", "promptEn": "Do you hold R5?", "promptSv": "Har du R5?", "answerKind": "yes_no", "requirementId": "10000000-0000-4000-8000-000000000005"}, {"id": "20000000-0000-4000-8000-000000000006", "promptEn": "Do you hold R6?", "promptSv": "Har du R6?", "answerKind": "yes_no", "requirementId": "10000000-0000-4000-8000-000000000006"}], "startDate": "2026-12-01", "confirmedAt": "2026-10-08T10:30:02.228705+00:00", "confirmedBy": "ee100000-0000-4000-8000-000000000002", "requirements": [{"id": "10000000-0000-4000-8000-000000000001", "kind": "mandatory", "labelEn": "Criterion R1", "labelSv": "Krav R1", "position": 1}, {"id": "10000000-0000-4000-8000-000000000002", "kind": "mandatory", "labelEn": "Criterion R2", "labelSv": "Krav R2", "position": 2}, {"id": "10000000-0000-4000-8000-000000000003", "kind": "mandatory", "labelEn": "Criterion R3", "labelSv": "Krav R3", "position": 3}, {"id": "10000000-0000-4000-8000-000000000004", "kind": "mandatory", "labelEn": "Criterion R4", "labelSv": "Krav R4", "position": 4}, {"id": "10000000-0000-4000-8000-000000000005", "kind": "desirable", "labelEn": "Criterion R5", "labelSv": "Krav R5", "position": 5}, {"id": "10000000-0000-4000-8000-000000000006", "kind": "desirable", "labelEn": "Criterion R6", "labelSv": "Krav R6", "position": 6}]}
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:355: NOTICE:  ok genuine auth-user FK erasure clears profile actor and preserves version content
+ ok 
+----
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:356: NOTICE:  ok genuine auth-user FK erasure preserves review event payload
+ ok 
+----
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:357: NOTICE:  ok genuine auth-user erasure cascades personal operation cache
+ ok 
+----
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:362: NOTICE:  ok genuine job erasure cascades P1 profiles, heads, audit and operations
+ ok 
+----
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:368: NOTICE:  ok ordinary member can read authorized received population
+ ok 
+----
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:369: NOTICE:  ok ordinary member cannot confirm criteria by direct RPC
+ fails 
+-------
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:370: NOTICE:  ok ordinary member cannot save review by direct RPC
+ fails 
+-------
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:372: NOTICE:  ok outsider cannot read original-backed review
+ fails 
+-------
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:373: NOTICE:  ok RLS hides profiles from outsider
+ ok 
+----
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:376: NOTICE:  ok anonymous direct RPC denied
+ fails 
+-------
+ 
+(1 row)
+
+psql:supabase/tests/recruiter_intelligence_p1_test.sql:383: NOTICE:  ok unchanged fixture ready for separate browser/API tests
+ ok 
+----
+ 
+(1 row)
+

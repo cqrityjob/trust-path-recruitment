@@ -1,0 +1,435 @@
+{
+  "observedAt": "2026-10-08T09:34:22Z",
+  "source": "Read-only GitHub connector metadata, not hosted installation or public runtime proof",
+  "main": {
+    "sha": "8498a1ae0aa973012b32d4957ee7ce32a8735989",
+    "tree": "232300877ba5d33eb23f99231b54338786e60660"
+  },
+  "pullRequests": [
+    {
+      "number": 451,
+      "url": "https://github.com/cqrityjob/trust-path-recruitment/pull/451",
+      "state": "open",
+      "draft": true,
+      "merged": false,
+      "mergedAt": null,
+      "headSha": "e3e58b0554d2c7b6f4e72e70f8cb818a962f9e07",
+      "baseSha": "34a91352c560bbe5ccf6a2540f7de95a05e529cc",
+      "baseRef": "codex/recruiter-intelligence-v03-content-schema",
+      "mergeCommitSha": "61b58a55acb1058291ace9e5235bbf29c52d249d",
+      "mergeCommitIsActual": false
+    },
+    {
+      "number": 452,
+      "url": "https://github.com/cqrityjob/trust-path-recruitment/pull/452",
+      "state": "open",
+      "draft": true,
+      "merged": false,
+      "mergedAt": null,
+      "headSha": "a68f22d799769de32230781bba268632e57e796f",
+      "baseSha": "c1d154420c4477c56f1fbeeecf7933e0171bf5e1",
+      "baseRef": "main",
+      "mergeCommitSha": "38f9ea6006e1decb062d4943dd15d61af9846e23",
+      "mergeCommitIsActual": false
+    },
+    {
+      "number": 453,
+      "url": "https://github.com/cqrityjob/trust-path-recruitment/pull/453",
+      "state": "open",
+      "draft": true,
+      "merged": false,
+      "mergedAt": null,
+      "headSha": "dea1ceb8e0769d98a345b2846fbee15ca082f969",
+      "baseSha": "c1d154420c4477c56f1fbeeecf7933e0171bf5e1",
+      "baseRef": "main",
+      "mergeCommitSha": null,
+      "mergeCommitIsActual": false
+    },
+    {
+      "number": 454,
+      "url": "https://github.com/cqrityjob/trust-path-recruitment/pull/454",
+      "state": "closed",
+      "draft": false,
+      "merged": true,
+      "mergedAt": "2026-10-08T09:05:36Z",
+      "headSha": "24d18eb627223c0b0d4572831bd494b2396868c1",
+      "baseSha": "c1d154420c4477c56f1fbeeecf7933e0171bf5e1",
+      "baseRef": "main",
+      "mergeCommitSha": "8498a1ae0aa973012b32d4957ee7ce32a8735989",
+      "mergeCommitIsActual": true
+    },
+    {
+      "number": 455,
+      "url": "https://github.com/cqrityjob/trust-path-recruitment/pull/455",
+      "state": "open",
+      "draft": true,
+      "merged": false,
+      "mergedAt": null,
+      "headSha": "250623cfb677c931caf70a2354daf774f72f443a",
+      "baseSha": "8498a1ae0aa973012b32d4957ee7ce32a8735989",
+      "baseRef": "main",
+      "mergeCommitSha": "295ba6f107aaa5f432245b11de83616337b1bf0f",
+      "mergeCommitIsActual": false
+    },
+    {
+      "number": 456,
+      "url": "https://github.com/cqrityjob/trust-path-recruitment/pull/456",
+      "state": "open",
+      "draft": true,
+      "merged": false,
+      "mergedAt": null,
+      "headSha": "4a5921e7e7bcd0ef02b984e7abb0d4b7afe43a20",
+      "baseSha": "250623cfb677c931caf70a2354daf774f72f443a",
+      "baseRef": "codex/ri-v03-conflict-transport-schema",
+      "mergeCommitSha": "bb07417ab01b101cec5a504d7524cf77b7265305",
+      "mergeCommitIsActual": false
+    },
+    {
+      "number": 457,
+      "url": "https://github.com/cqrityjob/trust-path-recruitment/pull/457",
+      "state": "open",
+      "draft": true,
+      "merged": false,
+      "mergedAt": null,
+      "headSha": "ef330a60c1eb27af687857db2b15ed0599429670",
+      "baseSha": "250623cfb677c931caf70a2354daf774f72f443a",
+      "baseRef": "codex/ri-v03-conflict-transport-schema",
+      "mergeCommitSha": "62ca742245ebfa691a59aa87e80ec6e3cd623afa",
+      "mergeCommitIsActual": false
+    }
+  ],
+  "workflowRuns": {
+    "snapshotApp": {
+      "workflow_runs": [
+        {
+          "id": 37753162013,
+          "name": "Passport preview image — Cloudflare Worker runtime evidence",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 33,
+          "jobs_url": "https://api.github.com/repos/cqrityjob/trust-path-recruitment/actions/runs/37753162013/jobs",
+          "logs_url": "https://api.github.com/repos/cqrityjob/trust-path-recruitment/actions/runs/37753162013/logs",
+          "workflow_id": 375232636
+        },
+        {
+          "id": 37753162039,
+          "name": "Career Center persistence — routed browser evidence",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 373,
+          "jobs_url": "https://api.github.com/repos/cqrityjob/trust-path-recruitment/actions/runs/37753162039/jobs",
+          "logs_url": "https://api.github.com/repos/cqrityjob/trust-path-recruitment/actions/runs/37753162039/logs",
+          "workflow_id": 368173933
+        },
+        {
+          "id": 37753162018,
+          "name": "Recruitment workspace — routed browser evidence",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 410,
+          "jobs_url": "https://api.github.com/repos/cqrityjob/trust-path-recruitment/actions/runs/37753162018/jobs",
+          "logs_url": "https://api.github.com/repos/cqrityjob/trust-path-recruitment/actions/runs/37753162018/logs",
+          "workflow_id": 366188871
+        },
+        {
+          "id": 37753162010,
+          "name": "E4 employer final report — routed browser evidence",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 654,
+          "jobs_url": "https://api.github.com/repos/cqrityjob/trust-path-recruitment/actions/runs/37753162010/jobs",
+          "logs_url": "https://api.github.com/repos/cqrityjob/trust-path-recruitment/actions/runs/37753162010/logs",
+          "workflow_id": 355184616
+        },
+        {
+          "id": 37753162049,
+          "name": "Job ad back navigation — routed browser evidence",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 375,
+          "jobs_url": "https://api.github.com/repos/cqrityjob/trust-path-recruitment/actions/runs/37753162049/jobs",
+          "logs_url": "https://api.github.com/repos/cqrityjob/trust-path-recruitment/actions/runs/37753162049/logs",
+          "workflow_id": 368167355
+        },
+        {
+          "id": 37753162016,
+          "name": "Passport public pilot — real-backend evidence",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 335,
+          "jobs_url": "https://api.github.com/repos/cqrityjob/trust-path-recruitment/actions/runs/37753162016/jobs",
+          "logs_url": "https://api.github.com/repos/cqrityjob/trust-path-recruitment/actions/runs/37753162016/logs",
+          "workflow_id": 368639091
+        },
+        {
+          "id": 37753162030,
+          "name": "Security Work browser evidence",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 423,
+          "jobs_url": "https://api.github.com/repos/cqrityjob/trust-path-recruitment/actions/runs/37753162030/jobs",
+          "logs_url": "https://api.github.com/repos/cqrityjob/trust-path-recruitment/actions/runs/37753162030/logs",
+          "workflow_id": 365751290
+        },
+        {
+          "id": 37753162019,
+          "name": "CI",
+          "status": "completed",
+          "conclusion": "failure",
+          "run_number": 1719,
+          "jobs_url": "https://api.github.com/repos/cqrityjob/trust-path-recruitment/actions/runs/37753162019/jobs",
+          "logs_url": "https://api.github.com/repos/cqrityjob/trust-path-recruitment/actions/runs/37753162019/logs",
+          "workflow_id": 316060196
+        }
+      ]
+    },
+    "p1App": {
+      "workflow_runs": []
+    },
+    "forwardSchema": {
+      "workflow_runs": [
+        {
+          "id": 37754392700,
+          "name": "Role assessment and TestBank regression",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 20,
+          "jobs_url": "https://api.github.com/repos/cqrityjob/trust-path-recruitment/actions/runs/37754392700/jobs",
+          "logs_url": "https://api.github.com/repos/cqrityjob/trust-path-recruitment/actions/runs/37754392700/logs",
+          "workflow_id": 376750970
+        },
+        {
+          "id": 37754392701,
+          "name": "Passport public pilot — real-backend evidence",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 337,
+          "jobs_url": "https://api.github.com/repos/cqrityjob/trust-path-recruitment/actions/runs/37754392701/jobs",
+          "logs_url": "https://api.github.com/repos/cqrityjob/trust-path-recruitment/actions/runs/37754392701/logs",
+          "workflow_id": 368639091
+        },
+        {
+          "id": 37754392728,
+          "name": "Job ad back navigation — routed browser evidence",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 377,
+          "jobs_url": "https://api.github.com/repos/cqrityjob/trust-path-recruitment/actions/runs/37754392728/jobs",
+          "logs_url": "https://api.github.com/repos/cqrityjob/trust-path-recruitment/actions/runs/37754392728/logs",
+          "workflow_id": 368167355
+        },
+        {
+          "id": 37754392706,
+          "name": "Recruitment workspace — routed browser evidence",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 412,
+          "jobs_url": "https://api.github.com/repos/cqrityjob/trust-path-recruitment/actions/runs/37754392706/jobs",
+          "logs_url": "https://api.github.com/repos/cqrityjob/trust-path-recruitment/actions/runs/37754392706/logs",
+          "workflow_id": 366188871
+        },
+        {
+          "id": 37754392774,
+          "name": "Career Center persistence — routed browser evidence",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 375,
+          "jobs_url": "https://api.github.com/repos/cqrityjob/trust-path-recruitment/actions/runs/37754392774/jobs",
+          "logs_url": "https://api.github.com/repos/cqrityjob/trust-path-recruitment/actions/runs/37754392774/logs",
+          "workflow_id": 368173933
+        },
+        {
+          "id": 37754392716,
+          "name": "CI",
+          "status": "in_progress",
+          "conclusion": null,
+          "run_number": 1723,
+          "jobs_url": "https://api.github.com/repos/cqrityjob/trust-path-recruitment/actions/runs/37754392716/jobs",
+          "logs_url": "https://api.github.com/repos/cqrityjob/trust-path-recruitment/actions/runs/37754392716/logs",
+          "workflow_id": 316060196
+        },
+        {
+          "id": 37754392736,
+          "name": "E4 employer final report — routed browser evidence",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 657,
+          "jobs_url": "https://api.github.com/repos/cqrityjob/trust-path-recruitment/actions/runs/37754392736/jobs",
+          "logs_url": "https://api.github.com/repos/cqrityjob/trust-path-recruitment/actions/runs/37754392736/logs",
+          "workflow_id": 355184616
+        },
+        {
+          "id": 37754392687,
+          "name": "Security Work browser evidence",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 425,
+          "jobs_url": "https://api.github.com/repos/cqrityjob/trust-path-recruitment/actions/runs/37754392687/jobs",
+          "logs_url": "https://api.github.com/repos/cqrityjob/trust-path-recruitment/actions/runs/37754392687/logs",
+          "workflow_id": 365751290
+        }
+      ]
+    },
+    "p1Schema": {
+      "workflow_runs": [
+        {
+          "id": 37757488078,
+          "name": "CI",
+          "status": "queued",
+          "conclusion": null,
+          "run_number": 1727,
+          "jobs_url": "https://api.github.com/repos/cqrityjob/trust-path-recruitment/actions/runs/37757488078/jobs",
+          "logs_url": "https://api.github.com/repos/cqrityjob/trust-path-recruitment/actions/runs/37757488078/logs",
+          "workflow_id": 316060196
+        }
+      ]
+    },
+    "realServicesPrevious": {
+      "workflow_runs": [
+        {
+          "id": 37754879423,
+          "name": "CI",
+          "status": "completed",
+          "conclusion": "cancelled",
+          "run_number": 1724,
+          "jobs_url": "https://api.github.com/repos/cqrityjob/trust-path-recruitment/actions/runs/37754879423/jobs",
+          "logs_url": "https://api.github.com/repos/cqrityjob/trust-path-recruitment/actions/runs/37754879423/logs",
+          "workflow_id": 316060196
+        },
+        {
+          "id": 37754879601,
+          "name": "Recruiter real Supabase evidence",
+          "status": "completed",
+          "conclusion": "failure",
+          "run_number": 1,
+          "jobs_url": "https://api.github.com/repos/cqrityjob/trust-path-recruitment/actions/runs/37754879601/jobs",
+          "logs_url": "https://api.github.com/repos/cqrityjob/trust-path-recruitment/actions/runs/37754879601/logs",
+          "workflow_id": 378273013
+        }
+      ]
+    },
+    "realServicesNew": {
+      "id": 37757213133,
+      "headSha": "4a5921e7e7bcd0ef02b984e7abb0d4b7afe43a20",
+      "status": "in_progress",
+      "conclusion": null
+    }
+  },
+  "jobs": [
+    {
+      "runId": 37754392716,
+      "jobs": [
+        {
+          "id": 113235559825,
+          "name": "Public entry browser — homepage, employers and the employer journey",
+          "status": "in_progress",
+          "conclusion": null,
+          "failedSteps": []
+        },
+        {
+          "id": 113235560070,
+          "name": "Recruiter current schema — PostgreSQL 17 and PostgREST 14",
+          "status": "completed",
+          "conclusion": "success",
+          "failedSteps": []
+        },
+        {
+          "id": 113235560131,
+          "name": "CV export — PDF and ATS proof",
+          "status": "completed",
+          "conclusion": "success",
+          "failedSteps": []
+        },
+        {
+          "id": 113235560160,
+          "name": "CV browser — the signed-in journey",
+          "status": "completed",
+          "conclusion": "success",
+          "failedSteps": []
+        },
+        {
+          "id": 113235560169,
+          "name": "Passport three-market browser — catalogue, cards, pilot access",
+          "status": "in_progress",
+          "conclusion": null,
+          "failedSteps": []
+        },
+        {
+          "id": 113235560177,
+          "name": "Migration replay, RLS and rollback tests",
+          "status": "completed",
+          "conclusion": "success",
+          "failedSteps": []
+        },
+        {
+          "id": 113235560290,
+          "name": "Lint, typecheck and deterministic checks",
+          "status": "in_progress",
+          "conclusion": null,
+          "failedSteps": []
+        }
+      ]
+    },
+    {
+      "runId": 37753162019,
+      "jobs": [
+        {
+          "id": 113231460263,
+          "name": "Public entry browser — homepage, employers and the employer journey",
+          "status": "completed",
+          "conclusion": "success",
+          "failedSteps": []
+        },
+        {
+          "id": 113231460627,
+          "name": "CV browser — the signed-in journey",
+          "status": "completed",
+          "conclusion": "success",
+          "failedSteps": []
+        },
+        {
+          "id": 113231460725,
+          "name": "Passport three-market browser — catalogue, cards, pilot access",
+          "status": "completed",
+          "conclusion": "success",
+          "failedSteps": []
+        },
+        {
+          "id": 113231460738,
+          "name": "CV export — PDF and ATS proof",
+          "status": "completed",
+          "conclusion": "success",
+          "failedSteps": []
+        },
+        {
+          "id": 113231461554,
+          "name": "Migration replay, RLS and rollback tests",
+          "status": "completed",
+          "conclusion": "success",
+          "failedSteps": []
+        },
+        {
+          "id": 113231461989,
+          "name": "Lint, typecheck and deterministic checks",
+          "status": "completed",
+          "conclusion": "failure",
+          "failedSteps": ["Passport credential picker"]
+        }
+      ]
+    },
+    {
+      "runId": 37754879601,
+      "jobs": [
+        {
+          "id": 113236862894,
+          "name": "Real GoTrue, Storage, PostgREST 14 and snapshot app",
+          "status": "completed",
+          "conclusion": "failure",
+          "failedSteps": [
+            "Fresh real Supabase, strict history, Storage and 12 UI journeys plus 2 CAS probes"
+          ]
+        }
+      ]
+    }
+  ]
+}

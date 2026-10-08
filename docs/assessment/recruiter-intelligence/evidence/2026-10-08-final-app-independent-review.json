@@ -1,0 +1,182 @@
+{
+  "formatVersion": 1,
+  "reviewedAt": "2026-10-08T14:28:47Z",
+  "reviewMode": "read-only source/git-object review; no test reruns or service calls",
+  "decision": "GO for bounded product integration; exact-head CI, new combined native evidence and publication remain separate gates",
+  "mainComparisonSha": "c004a8e394360cab473570737a0af4b005177a99",
+  "heads": [
+    {
+      "pullRequest": 453,
+      "headSha": "26f33f4425ef948afbccef28abfd7439add6bd47",
+      "srcTree": "f21f622235ad9c074931c1677d0467a2c2919a8a",
+      "srcByteEquivalentTo": "3e0aa8552b7d45f99c5de881320d4e6c773e59cf"
+    },
+    {
+      "pullRequest": 458,
+      "headSha": "12888da0cff00ce950e101b2ae1fa02ca2ba2c90",
+      "srcTree": "3d5feca97be01959778173fc3a0f0959fe62355c",
+      "srcByteEquivalentTo": "40e5775de5195050571421827434ec2872a61506"
+    }
+  ],
+  "generatedTypes": {
+    "path": "src/integrations/supabase/types.ts",
+    "blob": "8a84fa7959a31326bc094137faab87c2a90c246d",
+    "unchangedFromMainForBothHeads": true
+  },
+  "unchangedP0Paths": [
+    "src/lib/interview-intelligence/runtime.functions.ts",
+    "src/lib/interview-intelligence/question-note-draft.ts",
+    "src/lib/interview-intelligence/content-integrity.ts",
+    "src/components/employer/interview/CaseContentBoundary.tsx",
+    "src/routes/_authenticated.employer.$employerSlug.interview-intelligence.$caseId.interview.tsx",
+    "src/routes/_authenticated.employer.$employerSlug.interview-intelligence.$caseId.evidence.tsx",
+    "src/routes/_authenticated.employer.$employerSlug.interview-intelligence.$caseId.report.tsx"
+  ],
+  "sentinelSrcPathsUnchanged": [
+    "src/lib/sentinel",
+    "src/components/sentinel",
+    "src/routes/_authenticated.admin.assessments.sentinel.tsx"
+  ],
+  "contractsReviewed": [
+    {
+      "contract": "Organisation overview, job/org lists, profile and detail read server-authoritative profile/version/status; broad employer cache invalidation after explicit save",
+      "references": [
+        {
+          "path": "src/lib/recruitment/recruitment.functions.ts",
+          "line": 275
+        },
+        {
+          "path": "src/lib/recruitment/recruitment.functions.ts",
+          "line": 853
+        },
+        {
+          "path": "src/lib/recruitment/recruitment.functions.ts",
+          "line": 931
+        },
+        {
+          "path": "src/components/recruitment/RequirementProfilePanel.tsx",
+          "line": 41
+        },
+        {
+          "path": "src/components/recruitment/RequirementProfilePanel.tsx",
+          "line": 117
+        }
+      ]
+    },
+    {
+      "contract": "Nonempty mandatory profile only: explicit unmet dominates gaps, gaps gray, otherwise green; no AI status classifier or automatic human review",
+      "references": [
+        {
+          "path": "supabase/migrations/20270308090000_recruiter_intelligence_requirements.sql",
+          "line": 243
+        },
+        {
+          "path": "supabase/migrations/20270308090000_recruiter_intelligence_requirements.sql",
+          "line": 282
+        },
+        {
+          "path": "src/components/recruitment/RecruiterStatus.tsx",
+          "line": 15
+        },
+        {
+          "path": "src/components/recruitment/RequirementReviewPanel.tsx",
+          "line": 570
+        }
+      ]
+    },
+    {
+      "contract": "Withdrawn application and absent/changed current original invalidate accepted source; explicit human confirm uses profile/binding/revision/assignment CAS and records actor",
+      "references": [
+        {
+          "path": "supabase/migrations/20270308090000_recruiter_intelligence_requirements.sql",
+          "line": 161
+        },
+        {
+          "path": "supabase/migrations/20270308090000_recruiter_intelligence_requirements.sql",
+          "line": 327
+        },
+        {
+          "path": "src/components/recruitment/RequirementReviewPanel.tsx",
+          "line": 91
+        }
+      ]
+    },
+    {
+      "contract": "Case-private citation/human origin redacted for nonreaders; explicit transfer requires same application/employer and caller case-read/write permissions",
+      "references": [
+        {
+          "path": "supabase/migrations/20270308090000_recruiter_intelligence_requirements.sql",
+          "line": 302
+        },
+        {
+          "path": "supabase/migrations/20270308090000_recruiter_intelligence_requirements.sql",
+          "line": 465
+        }
+      ]
+    },
+    {
+      "contract": "Saved PEACE source panel uses authorized case read, exact source anchor and React-escaped plaintext; saved brief is observed at transfer, not current source validation or confirmed interview evidence",
+      "references": [
+        {
+          "path": "src/lib/interview-intelligence/runtime.functions.ts",
+          "line": 758
+        },
+        {
+          "path": "src/lib/interview-intelligence/runtime.functions.ts",
+          "line": 819
+        },
+        {
+          "path": "src/components/employer/interview/SavedCaseSources.tsx",
+          "line": 25
+        },
+        {
+          "path": "src/lib/interview-intelligence/selected-requirement-brief.ts",
+          "line": 18
+        }
+      ]
+    },
+    {
+      "contract": "Two existing nullable Overrides and FoundationFunctions remain, with additive P1/OP09 RPC overlay groups; generated code unchanged",
+      "references": [
+        {
+          "path": "src/integrations/supabase/database.ts",
+          "line": 173
+        },
+        {
+          "path": "src/integrations/supabase/database.ts",
+          "line": 203
+        }
+      ]
+    }
+  ],
+  "newFindings": [],
+  "existingBoundaries": [
+    "PEACE eight core questions/six competencies and frozen normative/runtime/report paths remain unchanged; no new content approval or English translation proof.",
+    "Historical 191d/0508/a037 native passes keep their original APP/schema/test pins and limits; byte equivalence alone is not a new combined native run.",
+    "Controlled privileged Storage fixture/delete/reupload is not candidate consent-withdrawal endpoint or upload-ACL proof.",
+    "No whole-CI success, hosted authenticated B flow, physical phone or publication claim is made.",
+    "No repo edits, production writes, Docker/service execution, Auth mutations, push or test reruns were performed by this review."
+  ],
+  "ciReadOnlySnapshot": {
+    "observedAt": "2026-10-08T14:28:47Z",
+    "pr453": {
+      "runId": 37790677138,
+      "coreJobSuccess": 7,
+      "coreJobTotal": 9,
+      "remaining": [
+        "Public entry browser",
+        "Lint/typecheck/deterministic checks"
+      ],
+      "terminalWholeCI": false
+    },
+    "pr458": {
+      "runId": 37790680071,
+      "coreJobSuccess": 1,
+      "coreJobTotal": 9,
+      "successfulJob": 113356930550,
+      "remaining": "running/queued",
+      "terminalWholeCI": false
+    }
+  },
+  "nextIndependentCheck": "New #460 artifact validation after parent provides immutable local paths; not yet reviewed here."
+}

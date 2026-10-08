@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "environment": "cqj-ri-real-20261008b: loopback55690/55691",
+  "startedAt": "2026-10-08T06:50:14.512Z",
+  "transport": "Real GoTrue password bearer sessions; no service-role or forged JWT as test actor",
+  "checks": [
+    {
+      "id": "OP11-V1-NO-OPEN",
+      "at": "2026-10-08T06:50:15.670Z",
+      "actual": {
+        "newSigningDenied": true,
+        "bytesDenied": true
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "OP11-V1-OPEN",
+      "at": "2026-10-08T06:50:15.696Z",
+      "actual": {
+        "newSigningAllowed": true,
+        "downloadBytesSha256": "c7fbff75892890ab0335be32a50a989e88112855d6a8163dfc259cd3416098fe",
+        "foreignUploadDenied": true,
+        "foreignDeleteDidNotRemoveBytes": true,
+        "scope": "current cqrityjob_review only, dedicated passport_verifier"
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "OP11-E1-E2-MATRIX",
+      "at": "2026-10-08T06:50:15.734Z",
+      "actual": {
+        "signDownloadListDenied": ["O1", "A1", "R1", "M1", "C2", "X2"],
+        "openReviewDidNotGrantEmployersAccess": true
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "OP11-V1-CLOSED",
+      "at": "2026-10-08T06:50:15.847Z",
+      "actual": {
+        "newSigningDenied": true,
+        "newDownloadDenied": true,
+        "preissuedSignedUrlStatus": 200,
+        "preissuedUrlTtlSeconds": 300,
+        "limitation": "Already issued bearer URL retains own lifetime; no immediate URL revocation claim"
+      },
+      "status": "PASS"
+    }
+  ],
+  "objectFingerprint": "c1f6a93a8eba8faeb44348959c350ad3e52ed324ee6e86e14b078e996c29d8dc",
+  "finishedAt": "2026-10-08T06:50:15.938Z",
+  "cleanup": {
+    "ownSyntheticObjectRemoved": true,
+    "oldSignedUrlStatus": 400,
+    "historicalMetadataPreserved": true
+  },
+  "summary": {
+    "pass": 4,
+    "fail": 0
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "headSha": "6039fbc685cad255aae4a4e39c1035e933af883d",
+  "virtualCheckoutSha": "0103cec37dd42451cf2aedb0455d3feeb769ca14",
+  "compare": "ahead1_files_empty_verified_GitHub",
+  "run": 37762014757,
+  "job": 113260736669,
+  "artifact": 11543611221,
+  "zipSha256": "d35c5d0a97e45039bb3e0e24847dc2094d4fa6b8db1756d2825a0c0442b92c2b",
+  "verifiedPresentLogs": [
+    "stages.log",
+    "bootstrap.log",
+    "replay.log",
+    "sql-oracle.log",
+    "http-api.log"
+  ],
+  "manifestListedButNotIncluded": [
+    "postgres-version.log",
+    "api-postgrest-version.log"
+  ],
+  "sqlAssertions": 95,
+  "apiAssertions": 23,
+  "browser": "intentionally_not_run",
+  "authStorage": "substitutes_not_GoTrue_or_actual_Storage"
+}

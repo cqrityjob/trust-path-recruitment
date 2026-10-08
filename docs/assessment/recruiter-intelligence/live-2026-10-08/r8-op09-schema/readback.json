@@ -1,0 +1,105 @@
+{
+  "kind": "op09-457-actual-ci-readback",
+  "runId": 37769873343,
+  "reviewedHead": "9c8b8159ce5f350c6ace074c917823599d19ce99",
+  "actualCheckout": "13b88998a5f84784c8e83653e652725990d56f24",
+  "mainBase": "6039fbc685cad255aae4a4e39c1035e933af883d",
+  "sourceParity": "GitHub compare ahead1 merge_base9c8 files=[]; entire tracked tree equal",
+  "p1Api": {
+    "jobId": 113287037288,
+    "jobConclusion": "success",
+    "postgres": "17.11",
+    "postgrest": "14.15",
+    "sqlNotices": 95,
+    "apiOkLines": 23,
+    "artifactId": 11548125580,
+    "zipSha256": "211cc1127e39768512cfc16a31793697bef57b88bc05300f04cc463c2e4bd266",
+    "verifiedPackagedFiles": 5,
+    "manifestListedNotPackaged": [
+      "postgres-version.log",
+      "api-postgrest-version.log"
+    ],
+    "scope": "actual SQL/PostgREST, Auth/Storage substitutes, runtime/browser intentionally_not_run"
+  },
+  "pg16": {
+    "jobId": 113287037047,
+    "status": "completed",
+    "conclusion": "success",
+    "postgres": "16.15",
+    "uploadAssertions": 41,
+    "p1Assertions": 95,
+    "strictFullHistory": 387,
+    "nonemptyJournalRollback": "P0001 refusal matched; transaction absence and empty-fence standdown checked",
+    "historicalRollback": "entire db-test.sh completed DB suite OK, including51 documented rollback assertions",
+    "autovacuum": "server log reset to default on exit",
+    "proofFile": "pg16-proof.log"
+  },
+  "pg17Current": {
+    "jobId": 113287037430,
+    "status": "completed",
+    "conclusion": "success",
+    "postgres": "17.11",
+    "uploadAssertions": 41,
+    "p1Assertions": 95,
+    "strictFullHistory": 387,
+    "nonemptyJournalRollback": "P0001 refusal matched; transaction absence and empty-fence standdown checked",
+    "historicalRollback": "entire db-test.sh completed DB suite OK, including51 documented rollback assertions",
+    "autovacuum": "server log reset to default on exit",
+    "proofFile": "pg17-proof.log",
+    "artifactId": 11548058222,
+    "zipSha256": "3572eb40f3ace34cacd6b53e759382c1db9f329dbca83c3ca5640f997d445e74",
+    "catalogFiles": [
+      {
+        "file": "current-catalog.txt",
+        "bytes": 4851,
+        "sha256": "5c42f5486b5dc0b9b0f032f046bed67d036f528dba4bdfd91cbb3202c8708d7f"
+      },
+      {
+        "file": "manifest.json",
+        "bytes": 2173,
+        "sha256": "ce9aaf088dbc56fcfff85496778412d7d43e3e2cf8559dff580aac7f42ed9a07"
+      }
+    ],
+    "catalogManifest": {
+      "sourceCommit": "13b88998a5f84784c8e83653e652725990d56f24",
+      "postgresVersion": "17.11 (Debian 17.11-1.pgdg13+2)",
+      "postgrestImage": "public.ecr.aws/supabase/postgrest:v14.15",
+      "migrationSha256": "aada322beb465a1a927c190eb4d81bafffd9a1f759263c8da4f94ddabf2c3fca",
+      "catalogSha256": "5c42f5486b5dc0b9b0f032f046bed67d036f528dba4bdfd91cbb3202c8708d7f",
+      "checks": [
+        "historical expectation count 3",
+        "current-foundation mandatory 56 assertions",
+        "historical expectation count 1",
+        "current-snapshot mandatory 94 assertions",
+        "current-domain mandatory 31 assertions",
+        "historical expectation count 3",
+        "negative control wrong SQLSTATE is rejected",
+        "rollback restores all12 exact prior definitions",
+        "rollback preserves immutable reports/snapshots/locks byte for byte",
+        "reapply preserves function definitions/defaults/owners/ACL/config",
+        "prior-session-case reproduces exact prior deadlock",
+        "forward-case-session waits then returns finite stale conflict",
+        "direct-rpc-finding waits then returns finite stale conflict",
+        "engine-serialization preserves genuine engine40001",
+        "actual14 rec_set_recruitment_responsible finite409 unchanged message",
+        "actual14 rec_complete_recruitment finite409 unchanged message",
+        "actual14 rec_set_application_responsible finite409 unchanged message",
+        "actual14 rec_set_application_stage finite409 unchanged message",
+        "actual14 rec_save_booking finite409 unchanged message",
+        "actual14 rec_set_booking_status finite409 unchanged message",
+        "actual14 rec_set_receipt_settings finite409 unchanged message",
+        "actual14 scp_iv_save_session_process finite409 unchanged message",
+        "actual14 scp_iv_review_manual_finding finite409 unchanged message",
+        "actual14 scp_iv_acknowledge_observed_content finite409 unchanged message",
+        "actual14 void state RPC returns empty body",
+        "actual14 overlapping state/process waits then finite409 without deadlock",
+        "actual14 winning pause and existing reflection preserved",
+        "actual14 no continuing stale request"
+      ],
+      "scope": "ephemeral PostgreSQL/PostgREST transport; fixture JWT, not GoTrue"
+    }
+  },
+  "nativeAuthStorageRecovery": "not_part_of_this_run",
+  "localDatabaseOrDockerExecution": false,
+  "overallCi": "all eight mandatory jobs completed successfully (run 37769873343; head 9c8b8159ce5f350c6ace074c917823599d19ce99; actual checkout 13b88998a5f84784c8e83653e652725990d56f24 has identical tracked tree)"
+}

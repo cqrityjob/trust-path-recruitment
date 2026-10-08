@@ -1,0 +1,375 @@
+{
+  "format_version": 1,
+  "repository": "cqrityjob/trust-path-recruitment",
+  "pull_request": 461,
+  "head_sha": "6ae933c68da56121cdf02d4a7d4e301510a0709e",
+  "source_tree_sha": "3d5feca97be01959778173fc3a0f0959fe62355c",
+  "run_id": 37796851285,
+  "run_attempt": 3,
+  "status": "completed",
+  "conclusion": "success",
+  "updated_at": "2026-10-08T16:21:41Z",
+  "rerun": {
+    "scope": "Only owner-triggered PG16 job rerun; latest-attempt IDs for eight previously successful jobs do not imply rerunning them",
+    "executed_owner_retries_total": 2,
+    "total_attempts": 3,
+    "last_pg16_job_id": 113412007956,
+    "agent_retry": false,
+    "preterminal_403_executed_no_retry": true
+  },
+  "gates": {
+    "total": 19,
+    "success": 19,
+    "failure": 0,
+    "core_jobs": [
+      {
+        "id": 113412007956,
+        "name": "Migration replay, RLS and rollback tests",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 113412010185,
+        "name": "CV export — PDF and ATS proof",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 113412010855,
+        "name": "Lint, typecheck and deterministic checks",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 113412011436,
+        "name": "Recruiter Intelligence P1 — full SQL, HTTP and browser proof",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 113412050522,
+        "name": "Passport three-market browser — catalogue, cards, pilot access",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 113412060494,
+        "name": "Recruiter current schema — PostgreSQL 17 and PostgREST 14",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 113412066050,
+        "name": "Recruiter Intelligence P1 — PostgreSQL 17 and concurrent HTTP API",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 113412067734,
+        "name": "CV browser — the signed-in journey",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 113412083645,
+        "name": "Public entry browser — homepage, employers and the employer journey",
+        "status": "completed",
+        "conclusion": "success"
+      }
+    ],
+    "external_runs": [
+      {
+        "id": 37796851241,
+        "name": "Passport preview image — Cloudflare Worker runtime evidence",
+        "head_sha": "6ae933c68da56121cdf02d4a7d4e301510a0709e",
+        "status": "completed",
+        "conclusion": "success",
+        "run_attempt": 1,
+        "created_at": "2026-10-08T14:58:17Z",
+        "updated_at": "2026-10-08T15:06:59Z",
+        "head_matches": true,
+        "jobs": [
+          {
+            "id": 113378429029,
+            "name": "Preview image in workerd (Cloudflare Worker runtime)",
+            "status": "completed",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 37796851233,
+        "name": "Career Center persistence — routed browser evidence",
+        "head_sha": "6ae933c68da56121cdf02d4a7d4e301510a0709e",
+        "status": "completed",
+        "conclusion": "success",
+        "run_attempt": 1,
+        "created_at": "2026-10-08T14:58:17Z",
+        "updated_at": "2026-10-08T15:05:58Z",
+        "head_matches": true,
+        "jobs": [
+          {
+            "id": 113378429589,
+            "name": "Career Center persistence browser evidence (isolated local stack)",
+            "status": "completed",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 37796851319,
+        "name": "Job ad back navigation — routed browser evidence",
+        "head_sha": "6ae933c68da56121cdf02d4a7d4e301510a0709e",
+        "status": "completed",
+        "conclusion": "success",
+        "run_attempt": 1,
+        "created_at": "2026-10-08T14:58:17Z",
+        "updated_at": "2026-10-08T15:10:00Z",
+        "head_matches": true,
+        "jobs": [
+          {
+            "id": 113378432052,
+            "name": "Job ad back navigation browser evidence (isolated local stack)",
+            "status": "completed",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 37796851336,
+        "name": "Recruitment workspace — routed browser evidence",
+        "head_sha": "6ae933c68da56121cdf02d4a7d4e301510a0709e",
+        "status": "completed",
+        "conclusion": "success",
+        "run_attempt": 1,
+        "created_at": "2026-10-08T14:58:17Z",
+        "updated_at": "2026-10-08T15:26:00Z",
+        "head_matches": true,
+        "jobs": [
+          {
+            "id": 113378431559,
+            "name": "Recruitment workspace browser evidence (isolated local stack)",
+            "status": "completed",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 37796851292,
+        "name": "Role assessment and TestBank regression",
+        "head_sha": "6ae933c68da56121cdf02d4a7d4e301510a0709e",
+        "status": "completed",
+        "conclusion": "success",
+        "run_attempt": 1,
+        "created_at": "2026-10-08T14:58:17Z",
+        "updated_at": "2026-10-08T15:27:28Z",
+        "head_matches": true,
+        "jobs": [
+          {
+            "id": 113378429713,
+            "name": "Assigned officer/manager reports and TestBank (isolated desktop/mobile)",
+            "status": "completed",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 37796851239,
+        "name": "E4 employer final report — routed browser evidence",
+        "head_sha": "6ae933c68da56121cdf02d4a7d4e301510a0709e",
+        "status": "completed",
+        "conclusion": "success",
+        "run_attempt": 1,
+        "created_at": "2026-10-08T14:58:17Z",
+        "updated_at": "2026-10-08T15:19:44Z",
+        "head_matches": true,
+        "jobs": [
+          {
+            "id": 113378435987,
+            "name": "E4 routed browser evidence (isolated local stack)",
+            "status": "completed",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 37796851340,
+        "name": "Passport native OP09 recovery evidence",
+        "head_sha": "6ae933c68da56121cdf02d4a7d4e301510a0709e",
+        "status": "completed",
+        "conclusion": "success",
+        "run_attempt": 1,
+        "created_at": "2026-10-08T14:58:17Z",
+        "updated_at": "2026-10-08T15:20:41Z",
+        "head_matches": true,
+        "jobs": [
+          {
+            "id": 113378429798,
+            "name": "Actual GoTrue Storage44 and four routed reload recovery journeys",
+            "status": "completed",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 37796851174,
+        "name": "Application retention — worker and UI",
+        "head_sha": "6ae933c68da56121cdf02d4a7d4e301510a0709e",
+        "status": "completed",
+        "conclusion": "success",
+        "run_attempt": 1,
+        "created_at": "2026-10-08T14:58:16Z",
+        "updated_at": "2026-10-08T15:01:31Z",
+        "head_matches": true,
+        "jobs": [
+          {
+            "id": 113378428327,
+            "name": "worker-and-ui",
+            "status": "completed",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 37796851163,
+        "name": "Passport public pilot — real-backend evidence",
+        "head_sha": "6ae933c68da56121cdf02d4a7d4e301510a0709e",
+        "status": "completed",
+        "conclusion": "success",
+        "run_attempt": 1,
+        "created_at": "2026-10-08T14:58:16Z",
+        "updated_at": "2026-10-08T15:27:10Z",
+        "head_matches": true,
+        "jobs": [
+          {
+            "id": 113378429280,
+            "name": "Passport public pilot browser evidence (isolated local stack)",
+            "status": "completed",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 37796851175,
+        "name": "Security Work browser evidence",
+        "head_sha": "6ae933c68da56121cdf02d4a7d4e301510a0709e",
+        "status": "completed",
+        "conclusion": "success",
+        "run_attempt": 1,
+        "created_at": "2026-10-08T14:58:16Z",
+        "updated_at": "2026-10-08T15:27:26Z",
+        "head_matches": true,
+        "jobs": [
+          {
+            "id": 113378430013,
+            "name": "browser",
+            "status": "completed",
+            "conclusion": "success"
+          }
+        ]
+      }
+    ]
+  },
+  "pg16_completed_log_proof": {
+    "safe_completed_lines": [
+      "2026-10-08T16:09:51.1838897Z     ok  387 migrations applied cleanly, in filename order",
+      "2026-10-08T16:09:51.8966048Z     ok  35 Sentinel pilot assertions passed",
+      "2026-10-08T16:09:52.0636481Z     ok  41 durable upload SQL assertions",
+      "2026-10-08T16:09:57.8404161Z     ok  95 actual P1 counts, sources, CAS, access and handoff assertions",
+      "2026-10-08T16:09:59.2495816Z     ok  CONFLICT current-foundation mandatory 56 assertions",
+      "2026-10-08T16:09:59.5628381Z     ok  CONFLICT current-snapshot mandatory 94 assertions",
+      "2026-10-08T16:09:59.6578779Z     ok  CONFLICT current-domain mandatory 31 assertions",
+      "2026-10-08T16:09:59.9365226Z     ok  CONFLICT negative control wrong SQLSTATE is rejected",
+      "2026-10-08T16:10:00.4586081Z     ok  CONFLICT rollback restores all12 exact prior definitions",
+      "2026-10-08T16:10:00.5219664Z     ok  CONFLICT rollback preserves immutable reports/snapshots/locks byte for byte",
+      "2026-10-08T16:10:00.6115760Z     ok  CONFLICT reapply preserves function definitions/defaults/owners/ACL/config",
+      "2026-10-08T16:10:03.8528567Z     ok  CONFLICT prior-session-case reproduces exact prior deadlock",
+      "2026-10-08T16:10:06.0684669Z     ok  CONFLICT forward-case-session waits then returns finite stale conflict",
+      "2026-10-08T16:10:08.2010125Z     ok  CONFLICT direct-rpc-finding waits then returns finite stale conflict",
+      "2026-10-08T16:10:10.3154959Z     ok  CONFLICT engine-serialization preserves genuine engine40001",
+      "2026-10-08T16:10:12.5594687Z     ok  CONFLICT actual14 rec_set_recruitment_responsible finite409 unchanged message",
+      "2026-10-08T16:10:12.5626802Z     ok  CONFLICT actual14 rec_complete_recruitment finite409 unchanged message",
+      "2026-10-08T16:10:12.5671502Z     ok  CONFLICT actual14 rec_set_application_responsible finite409 unchanged message",
+      "2026-10-08T16:10:12.5698181Z     ok  CONFLICT actual14 rec_set_application_stage finite409 unchanged message",
+      "2026-10-08T16:10:12.5856830Z     ok  CONFLICT actual14 rec_save_booking finite409 unchanged message",
+      "2026-10-08T16:10:12.5882979Z     ok  CONFLICT actual14 rec_set_booking_status finite409 unchanged message",
+      "2026-10-08T16:10:12.5913573Z     ok  CONFLICT actual14 rec_set_receipt_settings finite409 unchanged message",
+      "2026-10-08T16:10:12.5991973Z     ok  CONFLICT actual14 scp_iv_save_session_process finite409 unchanged message",
+      "2026-10-08T16:10:12.6052121Z     ok  CONFLICT actual14 scp_iv_review_manual_finding finite409 unchanged message",
+      "2026-10-08T16:10:12.6482997Z     ok  CONFLICT actual14 scp_iv_acknowledge_observed_content finite409 unchanged message",
+      "2026-10-08T16:10:14.7548041Z     ok  CONFLICT actual14 void state RPC returns empty body",
+      "2026-10-08T16:10:14.7548661Z     ok  CONFLICT actual14 overlapping state/process waits then finite409 without deadlock",
+      "2026-10-08T16:10:14.7919061Z     ok  CONFLICT actual14 winning pause and existing reflection preserved",
+      "2026-10-08T16:10:14.8663128Z     ok  CONFLICT actual14 no continuing stale request",
+      "2026-10-08T16:10:14.8664363Z     ok  CONFLICT 28 bounded runner assertions; original historical tests remain unchanged",
+      "2026-10-08T16:20:56.8345293Z     ok  51 rollback assertions passed"
+    ],
+    "overlap_diagnostic": "2026-10-08T16:10:14.7547319Z     CONFLICT overlap statuses state=204 process=409 code=PT409 elapsedMs=1952",
+    "full_suite_completed_line": "2026-10-08T16:21:37.6636364Z  DB suite OK: 162 domain assertions,",
+    "assertion_counts": {
+      "canonical_migrations": 387,
+      "durable_upload_sql": 41,
+      "requirements_sql": 95,
+      "interview_foundation_sql": 56,
+      "content_snapshot_sql": 94,
+      "domain_conflict_sql": 31,
+      "domain_conflict_runner_total": 28,
+      "domain_conflict_actual14_labeled_checks": 14,
+      "historical_rollback": 51
+    },
+    "postgrest": {
+      "executed_image": "public.ecr.aws/supabase/postgrest:v14.15",
+      "source_file": "scripts/recruiter-domain-conflict-check.mjs",
+      "source_sha256": "c58bd66bd0347774ebac369a3b5af5922e09bc9514907fae64ee884d9d01c09d",
+      "source_lines": {
+        "container_image": 290,
+        "timeout_and_status_message_contract": 317,
+        "overlap_contract": 460
+      },
+      "independent_binary_version_stdout_not_exported": true
+    },
+    "transport_scope": "28 is the complete bounded SQL/rollback/concurrency/HTTP runner assertion count, not28 HTTP-only assertions.14 actual14-labeled checks include ten stale RPCs plus void/overlap/preserved-data/no-continuing-request checks. All remaining historical DB suite and51rollback checks completed.",
+    "allowed_log_export_only": true,
+    "full_raw_log_not_persisted": true
+  },
+  "separate_native_proof": {
+    "head_sha": "6ae933c68da56121cdf02d4a7d4e301510a0709e",
+    "run_id": 37796851340,
+    "job_id": 113378429798,
+    "artifact_id": 11559159823,
+    "manifest_sha256": "498b0af41ad666c0ac2f369b3ace9f00b694561baa8a32ff26fbe23590ea85c8",
+    "independent_path": "/private/tmp/ri-op09-native-current-6ae-20261008/independent-verification.json",
+    "independent_sha256": "779239f30e16dd35d720e3ed743f45bccb80b7999238dfbfdf652f4e3daae6b9",
+    "auth": 8,
+    "sdk_assertions": 44,
+    "browser_cases": 4,
+    "canonical_migrations": 387,
+    "images": 12
+  },
+  "historical_failures_preserved": [
+    {
+      "attempt": 1,
+      "path": "/private/tmp/ri-live-20261008/op09-6ae-ci-first-attempt-failure.json",
+      "sha256": "c97a99c45c721326646231da8b3ded6bcdde1eafaafdb1744fc380b025a74872",
+      "classification": "ECR image-pull rate limit"
+    },
+    {
+      "attempt": 2,
+      "path": "/private/tmp/ri-live-20261008/op09-6ae-ci-attempt2-failure.json",
+      "sha256": "4101ebd30e983200a5a83779588b090434e9ceea45243781e56cae11a9b36500",
+      "classification": "ECR image-pull rate limit"
+    }
+  ],
+  "limits": {
+    "whole_core_ci_pass": true,
+    "whole_19_latest_gates_success": true,
+    "zero_historical_global_lint_errors_not_claimed": true,
+    "hosted_operational_proof": false,
+    "physical_phone_proof": false,
+    "method_or_content_approval": false,
+    "production_write_by_reviewer": false,
+    "agent_service_run": false,
+    "raw_private_log_export": false,
+    "content_lifecycle_gap_resolved": false
+  }
+}

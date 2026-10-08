@@ -1,0 +1,1010 @@
+{
+  "formatVersion": 1,
+  "checkedAtUtc": "2026-10-08T06:36:41.517588+00:00",
+  "kind": "local deterministic checks after Passport fixture fix, plus production build",
+  "releaseHead": "1424694e1f985d8a03c280eb8124145ddfdcb8f5",
+  "sourceTree": "1344fd8500d88da6bdf5937188fea748aad4979c",
+  "validationTree": "1344fd8500d88da6bdf5937188fea748aad4979c",
+  "sameTreeVerified": true,
+  "total": 142,
+  "failed": 0,
+  "realAuth": false,
+  "realStorage": false,
+  "publishedRuntime": false,
+  "checks": [
+    {
+      "name": "Passport pilot bug fix",
+      "command": "bun run passport-pilot-bugfix:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "f33cb587e16409bb2da56ae5d34cea24e03dd46b24804230f0fdf8cee44a704a"
+    },
+    {
+      "name": "Passport profile basics check",
+      "command": "bun run passport-profile-basics:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "3b2b01eacb97b44f251ddf9e695c1d080c55e39aa7ac04a46a8cbd095c363989"
+    },
+    {
+      "name": "Passport market profiles check",
+      "command": "bun run passport-market-profiles:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "73ab4e59cf34c7e173458be7a5a9a98f6b0886653a3f192a0ce3fdaf779a8bf9"
+    },
+    {
+      "name": "Passport market catalogue check",
+      "command": "bun run passport-market-catalogue:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "be3a1cc0dfa5a1454c96dc173a1c832f07f006f77927ec76d00364bf762cf59f"
+    },
+    {
+      "name": "Passport global certification catalogue check",
+      "command": "bun run passport-global-certification:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "286d74c7edfcf1a48b7d1c0c8ee468a515e0bce207c329a30a020486f3d63d0e"
+    },
+    {
+      "name": "Passport certification research import check",
+      "command": "bun run passport-catalogue-research:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "7f19ae2b3aa18a1e146a2cc12d9b89981ec668f9e9033e29be600050d5f327e9"
+    },
+    {
+      "name": "Passport private credential reference check",
+      "command": "bun run passport-private-reference:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "f88bc1d6bee6eb654ab5e33f0aa1a2eda355623ea527fe39732c8e494c26f4bd"
+    },
+    {
+      "name": "Passport classifier behaviour (executed, not read)",
+      "command": "bun run passport-classifier-behaviour:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "f3ce007ce3354e2770dbb2c5d10e492b6fe35afec34ca887237b24dde72bfd13"
+    },
+    {
+      "name": "Passport governed issuer (application half)",
+      "command": "bun run passport-governed-issuer:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "dd2f47cb41a53e61cc185ec13bb67aa1858ff2e11896fab80842851ca547dda4"
+    },
+    {
+      "name": "Passport schema-drift resilience check",
+      "command": "bun run passport-schema-drift:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "7d24efb9724505758f6f2e8b3d0f1be3cf5d30f8b339dd60ce20f3fe6e0b9cca"
+    },
+    {
+      "name": "Release parity bookkeeping check",
+      "command": "bun run release-parity:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "c2aacb51060c9795c4842db0b5b62b92b69266b203c1474462fd4e2d1c10db74"
+    },
+    {
+      "name": "Release frontier selection check",
+      "command": "bun run release-frontier:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "9ca996b0b16321410557c21d5b2fd5328d35fa09a06926851f554bb7ceeb971a"
+    },
+    {
+      "name": "Deploy plan check",
+      "command": "bun run deploy-plan:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "c5bc6b8086522d0b5c0738c08fdd7e4160ea671d5e888482e17509a5620da0b0"
+    },
+    {
+      "name": "Deploy plan negative controls",
+      "command": "bun run deploy-plan-negative:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "10ee35703ebee0e6427cbf93f207a5aae4a35de83b994c8cdf5ddfc38491e7f5"
+    },
+    {
+      "name": "Schema-first release contract",
+      "command": "bun run schema-first-release:check",
+      "code": 0,
+      "seconds": 3,
+      "logSha256": "040724e54ce67c8f7a68168119833571ec2a32c8e3d1de58df7a097419056ce0"
+    },
+    {
+      "name": "Interview UX and safety contract guard",
+      "command": "bun run interview-ux-contract:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "fddee5b858b72347640926defa348be70e7aac73c04738dc099c7eb270248830"
+    },
+    {
+      "name": "Passport regulatory-claim guard",
+      "command": "bun run passport-regulatory-claim:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "013bc31bfa72843864f00524d27659c6fa705353562cf98e82ebb291703a0d5e"
+    },
+    {
+      "name": "Passport scope surface check",
+      "command": "bun run passport-scope-surface:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "d2e45b67f1bc337504e1d2cd02ef7e0893c3d2e6adfcc856cb5718bb01f22b85"
+    },
+    {
+      "name": "Passport error-scope check",
+      "command": "bun run passport-error-scope:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "5ed850436e753cc27f629046de2f932b20d8655d8a67b03a90098267fdfe00c5"
+    },
+    {
+      "name": "Passport product status truthfulness",
+      "command": "bun run passport-product:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "cfd8f198fb120edd1abbadd474af86b3400a79f9b4e5cb00422fd83acc0c489b"
+    },
+    {
+      "name": "Passport decision truthfulness check",
+      "command": "bun run passport-decision-truthfulness:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "d12bd022bc2efb5c8535982368e56fa2263bba0a78bb0215e74508613693ab68"
+    },
+    {
+      "name": "Passport reviewer decision quality and trust attribution",
+      "command": "bun run passport-reviewer-decision:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "6bde2166210aff4e2995e386c8d3b25c117adcaad7c980eeac20013e57e28211"
+    },
+    {
+      "name": "Passport trust-source containment",
+      "command": "bun run passport-trust-source:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "3870286efd0fed0569c41ff40197f86e9b1d7f1ba8a06735e6e9343f4506bbaa"
+    },
+    {
+      "name": "Passport sharing flow check",
+      "command": "bun run passport-sharing-flow:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "49c2c5a822906064e704af388c0f462eec9ce382677ea82bbed0edc5b618016a"
+    },
+    {
+      "name": "Passport employer employment verification",
+      "command": "bun run passport-employer-verification:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "739ecee4518060cafadbbae25a9af8abcc26e64ec1bc6b004240b559618e9371"
+    },
+    {
+      "name": "Passport employer matching check",
+      "command": "bun run passport-employer-matching:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "168a2eb94915ed2529431892409b18ce9db4e8a15a0ca46d4cc78e71a6c2f5a4"
+    },
+    {
+      "name": "Employer job lifecycle check",
+      "command": "bun run employer-job-lifecycle:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "4014d81da94f15a15a9cedcbd765f361f25882bac7038c86a1ef0db1da7cb962"
+    },
+    {
+      "name": "Employer hire continuity check",
+      "command": "bun run employer-hire-continuity:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "504da8f4922ecbf364686bc1f57c817abe7c8cfad391afc65fcc7128f3b4883a"
+    },
+    {
+      "name": "Employer Other/Annat taxonomy check",
+      "command": "bun run employer-other-taxonomy:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "f45e5c7bbb6def82ab12be1235a781707f6c181df0451b4aa58e4bfb49f04a67"
+    },
+    {
+      "name": "Review proposal contract check",
+      "command": "bun run review-proposal-contract:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "90371c09254914dd5732f9fa5e346c456012db4b08b441dd1df082c4bfb9055f"
+    },
+    {
+      "name": "Candidate notification check",
+      "command": "bun run candidate-notification:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "fdc05735d43838d2602a27ef9ecfae651bcab1650b4f0773fd399567d31b0aa6"
+    },
+    {
+      "name": "Employer UAT reconciliation check",
+      "command": "bun run emma-uat:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "066a484da65228018eefc2e8889920fd0e3b2182fa90f37084957b6a0ec8cad2"
+    },
+    {
+      "name": "Invitation links and requirement explanations",
+      "command": "bun run scripts/invitation-message-check.tsx\nbun run scripts/requirement-explanation-check.ts\nbun test scripts/auth-account-boundary.test.ts\n",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "08af3fac0e3d762cdf0cf3f8d133c727661d5a87d04f84e0698d0aaaa8d1a0a6"
+    },
+    {
+      "name": "Recruitment assessment UX check",
+      "command": "bun run recruitment-assessment-ux:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "71cda8b2363706c21b96c841c4ca15ea4b931a1bfae5ce16ef21bd4326fd5037"
+    },
+    {
+      "name": "Send-test dialog and levels check",
+      "command": "bun run send-test-dialog:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "76f6a9fe4f1223311fca6a0354b7eab5155b601e96418a581fedc201a1cf5cf2"
+    },
+    {
+      "name": "Assessment pilot reliability check",
+      "command": "bun run assessment-reliability:check",
+      "code": 0,
+      "seconds": 1,
+      "logSha256": "964b8f1e3c27164ae46616a9ecfe550f418b84a7f95d1626b5db7311d971164c"
+    },
+    {
+      "name": "Assessment participant panels render check",
+      "command": "bun run assessment-panels-render:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "26265903e32163d401302bf4a62bd9814f472612c07b9edd7207d8a6707ef0e3"
+    },
+    {
+      "name": "Assessment language contract check",
+      "command": "bun run assessment-language-contract:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "31dcb0bb71f4efa38f3d40a1f23358bc75095f22d067f0c71eae26a662e75d47"
+    },
+    {
+      "name": "Candidate journey launch check",
+      "command": "bun run candidate-journey-launch:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "70503beabc8907345d6571ac24c2833eec4e9a9fb13e3c000fbffd0d4dc58df2"
+    },
+    {
+      "name": "Väktare pilot truth check",
+      "command": "bun run vaktare-pilot-truth:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "8029d31b3e8a33000f823943d7b539b7171134b8dcfbdbc120c303b77e58cb88"
+    },
+    {
+      "name": "Väktare content quality check",
+      "command": "bun run vaktare-content-quality:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "a08551c24091779514e64a3e38f5042bc2a64587f744fa51714cf138e1680860"
+    },
+    {
+      "name": "Väktare self-report quality check",
+      "command": "bun run vaktare-self-report-quality:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "c9becb80f20619062e84663fee983f67bdef69f3d41e45d199f15ccfd03f361a"
+    },
+    {
+      "name": "TRUST evidence report contract check",
+      "command": "bun run trust-evidence-report:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "58abf00672f710207d9b1b1c5e26a6736571ffe112219ae3579ec243c9e5c7bc"
+    },
+    {
+      "name": "rds-v1 next-step parity (TypeScript half)",
+      "command": "bun run trust-next-step-parity:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "c8c3b3efbe4a712cd5d3f9b8624e39247807ec93b6c1208dc7066e5e7daf6370"
+    },
+    {
+      "name": "Legacy assessment route guard",
+      "command": "bun run legacy-assessment-routes:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "a7c0e1e26cfd9080b28a6c1e07f3cb13d8229b3921b5b4bb6fca69639a5f94be"
+    },
+    {
+      "name": "Interview Intelligence pack contract check",
+      "command": "bun run interview-pack-contract:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "8cc9d823239fa59a88c87090b7e7a845671d82f99f1b23e0f23b544c90208a29"
+    },
+    {
+      "name": "BESKT architecture contract check",
+      "command": "bun run beskt-architecture:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "4a073f4457a40ea1d462354ffaf9434d234735b9294ec525c9ba9da8dd3809a1"
+    },
+    {
+      "name": "BESKT architecture negative controls",
+      "command": "bun run negative-controls:beskt",
+      "code": 0,
+      "seconds": 1,
+      "logSha256": "9d961019b5b7bf6bf8d34a33da75e5bc907c1bd0970ac60300d6aa342ed89edc"
+    },
+    {
+      "name": "BESKT governed-content guard",
+      "command": "bun run beskt-governed-content:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "8bab770c4cbd758a0b3d1a7de5f4b53ac5180ec8b7e931d0b19779a4c5aa0dfe"
+    },
+    {
+      "name": "BESKT candidate preparation (PR 3) source guard",
+      "command": "bun run beskt-candidate-preparation:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "b81e1a30ba4339f161765e67d6a8d340741128d36c1f3f52cce0eb548023a353"
+    },
+    {
+      "name": "BESKT interview-case bridge (PR 4) source guard",
+      "command": "bun run beskt-interview-case-bridge:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "42f113251abb13f01e7e910e69e164cb1c08de40795422575bfd396b1b0e1347"
+    },
+    {
+      "name": "BESKT interview conduct (PR 5A) source guard",
+      "command": "bun run beskt-interview-conduct:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "403c65f6726784f2c5f98cfe5d5d5be5d52d9e202f0fe3606b43bdc9bff56593"
+    },
+    {
+      "name": "BESKT conduct prompts and report (PR 6) source guard",
+      "command": "bun run beskt-conduct-report:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "473bf1fec66774c74ef84a554ab4babe6433a70c80e9a9d6fc813cfea4751770"
+    },
+    {
+      "name": "BESKT report independence boundary schema guard",
+      "command": "bun run beskt-report-independence:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "f0a04ddd7ee6f92d38b6c64622bf1eb0938f82c82e42c20f49526d6e09476173"
+    },
+    {
+      "name": "BESKT content authoring (PR 7) source guard",
+      "command": "bun run beskt-content-authoring:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "7c7db667cff8fb1729097f3b98bd414d4f64cbf4f574ea57b02b324f5df5c0c4"
+    },
+    {
+      "name": "Interview-method library tenant-read guard",
+      "command": "bun run interview-method-tenant-read:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "ca4fb0cac386a917facd38665d382545ce4c09e2daaebbbda7ef6f1d9e6535c4"
+    },
+    {
+      "name": "Outstanding-reviews operator-only guard",
+      "command": "bun run cd-outstanding-reviews:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "85429447135d83f6646ef523e13be7e7bfde35212ca7f6ded5bb89ef726d5333"
+    },
+    {
+      "name": "BESKT interview tool (PR 5B) source and render guard",
+      "command": "bun run beskt-interview-tool:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "89779414d89005c54302687ee9816ed4e8f86870f04a8ee48a1fcf22a8b462c4"
+    },
+    {
+      "name": "BESKT product completion (PR 6) source and behaviour guard",
+      "command": "bun run beskt-product-completion:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "8817f37f277dd2b62d93b3961b3828edc48f14e600c13336658b7f92527ee0f7"
+    },
+    {
+      "name": "BESKT product completion (PR 6) render guard",
+      "command": "bun run beskt-product-completion-render:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "845a9d1fe4318048f02079e7ab75850c9b04c5e680105f970195816fab7f94b6"
+    },
+    {
+      "name": "BESKT v0.1 import check",
+      "command": "bun run beskt-v01-import:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "c09a072bf26fa78cd48ff63ca4bbb549b9dd8a2da7e2e8e9dedf0b735683a492"
+    },
+    {
+      "name": "BESKT internal test activation guard",
+      "command": "bun run beskt-internal-test-activation:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "3c6f825606e9024a56e6a195201bb05d72f4b2195739cf3634bb4b99273b5376"
+    },
+    {
+      "name": "BESKT complete-product guard",
+      "command": "bun run beskt-complete:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "6800783a44fdd058b4437e5a8aa85dadde54dfb9ab41c940d23cb48090a5271d"
+    },
+    {
+      "name": "Library direct access and recruitment setup guard",
+      "command": "bun run library-direct-access:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "c3b30a4a9223c95535c5f769744b235eaa5ec3ed0cea9f651ffc8b74411057f4"
+    },
+    {
+      "name": "Library structure and employer journey guard",
+      "command": "bun run library-structure:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "912be4fba9787c4de62a38cb76f0100d947e25570908c57ed756bbcb711dc522"
+    },
+    {
+      "name": "Test → interview start guard",
+      "command": "bun run interview-start:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "ad0619ecce5f8f9d87d3a2d8147c3ac666f4c65c31e5a73bd22957938c2c43bf"
+    },
+    {
+      "name": "BESKT candidate notice copy digest",
+      "command": "bun run beskt-notice-copy:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "77fda67427847d8d9922767545f164187ffff2cdf79030ddd1a99ad45d025239"
+    },
+    {
+      "name": "Interview Intelligence pack render check",
+      "command": "bun run interview-pack-render:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "06563c6a2a5528d89090174161ef009b8e9c9a12184b699a7c648b6fb11b0cda"
+    },
+    {
+      "name": "Interview Intelligence AI evaluation",
+      "command": "bun run interview-ai-eval:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "607cdd237c93b91d19dd3bda16dc5ee36168925d68d6aad0365e3ba0a80ba9ce"
+    },
+    {
+      "name": "Interview Intelligence runtime contract check",
+      "command": "bun run interview-runtime-contract:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "d97b5c51ec96117441234b1325ccad157b17b7596e004ed3245fc678980f71fc"
+    },
+    {
+      "name": "Interview context bridge check",
+      "command": "bun run interview-context-bridge:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "ab34da34773de1f521c97839bebe41463fe4e77696172b5b7d9848b23cf24dc0"
+    },
+    {
+      "name": "Interview finalisation capability check",
+      "command": "bun run interview-finalisation-capability:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "3e363f561e06412d71aa479396763d354cea480860f11ab81b45146b9e308ad9"
+    },
+    {
+      "name": "Interview recruiter workflow check",
+      "command": "bun run interview-recruiter-workflow:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "2772a2428b8446407889dab11f4ba89b49290921dcfb9ac9c21312f2883bec7a"
+    },
+    {
+      "name": "Employer process continuity check (E1)",
+      "command": "bun run employer-process-continuity:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "ab7d1ef7cc1e27fd919dfbd0701b628a92a720d926e46f4e2fd5d4861fc52e79"
+    },
+    {
+      "name": "Employer lifecycle check (phases 2 and 3)",
+      "command": "bun run employer-lifecycle:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "b94bfaee62b714b75363a059033ed6ef6c6aca584cdc762bcd3f6d8021ab2b1d"
+    },
+    {
+      "name": "Employer access lifecycle check",
+      "command": "bun run employer-access-lifecycle:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "d6f59be7dfd150601bc0a318ae89856a48961ea38a5dbba5373524ef7015ba76"
+    },
+    {
+      "name": "Employer report access check",
+      "command": "bun run employer-report-access:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "8b571fecdb12db2c8a192f84e5de5d33a317d5b62f3432f2317fdb98ca7ab6cb"
+    },
+    {
+      "name": "Participant report availability check",
+      "command": "bun run participant-report-availability:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "7202a877b259ac6b57f56ed383ac793f767d82c001e7f10219c09fb4f40eb68b"
+    },
+    {
+      "name": "Recruitment workspace check",
+      "command": "bun run recruitment-workspace:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "966e4474dd730fe376aaffac4c7b8fb29a692eccb603c356df861764ecc5b227"
+    },
+    {
+      "name": "Interview context governance check (E3)",
+      "command": "bun run interview-context-governance:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "6b4fc35f7c40890e3504bcdde2d502a25cbff718cc78ab5f5f335b68a31e878b"
+    },
+    {
+      "name": "Employer final report check (E4)",
+      "command": "bun run employer-final-report:check",
+      "code": 0,
+      "seconds": 2,
+      "logSha256": "da5a702dd594279bbfef9daf57ac35fd4779f6e12672de6133c12a0cb33140b3"
+    },
+    {
+      "name": "Interview Intelligence AI provider adapter",
+      "command": "bun run interview-ai-provider:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "144d178a4cde5d9eed3691850522caad211b66d2e6f55e79d47ded9c74f6b7e8"
+    },
+    {
+      "name": "Interview evidence reliability guard",
+      "command": "bun run interview-evidence-reliability:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "9fa619e1be4751e03611b638c062055e38dd97b895e7f18022dffbcf28cf9694"
+    },
+    {
+      "name": "Interview Intelligence gold dataset independence",
+      "command": "bun run interview-gold-independence:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "be0dffeb28a37062f713c0c8c15f484d3317833c35c539f34b644d8afc97fb6e"
+    },
+    {
+      "name": "Migration content-duplicate check",
+      "command": "bun run migrations-duplicate:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "e8516c0f19fd110cf5d1ac4697f65254e74433e227a0c5fb528b872aa7a8a491"
+    },
+    {
+      "name": "Backend deployment target lock",
+      "command": "bun run backend-target-lock:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "7c5ba05f0a513cd927f642cc7c4de8886141bab74f3ec1fcb6e55c3f3537d152"
+    },
+    {
+      "name": "Authentication provider target lock",
+      "command": "bun run auth-provider-target:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "b51140275daf1322c307350e296ee8c77c8dd8f5fc38fe4aff3d02425186ac33"
+    },
+    {
+      "name": "SQL security guard",
+      "command": "bun run sql-security:check",
+      "code": 0,
+      "seconds": 1,
+      "logSha256": "3d5cd2d81c084bb08e1a89f5e6f5cdae1041914fd00954c30b7f27192c289752"
+    },
+    {
+      "name": "Security Career Center check",
+      "command": "bun run career-center:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "ee5d2a73671216497b1f5aea466fb368d9e12ebcef9addf1b9f1dee101dc3d22"
+    },
+    {
+      "name": "Career Center journey check",
+      "command": "bun run career-center-journey:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "8a63c987dcd5c8b5edce34a1b960b597e2e6586c67a02e3c7e7981cca6776e66"
+    },
+    {
+      "name": "Saved-report confidence check",
+      "command": "bun run career-report-confidence:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "8fe689c3ffb77ab816d3fbf44840053791f62812d96869c39293e9f074be3fda"
+    },
+    {
+      "name": "Saved-report stage check",
+      "command": "bun run career-report-stage:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "097f8d1ffc924c40c31445b0f2f7f8d2e123e500f895a41a21a80f84c32fa55a"
+    },
+    {
+      "name": "Security Career Center negative controls",
+      "command": "bun run career-center:negative-controls",
+      "code": 0,
+      "seconds": 6,
+      "logSha256": "8f0ddc960a5c39f3213964600919c398d02946d23d3371f31459cf98a7faea15"
+    },
+    {
+      "name": "Security Career Center sources",
+      "command": "bun run career-center:sources",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "97304d055d64ef6beda153a8bceae9e6eb04f30fd00b2b0ff2d73e657b123624"
+    },
+    {
+      "name": "Professional identity and AI CV contract check",
+      "command": "bun run professional-identity:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "bc77943b5d5b350ce345ce794ed2537bb95708057c8c5e7278668fd7923994b5"
+    },
+    {
+      "name": "CQrityjob CV as an application source check",
+      "command": "bun run cv-application-source:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "71d30d9a91483ca119ba997e78e4e03440209939ca32e48200298b6dd55f4388"
+    },
+    {
+      "name": "CV pilot flow check",
+      "command": "bun run cv-pilot:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "81057ac198901d104686514cd42d61845f0f3aa1baf800633dcf29feb04a9fbe"
+    },
+    {
+      "name": "CV provider data minimisation check",
+      "command": "bun run cv-provider-minimisation:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "fab8757fde911d7b18264981c9678cbc5e51f16dbe1b919d85509dbf655fe3a8"
+    },
+    {
+      "name": "Candidate app navigation and terminology check",
+      "command": "bun run candidate-app-navigation:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "11580170d1d2a25e93dcc816097eae5037d39dca8b91be8309d02eb9e873ff57"
+    },
+    {
+      "name": "My Career hub check",
+      "command": "bun run candidate-navigation-canon:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "e7f909f0b7974a692f4ad2d0bc0664741e0d9fe430f5321c77fe0cbe64af3826"
+    },
+    {
+      "name": "Account confirmation state (Emsoms",
+      "command": "bun run account-confirmation:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "4626c5dcf9c64f2330d7550da438f31ac475097f64890b4e26a7753d8c5059fd"
+    },
+    {
+      "name": "Passport / CV boundary",
+      "command": "bun run passport-cv-boundary:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "0269e4eca51d3d21e4f8c6e836d43da42888e340c536dbebedf6d91533239615"
+    },
+    {
+      "name": "Passport page composition (sketch 2)",
+      "command": "bun run passport-page-composition:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "ac934f859ee02bfcc950794ec5204cda8f2533f511c054588385e46333915b42"
+    },
+    {
+      "name": "Passport credential shields",
+      "command": "bun run passport-credential-shield:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "6df1dea052b59918f4cd99bc2deecda36447304dafd6a15699b42b41e7420751"
+    },
+    {
+      "name": "Passport HAYAT reading and verification",
+      "command": "bun run passport-hayat:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "1a8b07c53fcc51d5f1fed0e2b515bebf5a6141b5d278400becd4e5fc4e5d4876"
+    },
+    {
+      "name": "India entry journey",
+      "command": "bun run india-entry:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "6266de0e053a945100df19cc3256f74ae32864e063c8abb5a8ef51bbda67b8fe"
+    },
+    {
+      "name": "Public address guard",
+      "command": "bun run site-origin:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "db6a448df4d1efc0956b34419711650e65200d9b26c1bb54b4df57213cfc4770"
+    },
+    {
+      "name": "E-mail transport diagnosis",
+      "command": "bun run email-transport-diagnosis:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "c6d4a6a26e68cc5bad2baee5d7ec9fa814346d82a830c78b66fefa5015f33a50"
+    },
+    {
+      "name": "Job ad JSON-LD escaping",
+      "command": "bun run job-jsonld-escaping:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "4d6d35a33d73ff8862af92495c0831a8abbf54007090e704db93fc1945483d3a"
+    },
+    {
+      "name": "Job board launch readiness",
+      "command": "bun run job-board-launch:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "9a7c52756973e71f8d6740d0c5fbfd1cbd74b8acab60feabbb9d40f899856cf0"
+    },
+    {
+      "name": "Passport card surface and homepage panel",
+      "command": "bun run passport-card-surface:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "1d19378f4a2bdeb71c47488bd2e38fd93bf05d88670abff7f45ec31295ad55c9"
+    },
+    {
+      "name": "Passport catalogue filter model",
+      "command": "bun run passport-catalogue-filter:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "4191ab08b3b46e01945300cd5bd223428986cc4444d5f38748e9626f80c83bef"
+    },
+    {
+      "name": "Passport credential picker",
+      "command": "bun run passport-credential-picker:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "130f9035bb0f09db22b980d221545e3a36938297a1bc73d12b2f2e9cd445bff4"
+    },
+    {
+      "name": "Passport catalogue administration",
+      "command": "bun run passport-catalogue-admin:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "f45c7ada4ab78891ac0319bf7475ffb8c97647442961c3b3dea6b8058c85cad4"
+    },
+    {
+      "name": "Passport expired-trust language",
+      "command": "bun run passport-expired-trust-language:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "e7c765ff06bbf4b56acce4d2fae9d2c259e9dae205d06190922a2234c620b2be"
+    },
+    {
+      "name": "Passport date validation",
+      "command": "bun run passport-date-validation:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "c1a2d3bfbb8cfbcb29621f6391b04196e45e91b9706a7c3ba5dd9c099d652e83"
+    },
+    {
+      "name": "Passport persona journeys",
+      "command": "bun run passport-persona-journey:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "48967c4337413d5ea01cb4f22e5a430fd07a299693314e6dbe13260822e97612"
+    },
+    {
+      "name": "Passport recipient card",
+      "command": "bun run passport-recipient-card:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "9342556255b0e943207dd3e84a324c0d79f32e38dfa1a57412813b0ac812f55a"
+    },
+    {
+      "name": "Passport holder name",
+      "command": "bun run passport-holder-name:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "e8595468c4a7e63e85c585d9296ffd4c0ff9ddea5bba78b55cdfdbf8fbe3103c"
+    },
+    {
+      "name": "Passport skill contract",
+      "command": "bun run passport-skill-contract:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "8d9c748920e94fc29c3c68a6527b3e15a609bf3df9456e7d675a27157156993a"
+    },
+    {
+      "name": "Passport workspace",
+      "command": "bun run passport-workspace:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "6b3df32a10a100eec692588dcf139e2fc6a311840c270ea9c9e877ca382a9a95"
+    },
+    {
+      "name": "Candidate destination composition (sketches 3, 4, 5)",
+      "command": "bun run candidate-destination-composition:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "b044f9dd3d703082431b807a235da486ff667579843533e6442c8882f81c0291"
+    },
+    {
+      "name": "Candidate journey composition (images 0, 1, 2)",
+      "command": "bun run candidate-journey-composition:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "000875e54c227bd8d00a8c95bf2e22fba33366a63d4fc204825004a162b15020"
+    },
+    {
+      "name": "Public header entry-point check",
+      "command": "bun run header-entry:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "59ea734403c00a7f4c276b8b0632891a1682fbc9ad03d0a44a55f6971d6cca99"
+    },
+    {
+      "name": "Employer registration and activation check",
+      "command": "bun run employer-registration:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "8a06bd78be5dc1cea15681153e1a932677fe9d24a42bbb4935b251234dfc01b4"
+    },
+    {
+      "name": "Employer registration notification chain check",
+      "command": "bun run employer-registration-notice:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "392b7730aadad6e00af9655943d712afb73cddedb6ae88a2b954eea8e966bf8a"
+    },
+    {
+      "name": "MCP exposure check",
+      "command": "bun run mcp-exposure:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "17ab2790cbccbb2f74bfec9000a1e552e0d0a91dfaa05797bde575f247161376"
+    },
+    {
+      "name": "Transactional e-mail function check",
+      "command": "bun run transactional-email:check",
+      "code": 0,
+      "seconds": 13,
+      "logSha256": "1a588e2b4b60c5934ba35c20b66f3b5aaf54992e69d27ec9204f826dd6cb2578"
+    },
+    {
+      "name": "Employer new-application notice check",
+      "command": "bun run employer-application-notice:check",
+      "code": 0,
+      "seconds": 4,
+      "logSha256": "54155d20dc11b104ecd5ef8b3df4c51b1c402e2c173238c922fb0472f5686220"
+    },
+    {
+      "name": "Security headers check",
+      "command": "bun run security-headers:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "cdeed3d6484a353eb48236f343e3e718c14626f8c5c17ee02ada620d973af85b"
+    },
+    {
+      "name": "Invitation email guard check",
+      "command": "bun run invitation-email-guard:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "92f67509ef5498893dc26cfe89b6354a809a979ed16e18d1d166e7f228d3dbd8"
+    },
+    {
+      "name": "Admin Portal error contract check",
+      "command": "bun run admin-error-contract:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "feb85f72f56b5c7457395d9fe2c119ebfb88f349717925c35e5c4f959abc69a3"
+    },
+    {
+      "name": "Admin Portal operational scope check",
+      "command": "bun run admin-portal:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "05c3d79dc95cf3d3a4c675fdaa10158425afefeca8df8e0156117fe70cb85ff2"
+    },
+    {
+      "name": "Admin Control Center lifecycle check",
+      "command": "bun run admin-lifecycle:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "b8a544824f5026dfab33fa2a8edc3a490106f8a1d4981dcbec1d35bfe5485a01"
+    },
+    {
+      "name": "Admin employer status guard check",
+      "command": "bun run admin-employer-status-guard:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "d09dfbddb033134a3deeaf97754f838a6fb4b5a58f877c714a2d4d5cf70b0d5b"
+    },
+    {
+      "name": "Public homepage check",
+      "command": "bun run public-homepage:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "ec6baa8e674da3fc4e97fc38ea5686a1f2fea3f418885ac28acdf0c088f7a0e9"
+    },
+    {
+      "name": "Brand messaging check",
+      "command": "bun run brand-messaging:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "eb7677b9f1e2c5b933020eeb39f60cc853551ec1d800c4c7116c60e8e63a6f30"
+    },
+    {
+      "name": "Job ad back-navigation check",
+      "command": "bun run job-back-navigation:check\nbun run scripts/job-application-continuity-check.ts\nbun run scripts/job-vacancy-requirements-check.tsx\n",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "b05fae405aacfccb7a9d4cf9f64e039d112b24210a97bc169d8fa5b912257222"
+    },
+    {
+      "name": "Employer landing page check",
+      "command": "bun run employer-landing:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "f8350fb4cf0c3346d5cf466356d954ab96df200490266ed186d40f239ff71675"
+    },
+    {
+      "name": "Root fallback screens check",
+      "command": "bun run root-fallback:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "55b65f2f3b326f441389764cd8737d06cbf399cc5fa6885d73bdcd4ad7477209"
+    },
+    {
+      "name": "Page head language check",
+      "command": "bun run head-language:check",
+      "code": 0,
+      "seconds": 0,
+      "logSha256": "412f35f992fe351b815a7f059314b3fd4938a65c8a2acbe5eec9264a9b448c0a"
+    },
+    {
+      "name": "Production build",
+      "command": "bun run build",
+      "code": 0,
+      "seconds": 20,
+      "logSha256": "b74d8abc0d15b95a5842f88b86c2f21b34bc1113bc92fad7f63db5333e86f4b2"
+    }
+  ]
+}

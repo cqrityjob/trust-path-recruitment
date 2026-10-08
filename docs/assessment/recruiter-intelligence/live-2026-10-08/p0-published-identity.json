@@ -1,0 +1,18 @@
+{
+  "observedAt": "2026-10-08T07:01:23Z",
+  "origin": "https://www.cqrityjob.com",
+  "path": "/release-identity.json",
+  "status": 200,
+  "commitSha": "8860223e37cdf648a3438c98133018fcf4587440",
+  "prHeadSha": "1424694e1f985d8a03c280eb8124145ddfdcb8f5",
+  "mainBase": "48eec6fee4d080b3762513f8ee112b5ad7f307fb",
+  "sourceTreeSha256": "0481d12f7f7ad6f7556cd1cff0238d4cc61788f1861d224dd6a5cb72b4039ed5",
+  "deploymentId": "c8fcb9b6-d33d-4e6c-917f-70427dd4a8e0",
+  "headers": {
+    "contentType": "application/json",
+    "hsts": "max-age=31536000; includeSubDomains",
+    "referrerPolicy": "strict-origin-when-cross-origin",
+    "nosniff": true
+  },
+  "secretRedaction": "No cookies, sessions, keys, passwords or signed addresses included. Build identity and headers prove publication, not successful authenticated journeys."
+}

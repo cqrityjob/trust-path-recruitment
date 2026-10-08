@@ -1,0 +1,298 @@
+{
+  "schemaVersion": "ri-e341-ci-first-terminal-v1",
+  "observedAt": "2026-10-08T16:04:41.639Z",
+  "head": "e3418b3b7f0c82af74e38a276fd7b897d9d07a2c",
+  "attempt": 1,
+  "core": {
+    "runId": 37800119402,
+    "conclusion": "failure",
+    "passed": 8,
+    "total": 9
+  },
+  "external": {
+    "passed": 9,
+    "total": 9
+  },
+  "native": {
+    "runId": 37800119373,
+    "jobId": 113389758215,
+    "conclusion": "success"
+  },
+  "totalJobs": 19,
+  "successJobs": 18,
+  "failureJobs": 1,
+  "runs": [
+    {
+      "id": 37800119373,
+      "name": "Recruiter real Supabase evidence",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 37800119396,
+      "name": "Passport public pilot — real-backend evidence",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 37800119405,
+      "name": "Job ad back navigation — routed browser evidence",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 37800119300,
+      "name": "Recruitment workspace — routed browser evidence",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 37800119467,
+      "name": "Application retention — worker and UI",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 37800119315,
+      "name": "E4 employer final report — routed browser evidence",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 37800119358,
+      "name": "Security Work browser evidence",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 37800119402,
+      "name": "CI",
+      "status": "completed",
+      "conclusion": "failure"
+    },
+    {
+      "id": 37800119262,
+      "name": "Role assessment and TestBank regression",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 37800119269,
+      "name": "Passport preview image — Cloudflare Worker runtime evidence",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 37800119275,
+      "name": "Career Center persistence — routed browser evidence",
+      "status": "completed",
+      "conclusion": "success"
+    }
+  ],
+  "jobs": [
+    {
+      "runId": 37800119373,
+      "name": "Recruiter real Supabase evidence",
+      "jobs": [
+        {
+          "id": 113389758215,
+          "name": "Real GoTrue, Storage, PostgREST 14 and snapshot app",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "runId": 37800119396,
+      "name": "Passport public pilot — real-backend evidence",
+      "jobs": [
+        {
+          "id": 113389757857,
+          "name": "Passport public pilot browser evidence (isolated local stack)",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "runId": 37800119405,
+      "name": "Job ad back navigation — routed browser evidence",
+      "jobs": [
+        {
+          "id": 113389757563,
+          "name": "Job ad back navigation browser evidence (isolated local stack)",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "runId": 37800119300,
+      "name": "Recruitment workspace — routed browser evidence",
+      "jobs": [
+        {
+          "id": 113389758230,
+          "name": "Recruitment workspace browser evidence (isolated local stack)",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "runId": 37800119402,
+      "name": "CI",
+      "jobs": [
+        {
+          "id": 113390264200,
+          "name": "Recruiter current schema — PostgreSQL 17 and PostgREST 14",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "id": 113390264518,
+          "name": "CV browser — the signed-in journey",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "id": 113390264672,
+          "name": "Lint, typecheck and deterministic checks",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "id": 113390264909,
+          "name": "Recruiter Intelligence P1 — PostgreSQL 17 and concurrent HTTP API",
+          "status": "completed",
+          "conclusion": "failure"
+        },
+        {
+          "id": 113390264929,
+          "name": "Migration replay, RLS and rollback tests",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "id": 113390264933,
+          "name": "Recruiter Intelligence P1 — full SQL, HTTP and browser proof",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "id": 113390264941,
+          "name": "Public entry browser — homepage, employers and the employer journey",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "id": 113390265077,
+          "name": "Passport three-market browser — catalogue, cards, pilot access",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "id": 113390265083,
+          "name": "CV export — PDF and ATS proof",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "runId": 37800119467,
+      "name": "Application retention — worker and UI",
+      "jobs": [
+        {
+          "id": 113389757428,
+          "name": "worker-and-ui",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "runId": 37800119315,
+      "name": "E4 employer final report — routed browser evidence",
+      "jobs": [
+        {
+          "id": 113389757788,
+          "name": "E4 routed browser evidence (isolated local stack)",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "runId": 37800119358,
+      "name": "Security Work browser evidence",
+      "jobs": [
+        {
+          "id": 113390654260,
+          "name": "browser",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "runId": 37800119262,
+      "name": "Role assessment and TestBank regression",
+      "jobs": [
+        {
+          "id": 113389756992,
+          "name": "Assigned officer/manager reports and TestBank (isolated desktop/mobile)",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "runId": 37800119269,
+      "name": "Passport preview image — Cloudflare Worker runtime evidence",
+      "jobs": [
+        {
+          "id": 113389757194,
+          "name": "Preview image in workerd (Cloudflare Worker runtime)",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "runId": 37800119275,
+      "name": "Career Center persistence — routed browser evidence",
+      "jobs": [
+        {
+          "id": 113390022249,
+          "name": "Career Center persistence browser evidence (isolated local stack)",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ]
+    }
+  ],
+  "failure": {
+    "jobId": 113390264909,
+    "stage": "gateway",
+    "message": "RI P1 EVIDENCE REFUSED: local service not ready: http://127.0.0.1:54392/rest/v1/ (see private logs)",
+    "at": "2026-10-08T15:36:49.0208199Z",
+    "exitCode": 2,
+    "sqlAssertionsPassed": 95,
+    "strictReplayMigrations": 387,
+    "apiAssertionsExecuted": 0,
+    "underlyingCause": "not established from permitted public evidence",
+    "readbackPath": "/private/tmp/ri-456-e341-p1-api-attempt1/independent-readback.json",
+    "readbackSha256": "69c8b9e99cab57adadb82ecdcf8c38e204b7a3f4ac709d38681f84379a1b3786"
+  },
+  "nativeReadback": {
+    "path": "/private/tmp/ri-native-456-e341-actual-20261008/independent-readback.json",
+    "sha256": "6e91709287b8f6dea909b1c02b279bd76278b7cb1b2e3ef2f8c23cb463694777",
+    "curatedWitness": "/private/tmp/ri-final-witness-prep/interview-e341/"
+  },
+  "limits": [
+    "No ECR or product/schema cause inferred from readiness failure",
+    "Job success does not assert global lint has zero historical errors; existing continue-on-error remains",
+    "Historical narrow375 runs remain separate",
+    "No agent rerun, mutation, push or service execution"
+  ]
+}

@@ -1,0 +1,330 @@
+{
+  "schemaVersion": "ri-native-e341-independent-readback-v1",
+  "verifiedAt": "2026-10-08T15:44:54.581Z",
+  "head": "e3418b3b7f0c82af74e38a276fd7b897d9d07a2c",
+  "runId": 37800119373,
+  "jobId": 113389758215,
+  "conclusion": "success",
+  "appSha": "40e5775de5195050571421827434ec2872a61506",
+  "schemaSha": "1e5988c6f9c7121a0fefd22c0db06f6b573f0ae9",
+  "artifact": {
+    "id": 11561272224,
+    "bytes": 33624735,
+    "sha256": "10b9521410da348085997fd2ded7319bff2b66cea483b3767f01a0dd8198e1eb",
+    "originalManifestSha256": "4590949d4cb7c74b43a422816e3aaf5b3869052f03275dbb04fff1c402cf2647",
+    "entries": 38,
+    "privateFilesIncluded": 0
+  },
+  "startedAt": "2026-10-08T15:28:29.975Z",
+  "completedAt": "2026-10-08T15:36:56.615Z",
+  "serviceVersions": {
+    "cli": "2.111.0",
+    "node": "v22.23.3",
+    "bun": "1.3.14",
+    "postgres": "17.6",
+    "gotrueImage": "public.ecr.aws/supabase/gotrue:v2.194.0",
+    "storageImage": "public.ecr.aws/supabase/storage-api:v1.67.20",
+    "postgrestImage": "public.ecr.aws/supabase/postgrest:v14.15",
+    "postgresImage": "public.ecr.aws/supabase/postgres:17.6.1.156",
+    "postgrestBinary": "PostgREST 14.15"
+  },
+  "stages": {
+    "official_stack": "passed",
+    "strict_schema_replay": "passed",
+    "real_auth_and_receipt_off_fixture": "passed",
+    "real_storage_upload_recovery": "passed",
+    "pinned_app_start": "passed",
+    "twelve_real_password_ui_journeys": "passed",
+    "two_tab_real_auth_stress": "passed",
+    "real_gotrue_postgrest_bounded_conflict": "passed",
+    "final_readback": "passed",
+    "owned_stack_stop": "passed"
+  },
+  "migrations": {
+    "count": 387,
+    "allDigestsMatchPinnedGit": true,
+    "frontier": "20270309090000"
+  },
+  "browserPrimary": {
+    "expected": 12,
+    "unexpected": 0,
+    "flaky": 0,
+    "skipped": 0
+  },
+  "browserCAS": {
+    "expected": 2,
+    "unexpected": 0,
+    "flaky": 0,
+    "skipped": 0
+  },
+  "actualGoTrueCAS": {
+    "status": 409,
+    "code": "PT409",
+    "message": "SCP_IV_SESSION_PROCESS_STALE",
+    "elapsedMs": 6.51,
+    "timeoutMs": 8000
+  },
+  "storage": [
+    {
+      "mode": "missing-preflight",
+      "status": "PASS",
+      "outcome": "preflight-rejected",
+      "cleanup": null,
+      "setupCleanupConfirmed": true,
+      "storagePosts": 0,
+      "attachActualStatuses": [],
+      "deleteCalls": 0,
+      "readbackStatuses": []
+    },
+    {
+      "mode": "reject-cleanup-confirmed",
+      "status": "PASS",
+      "outcome": "not_attached",
+      "cleanup": "confirmed",
+      "setupCleanupConfirmed": true,
+      "storagePosts": 1,
+      "attachActualStatuses": [
+        500
+      ],
+      "deleteCalls": 1,
+      "readbackStatuses": [
+        200
+      ]
+    },
+    {
+      "mode": "reject-cleanup503-pending",
+      "status": "PASS",
+      "outcome": "not_attached",
+      "cleanup": "pending",
+      "setupCleanupConfirmed": true,
+      "storagePosts": 1,
+      "attachActualStatuses": [
+        500
+      ],
+      "deleteCalls": 1,
+      "readbackStatuses": [
+        200
+      ]
+    },
+    {
+      "mode": "committed-reply-lost",
+      "status": "PASS",
+      "outcome": "saved",
+      "cleanup": null,
+      "setupCleanupConfirmed": true,
+      "storagePosts": 1,
+      "attachActualStatuses": [
+        200
+      ],
+      "deleteCalls": 0,
+      "readbackStatuses": [
+        200
+      ]
+    },
+    {
+      "mode": "committed-reply-lost-read-denied",
+      "status": "PASS",
+      "outcome": "outcome_unknown",
+      "cleanup": null,
+      "setupCleanupConfirmed": true,
+      "storagePosts": 1,
+      "attachActualStatuses": [
+        200
+      ],
+      "deleteCalls": 0,
+      "readbackStatuses": [
+        401
+      ]
+    },
+    {
+      "mode": "ordinary-success",
+      "status": "PASS",
+      "outcome": "saved",
+      "cleanup": null,
+      "setupCleanupConfirmed": true,
+      "storagePosts": 1,
+      "attachActualStatuses": [
+        200
+      ],
+      "deleteCalls": 0,
+      "readbackStatuses": [
+        200
+      ]
+    },
+    {
+      "mode": "revoked-after-preflight",
+      "status": "PASS",
+      "outcome": "outcome_unknown",
+      "cleanup": null,
+      "setupCleanupConfirmed": true,
+      "storagePosts": 1,
+      "attachActualStatuses": [
+        403
+      ],
+      "deleteCalls": 0,
+      "readbackStatuses": []
+    }
+  ],
+  "beforeBrowser": {
+    "migration_count": 387,
+    "migration_frontier": "20270309090000",
+    "auth_users": 8,
+    "auth_confirmed_invalid_bcrypt": 8,
+    "jobs": 12,
+    "applications": 12,
+    "receipts_enabled": 0,
+    "cases": 0,
+    "reports": 0,
+    "ai_enabled": false,
+    "transcript_enabled": false,
+    "ai_runs": 0,
+    "sw_ai_runs": 0,
+    "recruitment_messages": 0,
+    "email_attempts": 0,
+    "erasure_jobs": 0,
+    "storage_erasure_queue": 0,
+    "cron_jobs": 0
+  },
+  "afterBrowser": {
+    "migration_count": 387,
+    "migration_frontier": "20270309090000",
+    "auth_users": 8,
+    "auth_confirmed_invalid_bcrypt": 8,
+    "jobs": 12,
+    "applications": 12,
+    "receipts_enabled": 0,
+    "cases": 14,
+    "reports": 12,
+    "ai_enabled": false,
+    "transcript_enabled": false,
+    "ai_runs": 0,
+    "sw_ai_runs": 0,
+    "recruitment_messages": 0,
+    "email_attempts": 0,
+    "erasure_jobs": 0,
+    "storage_erasure_queue": 0,
+    "cron_jobs": 0
+  },
+  "mobile": {
+    "playwrightLock": "1.61.1",
+    "configSha256": "ccb9513d09e70049cf6e913205d48526baec5c197f50e9b97037129fd127c154",
+    "presetGuardSha256": "0e213fb751356a042c544b17869084fb113854c317f6b938b2de9fc1be48e9d0",
+    "configuredProjects": [
+      {
+        "name": "mobile-375",
+        "preset": "iPhone 13 Mini",
+        "isMobile": true,
+        "hasTouch": true,
+        "deviceScaleFactor": 3,
+        "viewport": {
+          "width": 375,
+          "height": 812
+        },
+        "observedPngWidth": 1125,
+        "verifiedImages": 12
+      },
+      {
+        "name": "mobile-390",
+        "preset": "iPhone 14",
+        "isMobile": true,
+        "hasTouch": true,
+        "deviceScaleFactor": 3,
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "observedPngWidth": 1170,
+        "verifiedImages": 12
+      }
+    ],
+    "evidenceBasis": "Exact pinned fail-closed configuration, Playwright1.61.1 frozen dependency and all actual PNG widths; no separate in-page touch-capability recorder"
+  },
+  "allEightNotes": {
+    "scope": "All12 primary journeys require eight distinct governed nonblank question notes in paused, completed and evidence phases via own authenticated API",
+    "phaseLocations": [
+      {
+        "phase": "paused",
+        "line": 683
+      },
+      {
+        "phase": "completed",
+        "line": 711
+      },
+      {
+        "phase": "evidence",
+        "line": 746
+      }
+    ],
+    "specSha256": "2659b4beb683ea188516f3364ca39cc5b66cffc63a78f31a64d5d73938960850",
+    "diagnosticSha256": "80139d9daa09ee00b263ce02905b7fd98a147289d0bb515faeb6f630f3b572a7",
+    "privatePhaseRecorderPublished": false,
+    "evidenceBasis": "Passing12 tests enforce these pinned assertions; raw note records remain private"
+  },
+  "png": {
+    "count": 36,
+    "allBytesAndSha256Matched": true,
+    "projectCounts": {
+      "chromium": 12,
+      "mobile-375": 12,
+      "mobile-390": 12
+    },
+    "selected": [
+      {
+        "path": "images/chromium-manager-application-sv-resumed.png",
+        "bytes": 331491,
+        "sha256": "00d61c53a63dc7f360cec59df699a0c08b81263b96b4fd5f6f4ad363328cc3af",
+        "project": "chromium",
+        "width": 1440,
+        "height": 2281,
+        "localPath": "/private/tmp/ri-native-456-e341-actual-20261008/images/chromium-manager-application-sv-resumed.png"
+      },
+      {
+        "path": "images/mobile-375-guard-application-en-report.png",
+        "bytes": 422499,
+        "sha256": "e127b747aae2f2589c2b31e13026d46d24f829c60ce833bfe37a637254f714e6",
+        "project": "mobile-375",
+        "width": 1125,
+        "height": 5025,
+        "localPath": "/private/tmp/ri-native-456-e341-actual-20261008/images/mobile-375-guard-application-en-report.png"
+      },
+      {
+        "path": "images/mobile-390-manager-application-sv-resumed.png",
+        "bytes": 901977,
+        "sha256": "91a682d1d8755c8da871ffd259160be1dd33376d20d1750770908674669be61a",
+        "project": "mobile-390",
+        "width": 1170,
+        "height": 10944,
+        "localPath": "/private/tmp/ri-native-456-e341-actual-20261008/images/mobile-390-manager-application-sv-resumed.png"
+      }
+    ]
+  },
+  "limits": [
+    "Isolated ephemeral official Supabase integration; no hosted/CDN runtime claim",
+    "375/390 are Chromium mobile/touch emulations, not physical phones",
+    "Owned stack-stop command returned successfully; no independent post-stop Docker inventory readback",
+    "Seven Storage adapter fault probes are distinct from the separate OP09 durable44 proof",
+    "Historical5138 and ed375 narrow375 proofs remain distinct; neither inherits corrected-mobile results",
+    "No side-effect result for unrelated namespaces or hosted services"
+  ],
+  "agentActions": {
+    "readOnly": true,
+    "noRetry": true,
+    "noSourceChange": true,
+    "noServiceRun": true
+  },
+  "visualReview": {
+    "inspectedOriginalImages": [
+      "chromium-manager-application-sv-resumed.png",
+      "mobile-375-guard-application-en-report.png",
+      "mobile-390-manager-application-sv-resumed.png"
+    ],
+    "desktop": "Question8 of8, all questions answered, own reflection and protocol deviation visibly retained and marked saved",
+    "mobile375": "English immutable final-report/version1 and matching digest notice visible; report screenshot shows upper report portion",
+    "mobile390": "Single-column Swedish Question8,8/8 answered indicator and saved reflection/protocol deviation visible",
+    "limitations": [
+      "English UI retains the frozen Swedish role name Väktare",
+      "Step navigation is horizontally scrollable/clipped at mobile width",
+      "These are selected screenshots, not a full accessibility or physical-device audit"
+    ]
+  }
+}

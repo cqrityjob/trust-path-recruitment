@@ -1,0 +1,106 @@
+{
+  "schemaVersion": "ri-p1-local-evidence-v1",
+  "runMode": "api_only",
+  "checkoutSha": "0103cec37dd42451cf2aedb0455d3feeb769ca14",
+  "workingTreeChanges": [],
+  "sourceInputsSha256": "352c273c2564d3acd141a813063f9ff8cd6788eb45a59b6676b14d19771f6bce",
+  "sourceInputCount": 1579,
+  "createdAt": "2026-10-08T10:30:09.451Z",
+  "nodeVersion": "v22.23.3",
+  "serviceVersions": {
+    "postgres": "17.11 (Debian 17.11-1.pgdg13+2)",
+    "apiPostgrest": "PostgREST 14.15",
+    "uiPostgrest": "not_run"
+  },
+  "exitCode": 0,
+  "verification": {
+    "bootstrap": "passed",
+    "replay": "passed",
+    "oracle": "passed",
+    "gateway": "passed",
+    "api": "passed",
+    "runtime": "intentionally_not_run",
+    "browser": "intentionally_not_run"
+  },
+  "executedAssertions": {
+    "sql": 95,
+    "api": 23,
+    "browserCasesPassed": 0
+  },
+  "oracle": {
+    "received": 100,
+    "green": 40,
+    "yellow": 25,
+    "gray": 35,
+    "reviewed": 27,
+    "remaining": 73
+  },
+  "actual": [
+    "full SQL migration replay",
+    "actual SQL 100-application oracle",
+    "authenticated PostgREST privileges/RLS/RPC"
+  ],
+  "substitutes": [
+    "Auth/Storage gateway; not GoTrue or Storage API"
+  ],
+  "browser": {
+    "executed": false,
+    "engine": "Chromium",
+    "languages": [
+      "sv",
+      "en"
+    ],
+    "viewports": [
+      "1440×1000 desktop",
+      "375×812 touch/mobile emulation; not a physical device"
+    ]
+  },
+  "databases": [
+    "ri_p1_seed_ci_test",
+    "ri_p1_api_ci_test"
+  ],
+  "excluded": [
+    "private service configuration/logs",
+    "Playwright traces carrying local bearer tokens",
+    "real Auth/Storage",
+    "published runtime",
+    "physical mobile"
+  ],
+  "files": [
+    {
+      "path": "stages.log",
+      "bytes": 167,
+      "sha256": "6ae5ada2dbaf477ea8b7ccb14443babfc8caf7df3ca241fe37270d902140a472"
+    },
+    {
+      "path": "postgres-version.log",
+      "bytes": 32,
+      "sha256": "412cbe116971701e23d1a6a6081b50c3a71e032e130c911fdabe7d74f170a3ef"
+    },
+    {
+      "path": "api-postgrest-version.log",
+      "bytes": 16,
+      "sha256": "90a93bd17365cfc57bdf4cad96cb02c81a68ba079abae4148d6052c678ef93e6"
+    },
+    {
+      "path": "bootstrap.log",
+      "bytes": 237,
+      "sha256": "2a76defc707243a0db6f6d8d116ba1ece7722a62e8ff152e8e535ca697f8257c"
+    },
+    {
+      "path": "replay.log",
+      "bytes": 129626,
+      "sha256": "c1e65ce4aa68b64f92b3a3267f49f7cb54c89a630520a1d587073d4ccbcce653"
+    },
+    {
+      "path": "sql-oracle.log",
+      "bytes": 83928,
+      "sha256": "6e6194bfc3714cccaef300a43f85dd9c8f97f7aa774ae829c658b19caf984317"
+    },
+    {
+      "path": "http-api.log",
+      "bytes": 2967,
+      "sha256": "e7a8daa0a02ed8f9fff1db24c3046bba6f3bec770917a431dcb6d7e89a367b61"
+    }
+  ]
+}

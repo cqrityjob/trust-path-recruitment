@@ -1,0 +1,76 @@
+{
+  "schemaVersion": "ri-e341-p1-api-first-attempt-v1",
+  "head": "e3418b3b7f0c82af74e38a276fd7b897d9d07a2c",
+  "runId": 37800119402,
+  "jobId": 113390264909,
+  "attempt": 1,
+  "conclusion": "failure",
+  "artifact": {
+    "id": 11560403891,
+    "sha256": "d35513a4817c2d30e14c047e3e8cba6da0d156ee1a7314bc5877412e44b9dc87",
+    "bytes": 25908,
+    "originalManifestSha256": "024ed8c506dc7812f0fac51b25f3d58059b5f0bb486d2fe2dff8199431bad9e3"
+  },
+  "checkoutSha": "c3f9b9153db9aafe39070c761dda5c97a1ab73b7",
+  "runMode": "api_only",
+  "verification": {
+    "bootstrap": "passed",
+    "replay": "passed",
+    "oracle": "passed",
+    "gateway": "stopped_or_failed",
+    "api": "not_run",
+    "runtime": "not_run",
+    "browser": "not_run"
+  },
+  "executedAssertions": {
+    "sql": 95,
+    "api": 0,
+    "browserCasesPassed": 0
+  },
+  "oracle": {
+    "received": 100,
+    "green": 40,
+    "yellow": 25,
+    "gray": 35,
+    "reviewed": 27,
+    "remaining": 73
+  },
+  "observedFailure": {
+    "at": "2026-10-08T15:36:49.0208199Z",
+    "message": "RI P1 EVIDENCE REFUSED: local service not ready: http://127.0.0.1:54392/rest/v1/ (see private logs)",
+    "exitCode": 2,
+    "stage": "gateway",
+    "gatewayStatus": "stopped_or_failed"
+  },
+  "evidence": {
+    "strictReplayMigrationCount": 387,
+    "postgrestVersion": "PostgREST 14.15",
+    "publishedEntries": [
+      "manifest.json",
+      "stages.log",
+      "bootstrap.log",
+      "replay.log",
+      "sql-oracle.log"
+    ],
+    "presentManifestFileHashesMatched": 4,
+    "manifestFilesOmittedByWorkflow": [
+      "postgres-version.log",
+      "api-postgrest-version.log"
+    ],
+    "privateLogsRead": false,
+    "independentSqlOkNotices": 95
+  },
+  "sourceFindings": [
+    "start_rest launches PostgREST with host.docker.internal and runs its --version before readiness",
+    "start_gateway launches a loopback Node gateway; readiness calls the gateway /rest/v1/ root",
+    "wait_url requires curl --fail success, polling up to60 one-second intervals",
+    "PostgREST container and gateway logs and config remain private; no readiness HTTP status or process state is exported"
+  ],
+  "limits": [
+    "Underlying startup/readiness cause is not exposed in this curated artifact or completed job log",
+    "No ECR/rate-limit or product/schema defect established",
+    "95 SQL assertions and100 oracle passed; API0, runtime/browser not_run",
+    "This job uses substitute Auth/Storage, distinct from the successful native run"
+  ],
+  "noRetryOrMutationPerformed": true
+}

@@ -1,0 +1,24 @@
+{
+  "kind": "failed_native_p1_actual_stack_auth_then_fixture",
+  "runId": 37765935803,
+  "jobId": 113273494273,
+  "artifactId": 11543889022,
+  "zipSha256": "8b8138ac6ba2b6bade17f30037a6ae0060b991a13eeac1b0832c28408569e151",
+  "manifestSha256": "3b549cad830a25f97c4dba9a8c7ebedf206187f167dc6adcc5ad9e9524a78a5c",
+  "manifestBytes": 66144,
+  "artifactMembers": [
+    "manifest.json"
+  ],
+  "migrationCount": 386,
+  "authCreated": 104,
+  "result": "FAILED",
+  "rawSqlExceptionRecovered": false,
+  "storage80Executed": false,
+  "acceptance100Executed": false,
+  "api23Executed": false,
+  "browser5Executed": false,
+  "imageCount": 0,
+  "sourceDiagnosisCommit": "67a5311ef06efafed1b9f531ffbe342475cf8b9b",
+  "laterNativeResult": "pending",
+  "privateLogsCopied": false
+}
