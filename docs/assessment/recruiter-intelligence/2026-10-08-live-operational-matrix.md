@@ -1,5 +1,16 @@
 # RI v0.3: de 22 driftprovens faktiska status
 
+## Tillägg r9, dokumenterat 2026-10-08 12:23 UTC
+
+[Exakta r9-pinnar och releasegrindar](2026-10-08-live-release.md#tillägg-r9-dokumenterat-2026-10-08-1223-utc) skiljer de nya isolerade proven från oförändrad main 517/public 886/hosted 071–385. Ingen B-status blir PASS; r8 och äldre utfall bevaras.
+
+| Omfång | Nytt faktiskt utfört | Återstående gräns |
+| --- | --- | --- |
+| OP01/02/03/16/17/22, avgränsad native | [191d/run9](evidence/2026-10-08-native-supabase-run9/README.md), exakt app 3d66/schema 250: 385 migrationer, 8 Auth, 7 Storageadapterprov, 12 primary+2 tvåfliksprov, alla 8 noter efter 3 faser, 14 ärenden/12 rapporter, 409/PT409 på 7,53 ms, 0 sidoeffekter och egen stoppkontroll PASS; 36 PNG verifierade. | #452:s obligatoriska CI 37773422144 pågår. Ingen full 22-/hostedmatris, fysisk telefon eller nativeinjektion i explicit-read-felvägen påstås. |
+| P1 native 100 | [3ac](evidence/2026-10-08-native-p1-3ac-browser-failure/README.md): 386/Auth 104/Storage 80, 100 kravbedömningar via granskar-sessioner: 40 gröna/25 gula/35 gråa, 27 bekräftat granskade/73 återstående, 23 API, V2/källrevoke/AIgrått PASS; browser **FAIL** och 9 PNG bevarade. |0508192 pinnar app 3e0/schema 6039 med test-only exakt saved-source-locator och 33 guards/harmlöst verkligt JSON-reportertest. Ny faktisk nativebrowser med fem fall väntar; rå originalexception saknas. |
+| OP09/13, avgränsad native recovery | [a037](evidence/2026-10-08-native-op09-a037/README.md), appcce/schema 9c8: 387/Auth 8/44 SDK+4 UI PASS. Bestående reload/explicit resume/fence/retry, bytebevarande, andra-holdernekanden och 10 local-sessionnekanden; 13 journal/7 evidence slutligen, 0 sidoeffekter och egen stoppkontroll. 12 PNG verifierade. | Båda concurrent races observerade registration_won; endast sekventiella båda ordningarna är verifierade. Ingen TTL/global logout/hostedgaranti. Appcore-CI pending; 080 måste föregå 0909. Emulerad 375 har filnamnsradbrytningsskuld. |
+| Hosted/telefon/innehåll | Senaste installeringsreadback 20 observed_now/14 permanentlås/0 ACK/0 hostedrapporter är oförändrad; biblioteket fortsatt draft med 8Q/6C och EN-luckor. | Hosted Auth/B BLOCKED, fysisk telefon NOT RUN. Manifestdetektion är separat från use-lock/snapshot/reportfreeze; inget retroaktivt approval eller historiskt startfrysning tillkommer. |
+
 ## Tillägg r8, dokumenterat 2026-10-08 12:07 UTC
 
 [Exakta r8-huvuden, nativeversioner och releaseordning](2026-10-08-live-release.md#tillägg-r8-dokumenterat-2026-10-08-1207-utc) ersätter den då aktuella r7-statusen. Senast verifierad publicering är fortfarande886, main/Lovable517 och hosted071/385. Ingen ny B-status ärPASS.
