@@ -444,6 +444,14 @@ test("explicit chosen clarification reaches the existing PEACE case once without
     await page.getByRole("link", { name: "Öppna intervjuförberedelse" }).click();
     await expect(page).toHaveURL(new RegExp(`/interview-intelligence/${caseId}/prepare`));
     await expect(page.locator('section[aria-labelledby="s-setup"]')).toContainText(selected.label);
+    const brief = page.locator('section[aria-labelledby="s-selected-requirements"]');
+    await expect(brief).toContainText("Which document and validity date can you provide?");
+    await expect(brief).toContainText("inte bekräftad intervjuevidens");
+    await expect(brief.getByRole("link", { name: "Öppna ansökan" })).toHaveAttribute(
+      "href",
+      new RegExp(`/applications/${uuid(80)}`),
+    );
+    await expect(brief).not.toContainText('"requirementId"');
     await capture(page, "sv-desktop-explicit-peace-handoff");
   } finally {
     await context.close();
