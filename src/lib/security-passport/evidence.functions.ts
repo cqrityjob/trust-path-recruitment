@@ -25,7 +25,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { uploadOwnedEvidence } from "./evidence-upload-adapter";
+import { uploadOwnedEvidence } from "./evidence-upload-adapter.functions";
 import { requireSavedEvidence } from "./evidence-upload";
 import { withdrawAndDeleteEvidence, type WithdrawEvidenceResult } from "./evidence-withdrawal";
 
