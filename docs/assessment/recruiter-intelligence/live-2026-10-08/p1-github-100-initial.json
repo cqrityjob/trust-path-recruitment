@@ -1,0 +1,28 @@
+{
+  "observedAt": "2026-10-08T08:54:00Z",
+  "scope": "isolated GitHub CI; not published runtime",
+  "sourceCommit": "dce7decfaeda8041e1a2e1b490ea24af8506eb20",
+  "runUrl": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37749784083",
+  "jobs": {
+    "fullSqlHttpBrowser": {
+      "id": 113219898372,
+      "status": "PASS",
+      "auth": "substitute gateway",
+      "storage": "substitute gateway",
+      "syntheticApplications": 100,
+      "unitTests": 48,
+      "unitAssertions": 161
+    },
+    "apiPg17": {
+      "id": 113219898495,
+      "status": "PASS"
+    },
+    "wholeCi": {
+      "status": "FAIL",
+      "reason": "two negative-control anchors from superseded client filtering"
+    }
+  },
+  "laterHeadsInheritPass": false,
+  "physicalPhonePerformed": false,
+  "hostedWrites": false
+}

@@ -1,6 +1,6 @@
 # RI v0.3: de 22 driftprovens faktiska status
 
-Avläsning2026-10-08, arbetsversionLIVE-r3. A betyder riktig isolerad GoTrue/Storage/PostgREST; B betyder faktiskt publicerad runtime på cqrityjob.com. Ett passerat delprov gör inte hela OP-falletPASS. FAIL behåller det ursprungliga negativa utfallet även när en separat rättning testas. NOT RUN anger återstående omfång; BLOCKED anger en konkret extern förutsättning. Alla observationer gäller sina pinnade källor, inte automatiskt senare integrationshuvud.
+Avläsning2026-10-08, arbetsversionLIVE-r4. A betyder riktig isolerad GoTrue/Storage/PostgREST; B betyder faktiskt publicerad runtime på cqrityjob.com. Ett passerat delprov gör inte hela OP-falletPASS. FAIL behåller det ursprungliga negativa utfallet även när en separat rättning testas. NOT RUN anger återstående omfång; BLOCKED anger en konkret extern förutsättning. Alla observationer gäller sina pinnade källor, inte automatiskt senare integrationshuvud.
 
 Aktuell verifierad publicerad app är `8860223e37cdf648a3438c98133018fcf4587440`, senast HTTP200-läst08:02:52 UTC. Installerad snapshot-schemafrontier är20270307090000/384ledger. Main är `c1d154420c4477c56f1fbeeecf7933e0171bf5e1`. Ingen ny apppublicering görs före domänkonflikt-/låsordningsrättningen och dess exakta releasegrind.
 
@@ -36,3 +36,6 @@ Källor: [riktiga lokala tjänsteprov](2026-10-08-real-local-auth-storage.md), [
 Den installerade connectorn saknar Auth-admin createUser. Ägaren kan ange endast sökvägen till en egen mode0600-fil med canonical projectRef/url och servercredential enligt wrapperdokumentet; inga hemligheter i chatt. Wrappern skapar enbart förplanerade syntetiska `.invalid`-konton med email_confirm:true och inga invitations. Alternativt: [Supabase Authentication→Users](https://supabase.com/dashboard/project/wrygicdfxwjnrugduxnt/auth/users) → **Add user/Create user** → **Auto Confirm User**, med den privata adressplanens konton. Förväntat resultat är bekräftade syntetiska Auth-UUID:er, inga skickade brev och inga plattformsroller innan separat avgränsad setup. Båda vägarna kräver efterföljande faktisk app-/behörighetsverifiering.
 
 Efter publicerad kompatibel app och syntetisk fixture får telefonoperatören den exakta testrekryteringslänken. Operatören rapporterar fysisk modell, OS, browser/version, softkeyboard, sleep/återupptagning, filväljare/original-PDF och rapport→lista. Någon sådan fysisk körning har ännu inte genomförts.
+
+
+Avläsning r4: [releasejournalens nya exakta PR-/CI-ankare](2026-10-08-live-release.md#releaseavläsning-r4-2026-10-08-0854-utc) redovisar P1:s passerade fulla100-appharness med ersatt Auth/Storage, bevarade CI-fel och pågående rättningar. Det ändrar inte någon B-status tillPASS. Local Colima har I/O-fel; ersättande färsk GoTrue/Storage-CI är under framtagande. OP09:s beständiga journal och OP17:s nya Auth/tvåtab-verifiering är fortfarande ofullständiga.
