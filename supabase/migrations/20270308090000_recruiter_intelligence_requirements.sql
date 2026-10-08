@@ -36,6 +36,9 @@ CREATE TABLE public.rec_requirement_decisions (
   source_kind text CHECK(source_kind IN ('application_answer','application_cv','interview_source','external_reference')),
   source_reference text,
   source_version text,
+  -- Opaque provenance for the accompanying human text. No FK: deleting an
+  -- original case must not turn its private note into an unscoped note.
+  source_case_id uuid CHECK(source_kind IS DISTINCT FROM 'interview_source' OR source_case_id IS NOT NULL),
   source_label text CHECK(source_label IS NULL OR char_length(source_label) BETWEEN 1 AND 500),
   valid_until date,
   note text NOT NULL CHECK(char_length(note) BETWEEN 1 AND 3000),
@@ -247,7 +250,7 @@ BEGIN
       AND old->>'decisionRule'=_rule->>'decisionRule' AND old->>'instructionSv'=_rule->>'instructionSv'
       AND (old->>'instructionEn') IS NOT DISTINCT FROM (_rule->>'instructionEn')
       AND (old->>'questionId') IS NOT DISTINCT FROM (_rule->>'questionId'))
-  ORDER BY dd.updated_at DESC,dd.profile_id LIMIT 1;
+  ORDER BY dd.updated_at DESC,pp.version DESC,dd.profile_id LIMIT 1;
   IF FOUND AND (d.source_kind IS NULL OR _rule->'acceptedSources' ? d.source_kind) THEN
     sv:=recruiter_intelligence.source_version(_application,d.source_kind,d.source_reference);
     current:=sv IS NOT NULL AND sv=d.source_version;
@@ -272,7 +275,7 @@ BEGIN
       basis:=jsonb_build_object('kind','application_answer','reference',answer.question_id,'version',sv,'label',coalesce(answer.prompt_sv_snapshot,answer.prompt_en_snapshot),'answerBool',answer.answer_bool,'answerText',answer.answer_text);
     END IF;
   END IF;
-  RETURN _rule||jsonb_build_object('state',state,'source',basis,'sourceCurrent',current,'validUntil',d.valid_until,'note',d.note,'neutralQuestion',d.neutral_question,'reviewedBy',d.updated_by,'reviewedAt',d.updated_at);
+  RETURN _rule||jsonb_build_object('state',state,'source',basis,'sourceCurrent',current,'validUntil',d.valid_until,'note',d.note,'neutralQuestion',d.neutral_question,'reviewedBy',d.updated_by,'reviewedAt',d.updated_at,'_human_source_case_id',d.source_case_id);
 END $$;
 REVOKE ALL ON FUNCTION recruiter_intelligence.criterion(uuid,public.rec_requirement_profiles,jsonb) FROM PUBLIC,anon,authenticated;
 
@@ -306,10 +309,12 @@ BEGIN
   -- Application membership does not widen access to another interview's
   -- private original. Keep the organization-level status, redact its private
   -- citation and human text for callers who cannot open that exact case.
+  -- Human-text origin survives erasure and public explicit-NO fallback.
+  -- It is internal only; the public response strips it in every branch.
   state:=jsonb_set(state,'{criteria}',coalesce((SELECT jsonb_agg(CASE
-    WHEN cr#>>'{source,kind}'='interview_source' AND NOT EXISTS(SELECT 1 FROM public.scp_interview_case_sources s WHERE s.id::text=cr#>>'{source,reference}' AND public.scp_iv_can_read_case(s.case_id))
-    THEN cr||jsonb_build_object('source',NULL,'sourceCurrent',false,'validUntil',NULL,'note',NULL,'neutralQuestion',NULL,'reviewedBy',NULL,'reviewedAt',NULL)
-    ELSE cr END) FROM jsonb_array_elements(state->'criteria')cr),'[]'));
+    WHEN cr->>'_human_source_case_id' IS NOT NULL AND NOT public.scp_iv_can_read_case((cr->>'_human_source_case_id')::uuid)
+    THEN (cr-'_human_source_case_id')||jsonb_build_object('source',CASE WHEN cr#>>'{source,kind}'='interview_source' THEN NULL ELSE cr->'source' END,'sourceCurrent',CASE WHEN cr#>>'{source,kind}'='interview_source' THEN false ELSE (cr->>'sourceCurrent')::boolean END,'validUntil',NULL,'note',NULL,'neutralQuestion',NULL,'reviewedBy',NULL,'reviewedAt',NULL)
+    ELSE cr-'_human_source_case_id' END) FROM jsonb_array_elements(state->'criteria')cr),'[]'));
   SELECT coalesce(jsonb_agg(jsonb_build_object('kind','application_answer','reference',ans.question_id,'version',recruiter_intelligence.source_version(a.id,'application_answer',ans.question_id::text),'label',coalesce(ans.prompt_sv_snapshot,ans.prompt_en_snapshot),'answerBool',ans.answer_bool,'answerText',ans.answer_text) ORDER BY ans.question_id),'[]') INTO sources FROM public.job_application_answers ans WHERE ans.application_id=a.id AND recruiter_intelligence.source_version(a.id,'application_answer',ans.question_id::text) IS NOT NULL;
   cv:=recruiter_intelligence.source_version(a.id,'application_cv',a.id::text);
   IF cv IS NOT NULL THEN sources:=sources||jsonb_build_array(jsonb_build_object('kind','application_cv','reference',a.id,'version',cv,'label','Submitted CV','answerBool',NULL,'answerText',NULL)); END IF;
@@ -321,7 +326,7 @@ GRANT EXECUTE ON FUNCTION public.rec_ri_get_review(uuid) TO authenticated;
 
 CREATE FUNCTION public.rec_ri_save_review(_application_id uuid,_profile_id uuid,_expected_revision integer,_binding_token text,_operation_id uuid,_decisions jsonb,_confirm boolean,_next_action text,_responsible_user_id uuid,_expected_assignment_version integer) RETURNS jsonb
 LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$
-DECLARE a public.job_applications%ROWTYPE; p public.rec_requirement_profiles%ROWTYPE; h public.rec_requirement_review_heads%ROWTYPE; r jsonb; d jsonb; sourceversion text; wanted text; request jsonb; result jsonb; current jsonb; metadata public.recruitment_application_meta%ROWTYPE; initialized boolean;
+DECLARE a public.job_applications%ROWTYPE; p public.rec_requirement_profiles%ROWTYPE; h public.rec_requirement_review_heads%ROWTYPE; r jsonb; d jsonb; sourceversion text; wanted text; request jsonb; result jsonb; current jsonb; metadata public.recruitment_application_meta%ROWTYPE; initialized boolean; source_case uuid;
 BEGIN
   SELECT * INTO a FROM public.job_applications WHERE id=_application_id;
   IF NOT FOUND OR NOT public.rec_can_manage(a.job_id) THEN RAISE EXCEPTION 'RECRUITMENT_NOT_PERMITTED' USING ERRCODE='insufficient_privilege'; END IF;
@@ -356,7 +361,11 @@ BEGIN
     IF r IS NULL OR coalesce(d->>'state','') NOT IN ('met','not_met','clarify') OR nullif(btrim(d->>'note'),'') IS NULL OR char_length(d->>'note')>3000 OR char_length(d->>'sourceLabel')>500 OR char_length(d->>'sourceReference')>500 OR char_length(d->>'neutralQuestion')>3000 THEN RAISE EXCEPTION 'RI_REVIEW_INVALID' USING ERRCODE='check_violation'; END IF;
     sourceversion:=recruiter_intelligence.source_version(a.id,d->>'sourceKind',d->>'sourceReference');
     IF d->>'sourceKind' IS NOT NULL AND (NOT(r->'acceptedSources' ? (d->>'sourceKind')) OR sourceversion IS NULL OR sourceversion IS DISTINCT FROM (d->>'sourceVersion')) THEN RAISE EXCEPTION 'RI_SOURCE_STALE' USING ERRCODE='check_violation'; END IF;
-    IF d->>'sourceKind'='interview_source' AND NOT EXISTS(SELECT 1 FROM public.scp_interview_case_sources s WHERE s.id::text=d->>'sourceReference' AND public.scp_iv_can_read_case(s.case_id)) THEN RAISE EXCEPTION 'RECRUITMENT_NOT_PERMITTED' USING ERRCODE='insufficient_privilege'; END IF;
+    source_case:=NULL;
+    IF d->>'sourceKind'='interview_source' THEN
+      SELECT s.case_id INTO source_case FROM public.scp_interview_case_sources s WHERE s.id::text=d->>'sourceReference' AND public.scp_iv_can_read_case(s.case_id);
+      IF NOT FOUND THEN RAISE EXCEPTION 'RECRUITMENT_NOT_PERMITTED' USING ERRCODE='insufficient_privilege'; END IF;
+    END IF;
     IF d->>'state'<>'clarify' THEN
       IF sourceversion IS NULL THEN RAISE EXCEPTION 'RI_ACCEPTED_SOURCE_REQUIRED' USING ERRCODE='check_violation'; END IF;
       IF r->>'decisionRule'='boolean_yes' THEN
@@ -368,9 +377,9 @@ BEGIN
         IF d->>'sourceKind'='interview_source' AND NOT EXISTS(SELECT 1 FROM public.scp_interview_case_sources s WHERE s.id::text=d->>'sourceReference' AND s.source_kind='candidate_cv') THEN RAISE EXCEPTION 'RI_ACCEPTED_SOURCE_REQUIRED' USING ERRCODE='check_violation'; END IF;
       END IF;
     END IF;
-    INSERT INTO public.rec_requirement_decisions(application_id,profile_id,requirement_id,state,source_kind,source_reference,source_version,source_label,valid_until,note,neutral_question,updated_by)
-    VALUES(a.id,p.id,(d->>'requirementId')::uuid,d->>'state',d->>'sourceKind',d->>'sourceReference',sourceversion,nullif(btrim(d->>'sourceLabel'),''),(d->>'validUntil')::date,btrim(d->>'note'),nullif(btrim(d->>'neutralQuestion'),''),auth.uid())
-    ON CONFLICT(application_id,profile_id,requirement_id) DO UPDATE SET state=EXCLUDED.state,source_kind=EXCLUDED.source_kind,source_reference=EXCLUDED.source_reference,source_version=EXCLUDED.source_version,source_label=EXCLUDED.source_label,valid_until=EXCLUDED.valid_until,note=EXCLUDED.note,neutral_question=EXCLUDED.neutral_question,updated_by=EXCLUDED.updated_by,updated_at=clock_timestamp();
+    INSERT INTO public.rec_requirement_decisions(application_id,profile_id,requirement_id,state,source_kind,source_reference,source_version,source_case_id,source_label,valid_until,note,neutral_question,updated_by,updated_at)
+    VALUES(a.id,p.id,(d->>'requirementId')::uuid,d->>'state',d->>'sourceKind',d->>'sourceReference',sourceversion,source_case,nullif(btrim(d->>'sourceLabel'),''),(d->>'validUntil')::date,btrim(d->>'note'),nullif(btrim(d->>'neutralQuestion'),''),auth.uid(),clock_timestamp())
+    ON CONFLICT(application_id,profile_id,requirement_id) DO UPDATE SET state=EXCLUDED.state,source_kind=EXCLUDED.source_kind,source_reference=EXCLUDED.source_reference,source_version=EXCLUDED.source_version,source_case_id=EXCLUDED.source_case_id,source_label=EXCLUDED.source_label,valid_until=EXCLUDED.valid_until,note=EXCLUDED.note,neutral_question=EXCLUDED.neutral_question,updated_by=EXCLUDED.updated_by,updated_at=clock_timestamp();
   END LOOP;
   IF _confirm AND (NOT EXISTS(SELECT 1 FROM jsonb_array_elements(p.rules)rr WHERE rr->>'kind'='mandatory') OR EXISTS(SELECT 1 FROM jsonb_array_elements(p.rules)rr WHERE rr->>'kind'='mandatory' AND NOT EXISTS(SELECT 1 FROM jsonb_array_elements(_decisions)dd WHERE dd->>'requirementId'=rr->>'requirementId'))) THEN RAISE EXCEPTION 'RI_REVIEW_INCOMPLETE' USING ERRCODE='check_violation'; END IF;
   current:=recruiter_intelligence.application_state(a.id);
@@ -471,6 +480,7 @@ BEGIN
     IF criterion IS NULL THEN RAISE EXCEPTION 'RI_REVIEW_INVALID' USING ERRCODE='check_violation'; END IF;
     -- Explicit selection copies only the supplied answer or human note and
     -- citations. A CV remains an application pointer, never a wholesale copy.
+    IF criterion->>'_human_source_case_id' IS NOT NULL AND NOT public.scp_iv_can_read_case((criterion->>'_human_source_case_id')::uuid) THEN RAISE EXCEPTION 'RECRUITMENT_NOT_PERMITTED' USING ERRCODE='insufficient_privilege'; END IF;
     ref:=criterion#>>'{source,reference}';
     IF criterion#>>'{source,kind}'='interview_source' THEN
       IF NOT EXISTS(SELECT 1 FROM public.scp_interview_case_sources s WHERE s.id::text=ref AND public.scp_iv_can_read_case(s.case_id)) THEN RAISE EXCEPTION 'RECRUITMENT_NOT_PERMITTED' USING ERRCODE='insufficient_privilege'; END IF;
