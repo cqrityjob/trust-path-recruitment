@@ -45,3 +45,25 @@ export function mayApplyStoredQuestionNote(
     requestedEditRevision === currentEditRevision
   );
 }
+
+/** Read explicitly outside the shared case query. A failed read must not
+ * mark that query as errored and cause its boundary to unmount the draft. */
+export async function reloadQuestionNote<T>({
+  read,
+  mayApply,
+  apply,
+}: {
+  read: () => Promise<T>;
+  mayApply: () => boolean;
+  apply: (stored: T) => void;
+}): Promise<"applied" | "superseded" | "failed"> {
+  let stored: T;
+  try {
+    stored = await read();
+  } catch {
+    return "failed";
+  }
+  if (!mayApply()) return "superseded";
+  apply(stored);
+  return "applied";
+}
