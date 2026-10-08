@@ -84,9 +84,10 @@ CREATE POLICY rec_requirement_heads_read ON public.rec_requirement_review_heads 
 
 CREATE FUNCTION recruiter_intelligence.protect_profile() RETURNS trigger
 LANGUAGE plpgsql SET search_path=public,pg_temp AS $$ BEGIN
-  IF TG_OP='DELETE' AND NOT EXISTS(SELECT 1 FROM public.jobs WHERE id=OLD.job_id) THEN RETURN OLD; END IF;
+  IF TG_OP='DELETE' AND pg_trigger_depth()>1 AND NOT EXISTS(SELECT 1 FROM public.jobs WHERE id=OLD.job_id) THEN RETURN OLD; END IF;
   -- Only auth-user erasure may clear the actor without changing content.
-  IF TG_OP='UPDATE' AND NEW.confirmed_by IS NULL AND OLD.confirmed_by IS NOT NULL
+  IF TG_OP='UPDATE' AND pg_trigger_depth()>1 AND NEW.confirmed_by IS NULL AND OLD.confirmed_by IS NOT NULL
+     AND NOT EXISTS(SELECT 1 FROM auth.users WHERE id=OLD.confirmed_by)
      AND (to_jsonb(NEW)-'confirmed_by')=(to_jsonb(OLD)-'confirmed_by') THEN RETURN NEW; END IF;
   RAISE EXCEPTION 'RI_PROFILE_IMMUTABLE' USING ERRCODE='check_violation';
 END $$;
@@ -107,6 +108,42 @@ END $$;
 REVOKE ALL ON FUNCTION recruiter_intelligence.protect_used_identity() FROM PUBLIC,anon,authenticated;
 CREATE TRIGGER rec_requirement_identity_used BEFORE UPDATE OR DELETE ON public.recruitment_requirements FOR EACH ROW EXECUTE FUNCTION recruiter_intelligence.protect_used_identity();
 CREATE TRIGGER rec_question_identity_used BEFORE UPDATE OR DELETE ON public.recruitment_questions FOR EACH ROW EXECUTE FUNCTION recruiter_intelligence.protect_used_identity();
+
+-- No raw service-role bypass for the new canonical records. RPCs derive the
+-- user and tenant themselves; an RLS-bypassing role gets no table privilege.
+REVOKE ALL ON public.rec_requirement_profiles,public.rec_requirement_review_heads,public.rec_requirement_decisions,public.rec_requirement_review_events,recruiter_intelligence.operations FROM service_role;
+CREATE FUNCTION recruiter_intelligence.protect_history() RETURNS trigger
+LANGUAGE plpgsql SET search_path=public,pg_temp AS $$ BEGIN
+  IF TG_OP='TRUNCATE' THEN
+    IF TG_TABLE_NAME IN ('recruitment_requirements','recruitment_questions') AND NOT EXISTS(SELECT 1 FROM public.rec_requirement_profiles) THEN RETURN NULL; END IF;
+    RAISE EXCEPTION 'RI_HISTORY_TRUNCATE' USING ERRCODE='check_violation';
+  END IF;
+  IF TG_OP='DELETE' AND pg_trigger_depth()>1 THEN
+    IF TG_TABLE_NAME='rec_requirement_review_events' THEN
+      IF NOT EXISTS(SELECT 1 FROM public.job_applications WHERE id=OLD.application_id)
+        OR NOT EXISTS(SELECT 1 FROM public.rec_requirement_profiles WHERE id=OLD.profile_id) THEN RETURN OLD; END IF;
+    ELSIF TG_TABLE_NAME='operations' THEN
+      IF NOT EXISTS(SELECT 1 FROM auth.users WHERE id=OLD.actor_id)
+        OR NOT EXISTS(SELECT 1 FROM public.jobs WHERE id=OLD.job_id) THEN RETURN OLD; END IF;
+    END IF;
+  END IF;
+  IF TG_TABLE_NAME='rec_requirement_review_events' AND TG_OP='UPDATE' AND pg_trigger_depth()>1 THEN
+    IF NEW.actor_id IS NULL AND OLD.actor_id IS NOT NULL
+      AND NOT EXISTS(SELECT 1 FROM auth.users WHERE id=OLD.actor_id)
+      AND (to_jsonb(NEW)-'actor_id')=(to_jsonb(OLD)-'actor_id') THEN RETURN NEW; END IF;
+  END IF;
+  RAISE EXCEPTION 'RI_HISTORY_IMMUTABLE' USING ERRCODE='check_violation';
+END $$;
+REVOKE ALL ON FUNCTION recruiter_intelligence.protect_history() FROM PUBLIC,anon,authenticated,service_role;
+CREATE TRIGGER rec_requirement_events_immutable BEFORE UPDATE OR DELETE ON public.rec_requirement_review_events FOR EACH ROW EXECUTE FUNCTION recruiter_intelligence.protect_history();
+CREATE TRIGGER rec_requirement_operations_immutable BEFORE UPDATE OR DELETE ON recruiter_intelligence.operations FOR EACH ROW EXECUTE FUNCTION recruiter_intelligence.protect_history();
+CREATE TRIGGER rec_requirement_profiles_truncate BEFORE TRUNCATE ON public.rec_requirement_profiles FOR EACH STATEMENT EXECUTE FUNCTION recruiter_intelligence.protect_history();
+CREATE TRIGGER rec_requirement_heads_truncate BEFORE TRUNCATE ON public.rec_requirement_review_heads FOR EACH STATEMENT EXECUTE FUNCTION recruiter_intelligence.protect_history();
+CREATE TRIGGER rec_requirement_decisions_truncate BEFORE TRUNCATE ON public.rec_requirement_decisions FOR EACH STATEMENT EXECUTE FUNCTION recruiter_intelligence.protect_history();
+CREATE TRIGGER rec_requirement_events_truncate BEFORE TRUNCATE ON public.rec_requirement_review_events FOR EACH STATEMENT EXECUTE FUNCTION recruiter_intelligence.protect_history();
+CREATE TRIGGER rec_requirement_operations_truncate BEFORE TRUNCATE ON recruiter_intelligence.operations FOR EACH STATEMENT EXECUTE FUNCTION recruiter_intelligence.protect_history();
+CREATE TRIGGER rec_requirement_originals_truncate BEFORE TRUNCATE ON public.recruitment_requirements FOR EACH STATEMENT EXECUTE FUNCTION recruiter_intelligence.protect_history();
+CREATE TRIGGER rec_requirement_questions_truncate BEFORE TRUNCATE ON public.recruitment_questions FOR EACH STATEMENT EXECUTE FUNCTION recruiter_intelligence.protect_history();
 
 CREATE FUNCTION recruiter_intelligence.operation_result(_id uuid,_scope uuid,_kind text,_request jsonb) RETURNS jsonb
 LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path=public,pg_temp AS $$ DECLARE o recruiter_intelligence.operations%ROWTYPE; BEGIN
@@ -277,14 +314,14 @@ BEGIN
   cv:=recruiter_intelligence.source_version(a.id,'application_cv',a.id::text);
   IF cv IS NOT NULL THEN sources:=sources||jsonb_build_array(jsonb_build_object('kind','application_cv','reference',a.id,'version',cv,'label','Submitted CV','answerBool',NULL,'answerText',NULL)); END IF;
   sources:=sources||coalesce((SELECT jsonb_agg(jsonb_build_object('kind','interview_source','reference',s.id,'version',recruiter_intelligence.source_version(a.id,'interview_source',s.id::text),'label',s.label,'answerBool',NULL,'answerText',NULL,'caseId',cc.id) ORDER BY s.id) FROM public.scp_interview_case_sources s JOIN public.scp_interview_cases cc ON cc.id=s.case_id WHERE cc.application_id=a.id AND public.scp_iv_can_read_case(cc.id) AND recruiter_intelligence.source_version(a.id,'interview_source',s.id::text) IS NOT NULL),'[]');
-  RETURN state||jsonb_build_object('applicationId',a.id,'jobId',a.job_id,'employerId',a.employer_id,'canManage',public.rec_can_manage(a.job_id),'profile',recruiter_intelligence.profile_json(a.job_id),'availableSources',sources,'responsibleUserId',(SELECT responsible_user_id FROM public.recruitment_application_meta WHERE application_id=a.id));
+  RETURN state||jsonb_build_object('applicationId',a.id,'jobId',a.job_id,'employerId',a.employer_id,'canManage',public.rec_can_manage(a.job_id),'profile',recruiter_intelligence.profile_json(a.job_id),'availableSources',sources,'responsibleUserId',(SELECT responsible_user_id FROM public.recruitment_application_meta WHERE application_id=a.id),'assignmentVersion',(SELECT version FROM public.recruitment_application_meta WHERE application_id=a.id));
 END $$;
 REVOKE ALL ON FUNCTION public.rec_ri_get_review(uuid) FROM PUBLIC,anon;
 GRANT EXECUTE ON FUNCTION public.rec_ri_get_review(uuid) TO authenticated;
 
-CREATE FUNCTION public.rec_ri_save_review(_application_id uuid,_profile_id uuid,_expected_revision integer,_binding_token text,_operation_id uuid,_decisions jsonb,_confirm boolean,_next_action text,_responsible_user_id uuid) RETURNS jsonb
+CREATE FUNCTION public.rec_ri_save_review(_application_id uuid,_profile_id uuid,_expected_revision integer,_binding_token text,_operation_id uuid,_decisions jsonb,_confirm boolean,_next_action text,_responsible_user_id uuid,_expected_assignment_version integer) RETURNS jsonb
 LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$
-DECLARE a public.job_applications%ROWTYPE; p public.rec_requirement_profiles%ROWTYPE; h public.rec_requirement_review_heads%ROWTYPE; r jsonb; d jsonb; sourceversion text; wanted text; request jsonb; result jsonb; current jsonb; metadata public.recruitment_application_meta%ROWTYPE;
+DECLARE a public.job_applications%ROWTYPE; p public.rec_requirement_profiles%ROWTYPE; h public.rec_requirement_review_heads%ROWTYPE; r jsonb; d jsonb; sourceversion text; wanted text; request jsonb; result jsonb; current jsonb; metadata public.recruitment_application_meta%ROWTYPE; initialized boolean;
 BEGIN
   SELECT * INTO a FROM public.job_applications WHERE id=_application_id;
   IF NOT FOUND OR NOT public.rec_can_manage(a.job_id) THEN RAISE EXCEPTION 'RECRUITMENT_NOT_PERMITTED' USING ERRCODE='insufficient_privilege'; END IF;
@@ -292,7 +329,7 @@ BEGIN
   SELECT * INTO a FROM public.job_applications WHERE id=_application_id FOR UPDATE;
   IF a.status NOT IN ('submitted','reviewing','interview') OR a.employer_archived_at IS NOT NULL THEN RAISE EXCEPTION 'APPLICATION_NOT_OPEN' USING ERRCODE='check_violation'; END IF;
   IF _operation_id IS NULL OR _expected_revision IS NULL OR _binding_token IS NULL OR _confirm IS NULL OR _decisions IS NULL OR jsonb_typeof(_decisions)<>'array' OR jsonb_array_length(_decisions)>30 OR char_length(_next_action)>2000 THEN RAISE EXCEPTION 'RI_REVIEW_INVALID' USING ERRCODE='check_violation'; END IF;
-  request:=jsonb_build_object('profile',_profile_id,'revision',_expected_revision,'binding',_binding_token,'decisions',_decisions,'confirm',_confirm,'next',_next_action,'responsible',_responsible_user_id);
+  request:=jsonb_build_object('profile',_profile_id,'revision',_expected_revision,'binding',_binding_token,'decisions',_decisions,'confirm',_confirm,'next',_next_action,'responsible',_responsible_user_id,'assignmentVersion',_expected_assignment_version);
   result:=recruiter_intelligence.operation_result(_operation_id,a.id,'review',request); IF result IS NOT NULL THEN RETURN result; END IF;
   SELECT * INTO p FROM public.rec_requirement_profiles WHERE job_id=a.job_id ORDER BY version DESC LIMIT 1;
   IF p.id IS NULL OR p.id IS DISTINCT FROM _profile_id THEN RAISE EXCEPTION 'RI_SOURCE_STALE' USING ERRCODE='check_violation'; END IF;
@@ -301,6 +338,17 @@ BEGIN
   IF h.revision<>_expected_revision THEN RAISE EXCEPTION 'RI_STALE_VERSION' USING ERRCODE='check_violation'; END IF;
   current:=recruiter_intelligence.application_state(a.id);
   IF current->>'bindingToken' IS DISTINCT FROM _binding_token THEN RAISE EXCEPTION 'RI_SOURCE_STALE' USING ERRCODE='check_violation'; END IF;
+  -- Existing assignment RPCs maintain their own revision. Compare the
+  -- caller's observed version before decisions/actions can be persisted,
+  -- even when the submitted responsible person appears unchanged. Lock the
+  -- metadata row; no server-side 'latest version' may overwrite a stale draft.
+  INSERT INTO public.recruitment_application_meta(application_id,job_id,employer_id)
+    VALUES(a.id,a.job_id,a.employer_id) ON CONFLICT(application_id) DO NOTHING RETURNING true INTO initialized;
+  SELECT * INTO metadata FROM public.recruitment_application_meta WHERE application_id=a.id FOR UPDATE;
+  IF (_expected_assignment_version IS NULL AND initialized IS DISTINCT FROM true)
+    OR (_expected_assignment_version IS NOT NULL AND (initialized IS TRUE OR metadata.version IS DISTINCT FROM _expected_assignment_version)) THEN
+    RAISE EXCEPTION 'STALE_VERSION' USING ERRCODE='serialization_failure';
+  END IF;
   IF (SELECT count(DISTINCT x->>'requirementId') FROM jsonb_array_elements(_decisions)x)<>jsonb_array_length(_decisions) THEN RAISE EXCEPTION 'RI_REVIEW_INVALID' USING ERRCODE='check_violation'; END IF;
   IF _responsible_user_id IS NOT NULL AND NOT EXISTS(SELECT 1 FROM public.employer_memberships WHERE employer_id=a.employer_id AND user_id=_responsible_user_id AND status='active') THEN RAISE EXCEPTION 'RESPONSIBLE_NOT_A_MEMBER' USING ERRCODE='check_violation'; END IF;
   FOR d IN SELECT * FROM jsonb_array_elements(_decisions) LOOP
@@ -327,7 +375,6 @@ BEGIN
   IF _confirm AND (NOT EXISTS(SELECT 1 FROM jsonb_array_elements(p.rules)rr WHERE rr->>'kind'='mandatory') OR EXISTS(SELECT 1 FROM jsonb_array_elements(p.rules)rr WHERE rr->>'kind'='mandatory' AND NOT EXISTS(SELECT 1 FROM jsonb_array_elements(_decisions)dd WHERE dd->>'requirementId'=rr->>'requirementId'))) THEN RAISE EXCEPTION 'RI_REVIEW_INCOMPLETE' USING ERRCODE='check_violation'; END IF;
   current:=recruiter_intelligence.application_state(a.id);
   IF _confirm AND EXISTS(SELECT 1 FROM jsonb_array_elements(current->'criteria')c WHERE c->>'kind'='mandatory' AND c->>'state'='clarify') AND (nullif(btrim(_next_action),'') IS NULL OR _responsible_user_id IS NULL) THEN RAISE EXCEPTION 'RI_REVIEW_INCOMPLETE' USING ERRCODE='check_violation'; END IF;
-  SELECT * INTO metadata FROM public.recruitment_application_meta WHERE application_id=a.id;
   IF metadata.responsible_user_id IS DISTINCT FROM _responsible_user_id THEN PERFORM public.rec_set_application_responsible(a.id,_responsible_user_id,metadata.version); END IF;
   UPDATE public.rec_requirement_review_heads SET revision=h.revision+1,confirmed_profile_id=CASE WHEN _confirm THEN p.id ELSE NULL END,confirmed_binding=CASE WHEN _confirm THEN current->>'bindingToken' ELSE NULL END,reviewed_by=CASE WHEN _confirm THEN auth.uid() ELSE reviewed_by END,reviewed_at=CASE WHEN _confirm THEN clock_timestamp() ELSE reviewed_at END,next_action=nullif(btrim(_next_action),''),updated_at=clock_timestamp() WHERE application_id=a.id;
   INSERT INTO public.rec_requirement_review_events(application_id,employer_id,profile_id,revision,actor_id,confirmed,binding_token,payload) VALUES(a.id,a.employer_id,p.id,h.revision+1,auth.uid(),_confirm,current->>'bindingToken',request);
@@ -335,8 +382,8 @@ BEGIN
   INSERT INTO recruiter_intelligence.operations VALUES(_operation_id,auth.uid(),a.id,'review',md5(request::text),result,now(),a.job_id);
   RETURN result;
 END $$;
-REVOKE ALL ON FUNCTION public.rec_ri_save_review(uuid,uuid,integer,text,uuid,jsonb,boolean,text,uuid) FROM PUBLIC,anon;
-GRANT EXECUTE ON FUNCTION public.rec_ri_save_review(uuid,uuid,integer,text,uuid,jsonb,boolean,text,uuid) TO authenticated;
+REVOKE ALL ON FUNCTION public.rec_ri_save_review(uuid,uuid,integer,text,uuid,jsonb,boolean,text,uuid,integer) FROM PUBLIC,anon;
+GRANT EXECUTE ON FUNCTION public.rec_ri_save_review(uuid,uuid,integer,text,uuid,jsonb,boolean,text,uuid,integer) TO authenticated;
 
 -- Single statement snapshot: unfiltered counts, globally filtered totals,
 -- ordering and page/around selection all derive from the same MATERIALIZED base.
