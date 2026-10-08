@@ -38,7 +38,9 @@ export async function verifyIsolatedUploadRecovery(input: {
   )
     throw new Error("OP09_PROBE_REQUIRES_ISOLATED_LOOPBACK");
   for (const client of [input.owner, input.otherHolder]) {
-    if (new URL(String(Reflect.get(client, "supabaseUrl"))).origin !== url.origin)
+    if (
+      new URL(String(Reflect.get(client, "supabaseUrl"))).origin !== url.origin
+    )
       throw new Error("OP09_PROBE_CLIENT_TARGET_MISMATCH");
   }
   // Local CLI supplies an anon JWT; reject any privileged key before making
@@ -73,16 +75,27 @@ export async function verifyIsolatedUploadRecovery(input: {
     if (pass !== true) throw new Error(`OP09_ASSERTION_FAILED:${label}`);
     checks.push(label);
   };
-  const make = (mode: "normal" | "lose_upload_reply" | "fail_cleanup" = "normal") =>
+  const make = (
+    mode: "normal" | "lose_upload_reply" | "fail_cleanup" = "normal",
+  ) =>
     createClient<Database>(url.origin, input.publicAnonKey, {
-      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false,
+      },
       global: {
         headers: { Authorization: `Bearer ${token}` },
         fetch: async (raw, init) => {
           const target = new URL(
-            typeof raw === "string" ? raw : raw instanceof URL ? raw.href : raw.url,
+            typeof raw === "string"
+              ? raw
+              : raw instanceof URL
+                ? raw.href
+                : raw.url,
           );
-          if (target.origin !== url.origin) throw new Error("OP09_PROBE_FETCH_TARGET_MISMATCH");
+          if (target.origin !== url.origin)
+            throw new Error("OP09_PROBE_FETCH_TARGET_MISMATCH");
           if (
             mode === "fail_cleanup" &&
             target.pathname === "/storage/v1/object/passport-evidence" &&
@@ -92,7 +105,9 @@ export async function verifyIsolatedUploadRecovery(input: {
           const response = await fetch(raw, init);
           if (
             mode === "lose_upload_reply" &&
-            target.pathname.startsWith("/storage/v1/object/passport-evidence/") &&
+            target.pathname.startsWith(
+              "/storage/v1/object/passport-evidence/",
+            ) &&
             init?.method === "POST" &&
             response.ok
           )
@@ -119,7 +134,10 @@ export async function verifyIsolatedUploadRecovery(input: {
   const upload = async (id: string) => {
     const r = await input.owner.storage
       .from("passport-evidence")
-      .upload(path(id), bytes, { contentType: "application/pdf", upsert: false });
+      .upload(path(id), bytes, {
+        contentType: "application/pdf",
+        upsert: false,
+      });
     check(!r.error, "actual_owner_storage_upload");
   };
   const attach = (id: string) =>
@@ -147,11 +165,17 @@ export async function verifyIsolatedUploadRecovery(input: {
     bytes,
     sha256: hash,
   });
-  check(uncertain.status === "outcome_unknown", "lost_actual_storage_reply_unknown");
   check(
-    (await listOwnedUploadAttempts(reloaded(), { claimId: input.claimId, periodId: null })).some(
-      (a) => a.id === lost && a.status === "prepared",
-    ),
+    uncertain.status === "outcome_unknown",
+    "lost_actual_storage_reply_unknown",
+  );
+  check(
+    (
+      await listOwnedUploadAttempts(reloaded(), {
+        claimId: input.claimId,
+        periodId: null,
+      })
+    ).some((a) => a.id === lost && a.status === "prepared"),
     "fresh_client_reload_retains_intent",
   );
   const saved = await resumeOwnedUpload(reloaded(), lost);
@@ -172,36 +196,57 @@ export async function verifyIsolatedUploadRecovery(input: {
   const ownOnly = await input.otherHolder.rpc("sp_reconcile_evidence_upload", {
     _attempt_id: lost,
   });
-  check(ownOnly.error?.code === "42501", "other_holder_direct_reconcile_denied");
-  const otherCleanup = await input.otherHolder.rpc("sp_authorize_evidence_upload_cleanup", {
-    _attempt_id: lost,
-  });
-  check(otherCleanup.error?.code === "42501", "other_holder_direct_cleanup_denied");
-  const otherRead = await input.otherHolder.storage.from("passport-evidence").download(path(lost));
+  check(
+    ownOnly.error?.code === "42501",
+    "other_holder_direct_reconcile_denied",
+  );
+  const otherCleanup = await input.otherHolder.rpc(
+    "sp_authorize_evidence_upload_cleanup",
+    {
+      _attempt_id: lost,
+    },
+  );
+  check(
+    otherCleanup.error?.code === "42501",
+    "other_holder_direct_cleanup_denied",
+  );
+  const otherRead = await input.otherHolder.storage
+    .from("passport-evidence")
+    .download(path(lost));
   check(!!otherRead.error, "other_holder_original_bytes_denied");
 
   const pending = randomUUID();
   await journal(pending);
   await upload(pending);
-  const failed = await cleanupOwnedUpload({ ...owner, supabase: make("fail_cleanup") }, pending);
+  const failed = await cleanupOwnedUpload(
+    { ...owner, supabase: make("fail_cleanup") },
+    pending,
+  );
   check(
     failed.status === "unknown" || failed.status === "cleanup_pending",
     "actual_fence_cleanup_transport_failure_retained",
   );
   check(
-    (await listOwnedUploadAttempts(reloaded(), { claimId: input.claimId, periodId: null })).some(
-      (a) => a.id === pending && a.status === "cleanup_pending",
-    ),
+    (
+      await listOwnedUploadAttempts(reloaded(), {
+        claimId: input.claimId,
+        periodId: null,
+      })
+    ).some((a) => a.id === pending && a.status === "cleanup_pending"),
     "fresh_client_reload_retains_cleanup_fence",
   );
   const late = await attach(pending);
   check(
-    late.error?.code === "23514" && late.error.message.includes("SP_UPLOAD_CLEANUP_FENCED"),
+    late.error?.code === "23514" &&
+      late.error.message.includes("SP_UPLOAD_CLEANUP_FENCED"),
     "actual_late_attach_after_fence_refused",
   );
   const lateWrite = await input.owner.storage
     .from("passport-evidence")
-    .upload(path(pending), bytes, { contentType: "application/pdf", upsert: true });
+    .upload(path(pending), bytes, {
+      contentType: "application/pdf",
+      upsert: true,
+    });
   check(!!lateWrite.error, "actual_late_storage_upsert_after_fence_refused");
   check(
     (await cleanupOwnedUpload(reloaded(), pending)).status === "cleaned",
@@ -211,14 +256,21 @@ export async function verifyIsolatedUploadRecovery(input: {
     (await cleanupOwnedUpload(reloaded(), pending)).status === "cleaned",
     "cleanup_repeat_idempotent",
   );
-  const absent = await input.owner.storage.from("passport-evidence").download(path(pending));
+  const absent = await input.owner.storage
+    .from("passport-evidence")
+    .download(path(pending));
   check(!!absent.error, "actual_cleaned_object_not_downloadable");
 
   // The opposite committed order: registration wins, then cleanup must return
   // the registered record without removing its actual downloaded bytes.
   const registered = await cleanupOwnedUpload(reloaded(), lost);
-  check(registered.status === "registered", "registration_wins_fence_preserves_record");
-  const still = await input.owner.storage.from("passport-evidence").download(path(lost));
+  check(
+    registered.status === "registered",
+    "registration_wins_fence_preserves_record",
+  );
+  const still = await input.owner.storage
+    .from("passport-evidence")
+    .download(path(lost));
   check(
     !still.error &&
       !!still.data &&
@@ -234,7 +286,8 @@ export async function verifyIsolatedUploadRecovery(input: {
     check(!withdrawal.error, "existing_withdraw_rpc_preserved");
     const withdrawn = await cleanupOwnedUpload(reloaded(), lost);
     check(
-      withdrawn.status === "registered" && withdrawn.evidence.lifecycleState === "withdrawn",
+      withdrawn.status === "registered" &&
+        withdrawn.evidence.lifecycleState === "withdrawn",
       "withdrawn_record_never_orphan_cleanup",
     );
   }
@@ -249,7 +302,8 @@ export async function verifyIsolatedUploadRecovery(input: {
     });
   check(!changed.error, "prepared_own_bytes_change_for_integrity_probe");
   check(
-    (await resumeOwnedUpload(reloaded(), altered)).status === "integrity_mismatch",
+    (await resumeOwnedUpload(reloaded(), altered)).status ===
+      "integrity_mismatch",
     "actual_altered_bytes_never_registered",
   );
   check(
@@ -265,9 +319,17 @@ export async function verifyIsolatedUploadRecovery(input: {
       cleanupOwnedUpload(reloaded(), racing),
     ]);
     if (!attached.error) {
-      check(cleared.status === "registered", "concurrent_registration_won_cleanup_preserved");
-      const present = await input.owner.storage.from("passport-evidence").download(path(racing));
-      check(!present.error && !!present.data, "concurrent_registered_original_bytes_survive");
+      check(
+        cleared.status === "registered",
+        "concurrent_registration_won_cleanup_preserved",
+      );
+      const present = await input.owner.storage
+        .from("passport-evidence")
+        .download(path(racing));
+      check(
+        !present.error && !!present.data,
+        "concurrent_registered_original_bytes_survive",
+      );
     } else {
       check(
         attached.error.code === "23514" &&
@@ -275,7 +337,9 @@ export async function verifyIsolatedUploadRecovery(input: {
           cleared.status === "cleaned",
         "concurrent_cleanup_won_late_attach_denied",
       );
-      const gone = await input.owner.storage.from("passport-evidence").download(path(racing));
+      const gone = await input.owner.storage
+        .from("passport-evidence")
+        .download(path(racing));
       check(!!gone.error, "concurrent_unregistered_cleanup_absence");
     }
   }
@@ -286,17 +350,37 @@ export async function verifyIsolatedUploadRecovery(input: {
   check(!logout.error, "actual_gotrue_local_session_logout");
   const replay = make();
   const active = await replay.rpc("sp_passport_session_active");
-  check(!active.error && active.data === false, "replayed_jwt_live_session_inactive");
-  const forbiddenRead = await replay.rpc("sp_reconcile_evidence_upload", { _attempt_id: lost });
-  check(forbiddenRead.error?.code === "42501", "revoked_session_direct_reconcile_denied");
-  const forbiddenFence = await replay.rpc("sp_authorize_evidence_upload_cleanup", {
+  check(
+    !active.error && active.data === false,
+    "replayed_jwt_live_session_inactive",
+  );
+  const forbiddenRead = await replay.rpc("sp_reconcile_evidence_upload", {
     _attempt_id: lost,
   });
-  check(forbiddenFence.error?.code === "42501", "revoked_session_direct_cleanup_denied");
-  const forbiddenConfirm = await replay.rpc("sp_confirm_evidence_upload_cleanup", {
-    _attempt_id: pending,
-  });
-  check(forbiddenConfirm.error?.code === "42501", "revoked_session_direct_confirm_denied");
+  check(
+    forbiddenRead.error?.code === "42501",
+    "revoked_session_direct_reconcile_denied",
+  );
+  const forbiddenFence = await replay.rpc(
+    "sp_authorize_evidence_upload_cleanup",
+    {
+      _attempt_id: lost,
+    },
+  );
+  check(
+    forbiddenFence.error?.code === "42501",
+    "revoked_session_direct_cleanup_denied",
+  );
+  const forbiddenConfirm = await replay.rpc(
+    "sp_confirm_evidence_upload_cleanup",
+    {
+      _attempt_id: pending,
+    },
+  );
+  check(
+    forbiddenConfirm.error?.code === "42501",
+    "revoked_session_direct_confirm_denied",
+  );
   const forbiddenBegin = await replay.rpc("sp_begin_evidence_upload", {
     _attempt_id: randomUUID(),
     _claim_id: input.claimId,
@@ -306,7 +390,10 @@ export async function verifyIsolatedUploadRecovery(input: {
     _size_bytes: bytes.length,
     _sha256: hash,
   });
-  check(forbiddenBegin.error?.code === "42501", "revoked_session_direct_begin_denied");
+  check(
+    forbiddenBegin.error?.code === "42501",
+    "revoked_session_direct_begin_denied",
+  );
   let deniedList = false;
   try {
     await listOwnedUploadAttempts(
@@ -317,11 +404,29 @@ export async function verifyIsolatedUploadRecovery(input: {
     deniedList = true;
   }
   check(deniedList, "revoked_session_cannot_claim_empty_attempt_list");
-  const noCleanup = await cleanupOwnedUpload({ supabase: replay, userId: input.ownerId }, pending);
-  check(noCleanup.status === "unknown", "revoked_session_never_claims_cleanup_confirmed");
-  const noResume = await resumeOwnedUpload({ supabase: replay, userId: input.ownerId }, lost);
-  check(noResume.status === "unknown", "revoked_session_never_resumes_attachment");
-  const noBytes = await replay.storage.from("passport-evidence").download(path(lost));
+  const noCleanup = await cleanupOwnedUpload(
+    { supabase: replay, userId: input.ownerId },
+    pending,
+  );
+  check(
+    noCleanup.status === "unknown",
+    "revoked_session_never_claims_cleanup_confirmed",
+  );
+  const noResume = await resumeOwnedUpload(
+    { supabase: replay, userId: input.ownerId },
+    lost,
+  );
+  check(
+    noResume.status === "unknown",
+    "revoked_session_never_resumes_attachment",
+  );
+  const noBytes = await replay.storage
+    .from("passport-evidence")
+    .download(path(lost));
   check(!!noBytes.error, "revoked_session_original_bytes_denied");
-  return { checks, completed: checks.length, kind: "actual_gotrue_storage_sdk" };
+  return {
+    checks,
+    completed: checks.length,
+    kind: "actual_gotrue_storage_sdk",
+  };
 }

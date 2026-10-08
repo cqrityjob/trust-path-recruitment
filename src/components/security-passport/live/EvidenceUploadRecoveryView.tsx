@@ -27,7 +27,8 @@ export function EvidenceUploadRecoveryView({
   const sv = lang === "sv";
   const messages: Record<EvidenceRecoveryResult["status"], string> = sv
     ? {
-        registered: "Underlaget är registrerat. Kontrollera det bland dina sparade underlag.",
+        registered:
+          "Underlaget är registrerat. Kontrollera det bland dina sparade underlag.",
         unknown:
           "Resultatet kunde inte bekräftas. Försöket är bevarat. Läs in och kontrollera igen.",
         file_missing:
@@ -38,10 +39,12 @@ export function EvidenceUploadRecoveryView({
           "Underlaget kunde inte registreras på den ursprungliga meriten. Försöket är bevarat; du kan välja borttagning.",
         cleanup_pending:
           "Borttagningen är inte bekräftad. Försöket är bevarat och kan kontrolleras eller tas bort igen.",
-        cleaned: "Den oregistrerade filens borttagning är bekräftad. Du kan nu ladda upp på nytt.",
+        cleaned:
+          "Den oregistrerade filens borttagning är bekräftad. Du kan nu ladda upp på nytt.",
       }
     : {
-        registered: "The documentation is registered. Check it among your saved documents.",
+        registered:
+          "The documentation is registered. Check it among your saved documents.",
         unknown:
           "The result could not be confirmed. The attempt is preserved. Reload and check again.",
         file_missing:
@@ -52,11 +55,15 @@ export function EvidenceUploadRecoveryView({
           "The documentation could not be registered on the original entry. The attempt is preserved; you can choose cleanup.",
         cleanup_pending:
           "Removal is not confirmed. The attempt is preserved and can be checked or removed again.",
-        cleaned: "Removal of the unregistered file is confirmed. You can now upload again.",
+        cleaned:
+          "Removal of the unregistered file is confirmed. You can now upload again.",
       };
   if (!loading && !failed && attempts.length === 0 && !message) return null;
   return (
-    <section data-upload-recovery className="rounded-xl border border-border bg-card p-5">
+    <section
+      data-upload-recovery
+      className="rounded-xl border border-border bg-card p-5"
+    >
       <h3 className="font-semibold">
         {sv ? "Kontrollera tidigare uppladdning" : "Check an earlier upload"}
       </h3>
@@ -84,7 +91,11 @@ export function EvidenceUploadRecoveryView({
       )}
       <ul className="mt-3 space-y-3">
         {attempts.map((a) => (
-          <li key={a.id} data-upload-attempt={a.id} className="rounded-lg border p-3">
+          <li
+            key={a.id}
+            data-upload-attempt={a.id}
+            className="rounded-lg border p-3"
+          >
             <p className="break-all text-sm font-medium">{a.fileName}</p>
             <p className="mt-1 text-sm text-muted-foreground">
               {a.status === "cleanup_pending"

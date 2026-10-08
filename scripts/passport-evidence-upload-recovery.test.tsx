@@ -70,84 +70,130 @@ function harness() {
     invalidOwnPath: false,
   };
   const json = (data: unknown, status = 200) =>
-    new Response(JSON.stringify(data), { status, headers: { "content-type": "application/json" } });
-  const supabase = createClient<Database>("http://127.0.0.1:1", "synthetic-opaque-test-key", {
-    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
-    global: {
-      fetch: async (raw, init) => {
-        const url = new URL(
-          typeof raw === "string" ? raw : raw instanceof URL ? raw.href : raw.url,
-        );
-        const name = url.pathname.split("/").pop() ?? "";
-        if (url.pathname.startsWith("/rest/v1/rpc/")) {
-          calls.push(name);
-          if (name === "sp_passport_session_active") return json(h.session);
-          if (name === "sp_begin_evidence_upload") {
-            if (h.beginUnknown) return json({ code: "57014", message: "unknown" }, 503);
-            return json(h.invalidOwnPath ? { ...a, storagePath: `other/${attemptId}.pdf` } : a);
-          }
-          if (name === "sp_list_my_evidence_upload_attempts") return json([a]);
-          if (name === "sp_reconcile_evidence_upload") {
-            if (h.readUnknown) return json({ code: "57014", message: "unknown" }, 503);
-            return json(a);
-          }
-          if (name === "sp_attach_evidence") {
-            if (h.attachCommits && !h.attachRejected) {
-              a.status = "registered";
-              a.evidence = record;
+    new Response(JSON.stringify(data), {
+      status,
+      headers: { "content-type": "application/json" },
+    });
+  const supabase = createClient<Database>(
+    "http://127.0.0.1:1",
+    "synthetic-opaque-test-key",
+    {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false,
+      },
+      global: {
+        fetch: async (raw, init) => {
+          const url = new URL(
+            typeof raw === "string"
+              ? raw
+              : raw instanceof URL
+                ? raw.href
+                : raw.url,
+          );
+          const name = url.pathname.split("/").pop() ?? "";
+          if (url.pathname.startsWith("/rest/v1/rpc/")) {
+            calls.push(name);
+            if (name === "sp_passport_session_active") return json(h.session);
+            if (name === "sp_begin_evidence_upload") {
+              if (h.beginUnknown)
+                return json({ code: "57014", message: "unknown" }, 503);
+              return json(
+                h.invalidOwnPath
+                  ? { ...a, storagePath: `other/${attemptId}.pdf` }
+                  : a,
+              );
             }
-            if (h.attachUnknown) return json({ code: "57014", message: "unknown" }, 503);
-            if (h.attachRejected) return json({ code: "23503", message: "target gone" }, 409);
-            return json(record.id);
-          }
-          if (name === "sp_authorize_evidence_upload_cleanup") {
-            if (h.fenceUnknown) return json({ code: "57014", message: "unknown" }, 503);
-            if (h.lateRegistration) {
-              a.status = "registered";
-              a.evidence = record;
+            if (name === "sp_list_my_evidence_upload_attempts")
+              return json([a]);
+            if (name === "sp_reconcile_evidence_upload") {
+              if (h.readUnknown)
+                return json({ code: "57014", message: "unknown" }, 503);
+              return json(a);
             }
-            if (!a.evidence && a.status !== "cleaned") a.status = "cleanup_pending";
-            return json(a);
+            if (name === "sp_attach_evidence") {
+              if (h.attachCommits && !h.attachRejected) {
+                a.status = "registered";
+                a.evidence = record;
+              }
+              if (h.attachUnknown)
+                return json({ code: "57014", message: "unknown" }, 503);
+              if (h.attachRejected)
+                return json({ code: "23503", message: "target gone" }, 409);
+              return json(record.id);
+            }
+            if (name === "sp_authorize_evidence_upload_cleanup") {
+              if (h.fenceUnknown)
+                return json({ code: "57014", message: "unknown" }, 503);
+              if (h.lateRegistration) {
+                a.status = "registered";
+                a.evidence = record;
+              }
+              if (!a.evidence && a.status !== "cleaned")
+                a.status = "cleanup_pending";
+              return json(a);
+            }
+            if (name === "sp_confirm_evidence_upload_cleanup") {
+              if (h.confirmUnknown || h.object)
+                return json({ code: "23514", message: "unconfirmed" }, 409);
+              a.status = "cleaned";
+              return json(a);
+            }
           }
-          if (name === "sp_confirm_evidence_upload_cleanup") {
-            if (h.confirmUnknown || h.object)
-              return json({ code: "23514", message: "unconfirmed" }, 409);
-            a.status = "cleaned";
-            return json(a);
+          if (url.pathname === "/storage/v1/object/list/passport-evidence") {
+            calls.push("storage:list");
+            return json(h.object ? [{ name: `${attemptId}.pdf` }] : []);
           }
-        }
-        if (url.pathname === "/storage/v1/object/list/passport-evidence") {
-          calls.push("storage:list");
-          return json(h.object ? [{ name: `${attemptId}.pdf` }] : []);
-        }
-        if (url.pathname === "/storage/v1/object/passport-evidence" && init?.method === "DELETE") {
-          calls.push("storage:remove");
-          assert.deepEqual(JSON.parse(String(init.body)), { prefixes: [path] });
-          if (h.deleteError)
-            return json({ statusCode: "503", error: "unavailable", message: "unavailable" }, 503);
-          if (!h.deleteNoOp) h.object = false;
-          return json(h.deleteNoOp ? [] : [{ name: path }]);
-        }
-        if (
-          url.pathname === `/storage/v1/object/passport-evidence/${path}` &&
-          init?.method === "POST"
-        ) {
-          calls.push("storage:upload");
-          h.object = true;
-          if (h.uploadUnknown)
-            return json({ statusCode: "503", error: "unknown", message: "unknown" }, 503);
-          return json({ Key: path });
-        }
-        if (url.pathname === `/storage/v1/object/passport-evidence/${path}`) {
-          calls.push("storage:download");
-          if (!h.object)
-            return json({ statusCode: "404", error: "not_found", message: "not_found" }, 404);
-          return new Response(h.downloadBytes, { headers: { "content-type": h.downloadMime } });
-        }
-        throw new Error(`UNEXPECTED STUB REQUEST: ${url.pathname}`);
+          if (
+            url.pathname === "/storage/v1/object/passport-evidence" &&
+            init?.method === "DELETE"
+          ) {
+            calls.push("storage:remove");
+            assert.deepEqual(JSON.parse(String(init.body)), {
+              prefixes: [path],
+            });
+            if (h.deleteError)
+              return json(
+                {
+                  statusCode: "503",
+                  error: "unavailable",
+                  message: "unavailable",
+                },
+                503,
+              );
+            if (!h.deleteNoOp) h.object = false;
+            return json(h.deleteNoOp ? [] : [{ name: path }]);
+          }
+          if (
+            url.pathname === `/storage/v1/object/passport-evidence/${path}` &&
+            init?.method === "POST"
+          ) {
+            calls.push("storage:upload");
+            h.object = true;
+            if (h.uploadUnknown)
+              return json(
+                { statusCode: "503", error: "unknown", message: "unknown" },
+                503,
+              );
+            return json({ Key: path });
+          }
+          if (url.pathname === `/storage/v1/object/passport-evidence/${path}`) {
+            calls.push("storage:download");
+            if (!h.object)
+              return json(
+                { statusCode: "404", error: "not_found", message: "not_found" },
+                404,
+              );
+            return new Response(h.downloadBytes, {
+              headers: { "content-type": h.downloadMime },
+            });
+          }
+          throw new Error(`UNEXPECTED STUB REQUEST: ${url.pathname}`);
+        },
       },
     },
-  });
+  );
   return {
     ...h,
     state: h,
@@ -198,7 +244,10 @@ describe("persistent own upload recovery — SDK stub only, no external requests
       status: "outcome_unknown",
       attemptId,
     });
-    const rows = await listOwnedUploadAttempts(h.caller, { claimId: null, periodId: null });
+    const rows = await listOwnedUploadAttempts(h.caller, {
+      claimId: null,
+      periodId: null,
+    });
     assert.equal(rows[0].id, attemptId);
     assert.equal(rows[0].status, "prepared");
     const text = JSON.stringify(rows);
@@ -273,7 +322,11 @@ describe("persistent own upload recovery — SDK stub only, no external requests
     });
     assert.ok(!h.calls.includes("storage:remove"));
   });
-  for (const failure of ["deleteError", "deleteNoOp", "confirmUnknown"] as const)
+  for (const failure of [
+    "deleteError",
+    "deleteNoOp",
+    "confirmUnknown",
+  ] as const)
     test(`${failure} persists fenced cleanup for explicit retry after reload`, async () => {
       const h = harness();
       h.state[failure] = true;
@@ -282,7 +335,10 @@ describe("persistent own upload recovery — SDK stub only, no external requests
         attemptId,
       });
       assert.equal(h.state.a.status, "cleanup_pending");
-      const rows = await listOwnedUploadAttempts(h.caller, { claimId: null, periodId: null });
+      const rows = await listOwnedUploadAttempts(h.caller, {
+        claimId: null,
+        periodId: null,
+      });
       assert.equal(rows[0].status, "cleanup_pending");
       h.state[failure] = false;
       assert.deepEqual(await cleanupOwnedUpload(h.caller, attemptId), {
@@ -294,7 +350,10 @@ describe("persistent own upload recovery — SDK stub only, no external requests
         status: "cleaned",
         attemptId,
       });
-      assert.equal(h.calls.filter((c) => c === "storage:remove").length, removes);
+      assert.equal(
+        h.calls.filter((c) => c === "storage:remove").length,
+        removes,
+      );
     });
   test("revoked session cannot turn empty Storage list into cleanup confirmation", async () => {
     const h = harness();
@@ -334,10 +393,12 @@ describe("persistent own upload recovery — SDK stub only, no external requests
       attemptId,
     });
     assert.ok(
-      h.calls.indexOf("sp_authorize_evidence_upload_cleanup") < h.calls.indexOf("storage:remove"),
+      h.calls.indexOf("sp_authorize_evidence_upload_cleanup") <
+        h.calls.indexOf("storage:remove"),
     );
     assert.ok(
-      h.calls.indexOf("storage:remove") < h.calls.indexOf("sp_confirm_evidence_upload_cleanup"),
+      h.calls.indexOf("storage:remove") <
+        h.calls.indexOf("sp_confirm_evidence_upload_cleanup"),
     );
   });
   test("withdrawn metadata is registered, never mistaken for orphan cleanup", async () => {
@@ -379,9 +440,17 @@ describe("recovery UI render — sv/en without browser/physical mobile claims", 
           onCleanup={() => {}}
         />,
       );
-      assert.ok(html.includes(lang === "sv" ? "Kontrollera och återuppta" : "Check and resume"));
       assert.ok(
-        html.includes(lang === "sv" ? "Ta bort oregistrerad fil" : "Remove unregistered file"),
+        html.includes(
+          lang === "sv" ? "Kontrollera och återuppta" : "Check and resume",
+        ),
+      );
+      assert.ok(
+        html.includes(
+          lang === "sv"
+            ? "Ta bort oregistrerad fil"
+            : "Remove unregistered file",
+        ),
       );
       assert.ok(html.includes("proof.pdf"));
       assert.ok(!html.includes(path));
@@ -426,17 +495,22 @@ describe("recovery UI render — sv/en without browser/physical mobile claims", 
 
 describe("actual operational probe target guard — zero external calls", () => {
   test("hosted URL and privileged key are refused before Auth/Storage requests", async () => {
-    const { verifyIsolatedUploadRecovery } = await import("./passport-upload-recovery-operational");
+    const { verifyIsolatedUploadRecovery } =
+      await import("./passport-upload-recovery-operational");
     let requests = 0;
-    const client = createClient<Database>("http://127.0.0.1:55690", "synthetic", {
-      global: {
-        fetch: async () => {
-          requests++;
-          throw new Error("FORBIDDEN_EXTERNAL_REQUEST");
+    const client = createClient<Database>(
+      "http://127.0.0.1:55690",
+      "synthetic",
+      {
+        global: {
+          fetch: async () => {
+            requests++;
+            throw new Error("FORBIDDEN_EXTERNAL_REQUEST");
+          },
         },
+        auth: { persistSession: false, autoRefreshToken: false },
       },
-      auth: { persistSession: false, autoRefreshToken: false },
-    });
+    );
     const service = `e30.${Buffer.from(JSON.stringify({ role: "service_role" })).toString("base64url")}.synthetic`;
     const base = {
       owner: client,
@@ -446,11 +520,17 @@ describe("actual operational probe target guard — zero external calls", () => 
       publicAnonKey: service,
     };
     await assert.rejects(
-      verifyIsolatedUploadRecovery({ ...base, apiUrl: "https://wrygicdfxwjnrugduxnt.supabase.co" }),
+      verifyIsolatedUploadRecovery({
+        ...base,
+        apiUrl: "https://wrygicdfxwjnrugduxnt.supabase.co",
+      }),
       /OP09_PROBE_REQUIRES_ISOLATED_LOOPBACK/,
     );
     await assert.rejects(
-      verifyIsolatedUploadRecovery({ ...base, apiUrl: "http://127.0.0.1:55690" }),
+      verifyIsolatedUploadRecovery({
+        ...base,
+        apiUrl: "http://127.0.0.1:55690",
+      }),
       /OP09_PROBE_REQUIRES_ANON_KEY/,
     );
     assert.equal(requests, 0);

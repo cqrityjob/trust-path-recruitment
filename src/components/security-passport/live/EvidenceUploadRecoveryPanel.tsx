@@ -23,17 +23,25 @@ export function EvidenceUploadRecoveryPanel({
   readonly load: (input: {
     data: { claimId: string | null; periodId: string | null };
   }) => Promise<readonly EvidenceUploadAttempt[]>;
-  readonly resume: (input: { data: { attemptId: string } }) => Promise<EvidenceRecoveryResult>;
-  readonly cleanup: (input: { data: { attemptId: string } }) => Promise<EvidenceRecoveryResult>;
+  readonly resume: (input: {
+    data: { attemptId: string };
+  }) => Promise<EvidenceRecoveryResult>;
+  readonly cleanup: (input: {
+    data: { attemptId: string };
+  }) => Promise<EvidenceRecoveryResult>;
   readonly onResolved?: () => Promise<void>;
   readonly onPendingChange?: (pending: boolean) => void;
 }) {
   const { lang } = usePassportCopy();
-  const [attempts, setAttempts] = useState<readonly EvidenceUploadAttempt[]>([]);
+  const [attempts, setAttempts] = useState<readonly EvidenceUploadAttempt[]>(
+    [],
+  );
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
-  const [message, setMessage] = useState<EvidenceRecoveryResult["status"] | null>(null);
+  const [message, setMessage] = useState<
+    EvidenceRecoveryResult["status"] | null
+  >(null);
   const latest = useRef({ request: 0 });
   const reload = useCallback(async () => {
     const request = ++latest.current.request;
@@ -66,7 +74,9 @@ export function EvidenceUploadRecoveryPanel({
     setMessage(null);
     onPendingChange?.(true);
     try {
-      const r = await (kind === "resume" ? resume : cleanup)({ data: { attemptId: id } });
+      const r = await (kind === "resume" ? resume : cleanup)({
+        data: { attemptId: id },
+      });
       setMessage(r.status);
       await reload();
       // Refresh the existing evidence read even when a response was lost.

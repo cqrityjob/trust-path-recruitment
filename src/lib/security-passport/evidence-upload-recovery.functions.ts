@@ -8,7 +8,10 @@ import {
 } from "./evidence-upload-recovery-adapter.functions";
 
 const target = z
-  .object({ claimId: z.string().uuid().nullable(), periodId: z.string().uuid().nullable() })
+  .object({
+    claimId: z.string().uuid().nullable(),
+    periodId: z.string().uuid().nullable(),
+  })
   .refine((t) => !t.claimId || !t.periodId);
 const attempt = z.object({ attemptId: z.string().uuid() });
 export const listMyUploadAttempts = createServerFn({ method: "GET" })

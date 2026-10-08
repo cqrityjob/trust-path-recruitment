@@ -3,8 +3,14 @@ import { z } from "zod";
 import type { Database } from "@/integrations/supabase/database";
 import { orNull } from "./rpc";
 import type { EvidenceRecord } from "./evidence.functions";
-import type { EvidenceUploadAttempt, EvidenceRecoveryResult } from "./evidence-upload-recovery";
-import { isDefiniteAttachmentRejection, type EvidenceUploadOutcome } from "./evidence-upload";
+import type {
+  EvidenceUploadAttempt,
+  EvidenceRecoveryResult,
+} from "./evidence-upload-recovery";
+import {
+  isDefiniteAttachmentRejection,
+  type EvidenceUploadOutcome,
+} from "./evidence-upload";
 
 const evidenceSchema = z.object({
   id: z.string().uuid(),
@@ -23,7 +29,12 @@ const attemptSchema = z
     periodId: z.string().uuid().nullable(),
     storagePath: z.string(),
     fileName: z.string().min(1).max(300),
-    mimeType: z.enum(["application/pdf", "image/jpeg", "image/png", "image/heic"]),
+    mimeType: z.enum([
+      "application/pdf",
+      "image/jpeg",
+      "image/png",
+      "image/heic",
+    ]),
     sizeBytes: z
       .number()
       .int()
@@ -38,7 +49,10 @@ const attemptSchema = z
   })
   .refine((a) => (a.claimId === null) !== (a.periodId === null));
 type Attempt = z.infer<typeof attemptSchema>;
-type Caller = { readonly supabase: SupabaseClient<Database>; readonly userId: string };
+type Caller = {
+  readonly supabase: SupabaseClient<Database>;
+  readonly userId: string;
+};
 const BUCKET = "passport-evidence";
 const ext = {
   "application/pdf": "pdf",
@@ -82,7 +96,9 @@ function result(a: Attempt): EvidenceRecoveryResult | null {
   return null;
 }
 async function read(caller: Caller, id: string): Promise<Attempt> {
-  const r = await caller.supabase.rpc("sp_reconcile_evidence_upload", { _attempt_id: id });
+  const r = await caller.supabase.rpc("sp_reconcile_evidence_upload", {
+    _attempt_id: id,
+  });
   if (r.error) throw new Error("SP_EVIDENCE_UPLOAD_RECONCILE_FAILED");
   const a = parseOwn(r.data, caller.userId);
   if (a.id !== id) throw new Error("SP_EVIDENCE_UPLOAD_INVALID_JOURNAL");
@@ -105,7 +121,10 @@ async function missing(caller: Caller, a: Attempt): Promise<boolean> {
     (await sessionActive(caller))
   );
 }
-async function attach(caller: Caller, a: Attempt): Promise<"accepted" | "rejected" | "unknown"> {
+async function attach(
+  caller: Caller,
+  a: Attempt,
+): Promise<"accepted" | "rejected" | "unknown"> {
   const r = await caller.supabase.rpc("sp_attach_evidence", {
     _claim_id: orNull(a.claimId),
     _period_id: orNull(a.periodId),
@@ -115,7 +134,11 @@ async function attach(caller: Caller, a: Attempt): Promise<"accepted" | "rejecte
     _size_bytes: a.sizeBytes,
     _sha256: a.sha256,
   });
-  return r.error ? (isDefiniteAttachmentRejection(r.error) ? "rejected" : "unknown") : "accepted";
+  return r.error
+    ? isDefiniteAttachmentRejection(r.error)
+      ? "rejected"
+      : "unknown"
+    : "accepted";
 }
 
 /** Only the authenticated owner's journal is read. Technical paths/hash never
@@ -143,9 +166,12 @@ export async function cleanupOwnedUpload(
   attemptId: string,
 ): Promise<EvidenceRecoveryResult> {
   try {
-    const r = await caller.supabase.rpc("sp_authorize_evidence_upload_cleanup", {
-      _attempt_id: attemptId,
-    });
+    const r = await caller.supabase.rpc(
+      "sp_authorize_evidence_upload_cleanup",
+      {
+        _attempt_id: attemptId,
+      },
+    );
     if (r.error) return { status: "unknown", attemptId };
     const a = parseOwn(r.data, caller.userId);
     if (a.id !== attemptId) return { status: "unknown", attemptId };
@@ -157,12 +183,17 @@ export async function cleanupOwnedUpload(
     )
       return existing;
     if (a.status !== "cleanup_pending") return { status: "unknown", attemptId };
-    const deleted = await caller.supabase.storage.from(BUCKET).remove([a.storagePath]);
+    const deleted = await caller.supabase.storage
+      .from(BUCKET)
+      .remove([a.storagePath]);
     if (deleted.error || !(await missing(caller, a)))
       return { status: "cleanup_pending", attemptId };
-    const confirmed = await caller.supabase.rpc("sp_confirm_evidence_upload_cleanup", {
-      _attempt_id: attemptId,
-    });
+    const confirmed = await caller.supabase.rpc(
+      "sp_confirm_evidence_upload_cleanup",
+      {
+        _attempt_id: attemptId,
+      },
+    );
     if (confirmed.error) return { status: "cleanup_pending", attemptId };
     const final = parseOwn(confirmed.data, caller.userId);
     return final.id === attemptId && final.status === "cleaned"
@@ -185,9 +216,14 @@ export async function resumeOwnedUpload(
     const existing = result(a);
     if (existing) return existing;
     if (!(await sessionActive(caller))) return { status: "unknown", attemptId };
-    const download = await caller.supabase.storage.from(BUCKET).download(a.storagePath);
+    const download = await caller.supabase.storage
+      .from(BUCKET)
+      .download(a.storagePath);
     if (download.error || !download.data) {
-      return { status: (await missing(caller, a)) ? "file_missing" : "unknown", attemptId };
+      return {
+        status: (await missing(caller, a)) ? "file_missing" : "unknown",
+        attemptId,
+      };
     }
     if (!(await sessionActive(caller))) return { status: "unknown", attemptId };
     // Refuse before reading a potentially oversized or altered object body.
@@ -208,7 +244,10 @@ export async function resumeOwnedUpload(
     }
     const final = result(await read(caller, attemptId));
     if (final) return final;
-    return { status: outcome === "rejected" ? "attachment_rejected" : "unknown", attemptId };
+    return {
+      status: outcome === "rejected" ? "attachment_rejected" : "unknown",
+      attemptId,
+    };
   } catch {
     return { status: "unknown", attemptId };
   }
@@ -227,7 +266,10 @@ export async function uploadRecoverableEvidence(
     readonly sha256: string;
   },
 ): Promise<EvidenceUploadOutcome<EvidenceRecord>> {
-  const unknown = { status: "outcome_unknown", attemptId: input.attemptId } as const;
+  const unknown = {
+    status: "outcome_unknown",
+    attemptId: input.attemptId,
+  } as const;
   let a: Attempt;
   try {
     const prepared = await input.supabase.rpc("sp_begin_evidence_upload", {
@@ -279,7 +321,10 @@ export async function uploadRecoverableEvidence(
   try {
     const uploaded = await input.supabase.storage
       .from(BUCKET)
-      .upload(a.storagePath, input.bytes, { contentType: a.mimeType, upsert: false });
+      .upload(a.storagePath, input.bytes, {
+        contentType: a.mimeType,
+        upsert: false,
+      });
     if (uploaded.error) return unknown;
   } catch {
     return unknown;
@@ -292,14 +337,20 @@ export async function uploadRecoverableEvidence(
   }
   try {
     const resolved = result(await read(input, a.id));
-    if (resolved?.status === "registered" && resolved.evidence.lifecycleState === "active")
+    if (
+      resolved?.status === "registered" &&
+      resolved.evidence.lifecycleState === "active"
+    )
       return { status: "saved", evidence: resolved.evidence };
     if (resolved || outcome !== "rejected") return unknown;
   } catch {
     return unknown;
   }
   const cleanup = await cleanupOwnedUpload(input, a.id);
-  if (cleanup.status === "registered" && cleanup.evidence.lifecycleState === "active")
+  if (
+    cleanup.status === "registered" &&
+    cleanup.evidence.lifecycleState === "active"
+  )
     return { status: "saved", evidence: cleanup.evidence };
   return {
     status: "not_attached",
