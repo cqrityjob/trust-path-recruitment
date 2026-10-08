@@ -1,6 +1,6 @@
 # Arbetsgivarportalen – före/efter-bilder (lokal fotografering 2026-10-09)
 
-Bilderna produceras av workflowen `.github/workflows/employer-portal-ux-evidence.yml`
+Workflowen `.github/workflows/employer-portal-ux-evidence.yml` kan producera bildpar
 från sviten `e2e/employer-portal-ux-evidence.spec.ts` på den stubbade
 backend-gränsen i `e2e/support/public-entry-harness.ts`. Inget når hosted
 Supabase; varje serverfunktion besvaras från `e2e/support/employer-portal-fixture.ts`.
