@@ -124,6 +124,11 @@ jobs:
       - name: Recruiter Intelligence P0 process persistence and frozen readback
         run: bun run recruiter-interview-foundation:check
 
+      - name: Upload journal rollback ordering and planted controls
+        run: |
+          bun test scripts/sp-evidence-upload-recovery-ci.test.ts
+          bunx tsc --noEmit --allowJs --checkJs false --skipLibCheck --module preserve --moduleResolution bundler --target ES2022 --types node scripts/sp-evidence-upload-recovery-ci.test.ts
+
       - name: Type-check
         run: bunx tsc --noEmit
 
