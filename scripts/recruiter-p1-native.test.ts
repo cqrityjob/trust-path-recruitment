@@ -490,11 +490,12 @@ test("human decisions preserve explicit NO, actual missing sources and checked e
 });
 test("history/count contracts fail closed on missing full schema, skipped or flaky browser evidence", () => {
   const files = fs.readdirSync(path.join(root, "supabase/migrations"));
-  assert.ok(history(files).length >= 386);
-  assert.throws(
-    () => history(files.filter((name) => !name.startsWith("20270308090000_"))),
-    /COMPLETE_HISTORY/,
-  );
+  assert.ok(history(files).length >= 387);
+  for (const prefix of ["20270308090000_", "20270309090000_"])
+    assert.throws(
+      () => history(files.filter((name) => !name.startsWith(prefix))),
+      /COMPLETE_HISTORY/,
+    );
   assert.throws(
     () => history([...files, files.find((name) => name.endsWith(".sql"))]),
     /COMPLETE_HISTORY/,

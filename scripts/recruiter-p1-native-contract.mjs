@@ -2,8 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 
-export const APP_SHA = "3e0aa8552b7d45f99c5de881320d4e6c773e59cf";
-export const SCHEMA_SHA = "6039fbc685cad255aae4a4e39c1035e933af883d";
+export const APP_SHA = "40e5775de5195050571421827434ec2872a61506";
+export const SCHEMA_SHA = "1e5988c6f9c7121a0fefd22c0db06f6b573f0ae9";
 export const PROJECT = "cqj-ri-native-p1-100";
 export const API = "http://127.0.0.1:55810";
 export const APP = "http://127.0.0.1:35810";
@@ -132,10 +132,10 @@ export function validateStatus(status) {
 export function history(names) {
   const files = names.filter((name) => name.endsWith(".sql")).sort();
   if (
-    files.length < 386 ||
+    files.length < 387 ||
     files.some((name) => !/^\d{14}_.+\.sql$/.test(name)) ||
     new Set(files.map((name) => name.slice(0, 14))).size !== files.length ||
-    ["20270307090000_", "20270307100000_", "20270308090000_"].some(
+    ["20270307090000_", "20270307100000_", "20270308090000_", "20270309090000_"].some(
       (prefix) => !files.some((f) => f.startsWith(prefix)),
     )
   )
