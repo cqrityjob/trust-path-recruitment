@@ -11,6 +11,158 @@ import {
 import type { InterviewContextResult, LinkState } from "../src/lib/interview-intelligence/context";
 import { drainInterviewNoteDraft } from "../src/lib/interview-intelligence/note-save-drain";
 import { drainInterviewDrafts } from "../src/lib/interview-intelligence/draft-save-drain";
+import {
+  pendingQuestionNoteBody,
+  questionNoteBody,
+  type QuestionNoteDraft,
+} from "../src/lib/interview-intelligence/question-note-draft";
+
+describe("question-bound note draft after reload", () => {
+  test("initial loaded Q8 and StrictMode cleanup replay cannot clear a stored note", () => {
+    const saved = "Persisted Q8 account before pause";
+    const initial: QuestionNoteDraft | null = null;
+    expect(questionNoteBody(null, initial, saved)).toBe("");
+    expect(questionNoteBody("Q8", initial, saved)).toBe(saved);
+    const writes: string[] = [];
+    // The route may mount after CaseContentBoundary loaded the saved case.
+    // StrictMode's repeated effect cleanup has no human write intention.
+    for (let cleanup = 0; cleanup < 2; cleanup++) {
+      const body = pendingQuestionNoteBody("Q8", initial, saved, true);
+      if (body !== null) writes.push(body);
+    }
+    expect(writes).toEqual([]);
+    expect(questionNoteBody("Q8", initial, saved)).toBe(saved);
+  });
+  test("a prior question's draft cannot be displayed or saved into a newly selected question", () => {
+    const previous = { questionId: "Q1", body: "Human Q1 text" };
+    expect(questionNoteBody("Q2", previous, "Stored Q2 text")).toBe("Stored Q2 text");
+    expect(pendingQuestionNoteBody("Q2", previous, "Stored Q2 text", true)).toBeNull();
+    expect(questionNoteBody("Q3", previous, "")).toBe("");
+    expect(pendingQuestionNoteBody("Q3", previous, "", false)).toBeNull();
+  });
+  test("an explicit empty edit still drains through the ordinary writer and CAS failure keeps it", async () => {
+    const draft = { questionId: "Q8", body: "" };
+    let saved = "Stored Q8 account";
+    expect(questionNoteBody("Q8", draft, saved)).toBe("");
+    expect(pendingQuestionNoteBody("Q8", draft, saved, true)).toBe("");
+    const writes: string[] = [];
+    expect(
+      await drainInterviewNoteDraft({
+        readDraft: () => questionNoteBody("Q8", draft, saved),
+        readSaved: () => saved,
+        hasSavedNote: () => true,
+        isCurrentQuestion: () => true,
+        write: async (body) => {
+          writes.push(body);
+          saved = body;
+        },
+      }),
+    ).toBe(true);
+    expect(writes).toEqual([""]);
+    expect(pendingQuestionNoteBody("Q8", draft, saved, true)).toBeNull();
+    saved = "Changed in another tab";
+    expect(
+      await drainInterviewNoteDraft({
+        readDraft: () => draft.body,
+        readSaved: () => saved,
+        hasSavedNote: () => true,
+        isCurrentQuestion: () => true,
+        write: async () => {
+          throw Error("SCP_IV_NOTE_STALE");
+        },
+      }),
+    ).toBe(false);
+    expect(saved).toBe("Changed in another tab");
+    expect(draft.body).toBe("");
+    expect(pendingQuestionNoteBody("Q8", draft, saved, true)).toBe("");
+    expect(pendingQuestionNoteBody("Q8", draft, "", false)).toBeNull();
+  });
+  test("human edits survive later stored reads and still drain edits made during a pending write", async () => {
+    let draft: QuestionNoteDraft = { questionId: "Q8", body: "Human A" };
+    let saved = "Stored older account";
+    expect(questionNoteBody("Q8", draft, "Newer query response")).toBe("Human A");
+    let release!: () => void;
+    let started!: () => void;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const requested = new Promise<void>((resolve) => {
+      started = resolve;
+    });
+    const writes: string[] = [];
+    const drain = drainInterviewNoteDraft({
+      readDraft: () => questionNoteBody("Q8", draft, saved),
+      readSaved: () => saved,
+      hasSavedNote: () => true,
+      isCurrentQuestion: () => true,
+      write: async (body) => {
+        writes.push(body);
+        if (writes.length === 1) {
+          started();
+          await held;
+        }
+        saved = body;
+      },
+    });
+    await requested;
+    draft = { questionId: "Q8", body: "Human B while A pending" };
+    release();
+    expect(await drain).toBe(true);
+    expect(writes).toEqual(["Human A", "Human B while A pending"]);
+    expect(saved).toBe(draft.body);
+  });
+  test("a new question-bound edit during the process flush drains before navigation", async () => {
+    let draft: QuestionNoteDraft | null = null;
+    let saved = "Existing Q8";
+    let processDirty = true;
+    let release!: () => void;
+    let started!: () => void;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const requested = new Promise<void>((resolve) => {
+      started = resolve;
+    });
+    const writes: string[] = [];
+    let navigated = false;
+    const guard = drainInterviewDrafts({
+      flushNote: async () => {
+        if (draft?.questionId !== "Q8") return true;
+        return drainInterviewNoteDraft({
+          readDraft: () => questionNoteBody("Q8", draft, saved),
+          readSaved: () => saved,
+          hasSavedNote: () => true,
+          isCurrentQuestion: () => true,
+          write: async (body) => {
+            writes.push(body);
+            saved = body;
+          },
+        });
+      },
+      flushProcess: async () => {
+        if (processDirty) {
+          started();
+          await held;
+          processDirty = false;
+        }
+        return true;
+      },
+      noteIsDirty: () => pendingQuestionNoteBody("Q8", draft, saved, true) !== null,
+      processIsDirty: () => processDirty,
+    }).then((ok) => {
+      navigated = ok;
+      return ok;
+    });
+    await requested;
+    expect(navigated).toBe(false);
+    draft = { questionId: "Q8", body: "New human Q8 during process write" };
+    release();
+    expect(await guard).toBe(true);
+    expect(writes).toEqual(["New human Q8 during process write"]);
+    expect(saved).toBe(draft.body);
+    expect(navigated).toBe(true);
+  });
+});
 
 const t0 = "2026-10-07T12:00:00.000001Z";
 const t1 = "2026-10-07T12:00:00.000002Z";
