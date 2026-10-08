@@ -22,6 +22,11 @@
 
 \set ON_ERROR_STOP on
 
+-- Remove the additive RI application capabilities before their interview domain.
+-- The operational recovery preserves checkpoint data and its revision trigger;
+-- the historical teardown below removes that trigger's table explicitly.
+\ir ../rollback/20270306090000_recruiter_intelligence_interview_foundation_rollback.sql
+
 -- Unwind the additive, unused Sentinel domain before rolling back its SCP spine.
 \ir ../rollback/20270301090000_sentinel_abstract_reasoning_rollback.sql
 
@@ -511,6 +516,9 @@ DROP TABLE IF EXISTS public.scp_interview_case_events            CASCADE;
 DROP TABLE IF EXISTS public.scp_interview_reports                CASCADE;
 DROP TABLE IF EXISTS public.scp_interview_assessments            CASCADE;
 DROP TABLE IF EXISTS public.scp_interview_findings               CASCADE;
+-- Disposable-only domain teardown: the operational RI recovery deliberately
+-- retains this guard while manual history exists. Its table is now gone.
+DROP FUNCTION IF EXISTS public.scp_iv_guard_finding_revision();
 DROP TABLE IF EXISTS public.scp_interview_evidence               CASCADE;
 DROP TABLE IF EXISTS public.scp_interview_evidence_proposals     CASCADE;
 DROP TABLE IF EXISTS public.scp_interview_probe_usages           CASCADE;

@@ -244,6 +244,17 @@ const MUTATIONS: readonly Mutation[] = [
     expect: "IMTR-SUITE",
   },
   {
+    id: "IMTR-NC-SUITE-ANON-FUNNEL-RESTORED",
+    defect:
+      "the suite restores funnel writes to its anon allowlist despite the authenticated participant boundary",
+    file: SUITE,
+    find: "= 'cd_access_state, cd_get_shared_report, cd_submit_test_feedback, employer_is_active_status, sp_get_social_share, sp_network_stats'",
+    replace:
+      "= 'cd_access_state, cd_get_shared_report, cd_record_funnel_event, cd_submit_test_feedback, employer_is_active_status, sp_get_social_share, sp_network_stats'",
+    guard: GUARD,
+    expect: "IMTR-SUITE",
+  },
+  {
     id: "IMTR-NC-SUITE-ALLOWLIST-LOOSENED",
     defect: "the exact executor set is no longer pinned",
     file: SUITE,

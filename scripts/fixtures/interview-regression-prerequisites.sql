@@ -4,6 +4,21 @@
 \set ON_ERROR_STOP on
 \ir employer-final-report-fixture.sql
 BEGIN;
+-- The second synthetic candidate is referenced below and was formerly
+-- assumed to exist in a developer's database. Seed the sign-in identity
+-- explicitly so a fresh replay exercises the same application lifecycle.
+INSERT INTO auth.users(instance_id,id,aud,role,email,encrypted_password,email_confirmed_at,
+ raw_app_meta_data,raw_user_meta_data,created_at,updated_at,confirmation_token,recovery_token,
+ email_change_token_new,email_change,email_change_token_current,phone_change,phone_change_token,reauthentication_token)
+SELECT instance_id,'9e000000-0000-4000-8000-0000000000c1','authenticated','authenticated',
+ 'regression-candidate@local.test',encrypted_password,now(),raw_app_meta_data,
+ '{"full_name":"Synthetic regression candidate"}',now(),now(),'','','','','','','',''
+FROM auth.users WHERE id='e4000000-0000-4000-8000-0000000000c1'
+ON CONFLICT(id) DO NOTHING;
+INSERT INTO auth.identities(provider_id,user_id,identity_data,provider,last_sign_in_at,created_at,updated_at)
+VALUES('9e000000-0000-4000-8000-0000000000c1','9e000000-0000-4000-8000-0000000000c1',
+ '{"sub":"9e000000-0000-4000-8000-0000000000c1","email":"regression-candidate@local.test","email_verified":true}',
+ 'email',now(),now(),now()) ON CONFLICT(provider,provider_id) DO NOTHING;
 INSERT INTO auth.users(instance_id,id,aud,role,email,encrypted_password,email_confirmed_at,
  raw_app_meta_data,raw_user_meta_data,created_at,updated_at,confirmation_token,recovery_token,
  email_change_token_new,email_change,email_change_token_current,phone_change,phone_change_token,reauthentication_token)
@@ -36,11 +51,16 @@ FROM public.jobs WHERE id='e4000000-0000-4000-8000-00000000ff01' ON CONFLICT(id)
 INSERT INTO public.job_applications(id,job_id,employer_id,applicant_user_id,consent_given_at)
 SELECT '9e000000-0000-4000-8000-00000000e001','e4000000-0000-4000-8000-00000000ff02',employer_id,
  '9e000000-0000-4000-8000-0000000000c1',now() FROM public.jobs WHERE id='e4000000-0000-4000-8000-00000000ff02' ON CONFLICT(id) DO NOTHING;
--- Build both statuses through the real governed interview lifecycle. The
--- mixed legacy application link is owner-seeded after those transitions.
+-- Build both statuses through the real governed interview lifecycle with
+-- their application binding present before preparation or report preview.
+-- A candidate account without an application is correctly forbidden by the
+-- product; post-finalisation linkage would also invalidate what this fixture
+-- claims to test about historical report provenance.
 CREATE TEMP TABLE regression_cases(kind text,id uuid);
-INSERT INTO regression_cases SELECT 'ready',pg_temp.e4_walk('Regression ready report',NULL,NULL,NULL);
-INSERT INTO regression_cases SELECT 'reported',pg_temp.e4_walk('Regression reported history',NULL,NULL,NULL);
+INSERT INTO regression_cases SELECT 'ready',pg_temp.e4_walk('Regression ready report',
+ 'e4000000-0000-4000-8000-00000000ff02','9e000000-0000-4000-8000-00000000e001',NULL);
+INSERT INTO regression_cases SELECT 'reported',pg_temp.e4_walk('Regression reported history',
+ 'e4000000-0000-4000-8000-00000000ff02','9e000000-0000-4000-8000-00000000e001',NULL);
 DO $$ DECLARE c uuid; BEGIN
  SELECT id INTO c FROM regression_cases WHERE kind='reported';
  PERFORM set_config('request.jwt.claims',json_build_object('sub','9e000000-0000-4000-8000-000000000001','role','authenticated')::text,true);
@@ -52,8 +72,6 @@ DO $$ DECLARE c uuid; BEGIN
  RESET ROLE;
  PERFORM set_config('request.jwt.claims',NULL,true); PERFORM set_config('request.jwt.claim.sub',NULL,true);
 END $$;
-UPDATE public.scp_interview_cases SET application_id='9e000000-0000-4000-8000-00000000e001',job_id='e4000000-0000-4000-8000-00000000ff02'
-WHERE id IN (SELECT id FROM regression_cases);
 COMMIT;
 \ir interview-context-assessment-fixture.sql
 SELECT json_object_agg(kind,id) FROM regression_cases;

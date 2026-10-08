@@ -25,6 +25,16 @@ BEGIN
       'BCP_HARNESS_WRONG_DATABASE: this harness rewrites auth helper functions and runs only against a disposable local database (got "%").',
       current_database();
   END IF;
+  -- Role membership is a cluster/global object, so pg_dump does not carry
+  -- it when a replay is restored into a fresh disposable instance. Fail
+  -- before a browser silently waits on failed PostgREST role switching.
+  -- The bootstrap owns these standard grants; this harness does not relax
+  -- any product table/function permission to make the journey pass.
+  IF NOT pg_has_role('authenticator', 'anon', 'MEMBER')
+     OR NOT pg_has_role('authenticator', 'authenticated', 'MEMBER')
+     OR NOT pg_has_role('authenticator', 'service_role', 'MEMBER') THEN
+    RAISE EXCEPTION 'BCP_HARNESS_MISSING_AUTHENTICATOR_ROLES: apply the standard disposable bootstrap role memberships before starting PostgREST.';
+  END IF;
 END $$;
 
 BEGIN;
