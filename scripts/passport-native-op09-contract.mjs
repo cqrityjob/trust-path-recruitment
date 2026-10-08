@@ -4,7 +4,7 @@ import cp from "node:child_process";
 import crypto from "node:crypto";
 
 export const SCHEMA_SHA = "9c8b8159ce5f350c6ace074c917823599d19ce99";
-export const APP_SHA = "a5dd89ebee2c30f4d2ff18df7117d07e2bb125d2";
+export const APP_SHA = "cce2c8a238522d51396b52697d25bc9d54a8a8bd";
 export const PROJECT = "cqj-ri-native-op09-20261008";
 export const API = "http://127.0.0.1:55820";
 export const APP = "http://127.0.0.1:35820";
