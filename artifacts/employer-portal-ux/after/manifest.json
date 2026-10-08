@@ -1,6 +1,6 @@
 {
   "capturedFrom": "http://localhost:3100",
-  "startedAt": "2026-10-08T18:16:05.420Z",
+  "startedAt": "2026-10-08T18:30:47.836Z",
   "shots": [
     {
       "file": "after-overview-sv-1440.png",
@@ -27,6 +27,10 @@
       "note": "reports in sv at 1440px (chromium)"
     },
     {
+      "file": "after-requirements-sv-1440.png",
+      "note": "requirements in sv at 1440px (chromium)"
+    },
+    {
       "file": "after-overview-en-1440.png",
       "note": "overview in en at 1440px (chromium)"
     },
@@ -49,6 +53,10 @@
     {
       "file": "after-reports-en-1440.png",
       "note": "reports in en at 1440px (chromium)"
+    },
+    {
+      "file": "after-requirements-en-1440.png",
+      "note": "requirements in en at 1440px (chromium)"
     },
     {
       "file": "after-overview-sv-375.png",
@@ -75,6 +83,10 @@
       "note": "reports in sv at 375px (mobile-375)"
     },
     {
+      "file": "after-requirements-sv-375.png",
+      "note": "requirements in sv at 375px (mobile-375)"
+    },
+    {
       "file": "after-overview-en-375.png",
       "note": "overview in en at 375px (mobile-375)"
     },
@@ -97,6 +109,10 @@
     {
       "file": "after-reports-en-375.png",
       "note": "reports in en at 375px (mobile-375)"
+    },
+    {
+      "file": "after-requirements-en-375.png",
+      "note": "requirements in en at 375px (mobile-375)"
     }
   ]
 }

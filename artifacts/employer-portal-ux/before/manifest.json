@@ -1,6 +1,6 @@
 {
   "capturedFrom": "http://localhost:3100",
-  "startedAt": "2026-10-08T18:16:07.462Z",
+  "startedAt": "2026-10-08T18:29:04.948Z",
   "shots": [
     {
       "file": "before-overview-sv-1440.png",
@@ -27,6 +27,10 @@
       "note": "reports in sv at 1440px (chromium)"
     },
     {
+      "file": "before-requirements-sv-1440.png",
+      "note": "requirements in sv at 1440px (chromium)"
+    },
+    {
       "file": "before-overview-en-1440.png",
       "note": "overview in en at 1440px (chromium)"
     },
@@ -49,6 +53,10 @@
     {
       "file": "before-reports-en-1440.png",
       "note": "reports in en at 1440px (chromium)"
+    },
+    {
+      "file": "before-requirements-en-1440.png",
+      "note": "requirements in en at 1440px (chromium)"
     },
     {
       "file": "before-overview-sv-375.png",
@@ -75,6 +83,10 @@
       "note": "reports in sv at 375px (mobile-375)"
     },
     {
+      "file": "before-requirements-sv-375.png",
+      "note": "requirements in sv at 375px (mobile-375)"
+    },
+    {
       "file": "before-overview-en-375.png",
       "note": "overview in en at 375px (mobile-375)"
     },
@@ -97,6 +109,10 @@
     {
       "file": "before-reports-en-375.png",
       "note": "reports in en at 375px (mobile-375)"
+    },
+    {
+      "file": "before-requirements-en-375.png",
+      "note": "requirements in en at 375px (mobile-375)"
     }
   ]
 }
