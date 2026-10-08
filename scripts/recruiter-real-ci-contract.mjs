@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import cp from "node:child_process";
 
-export const APP_SHA = "3d66dd8cb0ce4c03d9d8e9a27aeb179aa9182101";
+export const APP_SHA = "40e5775de5195050571421827434ec2872a61506";
 export const PROJECT = "cqj-ri-real-20261008b";
 export const API = "http://127.0.0.1:55690";
 export const APP = "http://127.0.0.1:3140";
@@ -13,7 +13,7 @@ export const EXCLUDED =
 export function requireCompleteHistory(names) {
   const files = names.filter((name) => name.endsWith(".sql")).sort();
   if (
-    files.length < 385 ||
+    files.length < 387 ||
     files.some((name) => !/^\d{14}_.+\.sql$/.test(name)) ||
     new Set(files.map((name) => name.slice(0, 14))).size !== files.length
   )
@@ -23,6 +23,11 @@ export function requireCompleteHistory(names) {
     !files.some((name) => name.startsWith("20270307100000_"))
   )
     throw Error("REAL_CI_SNAPSHOT_FORWARD_REQUIRED");
+  if (
+    !files.some((name) => name.startsWith("20270308090000_")) ||
+    !files.some((name) => name.startsWith("20270309090000_"))
+  )
+    throw Error("REAL_CI_REQUIREMENTS_UPLOAD_FORWARD_REQUIRED");
   return files;
 }
 
