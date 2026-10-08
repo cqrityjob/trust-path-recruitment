@@ -25,7 +25,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { uploadOwnedEvidence } from "./evidence-upload-adapter.functions";
+import { uploadRecoverableEvidence } from "./evidence-upload-recovery-adapter.functions";
 import { requireSavedEvidence } from "./evidence-upload";
 import { withdrawAndDeleteEvidence, type WithdrawEvidenceResult } from "./evidence-withdrawal";
 
@@ -41,13 +41,6 @@ export const EVIDENCE_ALLOWED_MIME: readonly string[] = [
   "image/png",
   "image/heic",
 ];
-
-const EXT_BY_MIME: Readonly<Record<string, string>> = {
-  "application/pdf": "pdf",
-  "image/jpeg": "jpg",
-  "image/png": "png",
-  "image/heic": "heic",
-};
 
 export interface EvidenceRecord {
   readonly id: string;
@@ -128,18 +121,14 @@ export const uploadEvidence = createServerFn({ method: "POST" })
     // The object name is a UUID under the holder's own folder. The holder's
     // filename is metadata, never part of the path — so a filename can never
     // traverse out of the folder the Storage policy pins.
-    const ext = EXT_BY_MIME[data.mimeType] ?? "bin";
     const attemptId = randomUUID();
-    const storagePath = `${userId}/${attemptId}.${ext}`;
 
-    const outcome = await uploadOwnedEvidence({
+    const outcome = await uploadRecoverableEvidence({
       supabase: db,
       userId,
       claimId: data.claimId,
       periodId: data.periodId,
-      bucket: EVIDENCE_BUCKET,
       attemptId,
-      storagePath,
       bytes,
       fileName: safeDisplayName(data.fileName),
       mimeType: data.mimeType,

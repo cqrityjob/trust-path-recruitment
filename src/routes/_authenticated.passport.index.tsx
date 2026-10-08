@@ -25,6 +25,12 @@ import { listMyVerificationRequests } from "@/lib/security-passport/verification
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import { CredentialWallet } from "@/components/security-passport/CredentialWallet";
 import { PassportSideColumn } from "@/components/security-passport/PassportSideColumn";
+import { EvidenceUploadRecoveryPanel } from "@/components/security-passport/live/EvidenceUploadRecoveryPanel";
+import {
+  listMyUploadAttempts,
+  resumeMyUploadAttempt,
+  cleanupMyUploadAttempt,
+} from "@/lib/security-passport/evidence-upload-recovery.functions";
 
 export const Route = createFileRoute("/_authenticated/passport/")({
   ssr: false,
@@ -34,6 +40,9 @@ function PassportWorkspaceRoute() {
   const { lang, pt } = usePassportCopy();
   const navigate = useNavigate();
   const load = useServerFn(getMyPassport);
+  const loadUploadAttempts = useServerFn(listMyUploadAttempts);
+  const resumeUploadAttempt = useServerFn(resumeMyUploadAttempt);
+  const cleanupUploadAttempt = useServerFn(cleanupMyUploadAttempt);
   const loadMetadata = useServerFn(getInternationalPassportMetadata);
   const loadReviews = useServerFn(listMyVerificationRequests);
   const [snapshot, setSnapshot] = useState<PassportSnapshot | null>(null);
@@ -106,6 +115,12 @@ function PassportWorkspaceRoute() {
     <div data-passport-workspace className="mx-auto max-w-[1280px]">
       <div className="min-w-0 flex flex-col gap-6">
         <ScrollToHashOnceReady />
+        <EvidenceUploadRecoveryPanel
+          load={loadUploadAttempts}
+          resume={resumeUploadAttempt}
+          cleanup={cleanupUploadAttempt}
+          onResolved={refresh}
+        />
         <CredentialWallet
           snapshot={snapshot}
           metadata={metadata}

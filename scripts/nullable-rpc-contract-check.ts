@@ -257,7 +257,24 @@ ck(
       .sort(),
   ) === JSON.stringify(foundation.map(([name]) => name).sort()),
 );
-for (const [name, nullable] of foundation) {
+const uploadRecovery = [
+  ["sp_begin_evidence_upload", ["_claim_id", "_period_id"]],
+  ["sp_reconcile_evidence_upload", []],
+  ["sp_list_my_evidence_upload_attempts", ["_claim_id", "_period_id"]],
+  ["sp_authorize_evidence_upload_cleanup", []],
+  ["sp_confirm_evidence_upload_cleanup", []],
+  ["sp_evidence_upload_storage_writable", []],
+] as const;
+ck(
+  "4.3u only reviewed own-upload functions have additive contracts",
+  JSON.stringify(
+    alias("EvidenceUploadFunctions")
+      ?.getProperties()
+      .map((p) => p.name)
+      .sort(),
+  ) === JSON.stringify(uploadRecovery.map(([name]) => name).sort()),
+);
+for (const [name, nullable] of [...foundation, ...uploadRecovery]) {
   const def = latestDefinition(name);
   const args = field(field(functions, name), "Args");
   const sqlArgs = def?.args

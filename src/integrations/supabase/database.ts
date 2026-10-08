@@ -7,6 +7,33 @@ type Functions = GeneratedDatabase["public"]["Functions"];
 type RequiredNullable<Args, Keys extends keyof Args> = Omit<Args, Keys> & {
   [Key in Keys]-?: Exclude<Args[Key], undefined> | null;
 };
+type UploadAttemptJson =
+  GeneratedDatabase["public"]["Tables"]["scp_interview_reports"]["Row"]["payload"];
+type EvidenceUploadFunctions = {
+  sp_begin_evidence_upload: {
+    Args: {
+      _attempt_id: string;
+      _claim_id: string | null;
+      _period_id: string | null;
+      _file_name: string;
+      _mime_type: string;
+      _size_bytes: number;
+      _sha256: string;
+    };
+    Returns: UploadAttemptJson;
+  };
+  sp_reconcile_evidence_upload: { Args: { _attempt_id: string }; Returns: UploadAttemptJson };
+  sp_list_my_evidence_upload_attempts: {
+    Args: { _claim_id: string | null; _period_id: string | null };
+    Returns: UploadAttemptJson;
+  };
+  sp_authorize_evidence_upload_cleanup: {
+    Args: { _attempt_id: string };
+    Returns: UploadAttemptJson;
+  };
+  sp_confirm_evidence_upload_cleanup: { Args: { _attempt_id: string }; Returns: UploadAttemptJson };
+  sp_evidence_upload_storage_writable: { Args: { _path: string }; Returns: boolean };
+};
 type FoundationFunctions = {
   scp_iv_case_frozen_labels: {
     Args: { _case_ids: string[] };
@@ -120,9 +147,13 @@ type TableOverrides = {
 };
 export type Database = Omit<GeneratedDatabase, "public"> & {
   public: Omit<GeneratedDatabase["public"], "Functions" | "Tables"> & {
-    Functions: Omit<Functions, keyof Overrides | keyof FoundationFunctions> &
+    Functions: Omit<
+      Functions,
+      keyof Overrides | keyof FoundationFunctions | keyof EvidenceUploadFunctions
+    > &
       Overrides &
-      FoundationFunctions;
+      FoundationFunctions &
+      EvidenceUploadFunctions;
     Tables: Omit<Tables, keyof TableOverrides> & TableOverrides;
   };
 };
