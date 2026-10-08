@@ -1,0 +1,33 @@
+{
+  "kind": "read_only_original_failure_archive_verification",
+  "runId": 37768430749,
+  "jobId": 113281693823,
+  "artifactId": 11546902046,
+  "archiveSha256": "2046a3c73486c0e1fb2634c4710299d61f8a72cc4c7f7590dac6c6688f33927f",
+  "manifestSha256": "134666b8afb281d438742357e36b3ecc5cb6c1500d5d5bae2ad18aca9cd6e6ce",
+  "evidenceSha": "67a5311ef06efafed1b9f531ffbe342475cf8b9b",
+  "appSha": "ac25b3befbfb87ed5eb682679a929708d6dfbebf",
+  "schemaSha": "fd48827b79f3e09c1dc9ccb4a8720e18692d68a1",
+  "result": "FAILED",
+  "canonicalMigrationCount": 386,
+  "stages": {
+    "official_native_stack": "passed",
+    "strict_complete_schema": "passed",
+    "auth_104_admin_api_fixed_ids": "passed",
+    "application_fixture_receipts_off": "failed",
+    "storage_80_actual_pdf_bytes": "not_run",
+    "baseline_100_human_session_rpc": "not_run",
+    "canonical_23_http_two_real_reviewers": "not_run",
+    "actual_source_revoke_replace": "not_run",
+    "historical_synthetic_ai_never_green": "not_run",
+    "owned_job_cascade_fresh_browser_baseline": "not_run",
+    "actual_password_browser_five_cases": "not_run"
+  },
+  "sourceArchiveFiles": [
+    "manifest.json"
+  ],
+  "originalManifestBytesPreserved": true,
+  "rawPrivateLogsReadOrPublished": false,
+  "browserImagesInArchive": 0,
+  "scope": "Original redacted failure, no new service or browser execution"
+}

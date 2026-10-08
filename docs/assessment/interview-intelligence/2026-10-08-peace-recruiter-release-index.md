@@ -1,10 +1,10 @@
 # PEACE och Recruiter Intelligence: versionsbundet releaseunderlag
 
-Arbetsversion v0.3-LIVE-r7, 2026-10-08. Detta index förbinder den ursprungliga
+Arbetsversion v0.3-LIVE-r8, 2026-10-08. Detta index förbinder den ursprungliga
 intervjuinventeringens dokumentationsplats med det fortsatta releaseunderlaget
 i #449. Det ersätter inte beslutad rollguide eller innehållsgranskning.
 
-[Aktuell r7-releasejournal](../recruiter-intelligence/2026-10-08-live-release.md)
+[Aktuell r8-releasejournal](../recruiter-intelligence/2026-10-08-live-release.md)
 anger exakta huvud-/main-SHA, obligatorisk CI, verkligt installerade migrationer,
 faktisk publicerad releaseidentitet, konstaterade fel, blockerade kontroller och
 återställningsordning. [22driftprovs matris](../recruiter-intelligence/2026-10-08-live-operational-matrix.md)
@@ -37,3 +37,7 @@ och [konflikttransport/historik](../../release/2026-10-08-recruiter-domain-confl
 är skilda från [faktiska isolerade native-intervjuresor](../recruiter-intelligence/evidence/2026-10-08-native-supabase-run4/README.md).
 Ingen sådan teknisk kontroll godkänner metodinnehållet eller ersätter en
 kommersiell innehålls-/språkgranskning.
+
+## Daterat tillägg r8
+
+[Verifierat native run8](../recruiter-intelligence/evidence/2026-10-08-native-supabase-run8/README.md) gäller exakt app0eab/schema250/test885 i isolerad riktig GoTrue/Storage:12intervjuer/2tvåfliksprov och alla8 sparade frågenoter passerade. Den senare explicit-read-rättningen55d6 ingår i nya apphuvuden3d66/c52/cce och har separat lokal regression; nytt191d-nativebevis väntar. Fulla native100 och OP09 native44/recovery4 är fortfarande inte passerade;9c8:s faktiska full387/41+95/historik-CI är ett separat schema-/transportbevis. Ingen ny publicering eller080/0909-installation påstås. Äldre PASS och FAIL bevaras, och ingen teknisk kontroll godkänner de draftbaserade rollguiderna eller fyller deras engelska innehållsluckor.

@@ -1,0 +1,14 @@
+{
+  "kind": "frozen_prepared_setup_source_observation",
+  "sourceCommit": "3ac421c6a41edab6e0d9fe05f5c2e5ab42073dff",
+  "sourcePath": "scripts/recruiter-p1-native-storage.mjs",
+  "sourceSha256": "2b7ecb02e415e8e94d572d829a66e76c351db981bf928edc768e44b78146cf9e",
+  "releaseDocSha256": "476d3b1e62b35d76b6cfdba4c77abd41af0b03b4e9c662c569e465e3db944aa1",
+  "appSha": "c52bd0ff50b243a40d52b424998f5f253795817b",
+  "schemaSha": "6039fbc685cad255aae4a4e39c1035e933af883d",
+  "canonicalSqlSha256": "45db1d33d64f1fc1c424f2a22090105694daecdb079cf2eaee5afa277a1f98ce",
+  "guardsPassed": 32,
+  "actualNativeAcceptance": "not_run_at_this_observation",
+  "productionCalls": 0,
+  "runtimeOrSchemaFilesModifiedByThisDocsCommit": false
+}

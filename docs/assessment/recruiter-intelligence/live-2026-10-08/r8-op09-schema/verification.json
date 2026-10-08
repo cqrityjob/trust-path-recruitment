@@ -1,0 +1,8 @@
+{
+  "kind": "byte_preserved_reviewed_ci_summary",
+  "source": "isolated QA actual9c8 readback, independently reviewed by root",
+  "sha256": "1d282796acc693d95441cc76a3a987bf3eaf295e8ff840ce72fd635b3fa902ff",
+  "regularCiJobsSucceeded": 8,
+  "native44OrBrowser4Executed": false,
+  "actualServiceRerunByDocumentationAgent": false
+}

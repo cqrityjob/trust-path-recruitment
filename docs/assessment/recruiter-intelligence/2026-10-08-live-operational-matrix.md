@@ -1,5 +1,18 @@
 # RI v0.3: de 22 driftprovens faktiska status
 
+## Tillägg r8, dokumenterat 2026-10-08 12:07 UTC
+
+[Exakta r8-huvuden, nativeversioner och releaseordning](2026-10-08-live-release.md#tillägg-r8-dokumenterat-2026-10-08-1207-utc) ersätter den då aktuella r7-statusen. Senast verifierad publicering är fortfarande886, main/Lovable517 och hosted071/385. Ingen ny B-status ärPASS.
+
+| Omfång | Nytt faktiskt utfört | Vad återstår |
+| --- | --- | --- |
+| OP01/02/03/16/17/22, avgränsad native | [Run8](evidence/2026-10-08-native-supabase-run8/README.md): faktisk885 med app0eab/schema250 PASS.385 migrationer,8 Auth,12 primary+2two-tab, alla8 anteckningar efter3 checkpointfaser,14cases/12reports, finite processCAS409/PT409 på6,85ms,0 sidoeffekter och egen stoppkontroll.36 originalbilder/hashar verifierade. |Detta är en avgränsad korrektionsomkörning, inte full22-matris. Nytt191d-prov med app3d66/explicit55d6-felväg pågår; tidigare16d8PASS och439/8b/b6dFAIL bevaras. Hosted, fysisk telefon och övriga aktör/cache/refresh/finaliseringsraces återstår. |
+| P1 native100 | [67a](evidence/2026-10-08-native-p1-67a-failure/README.md): stack386/Auth104PASS, fixtureFAIL. [2dd](evidence/2026-10-08-native-p1-2dd-failure/README.md): även100 fixturesPASS, förstaStorageFAIL. |Native80original/100humanreview/23API/5browser är inte utförda PASS. Ny3ac-pinne appc52/schema6039 med [privat bucket-SDK-setup](evidence/2026-10-08-native-p1-storage-setup/README.md) och32 guards väntar faktisk37773504814. |
+| OP09 journal-schema | [9c8CI](live-2026-10-08/r8-op09-schema/README.md) alla8jobbPASS: PG16/17 full387/41+95/historisk rollback, separat95SQL/23HTTP med ersatt Auth/Storage. |Hosted0909 är ännu ej installerad. Schema-CI bevisar inte44 riktig Storage/sessionreplay eller4 routed recoveryjourneys. |
+| OP09 native44/recovery4 |2bb:s faktisk37770828265 FAIL efter387/Auth8 före SDK44; egen stack stoppad, browser/finalreadback ej körda. |[Oförändrat originalmanifest](evidence/2026-10-08-native-op09-2bb-failure/README.md) bevaras. Ny a037 appcce/schema9c8 med38 guards lämnar alla target-/provider-/44-/387-/browserguards kvar. Dotenv reproducerat utan nätanrop; originalexception saknas och slutorsak är inferens. Ny faktisk native44/browser4 krävs. |
+| OP09 tidigare Storage7 |Run8:s7 caller-adapterprov PASS med samma avgränsade saved/pending/unknown-semantic. |Det är ingen beständig journal/reload/fence- eller app-HTTP-fault-injectiongaranti. |
+| Innehåll och hosted/telefon |Permanent use-lock/snapshot och manifest/reportfreeze hålls åtskilda;20observed_now/14låsta versioner/0ACK/0hostedrapporter vid tidigare installeringsreadback. |Ingen retroaktiv startfrysning eller metodapproval tillkommer. Draft/EN-luckor och8Q/6C kvarstår; Auth-fixture/B BLOCKED, fysisk iPhone/Android NOT RUN. |
+
 ## Tillägg r7, dokumenterat 2026-10-08 11:17 UTC
 
 Aktuell main/Lovable-synk är `517f1a002e8ae35a10def1ddc42d703082264a13`; publicerad app är fortfarande8860223 och hosted frontier071/385. R6-matrisen nedan är historik, och ingen B-status ändras tillPASS. [Exakta r7-versioner, CI-grindar och schemaordning](2026-10-08-live-release.md#tillägg-r7-dokumenterat-2026-10-08-1117-utc).
