@@ -1,10 +1,10 @@
 # PEACE och Recruiter Intelligence: versionsbundet releaseunderlag
 
-Arbetsversion v0.3-LIVE-r11, 2026-10-08. Detta index förbinder den ursprungliga
+Arbetsversion v0.3-LIVE-r12, 2026-10-08. Detta index förbinder den ursprungliga
 intervjuinventeringens dokumentationsplats med det fortsatta releaseunderlaget
 i #449. Det ersätter inte beslutad rollguide eller innehållsgranskning.
 
-[Aktuell r11-releasejournal](../recruiter-intelligence/2026-10-08-live-release.md)
+[Aktuell r12-releasejournal](../recruiter-intelligence/2026-10-08-live-release.md)
 anger exakta huvud-/main-SHA, obligatorisk CI, verkligt installerade migrationer,
 faktisk publicerad releaseidentitet, konstaterade fel, blockerade kontroller och
 återställningsordning. [22driftprovs matris](../recruiter-intelligence/2026-10-08-live-operational-matrix.md)
@@ -21,22 +21,44 @@ rollfrågor/definitioner/probes saknas och säkerhetschefens engelska ankare har
 ytterligare luckor. Engelskt gränssnitt innebär inte en godkänd engelsk metod.
 
 Snapshot-schema 07090000 är installerat och konflikttransport 07100000 är
-verifierad installerad; snapshot-appen #452 är mergad men ännu inte publicerad.
+verifierad installerad; snapshot-appen #452 ingår i offentligt avlästa main 6d92056. R12 nedan skiljer den från integrationsappen och dess publiceringsunderlag.
 Manifestet upptäcker avvikelser. Faktiskt skydd av pågående ärenden kommer från
 bestående användningslås, atomisk full snapshot och att både intervju och
 rapport läser den. Dessa egenskaper får inte blandas ihop.
 
 De 20 tidigare ärendena har `observed_now`-snapshot; det är ingen retroaktiv
 garanti för äldre innehåll. Fortsättning kräver verklig ägare/admins hash-CAS,
-notering och audit. Använd draft blir låst. Godkännande, översättning eller
-ändring ska bindas till en ny innehållsversion; återkallning stoppar nya starter
-och lämnar tidigare lås, snapshots och fastställda rapporter skyddade.
+notering och audit. Använt normativt innehåll blir permanent låst. Ändring eller översättning kräver
+en ny version. Ren livscykel eller godkännandestatus kan ändras genom befintliga
+behörigheter när innehållshashen förblir densamma; ärendets snapshot behåller
+statusen vid frysningen. Indragen öppen pilottillgång tar bort den startgrunden
+men inte ett separat giltigt pilotmedgivande. R12 och den länkade
+livscykelgranskningen redovisar terminalstatusspärren som återstår.
+Tidigare lås, snapshots och fastställda rapporter består.
 
 [Installationsbevis snapshot](../../release/2026-10-08-interview-content-snapshot-hosted-verification.json)
 och [konflikttransport/historik](../../release/2026-10-08-recruiter-domain-conflict-hosted-verification.json)
 är skilda från [faktiska isolerade native-intervjuresor](../recruiter-intelligence/evidence/2026-10-08-native-supabase-run4/README.md).
 Ingen sådan teknisk kontroll godkänner metodinnehållet eller ersätter en
 kommersiell innehålls-/språkgranskning.
+
+## Daterat tillägg r12: aktuell slutleverans och öppna grindar
+
+[R12-journalen](../recruiter-intelligence/2026-10-08-live-release.md#tillägg-r12-aktuell-slutleverans-och-öppna-grindar) och [matrisen](../recruiter-intelligence/2026-10-08-live-operational-matrix.md#tillägg-r12-aktuell-slutleverans-och-öppna-grindar) binder #449:s main-bas **e4531c3b8abac440c9a98ed0f4182106d5b31106** och faktisk CI/native. Eget docshead/slutmain anges i PR-metadata/slutrespons utan själv-SHA; r11/tails/historiska FAIL/PASS bevaras.
+#453 a46→2db06ef/#458 b9→8c2895 har 18/18; #456 e341→a21bfed alla 19 efter enda faktiska API-retry med 95 SQL/23 HTTP på 14.15; #460 19ed→f249bc6 alla 19/core 37796857544. Hosted 080→0909/387 installerat; #461:s attempts 1+2 ECR FAIL bevaras; sista samma-head-owner-retry 16:08:41 blev attempt 3/job 113412007956 SUCCESS, samtliga 19 gröna, normal merge e4531c3b8abac440c9a98ed0f4182106d5b31106.
+Lovable 15:57:58 är synkad 8c2895 (P1+recovery); public GET 15:58:32 visar 6d92056 (snapshot). Detta är olika identiteter; avläsningen tillskriver ingen deploy/aktör. Äldre886/c004 behåller sina datum.
+Aktuella nativepinnar APP 40e/schema 1e: [e341 intervju](../recruiter-intelligence/evidence/2026-10-08-native-interview-current-e341/README.md) 12+2/Storage 7, [19ed native100](../recruiter-intelligence/evidence/2026-10-08-native-p1-current-19ed/witness.md) 100/API 23/browser 5 och [6ae OP09](../recruiter-intelligence/evidence/2026-10-08-native-op09-current-6ae/README.md) 44 SDK/4 browser PASS. Separata readiness-/rate-limitFAIL bevaras.
+PEACE styr intervjuarens fem steg. SV 8Q/6C, erfarenhetsfrågor/scenarier, manuella kontrollpunkter/reflektion/avvikelse bevaras; mänsklig bedömning citerar evidens mot rollkrav separat.
+Kravstatus är käll-/profilversionsbunden: minst ett skallkrav och alla accepterat uppfyllda ger grönt; explicit ej uppfyllt ger gult; luckor grått. AI-förslag/PEACE-arbetssätt ger ingen kandidatscore/rangordning/sannings-/personlighetsdetektion/anställningsslutsats.
+[Uttryckligen vald förberedelsekopia](recruiter-intelligence-v03-selected-source-boundary.md) följer målärendets ACL/retention och bekräftar ingen evidens. Aktuell SV-handoffbild visar sparad R2 men livepanel-loading, inte färdig liveansökan.
+Guiderna är draft/pilot_hypothesis/review open/0 godkännanden. EN-frågor/definitioner/probes och ytterligare säkerhetschefsankare saknas; engelskt UI/native-PASS är ingen godkänd engelsk metod eller kommersiell metodvalidering.
+Manifestet upptäcker avvikelser; permanenta use-lock/atomisk snapshot skyddar bundet innehåll; fastställd rapport fryses separat. Färsk 16:30/16:33 SELECT ger 21 snapshots: ursprungliga 20 observed_now och 14 låsrader oförändrade med samma radformel, 0 ACK; senaste rapportpopulationen avlästes separat 13:34. Ingen retroaktiv startfrysning.
+Normativ ändring/översättning av använt innehåll kräver ny version; ren lifecycle kan ske utan ändrad lagrad hash; submit/publish nekas på använd version om omstämplingen ändrar hash. Snapshotstatus blir inte retroaktivt godkänd. [Färsk hashavläsning](../recruiter-intelligence/evidence/2026-10-08-final-hosted-readback.json) bekräftar väktarens redan dokumenterade 6b/2f-avvikelse från äldre EN-evidensetiketter; ingen retroaktiv omstämpling.
+[Full 387-lifecyclegranskningen](../recruiter-intelligence/2026-10-08-content-lifecycle-review.md) skiljer indraget open_pilot från separat restricted + livegrant, som är avsiktligt. Suspended/retired + old livegrant når ännu new-case-fallback; grantguard på alla UPDATE nekar också revoked_at efter statusbytet: konkret kommersiellt pilotgap, inget påstått hostedmissbruk.
+Föreslagen forwardguard före grantfallback + strikt genuint revoked_at-undantag och nya behörighets/hash/list/create/INSERT/race/snapshot-/rapportprov är ej implementerade/ej utförda. Bevara exakt legitim grant/ärendekontinuitet, lås/snapshots/rapporter; tekniskt PASS ersätter inte metodbeslut.
+Alla 22 autentiserade hostedprov BLOCKED, fysisk telefon NOT RUN. E341 375/390 är korrekt emulering; filnamnswrap/scrollad steglist/startupdiagnostiklucka/tidigare lint 772/114/advisors 4 ERROR + 1 WARN kvarstår.
+Exakt slutmain/publiceringsredo fastställs utan nytt approvalsflöde; faktisk publicering/hosted-verifiering redovisas separat. Root anropade ingen deploy i den aktuella avläsningsomgången.
+Rollback: kompatibel app först, installerat schema rättas framåt utan SQL-replay; snapshots/evidens/audit/rapportfrysning bevaras. Ingen AI-kostnad/verkligt utskick/retention-worker/cron aktiveras av tillägget.
 
 ## Daterat tillägg r11, 2026-10-08 14:14 UTC
 
