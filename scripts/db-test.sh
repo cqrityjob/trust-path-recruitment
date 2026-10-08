@@ -266,6 +266,16 @@ if [ "$RI_P1_RC" -ne 0 ] || [ "$RI_P1_PASSED" -lt 95 ]; then
 else
   echo "    ok  ${RI_P1_PASSED} actual P1 counts, sources, CAS, access and handoff assertions"
 fi
+# Current workspace extension must be checked while080 is still present. The
+# focused runner requires36 SQL checks, real two-session CAS/audit races and
+# nonempty refusal + empty DOWN/reapply without changing old P1 definitions.
+echo "==> Running reviewed-profile workspace and data-preserving DOWN assertions"
+TEST_DB="$TEST_DB" bash scripts/recruiter-workspace-check.sh
+# Empty test schema only: stand down this newer consumer before the unchanged
+# historical080 rollback drops its profiles/schema. Never drop real audit data.
+psql_q -d "$TEST_DB" -f supabase/rollback/20270310100000_recruiter_profile_change_review_rollback.sql >/dev/null
+[ "$(psql_q -d "$TEST_DB" -Atc "SELECT to_regclass('recruiter_intelligence.profile_change_reviews') IS NULL")" = "t" ] || exit 1
+
 # Both current-schema suites have run. Stand down the newest EMPTY additive
 # journal before080/071 and the older Passport era. Its own-read policy depends
 # on sp_passport_session_active(), which the historical wallet rollback drops.

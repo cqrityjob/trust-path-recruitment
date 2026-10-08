@@ -3647,6 +3647,43 @@
           "object": "rec_requirement_review_events"
         }
       ]
+    },
+    {
+      "file": "20270310100000_recruiter_profile_change_review.sql",
+      "hostedState": "pending",
+      "introduces": [
+        {
+          "kind": "function",
+          "object": "rec_ri_profile_change_impact"
+        },
+        {
+          "kind": "function",
+          "object": "rec_ri_confirm_reviewed_profile"
+        },
+        {
+          "kind": "function",
+          "object": "rec_ri_profile_change_history"
+        },
+        {
+          "kind": "function",
+          "object": "rec_ri_compare_applications"
+        },
+        {
+          "kind": "function",
+          "object": "rec_ri_next_unreviewed"
+        },
+        {
+          "kind": "function",
+          "object": "rec_ri_page_evidence"
+        },
+        {
+          "kind": "table",
+          "object": "profile_change_reviews"
+        }
+      ],
+      "rollback": "supabase/rollback/20270310100000_recruiter_profile_change_review_rollback.sql",
+      "note": "Schema-only, stacked after lifecycle20270310090000. Read-only comparison/page evidence/next-unreviewed and a human-reviewed profile-confirmation wrapper reuse existing member/manage/source/redaction and PT409 contracts. One private append-only profile-change audit. No client consumers, AI, stage changes, candidate sends, snapshot/report mutation or hosted installation. Keep unmerged pending owner release decision because a merge may trigger automatic installation.",
+      "verify": "Run the 36 synthetic workspace SQL assertions, unchanged95 P1 assertions, actual two-SQL-session profile CAS/idempotency and locked empty/nonempty DOWN/reapply witness in an isolated ci_test database. Require strict full replay/history and actual PostgREST14/Auth/API/browser proof separately; local bootstrap role fixtures are not real Auth. Before any authorized installation compare exact six function bodies/ACL and private audit definition, verify prior ledgers/snapshots/locks/reports unchanged and record actual hosted evidence."
     }
   ], 
   "policyVersion": 2, 
