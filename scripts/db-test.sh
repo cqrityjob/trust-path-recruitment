@@ -224,6 +224,23 @@ SENTINEL_OUT="$(psql_q -d "$TEST_DB" -f supabase/tests/sentinel_test.sql 2>&1)" 
 echo "    ok  35 Sentinel pilot assertions passed"
 # STRICT-REPLAY-CONTRACT END
 
+# Durable holder recovery is checked on the complete current schema before
+# historical rollbacks. Synthetic metadata does not prove actual object bytes.
+echo "==> Running durable own upload journal assertions"
+RI_UPLOAD_OUT="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" -f supabase/tests/sp_evidence_upload_recovery_test.sql 2>&1)" || { echo "$RI_UPLOAD_OUT"; exit 1; }
+RI_UPLOAD_PASSED="$(echo "$RI_UPLOAD_OUT" | command grep -c 'NOTICE:  ok ' || true)"
+[ "$RI_UPLOAD_PASSED" -ge 41 ] || { echo "$RI_UPLOAD_OUT"; echo "FAIL:41 upload assertions required" >&2; exit 1; }
+echo "    ok  ${RI_UPLOAD_PASSED} durable upload SQL assertions"
+
+# Full-current-schema conflicts must be tested before historical rollback.
+# The independent clone runs PT409 foundation/snapshot/SQL checks, reproduces
+# the old deadlock, verifies real PostgREST14 and witnesses exact rollback.
+# Restore ONLY this forward patch on the empty main DB so all original40001
+# historical assertions below remain meaningful and unchanged.
+echo "==> Running domain-conflict transport, concurrency and actual PostgREST14"
+TEST_DB="$TEST_DB" bun scripts/recruiter-domain-conflict-check.mjs
+psql_q -d "$TEST_DB" -f supabase/rollback/20270307100000_recruiter_domain_conflict_transport_rollback.sql >/dev/null
+
 # ---------------------------------------------------------------------------
 # Recruiter Intelligence v0.3 P0 needs the complete current interview runtime.
 # Run immediately after the full replay, before historical rollback proofs

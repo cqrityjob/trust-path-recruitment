@@ -7,6 +7,120 @@
   "$comment": "RELEASE PARITY STATE. Enforced by scripts/release-parity-check.ts, which runs in CI and before a release. This file records, for every canonical migration at the release frontier, whether it is believed applied on the hosted database, and which database objects it introduces. The guard fails when application code on this branch references an object whose migration is not applied -- the exact class of failure that stopped employers saving jobs during UAT. It NEVER connects to a database, holds no credentials and applies no migration; it compares this repository against itself. Edit it deliberately: every entry is an owner-level statement about production.", 
   "frontier": [
     {
+      "file": "20270309090000_sp_evidence_upload_recovery.sql",
+      "hostedState": "pending",
+      "note": "Additive holder-owned upload intents and fenced recovery; no worker, email, AI or historical orphan backfill. Schema only; consumer must wait for official installation and readback. Preserve numeric installation order:07100000 then08090000 then09090000.",
+      "rollback": "supabase/rollback/20270309090000_sp_evidence_upload_recovery_rollback.sql",
+      "verify": "Mandatory strict full history,41 actual SQL assertions, nonempty-journal rollback refusal; actual GoTrue/Storage bytes, concurrency, own reload/retry and erasure queue proof via isolated real CI. No PASS from stubs. See docs/release/op09-evidence-upload-recovery-contract.md.",
+      "introduces": [
+        {
+          "kind": "table",
+          "object": "sp_evidence_upload_attempts"
+        },
+        {
+          "kind": "function",
+          "object": "sp_evidence_upload_payload"
+        },
+        {
+          "kind": "function",
+          "object": "sp_begin_evidence_upload"
+        },
+        {
+          "kind": "function",
+          "object": "sp_reconcile_evidence_upload"
+        },
+        {
+          "kind": "function",
+          "object": "sp_list_my_evidence_upload_attempts"
+        },
+        {
+          "kind": "function",
+          "object": "sp_authorize_evidence_upload_cleanup"
+        },
+        {
+          "kind": "function",
+          "object": "sp_confirm_evidence_upload_cleanup"
+        },
+        {
+          "kind": "function",
+          "object": "sp_evidence_upload_attachment_guard"
+        },
+        {
+          "kind": "function",
+          "object": "sp_evidence_upload_storage_writable"
+        },
+        {
+          "kind": "function",
+          "object": "sp_evidence_upload_intent_immutable"
+        },
+        {
+          "kind": "function",
+          "object": "sp_evidence_upload_erasure_manifest"
+        }
+      ]
+    },
+    {
+      "file": "20270307100000_recruiter_domain_conflict_transport.sql",
+      "hostedState": "pending",
+      "note": "Forward-only domain conflict transport and consistent interview locks after verified #450 installation. Exact business CAS branches return HTTP409/PT409; genuine PostgreSQL serialization failures unchanged. Preserves existing signatures/defaults/ACL, snapshots/reports and all lifecycle decisions. No application consumers in this schema PR.",
+      "rollback": "supabase/rollback/20270307100000_recruiter_domain_conflict_transport_rollback.sql",
+      "verify": "Mandatory full-history PG17 replay, foundation/snapshot/current domain suites, prior deadlock negative control, forward session/finding concurrency, actual PostgREST14 bounded conflicts, genuine engine40001, exact rollback/reapply and read-only12function catalog parity. Fresh real GoTrue/Storage browser checks are separate mandatory release evidence. See docs/release/2026-10-08-recruiter-domain-conflict-transport.md.",
+      "introduces": [
+        {
+          "kind": "function",
+          "object": "scp_iv_save_session_process"
+        },
+        {
+          "kind": "function",
+          "object": "scp_iv_review_manual_finding"
+        },
+        {
+          "kind": "function",
+          "object": "scp_iv_acknowledge_observed_content"
+        },
+        {
+          "kind": "function",
+          "object": "scp_iv_set_session_state"
+        },
+        {
+          "kind": "function",
+          "object": "scp_iv_guard_finding_revision"
+        },
+        {
+          "kind": "function",
+          "object": "rec_set_recruitment_responsible"
+        },
+        {
+          "kind": "function",
+          "object": "rec_complete_recruitment"
+        },
+        {
+          "kind": "function",
+          "object": "rec_set_application_responsible"
+        },
+        {
+          "kind": "function",
+          "object": "rec_set_application_stage"
+        },
+        {
+          "kind": "function",
+          "object": "rec_save_booking"
+        },
+        {
+          "kind": "function",
+          "object": "rec_set_booking_status"
+        },
+        {
+          "kind": "function",
+          "object": "rec_set_receipt_settings"
+        },
+        {
+          "kind": "table",
+          "object": "interview_conflict_prior_functions"
+        }
+      ]
+    },
+    {
       "file": "20270307090000_interview_content_snapshot_lock.sql",
       "hostedState": "applied",
       "note": "Schema-only release authorised by the owner’s 2026-10-08 live completion request. Permanent use locks and atomic normative content snapshots; old cases are explicitly observed_now and require owner/admin acknowledgement before continuation. No content approval, AI, retention worker/cron or real candidate messaging is activated. App changes follow verified installation in a separate PR.",
