@@ -33,6 +33,7 @@ import {
   decisions,
 } from "./recruiter-p1-native-fixture.mjs";
 import { writeNativePublic } from "./recruiter-p1-native-public.mjs";
+import { CV_BUCKET, createNativeCvBucket, storageFailure } from "./recruiter-p1-native-storage.mjs";
 import {
   capturePrivateOutput,
   fixtureFailure,
@@ -659,13 +660,127 @@ test("actual generated initial and reset SQL retain every literal dollar-quoted 
       /THEN RAISE EXCEPTION 'P1_NATIVE_RECEIPTS_MUST_BE_OFF'; END IF; END \$\$;/,
     );
     assert.equal((generated.match(/DO \$\$ BEGIN/g) ?? []).length, reset ? 3 : 2);
-    assert.equal((generated.match(/END \$\$;/g) ?? []).length, reset ? 3 : 2);
+    assert.equal((generated.match(/END \$\$;/g) ?? []).length, reset ? 4 : 3);
     assert.doesNotMatch(generated, /DO \$ BEGIN|END \$;/);
     assert.ok(
       generated.indexOf("P1_NATIVE_RECEIPTS_MUST_BE_OFF") <
         generated.indexOf("INSERT INTO public.job_applications("),
     );
   }
+});
+
+test("current canonical setup retains the exact Unicode hash assertion and helper in both sessions", () => {
+  const from = sql.indexOf("CREATE FUNCTION pg_temp.ok(");
+  const exact = sql.slice(from, sql.indexOf("CREATE FUNCTION pg_temp.fails("));
+  const unicode = sql.split("\n").find((line: string) => line.includes("UTF8 source SHA256"));
+  assert.ok(unicode);
+  for (const reset of [false, true]) {
+    const generated = appFixtureSql(sql, ns, reset);
+    assert.equal(generated.split(exact).length, 2);
+    assert.equal((generated.match(/CREATE FUNCTION pg_temp\.ok\(/g) ?? []).length, 1);
+    assert.equal(generated.split(unicode!).length, 2);
+    assert.ok(generated.indexOf(exact) < generated.indexOf(unicode!));
+    assert.doesNotMatch(
+      generated,
+      /ALTER EXTENSION|ri_p1_crypto_probe|CREATE FUNCTION pg_temp\.fails/,
+    );
+  }
+  assert.notEqual(APP_SHA, "ac25b3befbfb87ed5eb682679a929708d6dfbebf");
+});
+
+test("native CV bucket is created once through SDK and read back with canonical private configuration", async () => {
+  const calls: unknown[] = [];
+  const admin = {
+    storage: {
+      createBucket: async (id: string, config: unknown) => {
+        calls.push(["create", id, config]);
+        return { data: { name: CV_BUCKET }, error: null };
+      },
+      getBucket: async (id: string) => {
+        calls.push(["read", id]);
+        return {
+          data: { id, name: id, public: false, file_size_limit: null, allowed_mime_types: null },
+          error: null,
+        };
+      },
+    },
+  };
+  assert.deepEqual(await createNativeCvBucket(admin, 0), {
+    id: CV_BUCKET,
+    public: false,
+    fileSizeLimit: null,
+    allowedMimeTypes: null,
+  });
+  assert.deepEqual(calls, [
+    ["create", CV_BUCKET, { public: false }],
+    ["read", CV_BUCKET],
+  ]);
+  await assert.rejects(createNativeCvBucket(admin, 1), /FRESH_CV_BUCKET_REQUIRED/);
+  assert.equal(calls.length, 2);
+});
+
+test("unknown bucket creation or wrong readback stops without retries and discloses no SDK secrets", async () => {
+  for (const mode of [
+    "throw",
+    "error",
+    "unknown",
+    "public",
+    "limit",
+    "mime",
+    "wrong-id",
+    "read-throw",
+  ]) {
+    let creates = 0;
+    let reads = 0;
+    const admin = {
+      storage: {
+        createBucket: async () => {
+          creates++;
+          if (mode === "throw") throw Error("private_secret_canary");
+          if (mode === "error")
+            return { error: { statusCode: "404", message: "private_secret_canary" } };
+          if (mode === "unknown") return undefined;
+          return { data: { name: CV_BUCKET }, error: null };
+        },
+        getBucket: async () => {
+          reads++;
+          if (mode === "read-throw") throw Error("private_secret_canary");
+          return {
+            data: {
+              id: mode === "wrong-id" ? "private_secret_canary" : CV_BUCKET,
+              name: CV_BUCKET,
+              public: mode === "public",
+              file_size_limit: mode === "limit" ? 8192 : null,
+              allowed_mime_types: mode === "mime" ? ["application/pdf"] : null,
+            },
+            error: null,
+          };
+        },
+      },
+    };
+    await assert.rejects(
+      createNativeCvBucket(admin, 0),
+      (error: Error & { safeDiagnostic: unknown }) => {
+        assert.equal(error.message, "P1_NATIVE_STORAGE_SETUP_FAILED");
+        assert.doesNotMatch(error.stack ?? "", /private_secret_canary/);
+        assert.doesNotMatch(JSON.stringify(error.safeDiagnostic), /private_secret_canary/);
+        return true;
+      },
+    );
+    assert.equal(creates, 1);
+    assert.equal(reads, ["throw", "error", "unknown"].includes(mode) ? 0 : 1);
+  }
+  assert.deepEqual(
+    storageFailure("storage_upload", {
+      error: { statusCode: "403", message: "private_secret_canary" },
+    }).safeDiagnostic,
+    { operation: "storage_upload", status: 403 },
+  );
+  assert.deepEqual(
+    storageFailure("private_secret_canary", { error: { statusCode: "private_secret_canary" } })
+      .safeDiagnostic,
+    { operation: "unknown" },
+  );
 });
 
 test("SQL phase diagnostics accept fixed markers and syntax state while refusing arbitrary raw contents", () => {

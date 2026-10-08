@@ -10,7 +10,7 @@ import {
   appId,
 } from "./recruiter-p1-native-contract.mjs";
 
-export const SQL_HASH = "c47c13c3f11a44bfd2a883dc80391230581e2b0e1e7786c9aed691283bebad7e";
+export const SQL_HASH = "45db1d33d64f1fc1c424f2a22090105694daecdb079cf2eaee5afa277a1f98ce";
 export const API_HASH = "b650ce6987192c88404cc65bca63bad4f23983fd711e2af7c89cb3327ae4b3a4";
 export const BROWSER_HASH = "dc1e4e02f97e3116c553dc287d97360a99363f55e02fb0da7962a4c26acf72c4";
 function pinned(source, expected) {
@@ -24,6 +24,10 @@ function span(source, from, to) {
 export function appFixtureSql(source, namespace, reset = false) {
   pinned(source, SQL_HASH);
   if (!/^ri-p1-[a-f0-9]{12}$/.test(namespace)) throw Error("P1_NATIVE_NAMESPACE_REQUIRED");
+  // The current canonical setup includes the independent Unicode hash check.
+  // Retain its exact assertion helper; do not import pgcrypto relocation or
+  // the canonical Auth/Storage substitutes into the native stack.
+  const assertion = span(source, "CREATE FUNCTION pg_temp.ok(", "CREATE FUNCTION pg_temp.fails(");
   let sql = span(
     source,
     "CREATE TEMP TABLE fixture AS SELECT",
@@ -91,7 +95,7 @@ DO $$ BEGIN IF (SELECT count(*) FROM public.jobs WHERE employer_id='${EMPLOYER}'
 DELETE FROM public.jobs WHERE employer_id='${EMPLOYER}' AND id IN('${JOB}','ee100000-2222-4000-8000-000000000002');
 `
     : "";
-  const result = `\\set ON_ERROR_STOP on\nBEGIN;\n${guard}${resetSql}${sql}COMMIT;\n`;
+  const result = `\\set ON_ERROR_STOP on\nBEGIN;\n${guard}${assertion}${resetSql}${sql}COMMIT;\n`;
   if (
     /\b(?:INSERT INTO|UPDATE|DELETE FROM|ALTER TABLE)\s+(?:auth|storage)\./i.test(result) ||
     /SET LOCAL ROLE|request\.jwt/.test(result)

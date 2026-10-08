@@ -43,6 +43,7 @@ import {
   BROWSER_HASH,
 } from "./recruiter-p1-native-fixture.mjs";
 import { writeNativePublic } from "./recruiter-p1-native-public.mjs";
+import { createNativeCvBucket, storageFailure } from "./recruiter-p1-native-storage.mjs";
 import {
   capturePrivateOutput,
   fixtureFailure,
@@ -274,7 +275,7 @@ async function upload(n) {
   const r = await admin.storage
     .from("job-application-cvs")
     .upload(cvPath(n), PDF_BYTES, { contentType: "application/pdf", upsert: false });
-  if (r.error || r.data?.path !== cvPath(n)) throw Error("P1_NATIVE_SETUP_STORAGE_UPLOAD_FAILED");
+  if (r.error || r.data?.path !== cvPath(n)) throw storageFailure("storage_upload", r);
 }
 const canonicalSql = fs.readFileSync(
   path.join(context.appRoot, "supabase/tests/recruiter_intelligence_p1_test.sql"),
@@ -423,6 +424,10 @@ try {
     report.beforeOriginals = safety();
   });
   await stage("storage_80_actual_pdf_bytes", async () => {
+    report.storageBucket = await createNativeCvBucket(
+      admin,
+      Number(sql("SELECT count(*) FROM storage.buckets WHERE id='job-application-cvs'")),
+    );
     for (let n = 1; n <= 100; n++)
       if (hasCv(n)) {
         await upload(n);
