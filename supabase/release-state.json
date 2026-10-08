@@ -7,6 +7,51 @@
   "$comment": "RELEASE PARITY STATE. Enforced by scripts/release-parity-check.ts, which runs in CI and before a release. This file records, for every canonical migration at the release frontier, whether it is believed applied on the hosted database, and which database objects it introduces. The guard fails when application code on this branch references an object whose migration is not applied -- the exact class of failure that stopped employers saving jobs during UAT. It NEVER connects to a database, holds no credentials and applies no migration; it compares this repository against itself. Edit it deliberately: every entry is an owner-level statement about production.", 
   "frontier": [
     {
+      "file": "20270307090000_interview_content_snapshot_lock.sql",
+      "hostedState": "pending",
+      "note": "Schema-only release authorised by the owner’s 2026-10-08 live completion request. Permanent use locks and atomic normative content snapshots; old cases are explicitly observed_now and require owner/admin acknowledgement before continuation. No content approval, AI, retention worker/cron or real candidate messaging is activated. App changes follow verified installation in a separate PR.",
+      "rollback": "supabase/rollback/20270307090000_interview_content_snapshot_lock_rollback.sql",
+      "verify": "Replay full history on disposable PostgreSQL17; run snapshot legacy/direct-service/OLD+NEW/report tests, three connection races and adopted rollback refusal. After official integration compare ledger identity, function bodies, grants, private tables, triggers, snapshot provenance counts and unchanged pre-existing reports. Never replay an installed migration. See docs/release/2026-10-08-interview-content-snapshot.md.",
+      "introduces": [
+        {
+          "kind": "function",
+          "object": "scp_iv_case_frozen_content"
+        },
+        {
+          "kind": "function",
+          "object": "scp_iv_acknowledge_observed_content"
+        },
+        {
+          "kind": "function",
+          "object": "scp_iv_content_inventory"
+        },
+        {
+          "kind": "function",
+          "object": "scp_iv_case_frozen_labels"
+        },
+        {
+          "kind": "table",
+          "object": "interview_content_prior_functions"
+        },
+        {
+          "kind": "table",
+          "object": "interview_content_locks"
+        },
+        {
+          "kind": "table",
+          "object": "interview_content_snapshots"
+        },
+        {
+          "kind": "table",
+          "object": "interview_content_acknowledgements"
+        },
+        {
+          "kind": "table",
+          "object": "interview_client_copy_versions"
+        }
+      ]
+    },
+    {
       "file": "20270306090000_recruiter_intelligence_interview_foundation.sql",
       "hostedState": "applied",
       "note": "Owner authorises necessary merge, production installation and publication in the 2026-10-08 live completion request, after passing checks. #447 is installed by official integration; the dependent #448 may proceed through its mandatory gates. AI activation, retention worker/cron and real candidate messages remain excluded.",
