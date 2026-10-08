@@ -168,6 +168,9 @@ const invalidDraftId = {
 client.rpc("scp_iv_finalise_previewed_report", invalidDraftId);
 
 export type RecruitmentIntelligenceAssertions = [
+  Assert<
+    Equal<Functions["rec_ri_save_review"]["Args"]["_expected_assignment_version"], number | null>
+  >,
   Assert<Equal<Functions["rec_ri_candidate_view"]["Args"]["_job_id"], string | null>>,
   Assert<Equal<Functions["rec_ri_confirm_profile"]["Args"]["_start_date"], string | null>>,
   Assert<Equal<Functions["rec_ri_save_review"]["Args"]["_responsible_user_id"], string | null>>,

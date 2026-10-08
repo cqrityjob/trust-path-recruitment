@@ -73,6 +73,7 @@ const reviewSchema = z.object({
   employerId: z.string(),
   profile: profileSchema,
   revision: z.number(),
+  assignmentVersion: z.number().nullable(),
   bindingToken: z.string(),
   canManage: z.boolean(),
   requirementStatus: z.enum(REQUIREMENT_STATUSES),
@@ -92,6 +93,7 @@ const CODES = [
   "APPLICATION_NOT_OPEN",
   "RESPONSIBLE_NOT_A_MEMBER",
   "RI_STALE_VERSION",
+  "STALE_VERSION",
   "RI_SOURCE_STALE",
   "RI_OPERATION_CONFLICT",
   "RI_PROFILE_INVALID",
@@ -181,6 +183,7 @@ export const saveRequirementReview = createServerFn({ method: "POST" })
       _confirm: data.confirm,
       _next_action: data.nextAction ?? null,
       _responsible_user_id: data.responsibleUserId ?? null,
+      _expected_assignment_version: data.expectedAssignmentVersion ?? null,
     });
     if (result.error) throw requirementError(result.error);
     return z.object({ applicationId: z.string(), revision: z.number() }).parse(result.data);

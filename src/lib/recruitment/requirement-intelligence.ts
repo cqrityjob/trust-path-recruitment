@@ -96,6 +96,7 @@ export type RequirementReview = {
   employerId: string;
   profile: RequirementProfile;
   revision: number;
+  assignmentVersion: number | null;
   bindingToken: string;
   canManage: boolean;
   requirementStatus: RequirementStatus;
@@ -141,6 +142,7 @@ export const saveRequirementReviewSchema = z.object({
   applicationId: z.string().uuid(),
   profileId: z.string().uuid(),
   expectedRevision: z.number().int().min(0),
+  expectedAssignmentVersion: z.number().int().min(1).nullable(),
   bindingToken: z.string().regex(/^[a-f0-9]{32}$/),
   operationId: z.string().uuid(),
   decisions: z.array(requirementDecisionSchema).max(30),

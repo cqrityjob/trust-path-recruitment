@@ -293,7 +293,7 @@ const recruitmentIntelligence = [
   ["rec_ri_get_profile", []],
   ["rec_ri_get_review", []],
   ["rec_ri_confirm_profile", ["_start_date"]],
-  ["rec_ri_save_review", ["_next_action", "_responsible_user_id"]],
+  ["rec_ri_save_review", ["_next_action", "_responsible_user_id", "_expected_assignment_version"]],
   ["rec_ri_manual_reference", []],
   ["rec_ri_transfer_requirements", []],
   ["rec_ri_candidate_view", ["_job_id", "_dir", "_around"]],

@@ -31,6 +31,7 @@ type RecruitmentIntelligenceFunctions = {
       _confirm: boolean;
       _next_action: string | null;
       _responsible_user_id: string | null;
+      _expected_assignment_version: number | null;
     };
     Returns: Json;
   };
