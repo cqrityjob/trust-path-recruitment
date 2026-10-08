@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import { dictionaries, type Lang, type TranslationKey } from "./dictionaries";
+import type { InterviewClientCopy } from "@/lib/interview-intelligence/content-integrity";
 
 type I18nContextValue = {
   lang: Lang;
@@ -136,6 +137,34 @@ export function useT() {
   const ctx = useContext(I18nContext);
   if (!ctx) throw new Error("useT must be used within I18nProvider");
   return ctx;
+}
+
+/** Case-bound interview instructions also use saved copy. Site navigation and
+ * technical release notices retain the current dictionary. No live fallback
+ * can silently introduce new interview guidance into an existing case. */
+export function InterviewCopyProvider({
+  copy,
+  children,
+}: {
+  copy: InterviewClientCopy;
+  children: ReactNode;
+}) {
+  const parent = useT();
+  const value = useMemo(() => {
+    const t = (key: TranslationKey) => {
+      if (!key.startsWith("iiu.")) return parent.t(key);
+      const text = copy[parent.lang][key] ?? copy.sv[key];
+      if (typeof text !== "string") throw new Error(`INTERVIEW_COPY_MISSING: ${key}`);
+      return text;
+    };
+    return {
+      ...parent,
+      t,
+      tp: (key: PluralKey, count: number) =>
+        t(`${key}.${count === 1 ? "one" : "other"}` as TranslationKey),
+    };
+  }, [copy, parent]);
+  return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
 }
 
 /** Is there an I18nProvider above this component? For the few components that

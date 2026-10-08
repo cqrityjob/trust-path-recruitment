@@ -10,7 +10,12 @@
 // provider, and no key is ever shipped to one.
 
 import { readInterviewCaseCapabilities } from "./case-capabilities";
-import { readContentIntegrity, type ContentIntegrity } from "./content-integrity";
+import {
+  frozenRows,
+  readFrozenCaseContent,
+  type ContentIntegrity,
+  type ContentSnapshotState,
+} from "./content-integrity";
 import { createServerFn } from "@tanstack/react-start";
 import { parseReportPayload, type FinalReportReadback, type ReportPreview } from "./final-report";
 import { caseIsInStage, type CaseStage } from "./case-stage";
@@ -120,9 +125,7 @@ export const listInterviewCases = createServerFn({ method: "GET" })
 
     const { data: rows, error } = await db
       .from("scp_interview_cases")
-      .select(
-        "id, title, candidate_display_name, status, updated_at, pack_version_id, scp_interview_pack_versions(validation_label, scp_interview_packs(name_sv))",
-      )
+      .select("id, title, candidate_display_name, status, updated_at, pack_version_id")
       .eq("employer_id", data.employerId)
       .order("updated_at", { ascending: false });
 
@@ -142,23 +145,17 @@ export const listInterviewCases = createServerFn({ method: "GET" })
       }
     }
 
+    const labels = await loadFrozenLabels(db, ids);
     const cases = (rows ?? []).map((r) => {
-      const version = Array.isArray(r.scp_interview_pack_versions)
-        ? r.scp_interview_pack_versions[0]
-        : r.scp_interview_pack_versions;
-      const pack = version
-        ? Array.isArray(version.scp_interview_packs)
-          ? version.scp_interview_packs[0]
-          : version.scp_interview_packs
-        : null;
+      const label = labels.get(r.id)!;
       return {
         id: r.id as string,
         title: r.title as string,
         candidateDisplayName: r.candidate_display_name as string,
         status: r.status as CaseStatus,
         updatedAt: r.updated_at as string,
-        packName: pack?.name_sv ?? null,
-        validationLabel: version?.validation_label ?? null,
+        packName: label.name_sv_at_freeze,
+        validationLabel: label.validation_label_at_freeze,
         proposalsAwaitingReview: pending.get(r.id as string) ?? 0,
       };
     });
@@ -284,9 +281,7 @@ export const listInterviewCasesForApplication = createServerFn({ method: "GET" }
       // this, but an application id is guessable and the belt is cheap.
       const { data: rows, error } = await db
         .from("scp_interview_cases")
-        .select(
-          "id, title, status, updated_at, scp_interview_pack_versions(validation_label, scp_interview_packs(name_sv))",
-        )
+        .select("id, title, status, updated_at")
         .eq("employer_id", data.employerId)
         .eq("application_id", data.applicationId)
         .order("updated_at", { ascending: false });
@@ -317,22 +312,16 @@ export const listInterviewCasesForApplication = createServerFn({ method: "GET" }
         }
       }
 
+      const labels = await loadFrozenLabels(db, ids);
       const cases = (rows ?? []).map((r) => {
-        const version = Array.isArray(r.scp_interview_pack_versions)
-          ? r.scp_interview_pack_versions[0]
-          : r.scp_interview_pack_versions;
-        const pack = version
-          ? Array.isArray(version.scp_interview_packs)
-            ? version.scp_interview_packs[0]
-            : version.scp_interview_packs
-          : null;
+        const label = labels.get(r.id)!;
         return {
           id: r.id as string,
           title: r.title as string,
           status: r.status as CaseStatus,
           updatedAt: r.updated_at as string,
-          packName: pack?.name_sv ?? null,
-          validationLabel: version?.validation_label ?? null,
+          packName: label.name_sv_at_freeze,
+          validationLabel: label.validation_label_at_freeze,
           proposalsAwaitingReview: pending.get(r.id as string) ?? 0,
           reportFinalised: finalised.has(r.id as string),
           reportContentHash: hashes.get(r.id as string) ?? null,
@@ -459,6 +448,7 @@ export interface CaseDetail {
   readonly validationLabel: string | null;
   readonly packContentHash: string | null;
   readonly contentIntegrity: ContentIntegrity;
+  readonly contentSnapshot: ContentSnapshotState;
   readonly manualFindingCapabilities: { readonly mayCreate: boolean; readonly mayReview: boolean };
   readonly transcriptConfirmedAt: string | null;
   /** The date after which this case's material is no longer kept, when one has
@@ -739,6 +729,32 @@ function fiveE(row: Record<string, unknown>): FiveE {
 
 const caseInput = z.object({ caseId: z.string().uuid() });
 
+/** One compact saved-label projection per bounded batch. Lists do not fetch
+ * full bilingual guide copy or silently substitute mutable catalogue labels. */
+async function loadFrozenLabels(db: CallerDb, caseIds: readonly string[]) {
+  type Label = Database["public"]["Functions"]["scp_iv_case_frozen_labels"]["Returns"][number];
+  const labels = new Map<string, Label>();
+  for (let start = 0; start < caseIds.length; start += 500) {
+    const ids = caseIds.slice(start, start + 500);
+    const result = await db.rpc("scp_iv_case_frozen_labels", { _case_ids: ids });
+    if (result.error)
+      throw new Error(`INTERVIEW_READ_FAILED (saved labels): ${result.error.message}`);
+    for (const row of result.data ?? []) labels.set(row.case_id, row);
+    if (ids.some((id) => !labels.has(id)))
+      throw new Error("INTERVIEW_READ_FAILED (saved label contract)");
+  }
+  return labels;
+}
+
+async function loadFrozenContent(db: CallerDb, caseId: string) {
+  const result = await db.rpc("scp_iv_case_frozen_content", { _case_id: caseId });
+  if (result.error)
+    throw new Error(`INTERVIEW_READ_FAILED (frozen content): ${result.error.message}`);
+  const snapshot = readFrozenCaseContent(result.data);
+  if (!snapshot) throw new Error("INTERVIEW_READ_FAILED (frozen content contract)");
+  return snapshot;
+}
+
 export const getInterviewCase = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .validator((d: unknown) => caseInput.parse(d))
@@ -749,7 +765,7 @@ export const getInterviewCase = createServerFn({ method: "GET" })
     const caseRes = await db
       .from("scp_interview_cases")
       .select(
-        "id, employer_id, title, candidate_display_name, application_id, job_id, status, pack_version_id, trust_method_id, pack_content_hash, transcript_lawful_basis_confirmed_at, retain_until, scp_interview_pack_versions(content_status, validation_label, scp_interview_packs(name_sv))",
+        "id, employer_id, title, candidate_display_name, application_id, job_id, status, pack_version_id, trust_method_id, pack_content_hash, transcript_lawful_basis_confirmed_at, retain_until",
       )
       .eq("id", caseId)
       .maybeSingle();
@@ -760,9 +776,12 @@ export const getInterviewCase = createServerFn({ method: "GET" })
     if (!caseRes.data) throw new Error("INTERVIEW_CASE_NOT_FOUND");
     const c = caseRes.data;
     const packVersionId = c.pack_version_id as string;
-    // A legacy case without a method pin gets no method rows. A caller's
-    // access to a second case never selects that case's method here.
-    const pinnedMethodIds = c.trust_method_id ? [c.trust_method_id] : [];
+    const frozen = await loadFrozenContent(db, caseId);
+    if (
+      frozen.manifest.pack_version_id !== packVersionId ||
+      frozen.manifest.method_id !== c.trust_method_id
+    )
+      throw new Error("INTERVIEW_READ_FAILED (content identity)");
 
     const [
       sourcesRes,
@@ -789,7 +808,6 @@ export const getInterviewCase = createServerFn({ method: "GET" })
       competencyRes,
       questionCompetencyRes,
       verificationRuleRes,
-      integrityRes,
       manualCapabilitiesRes,
     ] = await Promise.all([
       db
@@ -801,31 +819,11 @@ export const getInterviewCase = createServerFn({ method: "GET" })
         .from("scp_interview_source_passages")
         .select("id, source_id, passage_index, content, scp_interview_case_sources!inner(case_id)")
         .eq("scp_interview_case_sources.case_id", caseId),
-      db
-        .from("scp_interview_core_questions")
-        .select("id, code, display_order, question_type, prompt_sv")
-        .eq("pack_version_id", packVersionId)
-        .order("display_order"),
-      db
-        .from("scp_interview_evidence_dimensions")
-        .select("id, question_id, code, label_sv, label_en")
-        .order("display_order"),
-      db
-        .from("scp_interview_rating_anchors")
-        .select(
-          "id, question_id, level, label_sv, label_en, anchor_sv, anchor_en, counts_toward_aggregation",
-        )
-        .order("level"),
-      db
-        .from("scp_interview_approved_probes")
-        .select("id, question_id, purpose, wording_sv, display_order")
-        .eq("pack_version_id", packVersionId)
-        .order("display_order"),
-      db
-        .from("scp_interview_prohibited_areas")
-        .select("id, statement_sv, statement_en, area_type")
-        .eq("pack_version_id", packVersionId)
-        .order("display_order"),
+      frozenRows(frozen, "questions"),
+      frozenRows(frozen, "dimensions"),
+      frozenRows(frozen, "anchors"),
+      frozenRows(frozen, "probes"),
+      frozenRows(frozen, "prohibited_areas"),
       db
         .from("scp_interview_prep_plans")
         .select(
@@ -881,45 +879,14 @@ export const getInterviewCase = createServerFn({ method: "GET" })
         .eq("case_id", caseId)
         .order("seq", { ascending: false })
         .limit(200),
-      db
-        .from("scp_interview_method_practices")
-        .select("id, peace_stage, practice_kind, statement_sv, statement_en, rationale, claim_id")
-        .in("method_id", pinnedMethodIds)
-        .order("display_order"),
+      frozenRows(frozen, "method_practices"),
       readInterviewCaseCapabilities(db, caseId),
-      db
-        .from("scp_interview_conduct_steps")
-        .select("id, step_key, ordinal, label_sv, label_en, guidance_sv, guidance_en")
-        .in("method_id", pinnedMethodIds)
-        .order("ordinal"),
-      db
-        .from("scp_interview_conduct_prohibitions")
-        .select("id, prohibition_key, statement_sv, statement_en")
-        .in("method_id", pinnedMethodIds)
-        .order("display_order"),
-      db
-        .from("scp_interview_conduct_guidance")
-        .select("id, trust_stage, surface, guidance_key, statement_sv, statement_en")
-        .in("method_id", pinnedMethodIds)
-        .order("display_order"),
-      db
-        .from("scp_interview_pack_competencies")
-        .select(
-          "id, code, name_sv, name_en, definition_sv, definition_en, observable_indicators_sv",
-        )
-        .eq("pack_version_id", packVersionId)
-        .order("display_order"),
-      db
-        .from("scp_interview_question_competencies")
-        .select("question_id, pack_competency_id, is_primary"),
-      db
-        .from("scp_interview_verification_rules")
-        .select(
-          "id, code, requirement_sv, interview_action_sv, subsequent_verification_sv, passport_boundary_sv",
-        )
-        .eq("pack_version_id", packVersionId)
-        .order("display_order"),
-      db.rpc("scp_iv_case_content_manifest", { _case_id: caseId }),
+      frozenRows(frozen, "conduct_steps"),
+      frozenRows(frozen, "conduct_prohibitions"),
+      frozenRows(frozen, "conduct_guidance"),
+      frozenRows(frozen, "competencies"),
+      frozenRows(frozen, "question_competencies"),
+      frozenRows(frozen, "verification_rules"),
       db.rpc("scp_iv_manual_finding_capabilities", { _case_id: caseId }).single(),
     ]);
 
@@ -957,15 +924,13 @@ export const getInterviewCase = createServerFn({ method: "GET" })
       ["conduct", conductRes],
       ["conduct prohibitions", conductProhibitionsRes],
       ["conduct guidance", guidanceRes],
-      ["content integrity", integrityRes],
       ["manual finding capabilities", manualCapabilitiesRes],
     ] as const) {
       if (res.error) throw new Error(`INTERVIEW_READ_FAILED (${what}): ${res.error.message}`);
     }
 
-    const contentIntegrity = readContentIntegrity(integrityRes.data);
-    if (!contentIntegrity || !manualCapabilitiesRes.data)
-      throw new Error("INTERVIEW_READ_FAILED (content contract)");
+    const contentIntegrity = frozen.integrity;
+    if (!manualCapabilitiesRes.data) throw new Error("INTERVIEW_READ_FAILED (content contract)");
     const sourceRows = (sourcesRes.data ?? []) as Array<Record<string, unknown>>;
     const passageRows = (passagesRes.data ?? []) as Array<{
       id: string;
@@ -988,8 +953,7 @@ export const getInterviewCase = createServerFn({ method: "GET" })
     );
     const probes = (probesRes.data ?? []) as Array<Record<string, unknown>>;
     const competencyRows = (competencyRes.data ?? []) as Array<Record<string, unknown>>;
-    // The map is read across every pack in the tenant, so it is narrowed to
-    // this pack's competencies before it is used.
+    // Mapping rows belong to this snapshot. Keep only its competencies.
     const competencyById = new Map(competencyRows.map((c) => [c.id as string, c]));
     const questionCompetencies = (
       (questionCompetencyRes.data ?? []) as Array<Record<string, unknown>>
@@ -1076,14 +1040,7 @@ export const getInterviewCase = createServerFn({ method: "GET" })
       };
     }
 
-    const version = Array.isArray(c.scp_interview_pack_versions)
-      ? c.scp_interview_pack_versions[0]
-      : c.scp_interview_pack_versions;
-    const pack = version
-      ? Array.isArray(version.scp_interview_packs)
-        ? version.scp_interview_packs[0]
-        : version.scp_interview_packs
-      : null;
+    const pack = frozen.content.pack as Record<string, unknown>;
 
     const reportRow = (reportRes.data ?? [])[0] ?? null;
 
@@ -1096,11 +1053,19 @@ export const getInterviewCase = createServerFn({ method: "GET" })
       jobId: (c.job_id as string | null) ?? null,
       status: c.status as CaseStatus,
       packVersionId,
-      packName: pack?.name_sv ?? null,
-      packContentStatus: version?.content_status ?? null,
-      validationLabel: version?.validation_label ?? null,
+      packName: (pack.name_sv as string | null) ?? null,
+      packContentStatus: contentIntegrity.packContentStatus,
+      validationLabel: contentIntegrity.packValidationLabel,
       packContentHash: (c.pack_content_hash as string) ?? null,
       contentIntegrity,
+      contentSnapshot: {
+        provenance: frozen.provenance,
+        frozenAt: frozen.frozenAt,
+        requiresAcknowledgement: frozen.requiresAcknowledgement,
+        mayAcknowledge: frozen.mayAcknowledge,
+        acknowledgedAt: frozen.acknowledgedAt,
+        clientCopy: frozen.clientCopy,
+      },
       manualFindingCapabilities: {
         mayCreate: manualCapabilitiesRes.data.may_create,
         mayReview: manualCapabilitiesRes.data.may_review,
@@ -1427,12 +1392,10 @@ async function seedCaseSources(
   packVersionId: string,
   jobId: string | null,
 ): Promise<void> {
-  const comps = await db
-    .from("scp_interview_pack_competencies")
-    .select("code, display_order, name_sv, definition_sv")
-    .eq("pack_version_id", packVersionId)
-    .order("display_order");
-  if (comps.error) throw new Error(comps.error.message);
+  const frozen = await loadFrozenContent(db, caseId);
+  if (frozen.manifest.pack_version_id !== packVersionId)
+    throw new Error("INTERVIEW_READ_FAILED (content identity)");
+  const comps = frozenRows(frozen, "competencies");
   const requirements = (comps.data ?? [])
     .map((c) => `${c.code} ${c.name_sv}\n${c.definition_sv ?? ""}`.trim())
     .join("\n\n");
@@ -1585,25 +1548,17 @@ export interface WithheldPassage {
 type CallerDb = SupabaseClient<Database>;
 
 async function loadAiContext(db: CallerDb, caseId: string, packVersionId: string) {
-  const [sourcesRes, questionsRes, dimsRes, probesRes, compsRes] = await Promise.all([
+  const frozen = await loadFrozenContent(db, caseId);
+  if (frozen.manifest.pack_version_id !== packVersionId)
+    throw new Error("INTERVIEW_READ_FAILED (content identity)");
+  const [sourcesRes] = await Promise.all([
     db.from("scp_interview_case_sources").select("id, source_kind").eq("case_id", caseId),
-    db
-      .from("scp_interview_core_questions")
-      .select("id, code, prompt_sv")
-      .eq("pack_version_id", packVersionId)
-      .order("display_order"),
-    db
-      .from("scp_interview_evidence_dimensions")
-      .select("id, question_id, code, label_sv, label_en"),
-    db
-      .from("scp_interview_approved_probes")
-      .select("id, question_id, purpose, wording_sv")
-      .eq("pack_version_id", packVersionId),
-    db
-      .from("scp_interview_pack_competencies")
-      .select("id, code, name_sv")
-      .eq("pack_version_id", packVersionId),
   ]);
+  if (sourcesRes.error) throw new Error(sourcesRes.error.message);
+  const questionsRes = frozenRows(frozen, "questions");
+  const dimsRes = frozenRows(frozen, "dimensions");
+  const probesRes = frozenRows(frozen, "probes");
+  const compsRes = frozenRows(frozen, "competencies");
 
   const sourceKind = new Map<string, string>();
   for (const s of sourcesRes.data ?? []) sourceKind.set(s.id as string, s.source_kind as string);
@@ -2893,7 +2848,8 @@ export const getTrustStage = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .validator((d: unknown) => caseInput.parse(d))
   .handler(async ({ context, data }): Promise<TrustStageView> => {
-    // One call, through the case-scoped projection.
+    // The governed case projection supplies the current workflow key.
+    // Displayed method text is read only from the saved case snapshot.
     //
     // The previous version read scp_trust_stages, _prohibitions and _ai_tasks
     // directly and filtered in the caller. That worked only because those
@@ -2908,7 +2864,9 @@ export const getTrustStage = createServerFn({ method: "GET" })
     });
     if (error) throw new Error(error.message);
 
-    const r = ((rows ?? []) as Array<Record<string, unknown>>)[0];
+    const frozen = await loadFrozenContent(context.supabase, data.caseId);
+    const live = ((rows ?? []) as Array<Record<string, unknown>>)[0];
+    const r = frozenRows(frozen, "trust_stages").data.find((s) => s.stage_key === live?.stage_key);
     if (!r) {
       return {
         stageKey: null,
@@ -2937,10 +2895,17 @@ export const getTrustStage = createServerFn({ method: "GET" })
       purposeEn: (r.purpose_en as string | null) ?? null,
       humanResponsibilitySv: (r.human_responsibility_sv as string | null) ?? null,
       humanResponsibilityEn: (r.human_responsibility_en as string | null) ?? null,
-      prohibitions: (r.prohibitions as string[] | null) ?? [],
-      prohibitionsEn: (r.prohibitions_en as string[] | null) ?? [],
-      permitsAi: Boolean(r.permits_ai),
-      methodVersion: (r.method_version as number | null) ?? null,
+      prohibitions: frozenRows(frozen, "trust_prohibitions")
+        .data.filter((p) => p.stage_id === r.id)
+        .map((p) => p.statement_sv as string),
+      prohibitionsEn: frozenRows(frozen, "trust_prohibitions")
+        .data.filter((p) => p.stage_id === r.id)
+        .map((p) => (p.statement_en ?? p.statement_sv) as string),
+      permitsAi: frozenRows(frozen, "trust_ai_tasks").data.some((a) => a.stage_id === r.id),
+      methodVersion:
+        ((frozen.content.method as Record<string, unknown> | null)?.version_number as
+          | number
+          | null) ?? null,
     };
   });
 
@@ -3302,3 +3267,27 @@ function mapReadbackRow(row: ReadbackRow): FinalReportReadback {
     payload: row.payload == null ? null : parseReportPayload(row.payload),
   };
 }
+
+export const acknowledgeObservedInterviewContent = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((value: unknown) =>
+    z
+      .object({
+        caseId: z.string().uuid(),
+        expectedManifestHash: z.string().regex(/^[a-f0-9]{64}$/),
+        note: z.string().trim().min(1).max(4000),
+      })
+      .parse(value),
+  )
+  .handler(async ({ context, data }) => {
+    const result = await context.supabase.rpc("scp_iv_acknowledge_observed_content", {
+      _case_id: data.caseId,
+      _expected_manifest_hash: data.expectedManifestHash,
+      _note: data.note,
+    });
+    if (result.error) throw new Error(result.error.message);
+    const snapshot = readFrozenCaseContent(result.data);
+    if (!snapshot || snapshot.requiresAcknowledgement)
+      throw new Error("INTERVIEW_READ_FAILED (acknowledgement)");
+    return { acknowledgedAt: snapshot.acknowledgedAt };
+  });
