@@ -13,7 +13,7 @@ faktiskt utförd kontroll; blockerat och inte kört är inte PASS.
 | Main-CI på basen | `CI` run 37808576247 pågick vid avläsningen; native-workflows (`recruiter-p1-native-ci`, `recruiter-real-ci`) PASS på samma commit |
 | Gren | `claude/amazing-clarke-ferjkh`, vanliga framåtriktade commits ovanpå basen; ingen historik omskriven |
 | Sista appkodscommit | `2ad7a3d10cd79cdf3477c0d018be49e06c78b5c3` (sista commit som ändrar `src/`, `e2e/` eller `scripts/`) |
-| Bildcommit | `06e5a6c9f0f4e74e1ff644d02f47a34e011c4301` av `github-actions[bot]`, fotograferat från `2ad7a3d` (efter) och `e4531c3b` (före) i workflow-körning 37817843842 |
+| Bildcommit | `172bd8a` av `github-actions[bot]`, fotograferat från `0cda304` (efter, samma appkod som `2ad7a3d`) och `e4531c3b` (före). Den ändrar bara `SOURCE.txt`/`manifest.json`: PNG-filerna är byte-identiska med `06e5a6c`, som fotograferades från `2ad7a3d` i körning 37817843842 |
 | Slut-SHA | PR-huvudet (anges i PR:n). Ovanpå bildcommiten ligger bara denna fil och en ändring i `employer-portal-ux-evidence.yml` (fotograferingsjobben hoppar över en push som inte ändrar något de fotograferar, så en docs-push inte längre slutar i en bot-commit vars kontroller väntar på godkännande). CI på slut-SHA:n kör samma appkod som `2ad7a3d` |
 
 Merge betyder inte att Lovable har synkat eller publicerat; se sista avsnittet.
@@ -191,8 +191,8 @@ Begränsningar att redovisa separat:
   (verklig mobilemulering). Två fynd från granskningen är rättade i samma PR:
   menybeskrivningarna trunkerades mitt i ordet (radbryts nu till två rader) och
   rekryteringslistan hette "Jobbannonser" under menyposten "Rekryteringar" (heter nu
-  Rekryteringar). Bilderna i `06e5a6c` (fotograferade från `2ad7a3d`) visar dessa två
-  rättningar och är det par som gäller. Två tidigare bot-commits (`b887c64`, `ed6bf49`)
+  Rekryteringar). Bilderna i `06e5a6c`/`172bd8a` (fotograferade från `2ad7a3d` respektive
+  `0cda304`, byte-identiska PNG) visar dessa två rättningar och är det par som gäller. Två tidigare bot-commits (`b887c64`, `ed6bf49`)
   skrev in ofullständiga uppsättningar från körningar som avbrutits av concurrency-regeln;
   workflowen committar sedan `2ad7a3d` bara när båda fotograferingsjobben lyckats, och
   `06e5a6c` skriver över de ofullständiga manifesten med 24 + 24 bilder.
