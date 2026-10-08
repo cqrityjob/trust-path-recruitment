@@ -35,6 +35,12 @@ on:
 permissions:
   contents: read
 
+# One run per branch: a new push supersedes the images an older head would
+# have committed, so the pair in the repository is always the latest head's.
+concurrency:
+  group: employer-portal-ux-evidence-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   before:
     name: Before (base commit)
@@ -213,5 +219,8 @@ jobs:
           fi
           git commit -m "evidence(employer): before/after images for ${{ github.event.pull_request.head.sha }}" \
             -m "Photographed by employer-portal-ux-evidence.yml run ${{ github.run_id }}: the base commit (before) and the PR head (after) on the same synthetic fixture."
+          # The branch may have moved while the images were taken; rebase the
+          # one image commit onto it rather than fail on a non-fast-forward.
+          git pull --rebase origin ${{ github.event.pull_request.head.ref }}
           git push origin HEAD:${{ github.event.pull_request.head.ref }}
 
