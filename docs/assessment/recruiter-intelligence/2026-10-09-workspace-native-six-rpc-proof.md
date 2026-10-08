@@ -19,7 +19,7 @@ The runner keeps application `55db1e3b83ace033450899a93ca0961edde05217`, schema 
 
 Anonymous and outsider requests cover all six RPCs, with an exact permission SQLSTATE and HTTP 401/403. All five reads are also exercised as an ordinary signed-in member. All observed judgments and transitions use genuine signed-in SDK clients. SQL is used only for private immutable readback, existing guarded fixture setup/reset, and existing side-effect inventories; it does not fabricate JWT/session evidence.
 
-The ten support requests comprise current-profile/review/application-status reads, read/confirmation of the existing owned empty second-job profile, the new current profile read, two owner stage transitions, closed-application archiving and one genuine existing candidate's own withdrawal. They reuse the existing 104 Auth accounts and 100 applications. There is no extra candidate, application, CV original or Auth account.
+The ten support requests comprise current-profile/review/application-status reads, read/confirmation of the existing owned empty second-job profile, the new current profile read, two owner stage transitions, closed-application archiving and one genuine existing candidate's own withdrawal. They reuse the existing 104 Auth accounts and 100 applications. There is no extra candidate, application, CV original or Auth account. The extra password login for the already-created A095 holder is an Auth request outside the 70 PostgREST RPC requests.
 
 ## Binding and lifecycle limits
 

@@ -1,0 +1,148 @@
+{
+  "kind": "local-preflight-only",
+  "sourceCommit": "5d253e6223a120f5de7a2ff23232f458301950fd",
+  "base": "9dc163e2399eed9716bec8d9156d3912136ba5a1",
+  "recordedAt": "2026-10-08T23:37:47.161Z",
+  "appSha": "55db1e3b83ace033450899a93ca0961edde05217",
+  "schemaSha": "8dfec6c47e42074d808c30939cebf0c63defce55",
+  "exactCompleteMigrationCount": 389,
+  "nativeWorkspaceExecution": "not_run",
+  "nativeServiceRequestsLocal": 0,
+  "providerOrDatabaseActivations": 0,
+  "preparedStage": {
+    "fixedRpcRequests": 70,
+    "sixNewRpcRequests": 60,
+    "supportingRpcRequests": 10,
+    "candidatePasswordLogin": "separate existing-account Auth request outside RPC count",
+    "stageAfter": "historical_synthetic_ai_never_green",
+    "stageBefore": "owned_job_cascade_fresh_browser_baseline",
+    "canonicalApiAssertions": 23,
+    "canonicalBrowserCases": 5,
+    "crossJobPageLimit": "combined outside application and criterion IDs after correct current second-job profile; not each isolated OR branch"
+  },
+  "checks": {
+    "nativeGuardTests": 84,
+    "previousGuardTestsPreserved": 81,
+    "newGuardTests": 3,
+    "bunExpectCalls": 241,
+    "p1Old34BodiesByteIdentical": true,
+    "appTypecheckExit": 0,
+    "scriptsTypecheckExit": 0,
+    "configuredNativeTypecheckExit": 0,
+    "scopedLintExit": 0,
+    "formatExit": 0,
+    "syntaxExit": 0,
+    "diffCheckExit": 0,
+    "epeMutations": 3,
+    "portalMutations": 8,
+    "workspaceMutations": 72,
+    "negativeRestoration": "byte-for-byte and clean after every suite",
+    "productSchemaGeneratedTypesPermissionsChanged": false,
+    "recruitmentWorkspaceGuard": {
+      "exit": 0,
+      "assertions": 817,
+      "scope": "local source/runtime fixtures, not real service proof"
+    },
+    "employerPortalFlowGuardExit": 0
+  },
+  "expectedNative": {
+    "permissionStatuses": [401, 403],
+    "invalidInput": 400,
+    "stale": 409,
+    "humanRace": [200, 409],
+    "queueRemaining": [100, 97],
+    "historicalExcluded": [0, 3],
+    "finalImpact": {
+      "received": 100,
+      "active": 97,
+      "archived": 1,
+      "withdrawn": 1,
+      "decided": 2
+    },
+    "existingAuthAccounts": 104,
+    "existingApplications": 100,
+    "originalStorageObjectsSetup": 80,
+    "receiptsMessagesMailWorkersCronGeneratedAi": 0,
+    "existingSyntheticMockRows": 2
+  },
+  "sourceHashes": {
+    ".github/workflows/recruiter-p1-native-ci.yml": "54d93eb4b974ffb61250774154b80f8d78b8de974b001d7671715d38b34c9c44",
+    "scripts/recruiter-p1-native-run.mjs": "ff203a8b33be705d32d4785a04ccb77a1324cfc3e10aacd5d46dfbedb12b34e8",
+    "scripts/recruiter-p1-native-public.mjs": "32c7271c66a38dbbcbf667e9d0f369456a0fc5f64c9921e7eb131b60db7b8d75",
+    "scripts/recruiter-p1-native-workspace.mjs": "b0e743f17b18a9db7bc1d7ea7ffbf86bca11ffbab876df944ab0c788cbb9c1a1",
+    "scripts/recruiter-p1-native.test.ts": "1b594444928deb52e70232e2e2168ee665f2ebb5335f76b4786d11e42c83840f",
+    "scripts/negative-controls/employer-portal-evidence-controls.ts": "63dde2334354d671cb9c2b37f12d3444748cb085c53ab01adfca2f9c5f7ef368",
+    "scripts/recruiter-p1-native-contract.mjs": "ac3d4138c3197cd5c9d21747b5110fb76736a29c5ba26e02c6b2cdc0a2d6102f",
+    "scripts/recruiter-p1-native-fixture.mjs": "c3da0b1b9c774ca8c14e73f546ac2e2d42001abca42522b5a7a101b0d6509bfa",
+    "scripts/recruiter-real-ci-contract.mjs": "8663158bb37c750064d9e4046a37c6500900f14037b33e4f82156180f010f325",
+    "scripts/passport-native-op09-contract.mjs": "f10d482716406455d1ac1801e12bdf13688cb51b2e89b5640090fb55242c4f09",
+    "scripts/recruiter-real-ci.test.ts": "35c2a3981814f159afed42645215d66216727c25139d8d8db2092904e6abd26c",
+    "scripts/passport-native-op09.test.ts": "3cbaa76848450be996ccff952343a653b557799bbc145ab3bb5597544270bb03"
+  },
+  "logHashes": {
+    "nativeGuards": {
+      "localBasename": "workspace-native-six-rpc-all-guards-final.log",
+      "bytes": 10782,
+      "sha256": "cfe4b33c79e512badf9cd98147beeb4f068e664654c1ce8ec495dbff012eb404"
+    },
+    "appTypecheck": {
+      "localBasename": "workspace-native-six-rpc-app-ts-final.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "scriptsTypecheck": {
+      "localBasename": "workspace-native-six-rpc-scripts-ts-final.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "configuredNativeTypecheck": {
+      "localBasename": "workspace-native-six-rpc-native-ts-frozen.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "scopedLint": {
+      "localBasename": "workspace-native-six-rpc-lint.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "format": {
+      "localBasename": "workspace-native-six-rpc-format-final.log",
+      "bytes": 66,
+      "sha256": "17aa973d3f004560237d9a95171210b0671deff23d61628eecf7322ff5938f20"
+    },
+    "epeNegative": {
+      "localBasename": "workspace-native-six-rpc-epe-controls.log",
+      "bytes": 886,
+      "sha256": "4a07261d407a038c123979b31807de3a61e834bce8a0a5bb17e8bffc24ed351c"
+    },
+    "portalNegative": {
+      "localBasename": "workspace-native-six-rpc-portal-controls.log",
+      "bytes": 2175,
+      "sha256": "b24cc4aa4cd68bb6a3ea54cf2035e17a7c3b0b5324934486696a30dfe97cc938"
+    },
+    "workspaceNegative": {
+      "localBasename": "workspace-native-six-rpc-workspace-controls.log",
+      "bytes": 15804,
+      "sha256": "50a09899892c194d3d1642f2b77e8aa27ca160564222b8229a9a7e1d81d27c6d"
+    },
+    "workspaceGuard": {
+      "localBasename": "workspace-native-six-rpc-workspace-guard.log",
+      "bytes": 448,
+      "sha256": "b2d661b43f0882b204325f8b5161e42b5a467a604815649197904576e5263d82"
+    },
+    "portalGuard": {
+      "localBasename": "workspace-native-six-rpc-portal-guard.log",
+      "bytes": 82,
+      "sha256": "4720281ed5adfdf31e37ad37335ea0064bc232415866053430a3b989b0e609f3"
+    }
+  },
+  "blocked": [
+    "Actual new native Auth/HTTP execution awaits root-owned exact-head CI",
+    "No new P3 UI/publication/hosted/pilot/physical-phone proof"
+  ],
+  "observationsNotPass": [
+    "First local new source guard misclassified Array.from as a client table adapter; corrected narrow intrinsic exemption and real adapter negative controls",
+    "An earlier all-guards command included an absent OP09 filename and executed only70 tests across2 files; final explicit three-file command executed84 across3",
+    "Original9dc job113579235631 FAILED EPE anchor0 at23:04:02UTC; preserved separately, not relabeled"
+  ]
+}
