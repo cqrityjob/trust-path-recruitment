@@ -33,7 +33,20 @@ function governedFixture(source: string) {
     /a7090000-1000-4000-8000-000000000001/,
     "all consumers bind the real returned claim UUID",
   );
-  assert.equal((source.match(/SELECT id FROM pg_temp\.op09_fixture_claim/g) ?? []).length, 5);
+  assert.equal((source.match(/SELECT id FROM pg_temp\.op09_fixture_claim/g) ?? []).length, 6);
+  const detailDelete =
+    "DELETE FROM public.sp_credential_details WHERE claim_id=(SELECT id FROM pg_temp.op09_fixture_claim);";
+  const claimDelete =
+    "DELETE FROM public.sp_claims WHERE id=(SELECT id FROM pg_temp.op09_fixture_claim);";
+  assert.equal((source.match(/DELETE FROM public\.sp_credential_details/g) ?? []).length, 1);
+  assert.ok(
+    source.includes(detailDelete),
+    "remove only the governed fixture's restrictive dependent",
+  );
+  assert.ok(
+    source.indexOf(detailDelete) < source.indexOf(claimDelete),
+    "dependent before target deletion",
+  );
   assert.match(source, /^BEGIN;/m);
   assert.match(source, /ROLLBACK;\s*$/);
   const labels = [...source.matchAll(/SELECT pg_temp\.ok[\s\S]*?;(?=\n|$)/g)].map(
@@ -67,6 +80,38 @@ for (const [label, mutate] of [
   [
     "renamed assertion",
     (s: string) => s.replace("one metadata row after duplicate", "one row maybe"),
+  ],
+  [
+    "missing restrictive dependent cleanup",
+    (s: string) =>
+      s.replace(
+        "DELETE FROM public.sp_credential_details WHERE claim_id=(SELECT id FROM pg_temp.op09_fixture_claim);",
+        "",
+      ),
+  ],
+  [
+    "unscoped restrictive dependent cleanup",
+    (s: string) =>
+      s.replace(
+        "DELETE FROM public.sp_credential_details WHERE claim_id=(SELECT id FROM pg_temp.op09_fixture_claim);",
+        "DELETE FROM public.sp_credential_details;",
+      ),
+  ],
+  [
+    "other claim dependent cleanup",
+    (s: string) =>
+      s.replace(
+        "DELETE FROM public.sp_credential_details WHERE claim_id=(SELECT id FROM pg_temp.op09_fixture_claim);",
+        "DELETE FROM public.sp_credential_details WHERE claim_id='a7090000-1000-4000-8000-000000000009';",
+      ),
+  ],
+  [
+    "dependent cleanup after target deletion",
+    (s: string) =>
+      s.replace(
+        "DELETE FROM public.sp_credential_details WHERE claim_id=(SELECT id FROM pg_temp.op09_fixture_claim);\nDELETE FROM public.sp_claims WHERE id=(SELECT id FROM pg_temp.op09_fixture_claim);",
+        "DELETE FROM public.sp_claims WHERE id=(SELECT id FROM pg_temp.op09_fixture_claim);\nDELETE FROM public.sp_credential_details WHERE claim_id=(SELECT id FROM pg_temp.op09_fixture_claim);",
+      ),
   ],
   ["committed SQL fixture", (s: string) => s.replace(/ROLLBACK;\s*$/, "COMMIT;")],
 ] as const)
