@@ -1,4 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
+import { requireNativeMobilePreset } from "./recruiter-real-ci-mobile-preset";
+
+const mobile375 = requireNativeMobilePreset(devices, "iPhone 13 Mini", 375);
+const mobile390 = requireNativeMobilePreset(devices, "iPhone 14", 390);
 export default defineConfig({
   testDir: "../e2e",
   testMatch: "interview-real-auth-storage-local.spec.ts",
@@ -19,7 +23,7 @@ export default defineConfig({
     {
       name: "mobile-375",
       use: {
-        ...devices["iPhone 13 mini"],
+        ...mobile375,
         browserName: "chromium",
         viewport: { width: 375, height: 812 },
       },
@@ -27,7 +31,7 @@ export default defineConfig({
     {
       name: "mobile-390",
       use: {
-        ...devices["iPhone 14"],
+        ...mobile390,
         browserName: "chromium",
         viewport: { width: 390, height: 844 },
       },
