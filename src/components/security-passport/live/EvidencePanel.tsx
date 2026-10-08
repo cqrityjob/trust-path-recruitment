@@ -32,6 +32,7 @@ import { useRef, useState } from "react";
 import { CheckCircle2, FileText, Paperclip, RefreshCw, Trash2 } from "lucide-react";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import type { EvidenceRecord } from "@/lib/security-passport/evidence.functions";
+import type { WithdrawEvidenceResult } from "@/lib/security-passport/evidence-withdrawal";
 
 const ALLOWED = ["application/pdf", "image/jpeg", "image/png", "image/heic"];
 const MAX_BYTES = 8 * 1024 * 1024;
@@ -63,7 +64,7 @@ export interface EvidencePanelProps {
     contentBase64: string;
   }) => Promise<void>;
   readonly onOpen: (evidenceId: string) => Promise<void>;
-  readonly onWithdraw: (evidenceId: string) => Promise<void>;
+  readonly onWithdraw: (evidenceId: string) => Promise<WithdrawEvidenceResult | void>;
 }
 
 /** FileReader gives a `data:` URL; the server wants raw base64. Splitting on
@@ -115,6 +116,12 @@ export function EvidencePanel({
    *  fails the holder is left with both documents, which is visible and
    *  fixable. The other order can lose the only copy. */
   const [replacing, setReplacing] = useState<string | null>(null);
+  const [deletions, setDeletions] = useState<Record<string, "confirmed" | "pending">>({});
+
+  async function removeEvidence(id: string) {
+    const result = await onWithdraw(id);
+    if (result) setDeletions((current) => ({ ...current, [id]: result.fileDeletion }));
+  }
 
   async function handleFile(file: File) {
     setError(null);
@@ -140,7 +147,7 @@ export function EvidencePanel({
     try {
       const contentBase64 = await readAsBase64(file);
       await onUpload({ fileName: file.name, mimeType: file.type, contentBase64 });
-      if (supersedes) await onWithdraw(supersedes);
+      if (supersedes) await removeEvidence(supersedes);
       setSaved(true);
     } catch (err) {
       console.error("[passport] evidence upload failed", err);
@@ -181,21 +188,31 @@ export function EvidencePanel({
               <span className="text-xs tabular-nums text-muted-foreground">
                 {formatSize(item.sizeBytes)}
               </span>
-              <button
-                type="button"
-                onClick={() => {
-                  setBusy(item.id);
-                  void onOpen(item.id).finally(() => setBusy(null));
-                }}
-                disabled={busy !== null}
-                className="inline-flex h-9 items-center rounded-md border border-input px-3 text-sm font-medium text-foreground disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-              >
-                {busy === item.id ? pt("ev.opening") : pt("ev.view")}
-              </button>
+              {item.lifecycleState === "withdrawn" ? (
+                <span role="status" className="w-full text-sm text-muted-foreground">
+                  {pt(
+                    deletions[item.id] === "confirmed"
+                      ? "ev.withdrawnDeleted"
+                      : "ev.withdrawnPending",
+                  )}
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setBusy(item.id);
+                    void onOpen(item.id).finally(() => setBusy(null));
+                  }}
+                  disabled={busy !== null}
+                  className="inline-flex h-9 items-center rounded-md border border-input px-3 text-sm font-medium text-foreground disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                >
+                  {busy === item.id ? pt("ev.opening") : pt("ev.view")}
+                </button>
+              )}
               {/* Replace is upload-then-withdraw, so it needs BOTH
                   permissions: offering it while withdrawal is refused would
                   leave the holder with two documents and an error. */}
-              {canAdd && canRemove ? (
+              {canAdd && canRemove && item.lifecycleState === "active" ? (
                 <button
                   type="button"
                   onClick={() => {
@@ -217,20 +234,28 @@ export function EvidencePanel({
                     : pt("ev.replace")}
                 </button>
               ) : null}
-              {canRemove ? (
+              {(canRemove || item.lifecycleState === "withdrawn") &&
+              deletions[item.id] !== "confirmed" ? (
                 <button
                   type="button"
                   onClick={() => {
-                    if (!window.confirm(pt("ev.withdrawConfirm"))) return;
+                    if (
+                      item.lifecycleState === "active" &&
+                      !window.confirm(pt("ev.withdrawConfirm"))
+                    )
+                      return;
                     setSaved(false);
+                    setError(null);
                     setBusy(item.id);
-                    void onWithdraw(item.id).finally(() => setBusy(null));
+                    void removeEvidence(item.id)
+                      .catch(() => setError(pt("ev.failed")))
+                      .finally(() => setBusy(null));
                   }}
                   disabled={busy !== null}
                   className="inline-flex h-9 items-center gap-1.5 rounded-md border border-input px-3 text-sm font-medium text-foreground disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                 >
                   <Trash2 aria-hidden="true" className="h-3.5 w-3.5" />
-                  {pt("ev.withdraw")}
+                  {pt(item.lifecycleState === "withdrawn" ? "ev.retryDeletion" : "ev.withdraw")}
                 </button>
               ) : null}
             </li>
@@ -241,7 +266,7 @@ export function EvidencePanel({
       {/* The two sentences that were one. "Stored until you remove it" is about
           the DOCUMENT; the five minutes is about the link Open mints, and is
           stated as such directly beneath the buttons that mint one. */}
-      {evidence.length > 0 ? (
+      {evidence.some((item) => item.lifecycleState === "active") ? (
         <>
           <p className="mt-2 text-xs text-muted-foreground">{pt("ev.stored")}</p>
           <p className="mt-1 text-xs text-muted-foreground">{pt("ev.linkShort")}</p>

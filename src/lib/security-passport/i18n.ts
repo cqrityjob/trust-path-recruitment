@@ -1093,7 +1093,11 @@ const sv = {
   "ev.withdraw": "Ta bort",
   "ev.withdrawing": "Tar bort …",
   "ev.withdrawConfirm":
-    "Dokumentet raderas. Uppgiften går tillbaka till egenrapporterad om det var det enda dokumentet.",
+    "Underlaget återkallas och filradering begärs. Vid ett raderingsfel kan du försöka igen. Uppgiften går tillbaka till egenrapporterad om det var det enda dokumentet. Tidigare länkar och nedladdade kopior har egen livslängd.",
+  "ev.withdrawnDeleted": "Underlaget är återkallat. Filraderingen är bekräftad.",
+  "ev.withdrawnPending":
+    "Underlaget är återkallat. Filradering är ännu inte bekräftad i denna vy. Du kan försöka igen.",
+  "ev.retryDeletion": "Försök radera filen igen",
   "ev.underReview": "Går inte att ta bort under pågående granskning.",
   "ev.addOnlyUnderReview":
     "Du kan lägga till fler dokument under granskningen. Befintliga dokument kan inte tas bort förrän granskningen är klar.",
@@ -3482,7 +3486,11 @@ const en: Record<PassportCopyKey, string> = {
   "ev.withdraw": "Remove",
   "ev.withdrawing": "Removing …",
   "ev.withdrawConfirm":
-    "The document is deleted. The entry returns to self-declared if it was the only document.",
+    "Withdraw this evidence and request file deletion. You can retry if deletion fails. The entry returns to self-declared if it was the only document. Earlier links and downloaded copies have their own lifetime.",
+  "ev.withdrawnDeleted": "Evidence withdrawn. File deletion confirmed.",
+  "ev.withdrawnPending":
+    "Evidence withdrawn. File deletion is not yet confirmed in this view. You can retry.",
+  "ev.retryDeletion": "Retry file deletion",
   "ev.underReview": "Cannot be removed while a review is open.",
   "ev.addOnlyUnderReview":
     "You can add more documents while the review is open. Existing documents cannot be removed until it is finished.",

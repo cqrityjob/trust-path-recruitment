@@ -1,0 +1,272 @@
+{
+  "version": 1,
+  "observedAt": "2026-10-08 05:20:28.716426+00",
+  "projectRef": "wrygicdfxwjnrugduxnt",
+  "migration": {
+    "version": "20270306090000",
+    "name": "recruiter_intelligence_interview_foundation",
+    "ledgerRows": 383
+  },
+  "reviewedMain": "48eec6fee4d080b3762513f8ee112b5ad7f307fb",
+  "comparison": {
+    "functionsMatch": true,
+    "schemaMatch": true,
+    "localPostgresMajor": 17,
+    "installation": "official_supabase_github_integration"
+  },
+  "functions": [
+    {
+      "schema": "public",
+      "proname": "scp_iv_case_content_manifest",
+      "args": "_case_id uuid",
+      "definition_md5": "d9591f50814a4d7450c5ee8544e91b2d",
+      "security_definer": true,
+      "proconfig": [
+        "search_path=public, pg_temp"
+      ],
+      "proacl": "{postgres=X/postgres,authenticated=X/postgres}"
+    },
+    {
+      "schema": "public",
+      "proname": "scp_iv_create_manual_finding",
+      "args": "_case_id uuid, _operation_id uuid, _finding_kind text, _statement text, _neutral_question text, _question_id uuid, _source_passage_id uuid, _source_label text, _responsible_label text, _next_action text, _due_on date",
+      "definition_md5": "56eb70589bcbd3dbc223b2033184584c",
+      "security_definer": true,
+      "proconfig": [
+        "search_path=public, pg_temp"
+      ],
+      "proacl": "{postgres=X/postgres,authenticated=X/postgres}"
+    },
+    {
+      "schema": "public",
+      "proname": "scp_iv_guard_finding_revision",
+      "args": "",
+      "definition_md5": "e6b05dc806e764657aeebbaede02407e",
+      "security_definer": true,
+      "proconfig": [
+        "search_path=public, pg_temp"
+      ],
+      "proacl": "{postgres=X/postgres}"
+    },
+    {
+      "schema": "public",
+      "proname": "scp_iv_manual_finding_capabilities",
+      "args": "_case_id uuid",
+      "definition_md5": "834523bbe18c4799b5674dd93cd43910",
+      "security_definer": true,
+      "proconfig": [
+        "search_path=public, pg_temp"
+      ],
+      "proacl": "{postgres=X/postgres,authenticated=X/postgres}"
+    },
+    {
+      "schema": "public",
+      "proname": "scp_iv_review_manual_finding",
+      "args": "_finding_id uuid, _expected_revision bigint, _resolution_state text, _human_note text, _responsible_label text, _next_action text, _due_on date",
+      "definition_md5": "c23a9798581ce0d66029cc3a98756e3e",
+      "security_definer": true,
+      "proconfig": [
+        "search_path=public, pg_temp"
+      ],
+      "proacl": "{postgres=X/postgres,authenticated=X/postgres}"
+    },
+    {
+      "schema": "public",
+      "proname": "scp_iv_save_session_process",
+      "args": "_session_id uuid, _reflection text, _deviations text, _expected_updated_at timestamp with time zone",
+      "definition_md5": "4f20099596adaf8218952dab4192de18",
+      "security_definer": true,
+      "proconfig": [
+        "search_path=public, pg_temp"
+      ],
+      "proacl": "{postgres=X/postgres,authenticated=X/postgres}"
+    },
+    {
+      "schema": "scp_private",
+      "proname": "interview_content_manifest",
+      "args": "_case_id uuid",
+      "definition_md5": "01b9c6679ab48aec753b9ec40a0e58f3",
+      "security_definer": true,
+      "proconfig": [
+        "search_path=public, pg_temp"
+      ],
+      "proacl": "{postgres=X/postgres}"
+    }
+  ],
+  "schema": {
+    "columns": [
+      {
+        "name": "origin",
+        "type": "text",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "name": "neutral_question",
+        "type": "text",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "name": "source_label",
+        "type": "text",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "name": "responsible_label",
+        "type": "text",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "name": "next_action",
+        "type": "text",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "name": "due_on",
+        "type": "date",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "name": "created_by",
+        "type": "uuid",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "name": "operation_id",
+        "type": "uuid",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "name": "creation_request_hash",
+        "type": "text",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "name": "revision",
+        "type": "bigint",
+        "default": "1",
+        "nullable": "NO"
+      },
+      {
+        "name": "updated_at",
+        "type": "timestamp with time zone",
+        "default": "now()",
+        "nullable": "NO"
+      }
+    ],
+    "function": {
+      "acl": [
+        "postgres=X/postgres"
+      ],
+      "md5": "8733735679f882cf3fb47b5628fd337c",
+      "name": "scp_iv_build_report_basis",
+      "config": [
+        "search_path=public"
+      ]
+    },
+    "triggers": [
+      {
+        "name": "retention_pending_guard",
+        "definition": "CREATE TRIGGER retention_pending_guard BEFORE INSERT OR UPDATE ON public.scp_interview_findings FOR EACH ROW EXECUTE FUNCTION recruitment_erasure.guard_pending()"
+      },
+      {
+        "name": "scp_interview_findings_origin_in_case",
+        "definition": "CREATE TRIGGER scp_interview_findings_origin_in_case BEFORE INSERT OR UPDATE ON public.scp_interview_findings FOR EACH ROW EXECUTE FUNCTION scp_iv_guard_evidence_origin_in_case()"
+      },
+      {
+        "name": "scp_interview_findings_question_in_pack",
+        "definition": "CREATE TRIGGER scp_interview_findings_question_in_pack BEFORE INSERT OR UPDATE ON public.scp_interview_findings FOR EACH ROW EXECUTE FUNCTION scp_iv_guard_question_in_pinned_pack()"
+      },
+      {
+        "name": "scp_interview_findings_review_stamp",
+        "definition": "CREATE TRIGGER scp_interview_findings_review_stamp BEFORE UPDATE ON public.scp_interview_findings FOR EACH ROW EXECUTE FUNCTION scp_iv_stamp_finding_review()"
+      },
+      {
+        "name": "scp_interview_findings_revision",
+        "definition": "CREATE TRIGGER scp_interview_findings_revision BEFORE INSERT OR UPDATE ON public.scp_interview_findings FOR EACH ROW EXECUTE FUNCTION scp_iv_guard_finding_revision()"
+      }
+    ],
+    "constraints": [
+      {
+        "name": "scp_interview_findings_ai_run_id_fkey",
+        "definition": "FOREIGN KEY (ai_run_id) REFERENCES scp_interview_ai_runs(id) ON DELETE SET NULL"
+      },
+      {
+        "name": "scp_interview_findings_case_id_fkey",
+        "definition": "FOREIGN KEY (case_id) REFERENCES scp_interview_cases(id) ON DELETE CASCADE"
+      },
+      {
+        "name": "scp_interview_findings_citation",
+        "definition": "CHECK (((claim_class = 'source_grounded'::text) = (source_passage_id IS NOT NULL)))"
+      },
+      {
+        "name": "scp_interview_findings_claim_class_check",
+        "definition": "CHECK ((claim_class = ANY (ARRAY['source_grounded'::text, 'governed_content'::text, 'ai_inference'::text, 'human_clarification'::text])))"
+      },
+      {
+        "name": "scp_interview_findings_created_by_fkey",
+        "definition": "FOREIGN KEY (created_by) REFERENCES auth.users(id) ON DELETE SET NULL"
+      },
+      {
+        "name": "scp_interview_findings_finding_kind_check",
+        "definition": "CHECK ((finding_kind = ANY (ARRAY['gap'::text, 'unclear'::text, 'contradiction'::text, 'verification'::text])))"
+      },
+      {
+        "name": "scp_interview_findings_human_actor_id_fkey",
+        "definition": "FOREIGN KEY (human_actor_id) REFERENCES auth.users(id) ON DELETE SET NULL"
+      },
+      {
+        "name": "scp_interview_findings_human_class",
+        "definition": "CHECK (((claim_class <> 'human_clarification'::text) OR (NOT (origin IS DISTINCT FROM 'human'::text))))"
+      },
+      {
+        "name": "scp_interview_findings_human_state_check",
+        "definition": "CHECK ((human_state = ANY (ARRAY['proposed'::text, 'confirmed'::text, 'edited'::text, 'rejected'::text])))"
+      },
+      {
+        "name": "scp_interview_findings_manual_shape",
+        "definition": "CHECK (((origin IS DISTINCT FROM 'human'::text) OR ((ai_run_id IS NULL) AND (operation_id IS NOT NULL) AND (creation_request_hash IS NOT NULL) AND (COALESCE(length(btrim(neutral_question)), 0) > 0) AND (COALESCE(length(btrim(next_action)), 0) > 0) AND ((source_passage_id IS NOT NULL) OR (COALESCE(length(btrim(source_label)), 0) > 0)) AND (claim_class = ANY (ARRAY['source_grounded'::text, 'human_clarification'::text])))))"
+      },
+      {
+        "name": "scp_interview_findings_origin_check",
+        "definition": "CHECK ((origin = ANY (ARRAY['human'::text, 'ai'::text])))"
+      },
+      {
+        "name": "scp_interview_findings_pkey",
+        "definition": "PRIMARY KEY (id)"
+      },
+      {
+        "name": "scp_interview_findings_question_id_fkey",
+        "definition": "FOREIGN KEY (question_id) REFERENCES scp_interview_core_questions(id) ON DELETE RESTRICT"
+      },
+      {
+        "name": "scp_interview_findings_resolution_state_check",
+        "definition": "CHECK ((resolution_state = ANY (ARRAY['open'::text, 'needs_verification'::text, 'corrected_by_candidate'::text, 'unresolved_difference'::text, 'resolved'::text, 'not_relevant'::text])))"
+      },
+      {
+        "name": "scp_interview_findings_revision_check",
+        "definition": "CHECK ((revision > 0))"
+      },
+      {
+        "name": "scp_interview_findings_source_passage_id_fkey",
+        "definition": "FOREIGN KEY (source_passage_id) REFERENCES scp_interview_source_passages(id) ON DELETE SET NULL"
+      },
+      {
+        "name": "scp_interview_findings_verification_rule_id_fkey",
+        "definition": "FOREIGN KEY (verification_rule_id) REFERENCES scp_interview_verification_rules(id) ON DELETE RESTRICT"
+      }
+    ],
+    "broad_update": false,
+    "next_action_update": false
+  },
+  "productionWrites": 0,
+  "migrationReplayedOnHosted": false
+}

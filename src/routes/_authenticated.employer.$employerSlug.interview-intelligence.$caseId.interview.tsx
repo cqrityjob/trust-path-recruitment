@@ -71,7 +71,14 @@ import { ManualControlPoints } from "@/components/employer/interview/ManualContr
 
 export const Route = createFileRoute(
   "/_authenticated/employer/$employerSlug/interview-intelligence/$caseId/interview",
-)({ ssr: false, component: Page, errorComponent: EmployerErrorState });
+)({
+  ssr: false,
+  validateSearch: (search: Record<string, unknown>): { question?: string } => ({
+    question: typeof search.question === "string" ? search.question : undefined,
+  }),
+  component: Page,
+  errorComponent: EmployerErrorState,
+});
 
 const STATE_LABEL: Record<string, TranslationKey> = {
   not_started: "iiu.iv.state.not_started",
@@ -106,6 +113,8 @@ const FOLLOWUPS_SHOWN = 4;
 
 function Page() {
   const { employerSlug, caseId } = Route.useParams();
+  const search = Route.useSearch();
+  const navigate = Route.useNavigate();
   const ws = useEmployerWorkspace(employerSlug);
   const { t, lang } = useT();
   const qc = useQueryClient();
@@ -133,7 +142,6 @@ function Page() {
     retry: false,
   });
 
-  const [active, setActive] = useState(0);
   const [draft, setDraft] = useState("");
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [navOpen, setNavOpen] = useState(false);
@@ -263,6 +271,14 @@ function Page() {
 
   const d = q.data;
   const session = d?.session ?? null;
+  // The URL stores the question ID, not an index that could silently point
+  // at another question. Reload/back restores position after the case read.
+  const active = Math.max(0, d?.questions.findIndex((item) => item.id === search.question) ?? 0);
+  const setActive = (next: number | ((current: number) => number)) => {
+    const index = typeof next === "function" ? next(active) : next;
+    const id = d?.questions[index]?.id;
+    if (id) void navigate({ search: (previous) => ({ ...previous, question: id }), replace: true });
+  };
   const question = d?.questions[active] ?? null;
   const { process, flush: flushProcess } = useSessionProcessSave(
     session,
