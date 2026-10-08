@@ -22,8 +22,16 @@ INSERT INTO auth.users(id,email) VALUES
 INSERT INTO public.sp_passport_profiles(holder_user_id,display_name,jurisdiction_code) VALUES
  ('a7090000-0000-4000-8000-000000000001','OP09 A','SE'),
  ('a7090000-0000-4000-8000-000000000002','OP09 B','SE') ON CONFLICT DO NOTHING;
-INSERT INTO public.sp_claims(id,holder_user_id,claim_type,credential_code,title,claimed_issuer_name,issued_on,valid_until,assertion_level,lifecycle_state,jurisdiction_code) VALUES
- ('a7090000-1000-4000-8000-000000000001','a7090000-0000-4000-8000-000000000001','licence','OV','OP09 licence','Synthetic',current_date-10,current_date+30,'self_declared','active','SE');
+-- Use the real governed writer: arbitrary OV title/issuer metadata correctly
+-- fails the final catalogue guard. Keep its generated ID; never rewrite it or
+-- disable the guard to manufacture a claim for this upload-only SQL suite.
+CREATE TEMP TABLE op09_fixture_claim(id uuid PRIMARY KEY);
+INSERT INTO op09_fixture_claim(id)
+ SELECT pg_temp.as_actor('a7090000-0000-4000-8000-000000000001',
+ format('SELECT public.sp_save_international_credential(%L::jsonb)',
+ jsonb_build_object('definition_code','INTL_ASIS_CPP','market_country','','market_region','',
+ 'identifier','OP09-SQL-SYNTHETIC','issued_on',(current_date-10)::text,
+ 'valid_until',(current_date+30)::text,'no_expiry',false)))::uuid;
 INSERT INTO public.sp_experience_periods(id,holder_user_id,employer_name,role_title,jurisdiction_code,employment_type,started_on,assertion_level,lifecycle_state) VALUES
  ('a7090000-2000-4000-8000-000000000001','a7090000-0000-4000-8000-000000000001','Synthetic','Guard','SE','full_time',current_date-20,'self_declared','active'),
  ('a7090000-2000-4000-8000-000000000002','a7090000-0000-4000-8000-000000000002','Synthetic','Guard','SE','full_time',current_date-20,'self_declared','active');
@@ -31,12 +39,13 @@ CREATE FUNCTION pg_temp.begin_attempt(_n integer,_target text DEFAULT 'claim',_s
  SELECT pg_temp.as_actor('a7090000-0000-4000-8000-000000000001',format(
  'SELECT public.sp_begin_evidence_upload(%L,%s,%s,''proof.pdf'',''application/pdf'',%s,%L)',
  'a7090000-3000-4000-8000-'||lpad(_n::text,12,'0'),
- CASE WHEN _target='claim' THEN quote_literal('a7090000-1000-4000-8000-000000000001') ELSE 'NULL' END,
+ CASE WHEN _target='claim' THEN quote_literal((SELECT id FROM pg_temp.op09_fixture_claim)) ELSE 'NULL' END,
  CASE WHEN _target='period' THEN quote_literal('a7090000-2000-4000-8000-000000000001') WHEN _target='other' THEN quote_literal('a7090000-2000-4000-8000-000000000002') ELSE 'NULL' END,_size,_hash));
 $$;
 CREATE FUNCTION pg_temp.attach(_n integer) RETURNS text LANGUAGE sql AS $$
  SELECT pg_temp.as_actor('a7090000-0000-4000-8000-000000000001',format(
- 'SELECT public.sp_attach_evidence(''a7090000-1000-4000-8000-000000000001'',NULL,%L,''proof.pdf'',''application/pdf'',4,%L)',
+ 'SELECT public.sp_attach_evidence(%L,NULL,%L,''proof.pdf'',''application/pdf'',4,%L)',
+ (SELECT id FROM pg_temp.op09_fixture_claim),
  'a7090000-0000-4000-8000-000000000001/a7090000-3000-4000-8000-'||lpad(_n::text,12,'0')||'.pdf',repeat('a',64)));
 $$;
 SELECT pg_temp.ok((pg_temp.begin_attempt(1)::jsonb)->>'status'='prepared','intent durable before bytes');
@@ -81,14 +90,14 @@ SELECT pg_temp.ok((pg_temp.as_actor('a7090000-0000-4000-8000-000000000001',$q$SE
 SELECT pg_temp.ok((pg_temp.as_actor('a7090000-0000-4000-8000-000000000001',$q$SELECT public.sp_confirm_evidence_upload_cleanup('a7090000-3000-4000-8000-000000000003')$q$)::jsonb)->>'revision'='3','confirmed cleanup retry idempotent');
 SELECT pg_temp.ok((SELECT count(*)=0 FROM public.sp_evidence WHERE storage_path='a7090000-0000-4000-8000-000000000001/a7090000-3000-4000-8000-000000000003.pdf'),'cleanup never inserts evidence');
 SELECT pg_temp.ok(pg_temp.as_actor('a7090000-0000-4000-8000-000000000001',$q$SELECT public.sp_evidence_upload_storage_writable('a7090000-0000-4000-8000-000000000001/legacy.pdf')$q$)='true','historical own paths retain policy');
-SELECT pg_temp.ok(pg_temp.as_actor('a7090000-0000-4000-8000-000000000001',$q$SELECT public.sp_attach_evidence('a7090000-1000-4000-8000-000000000001',NULL,'a7090000-0000-4000-8000-000000000001/legacy.pdf','legacy.pdf','application/pdf',4,NULL)$q$) NOT LIKE 'err:%','historical attach contract unchanged');
+SELECT pg_temp.ok(pg_temp.as_actor('a7090000-0000-4000-8000-000000000001',format($q$SELECT public.sp_attach_evidence(%L,NULL,'a7090000-0000-4000-8000-000000000001/legacy.pdf','legacy.pdf','application/pdf',4,NULL)$q$,(SELECT id FROM pg_temp.op09_fixture_claim))) NOT LIKE 'err:%','historical attach contract unchanged');
 SELECT pg_temp.ok((SELECT count(*)=0 FROM public.sp_evidence_upload_attempts WHERE storage_path LIKE '%/legacy.pdf'),'no fabricated historical backfill');
 -- A deleted target leaves an unresolved intention discoverable in the global
 -- own list; it never silently retries attachment on some other target.
 DELETE FROM public.sp_experience_periods WHERE id='a7090000-2000-4000-8000-000000000001';
 SELECT pg_temp.ok((pg_temp.as_actor('a7090000-0000-4000-8000-000000000001',$q$SELECT public.sp_list_my_evidence_upload_attempts(NULL,NULL)$q$)::jsonb) @> '[{"id":"a7090000-3000-4000-8000-000000000002"}]','deleted-target intention still discoverable');
-SELECT pg_temp.ok(pg_temp.as_actor('a7090000-0000-4000-8000-000000000001',$q$SELECT public.sp_list_my_evidence_upload_attempts('a7090000-1000-4000-8000-000000000001','a7090000-2000-4000-8000-000000000001')$q$) LIKE 'err:23514:SP_TARGET_AMBIGUOUS%','ambiguous list refused');
-DELETE FROM public.sp_claims WHERE id='a7090000-1000-4000-8000-000000000001';
+SELECT pg_temp.ok(pg_temp.as_actor('a7090000-0000-4000-8000-000000000001',format($q$SELECT public.sp_list_my_evidence_upload_attempts(%L,'a7090000-2000-4000-8000-000000000001')$q$,(SELECT id FROM pg_temp.op09_fixture_claim))) LIKE 'err:23514:SP_TARGET_AMBIGUOUS%','ambiguous list refused');
+DELETE FROM public.sp_claims WHERE id=(SELECT id FROM pg_temp.op09_fixture_claim);
 SELECT pg_temp.ok((pg_temp.as_actor('a7090000-0000-4000-8000-000000000001',$q$SELECT public.sp_list_my_evidence_upload_attempts(NULL,NULL)$q$)::jsonb) @> '[{"id":"a7090000-3000-4000-8000-000000000001","status":"registered"}]','registered target deletion also retains orphan recovery');
 SELECT pg_temp.ok((pg_temp.as_actor('a7090000-0000-4000-8000-000000000001',$q$SELECT public.sp_authorize_evidence_upload_cleanup('a7090000-3000-4000-8000-000000000001')$q$)::jsonb)->>'status'='cleanup_pending','removed registered target can be explicitly fenced without changing original intent');
 -- Replayed authenticated JWT with missing live session must fail even though
