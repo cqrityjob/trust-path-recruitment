@@ -40,6 +40,14 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { singleFlight } from "../src/lib/interview-intelligence/single-flight";
+import {
+  mayApplyStoredQuestionNote,
+  pendingQuestionNoteBody,
+  questionNoteBody,
+  reloadQuestionNote,
+  type QuestionNoteDraft,
+} from "../src/lib/interview-intelligence/question-note-draft";
+import { QueryClient, QueryObserver } from "@tanstack/react-query";
 import { dictionaries } from "../src/i18n/dictionaries";
 
 const root = process.cwd();
@@ -455,10 +463,19 @@ for (const [route, fnNames] of [
       ),
     "stale · every save carries the last version this tab saw and advances it on success",
   );
+  const freshDraftWired = (src: string) =>
+    /useState<QuestionNoteDraft \| null>\(null\)/.test(src) &&
+    /Date\.parse\(mine\.updatedAt\) > Date\.parse\(existingNote\.updatedAt\)/.test(src) &&
+    /return mine\.body;/.test(src) &&
+    /const draft = questionNoteBody\(question\?\.id \?\? null, noteDraft, savedBody\)/.test(src);
   ok(
-    /Date\.parse\(mine\.updatedAt\) > Date\.parse\(existingNote\.updatedAt\)/.test(iv) &&
-      /setDraft\(fresher\)/.test(iv),
-    "23 · returning to a question seeds the box from the freshest text this tab knows, never from a stale cache",
+    freshDraftWired(iv),
+    "23 · returning to a question displays the freshest observed text synchronously without inventing a human draft",
+  );
+  ok(
+    !freshDraftWired(iv.replace("return mine.body;", 'return existingNote?.body ?? "";')) &&
+      !freshDraftWired(iv.replace("noteDraft, savedBody", 'noteDraft, existingNote?.body ?? ""')),
+    "23 · negative controls reject stale-cache selection and display wiring",
   );
   ok(
     !/noteId: existingNote\?\.id/.test(iv) && !/noteId: stored\.id/.test(iv),
@@ -472,11 +489,46 @@ for (const [route, fnNames] of [
     /if \(noteConflict\) return;/.test(iv),
     "stale · the autosave stops while a conflict is unresolved",
   );
+  const reloadSource = iv.slice(
+    iv.indexOf("const reloadNote = async () =>"),
+    iv.indexOf("draftRef.current = draft;"),
+  );
+  const explicitReadWired = (src: string) =>
+    /await reloadQuestionNote\(\{/.test(src) &&
+    /read: \(\) => getFn\(\{ data: \{ caseId \} \}\)/.test(src) &&
+    /mayApply: \(\) =>\s*mayApplyStoredQuestionNote\(\s*stored\.questionId,\s*storedRef\.current\?\.questionId \?\? null,\s*requestedEditRevision,\s*noteEditRevision\.current,\s*true,?\s*\)/.test(
+      src,
+    ) &&
+    /apply: \(fresh\) => \{/.test(src) &&
+    /known\.current\[stored\.questionId\] = n/.test(src) &&
+    /qc\.setQueryData\(\["ii", "case", caseId\], fresh\)/.test(src) &&
+    /setDraft\(n\?\.body \?\? "", stored\.questionId\)/.test(src) &&
+    /if \(result === "failed"\) setNoteError\(true\)/.test(src) &&
+    !/q\.refetch\(/.test(src);
   ok(
-    /const reloadNote = async \(\) =>/.test(iv) &&
-      /await q\.refetch\(\)/.test(iv) &&
-      /setDraft\(n\?\.body \?\? ""\)/.test(iv),
-    "stale · resolving the conflict re-reads the server and is the interviewer's explicit act",
+    explicitReadWired(reloadSource),
+    "stale · explicit conflict resolution reads getFn, guards question/edit revision, then applies only that successful response",
+  );
+  ok(
+    !explicitReadWired(
+      reloadSource.replace(
+        "read: () => getFn({ data: { caseId } })",
+        "read: () => Promise.resolve(q.data)",
+      ),
+    ) &&
+      !explicitReadWired(
+        reloadSource.replace("storedRef.current?.questionId ?? null", "stored.questionId"),
+      ) &&
+      !explicitReadWired(
+        reloadSource.replace("noteEditRevision.current,", "requestedEditRevision,"),
+      ) &&
+      !explicitReadWired(
+        reloadSource.replace(
+          'if (result === "failed") setNoteError(true)',
+          'if (result === "failed") setNoteConflict(false)',
+        ),
+      ),
+    "stale · negative controls reject cached reads, obsolete targets, newer-edit bypass and false conflict resolution",
   );
   ok(
     /t\("iiu\.iv\.note\.conflict\.title"\)/.test(iv) &&
@@ -489,6 +541,137 @@ for (const [route, fnNames] of [
     /role="status"[\s\S]{0,200}aria-live="polite"/.test(read(ROUTES.interview)),
     "25 · the save state is a live region",
   );
+}
+
+/* Execute the current draft/read contract. These checks run in the existing
+ * mandatory guard; they are not Auth/Storage or native network-fault proof. */
+{
+  const iv = codeOnly(read(ROUTES.interview));
+  const savedExpression = iv.match(/const savedBody = \(\(\) => \{[\s\S]*?\}\)\(\);/)?.[0];
+  type Stored = { id: string; body: string; updatedAt: string };
+  const stored: Stored = { id: "old", body: "Old query text", updatedAt: "2026-10-08T10:00:00Z" };
+  const latest: Stored = {
+    id: "new",
+    body: "Newest observed text",
+    updatedAt: "2026-10-08T10:01:00Z",
+  };
+  // Evaluate only the actual pure savedBody expression against synthetic
+  // inputs. The current selection logic is tested, not recreated here.
+  const selectBody = savedExpression
+    ? (new Function(
+        "question",
+        "known",
+        "existingNote",
+        `${savedExpression} return savedBody;`,
+      ) as (
+        question: { id: string },
+        known: { current: Record<string, Stored> },
+        existingNote: Stored,
+      ) => string)
+    : null;
+  const currentBody = selectBody?.({ id: "Q8" }, { current: { Q8: latest } }, stored);
+  ok(
+    currentBody === latest.body,
+    "23 · actual savedBody chooses this tab's newer version over a stale query response",
+  );
+  ok(
+    selectBody?.({ id: "Q8" }, { current: { Q8: stored } }, latest) === latest.body,
+    "23 · actual savedBody also accepts a genuinely newer server version",
+  );
+  ok(
+    questionNoteBody("Q8", null, currentBody ?? "") === latest.body &&
+      pendingQuestionNoteBody("Q8", null, latest.body, true) === null,
+    "23 · an untouched or StrictMode-replayed mount displays stored Q8 but has no write intention",
+  );
+  const human: QuestionNoteDraft = { questionId: "Q8", body: "New human edit" };
+  ok(
+    questionNoteBody("Q8", human, "Late cached text") === human.body &&
+      questionNoteBody("Q7", human, "Stored Q7") === "Stored Q7",
+    "23 · cached reads cannot replace a human edit or carry it into another question",
+  );
+  ok(
+    pendingQuestionNoteBody("Q8", { questionId: "Q8", body: "" }, latest.body, true) === "" &&
+      pendingQuestionNoteBody("Q7", human, "Stored Q7", true) === null,
+    "N · deliberate empty clearing remains writable and a different question's draft never is",
+  );
+  let reads = 0;
+  let applied = "Old cached text";
+  const successful = await reloadQuestionNote({
+    read: async () => {
+      reads += 1;
+      return latest;
+    },
+    mayApply: () => mayApplyStoredQuestionNote("Q8", "Q8", 1, 1, true),
+    apply: (fresh) => {
+      applied = fresh.body;
+    },
+  });
+  ok(
+    successful === "applied" && reads === 1 && applied === latest.body,
+    "stale · explicit reload applies its actual fresh read, not cached text",
+  );
+
+  for (const change of ["question", "edit"] as const) {
+    let resolve!: (value: Stored) => void;
+    let currentQuestion = "Q8";
+    let currentRevision = 1;
+    let body = "Human draft retained";
+    const loading = reloadQuestionNote({
+      read: () =>
+        new Promise<Stored>((done) => {
+          resolve = done;
+        }),
+      mayApply: () => mayApplyStoredQuestionNote("Q8", currentQuestion, 1, currentRevision, true),
+      apply: (fresh) => {
+        body = fresh.body;
+      },
+    });
+    if (change === "question") currentQuestion = "Q7";
+    else currentRevision += 1;
+    resolve(latest);
+    ok(
+      (await loading) === "superseded" && body === "Human draft retained",
+      `stale · late explicit read cannot consume a newer ${change}`,
+    );
+  }
+  ok(
+    !mayApplyStoredQuestionNote("Q8", "Q8", 1, 1, false),
+    "M · a failed read cannot authorize draft replacement",
+  );
+
+  const cache = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const key = ["ii", "case", "synthetic-case"];
+  cache.setQueryData(key, stored);
+  const failure = async () => {
+    throw Error("Synthetic getFn failure");
+  };
+  const observer = new QueryObserver<Stored>(cache, { queryKey: key, queryFn: failure });
+  const oldRead = await observer.refetch();
+  ok(
+    oldRead.isError && oldRead.data?.body === stored.body,
+    "M · regression control: failed shared refetch carries cached data and errors the boundary",
+  );
+  cache.setQueryData(key, stored);
+  const retained = { body: human.body, conflict: true, version: stored.updatedAt };
+  const failed = await reloadQuestionNote({
+    read: failure,
+    mayApply: () => true,
+    apply: (fresh: Stored) => {
+      retained.body = fresh.body;
+      retained.conflict = false;
+      retained.version = fresh.updatedAt;
+    },
+  });
+  ok(
+    failed === "failed" &&
+      cache.getQueryState(key)?.status === "success" &&
+      retained.body === human.body &&
+      retained.conflict &&
+      retained.version === stored.updatedAt,
+    "M/N · failed explicit getFn read preserves the mounted draft, conflict and observed CAS version",
+  );
+  observer.destroy();
+  cache.clear();
 }
 
 /* ------------------------------------------------------------------ */
