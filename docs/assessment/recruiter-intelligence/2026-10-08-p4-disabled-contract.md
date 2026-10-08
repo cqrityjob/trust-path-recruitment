@@ -52,6 +52,18 @@ Enhetstesterna täcker bland annat scopefel, otillåten roll, obekräftad/tom pr
 
 [Original offline-evidens, källhashar och återkörningskommandon](evidence/2026-10-08-p4-synthetic-contract/README.md) hålls åtskilda från framtida modell- och driftprov. Inga kandidater, credentials eller privata originalfiler ingår.
 
+## Lokal integration med färsk main, 2026-10-09
+
+Main `55db1e3b83ace033450899a93ca0961edde05217` har normalt integrerats i denna separat avstängda kontraktsgren genom merge `2c6723f0e59c6e5f476d7f7faf2953102b17806b`. Föräldrarna är den frysta kontraktsgrenen `425beabecc4e6ddcf0839b5b4d9f452721f2bc47` och exakt main ovan. Ingen historik har skrivits om. Detta är en lokal grenintegration, inte en merge till main, installation eller aktivering.
+
+Samtliga sju AI-kod-, test- och fixturefiler är byte-identiska med den ursprungliga kontraktsleveransen. Alla fyra handlers har fortfarande endast den ovillkorliga `RECRUITER_AI_V03_DISABLED`-spärren efter befintlig autentisering och request-validering. Ingen provider-, underlags-, databas-, status-, meddelande- eller rapportadapter tillkommer. Main- och kontraktsgrenens CI-jobb, scriptregistreringar, negativa spärrar och typecheck-includes bevaras tillsammans; genererade typer och permissions ändras inte.
+
+Den förenade koden har återprovats lokalt: **68 tester/151 Bun-expect-kontroller, nio facitfall utan avvikelse och samtliga 35 äldre AI-spärrkontroller PASS**. Appens och scripts fulla typkontroller, nio compile-only negativa typkontrakt, riktad ESLint utan varningar samt riktad Prettier är exit 0. Källhashar, återlästa ursprungliga facithashar och faktiska körningslogghashar finns i [den nya verifieringskvittensen](evidence/2026-10-09-p4-fresh-main/verification.json); [ny evaluatorobservation](evidence/2026-10-09-p4-fresh-main/evaluation.json) sparas separat från originalet.
+
+De utförda proven är fortfarande offlinekontrakt och lokala syntetiska objekt. Sandlådans kostnads-, idempotens-, cache- och kötillstånd är **inte beständigt eller samordnat över processer**. Syntetiska debiteringsenheter är inte pengar, tokenräkningar eller leverantörsfakturor. Ingen riktig Auth/API/RLS-, browser-, modell-, hosted- eller publicerad runtime verifieras här. Det finns inget nytt aktiveringsbeslut.
+
+Den riktade diffkontrollen är grön. En extra kontroll av hela merge-diffen fann en tom slutrad i den oförändrat ärvda main-filen `employer-portal-ux-evidence.yml:315`; detta redovisas i kvittensen och räknas inte som ett AI-produktfel eller som att hela merge-diffen är ren.
+
 ## Kvar före eventuell aktivering
 
 1. Lås uppgifter, SV/EN-ordalydelse, human-reviewflöde och vad som får användas som accepterat underlag. Håll PEACE-arbetssätt och mänsklig rollbedömning separata.
@@ -61,4 +73,4 @@ Enhetstesterna täcker bland annat scopefel, otillåten roll, obekräftad/tom pr
 5. Utvärdera verkliga modellförslag mot syntetiskt originalfacit, inklusive fel OCR, förfalskade citeringar, injection, neutrala frågor, varierade namn/format och manuell avvisning av semantiskt ostödda förslag. Nuvarande lexikala policykontroll är en begränsad mitigation.
 6. Ta ett uttryckligt aktiverings- och pilotbeslut efter dessa kontroller. Ingen av punkterna ovan blir uppfylld av att de fyra avstängda funktionerna typkontrollerar.
 
-Återställning för denna leverans är en normal kompatibel app-revert av dessa nya filer och scriptregistreringar. Inga schema- eller dataskrivningar, inga aktiverade funktioner och inga nya rapporter behöver återställas. Ingen merge, publicering eller hosted installation har utförts av denna arbetsgren.
+Återställning för denna leverans är en normal kompatibel app-revert av dessa nya filer och scriptregistreringar. Inga schema- eller dataskrivningar, inga aktiverade funktioner och inga nya rapporter behöver återställas. Ingen merge till main, publicering eller hosted installation har utförts av denna arbetsgren.
