@@ -1,10 +1,10 @@
 # PEACE och Recruiter Intelligence: versionsbundet releaseunderlag
 
-Arbetsversion v0.3-LIVE-r9, 2026-10-08. Detta index förbinder den ursprungliga
+Arbetsversion v0.3-LIVE-r10, 2026-10-08. Detta index förbinder den ursprungliga
 intervjuinventeringens dokumentationsplats med det fortsatta releaseunderlaget
 i #449. Det ersätter inte beslutad rollguide eller innehållsgranskning.
 
-[Aktuell r9-releasejournal](../recruiter-intelligence/2026-10-08-live-release.md)
+[Aktuell r10-releasejournal](../recruiter-intelligence/2026-10-08-live-release.md)
 anger exakta huvud-/main-SHA, obligatorisk CI, verkligt installerade migrationer,
 faktisk publicerad releaseidentitet, konstaterade fel, blockerade kontroller och
 återställningsordning. [22driftprovs matris](../recruiter-intelligence/2026-10-08-live-operational-matrix.md)
@@ -37,6 +37,14 @@ och [konflikttransport/historik](../../release/2026-10-08-recruiter-domain-confl
 är skilda från [faktiska isolerade native-intervjuresor](../recruiter-intelligence/evidence/2026-10-08-native-supabase-run4/README.md).
 Ingen sådan teknisk kontroll godkänner metodinnehållet eller ersätter en
 kommersiell innehålls-/språkgranskning.
+
+## Daterat tillägg r10, 2026-10-08 13:06 UTC
+
+Main 2a innehåller normal merge av P1-schema451/6039. 080 är faktiskt installerad med 386 ledgeridentiteter och oberoende full katalog-/ACL-/constraint-/policygranskning; 20 observed_now-snapshots/14 permanenta lås/0 ACK/0 rapporter och deras rad-MD5 är bevarade. Publicerad app är fortsatt 886; senast faktiskt avläst Lovable 517 är ingen ny synkavläsning på 2a. [R10-releasejournalen](../recruiter-intelligence/2026-10-08-live-release.md#tillägg-r10-dokumenterat-2026-10-08-1306-utc) länkar exakt installeringsbevis och metadata462.
+
+[Native 100:s 0508-vittne](../recruiter-intelligence/2026-10-08-native-p1-100-actual-witness.md) passerar 386 migrationer/104 riktig Auth/80 original/100 facit40–25–35 och27–73/23 API/fem browserfall med exakt app 3e0/schema 6039. PEACE-handoff bevarar 8 frågor/6 kompetensområden/full fryst manifest och 0 bekräftad evidens. Privilegierad fixture-Storage och admin CV-radering/återuppladdning är uttryckliga testgränser; ingen kandidatconsent- eller hosted-upload-garanti tillkommer. Kravprofilens version/status är skild från intervjuarens PEACE-arbetssätt och rollkravsbedömning.
+
+452/26e7 har oförändrat produkt-SRC mot 191d/app 3d66:s native 12+2-PASS; ny obligatorisk CI har ett faktiskt ECR Dockerpull 429-fel och är ännu ingen slut-PASS. Lokalt P1-/recoveryintegrerade apphuvuden har separata slutgrindar. 0909 är ej installerad; a037:s native 44+4 är separat från hela den nya integrationsappen. Hosted Auth/B BLOCKED, fysisk telefon NOT RUN, draft/0 godkännanden/EN-luckor och dokumenterad repository-/UX-skuld består. Tekniskt use-lock/snapshot, manifestdetektion och rapportfrysning ger inget retroaktivt innehållsgodkännande eller historiskt startfrysningsbevis. Alla äldre daterade PASS/FAIL bevaras.
 
 ## Daterat tillägg r9, 2026-10-08 12:23 UTC
 

@@ -1,5 +1,17 @@
 # RI v0.3: de 22 driftprovens faktiska status
 
+## Tillägg r10, dokumenterat 2026-10-08 13:06 UTC
+
+[Exakta r10-versioner, installeringsbevis och grindar](2026-10-08-live-release.md#tillägg-r10-dokumenterat-2026-10-08-1306-utc) skiljer ny main 2a/hosted 080–386 från fortsatt publicerad 886 och senast avläst Lovable 517. Tidigare A/B-status och daterade FAIL/PASS bevaras; inget native-PASS blir automatiskt hosted/B-PASS.
+
+| Omfång | Ny faktiskt utförd kontroll | Kvarstående gräns |
+| --- | --- | --- |
+| OP01, hosted schema | 080 installerad 12:48:40 UTC: 16 fulla funktionskontrakt/ACL, 5 tabeller/49 kolumner, 12 triggers, alla 33 fulla constraints och 2 policyer matchar exakt 6039. 386 ledgeridentiteter, tidigare385 bevarade; 20 snapshots/14 lås/0 ACK/0 rapporter/status och rad-MD5 oförändrade; nya tabellrader0. | Detta är read-only katalog-/bevarandebevis, inte autentiserad publicerad app. Metadata462/3046 väntar core-CI; 0909 ännu ej installerad. |
+| P1 native 100, OP10/15 och avgränsad arbetsyta | [0508:s oförändrade originalbevis](evidence/2026-10-08-native-p1-100-0508/README.md): 386/Auth104/80 verkliga originalbytes/100 facit40–25–35 och27–73, API23/fem browserfall PASS. Globala filter/sortering före paginering, alla fyra25-sidor, separata statusaxlar, V2/stale source/explicit reread, eget signeroriginal och PEACE-handoff8Q/6C/full frozen equality/evidence0 passerar. | Storage-original är privilegierad fixture-setup; källändring är admin.remove/reupload av fem objekt, inte kandidatconsentwithdrawal. Senare grågranskning28/72 och slutarchive100 är skilda från baseline27/73. Ny integrationsapp-CI/publicering/B återstår. |
+| OP16/17, native och aktuell app-CI | 191d/app3d66:s 12 primary+2 tvåfliksprov/Storage7/alla8 noter efter3faser PASS består. Aktuellt452/26e7 har identiskt SRC och testguard143PASS/6 negativa mutationer. | Core37779464756 PG16 FAIL vid ECR Public Dockerpull HTTP429; andra checks pågår. Det är inget komplett exact-head-CI-PASS. Explicit-read-nätfel har lokal regression, ingen native HTTP-injektion. |
+| OP09/13, recovery | A037/appcce:s riktiga44+4 PASS består; båda samtidiga raceförsök registration_won, sekventiella båda ordningarna separat verifierade. Lokalt3320 integrerar P1 med bevarad RPC-typöverlagring och typer/nullable/tests PASS; journalmoduler identiska cce. | 0909-installation/readback, nytt sammanslaget app-CI/native och publicerad B-verifiering återstår. Ingen garanti för hela 3320, TTL eller global logout; mobilfilnamnets teckenradbrytning kvarstår. |
+| Hosted Auth/telefon/innehåll | Skyddad hosted-inventering fortfarande20 observed_now/14 permanenta lås/0 ACK/0 rapporter; inget innehållsgodkännande tillkom. | Auth/B BLOCKED, fysisk telefon NOT RUN. Draft/review open/0 godkännanden/EN-luckor kvarstår; manifestvarning är skild från use-lock/snapshot/reportfreeze. Ingen AI/mail/worker/cron-aktivering. |
+
 ## Tillägg r9, dokumenterat 2026-10-08 12:23 UTC
 
 [Exakta r9-pinnar och releasegrindar](2026-10-08-live-release.md#tillägg-r9-dokumenterat-2026-10-08-1223-utc) skiljer de nya isolerade proven från oförändrad main 517/public 886/hosted 071–385. Ingen B-status blir PASS; r8 och äldre utfall bevaras.
