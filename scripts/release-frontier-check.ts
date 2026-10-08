@@ -445,9 +445,8 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // the pending expectation; worker, cron and erasure activation remain off.
 // RI v0.3 P0 was installed by the official integration after #447. Read-only
 // ledger, body and privilege parity are recorded in the 2026-10-08 hosted proof.
-// Pending schemas preserve numeric installation order.
+// Conflict transport071 is installed; pending080 then0909 preserve order.
 const expectedPending: string[] = [
-  "20270307100000_recruiter_domain_conflict_transport.sql",
   "20270308090000_recruiter_intelligence_requirements.sql",
   "20270309090000_sp_evidence_upload_recovery.sql",
 ];
