@@ -38,10 +38,13 @@
     // The employer-portal flow guard and its controls (UX pass 2026-10-08).
     "scripts/employer-portal-flow-check.ts",
     "scripts/negative-controls/employer-portal-flow-controls.ts",
-    "scripts/playwright-mobile-presets.test.ts",
+    // The two bun test files beside them (playwright-mobile-presets.test.ts,
+    // employer-portal-fixture.test.ts) are NOT listed: scripts-env.d.ts
+    // declares `bun:test` with its one export the guards use, on purpose, so
+    // a test file in this net fails on `describe`/`expect`/`test`. They are
+    // run, not typechecked, like every other bun test under scripts/.
     "scripts/employer-portal-evidence-check.ts",
     "scripts/negative-controls/employer-portal-evidence-controls.ts",
-    "scripts/employer-portal-fixture.test.ts",
     "e2e/support/employer-portal-fixture.ts",
     // The security guard is added on its own terms rather than by widening the
     // net: it is new, it carries no pre-existing type debt, and a guard that
