@@ -220,6 +220,23 @@ describe("real CI execution and publication cannot silently narrow", () => {
       "real-public/images/*.png",
     ]);
   });
+  test("CLI composite cannot replace the final reviewed Node and Bun runtimes", () => {
+    const index = (action: string) =>
+      job.steps.findIndex((step: { uses?: string }) => step.uses === action);
+    const cli = index("supabase/setup-cli@v3");
+    const node = index("actions/setup-node@v4");
+    const bun = index("oven-sh/setup-bun@v2");
+    expect(cli).toBeLessThan(node);
+    expect(cli).toBeLessThan(bun);
+    expect(Math.max(node, bun)).toBeLessThan(
+      job.steps.findIndex(
+        (step: { name?: string }) => step.name === "Frozen evidence dependencies",
+      ),
+    );
+    const runner = read("scripts/recruiter-real-ci-run.mjs");
+    expect(runner).toContain('bunVersion !== "1.3.14"');
+    expect(runner).toContain("/^v22\\./.test(nodeVersion)");
+  });
   test("strict replay refuses missing forward, does not bootstrap fake Auth, and exact counts cannot become skips", () => {
     const runner = read("scripts/recruiter-real-ci-run.mjs");
     expect(runner).toContain("ON_ERROR_STOP=1");
@@ -285,7 +302,10 @@ describe("real CI execution and publication cannot silently narrow", () => {
 describe("curated real-service artifacts", () => {
   function fixture() {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "real-ci-public-test-"));
-    return { stackRoot: path.join(root, "stack"), publicRoot: path.join(root, "public") };
+    return {
+      stackRoot: path.join(root, "stack"),
+      publicRoot: path.join(root, "public"),
+    };
   }
   const report = () => ({
     schemaVersion: "recruiter-real-ci-v1",
@@ -303,7 +323,10 @@ describe("curated real-service artifacts", () => {
   test("tokens and private extra files stop publication", () => {
     const context = fixture();
     expect(() =>
-      writePublicReport(context, { ...report(), raw: "Bearer syntheticForbiddenToken123" }),
+      writePublicReport(context, {
+        ...report(),
+        raw: "Bearer syntheticForbiddenToken123",
+      }),
     ).toThrow("PUBLIC_CREDENTIAL_REFUSED");
     const good = fixture();
     writePublicReport(good, report());

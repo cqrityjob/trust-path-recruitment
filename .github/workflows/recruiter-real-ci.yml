@@ -41,15 +41,17 @@ jobs:
           ref: a68f22d799769de32230781bba268632e57e796f
           path: app
           persist-credentials: false
+      # The CLI composite installs its own Bun. Restore our reviewed test
+      # runtimes afterwards; the runner also checks their actual versions.
+      - uses: supabase/setup-cli@v3
+        with:
+          version: 2.111.0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.3.14
-      - uses: supabase/setup-cli@v3
-        with:
-          version: 2.111.0
       - name: PostgreSQL client for strict full-history replay
         run: |
           sudo apt-get update -qq
