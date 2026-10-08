@@ -1,0 +1,19 @@
+{
+  "kind": "isolated_chromium_react19_development_strictmode_causal_probe",
+  "actualAuthOrStorage": false,
+  "checks": {
+    "oldInitialBlankCleanupReproduced": true,
+    "newInitialReplayAndUnmountNoWrite": true,
+    "explicitHumanClearStillWritten": true,
+    "priorQuestionDraftNeverWrittenIntoNewTarget": true,
+    "cachedCaseSwitchRemountsDraftAndObservedNoteId": true,
+    "withinCaseQuestionSearchKeepsCoordinator": true
+  },
+  "productFixHead": "d2429f7d2cd86a6e47a557923fc9ba76ad786448",
+  "control": "source-equivalent initial-string/passive-seed cleanup; memory-router cached-case lifecycle; no platform server request",
+  "moduleSha256": "38fae507f5c273338013977b41fbc2c7241f83c2755a0f3e4c69077127124368",
+  "probeSourceSha256": "5316906a5762678bb32a53a7a749de35afcf2f1cd652616d1b694fb517005e0e",
+  "runnerSourceSha256": "042a288fe30daeba0d67251180b5d1297f153333561b22c7283802b8369b4a49",
+  "integratedAppHead": "0eab408debbe660d22825c2ffaa8fcc60de0b68c",
+  "integratedModuleBytesMatch": true
+}
