@@ -11,6 +11,7 @@ import {
   EVIDENCE_ALLOWED_MIME,
   EVIDENCE_MAX_BYTES,
 } from "@/lib/security-passport/evidence.functions";
+import { evidenceUploadIssue } from "@/lib/security-passport/evidence-upload";
 import { credentialClassLabel } from "@/lib/security-passport/international";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import { PublicPilotStatus } from "./PublicPilotStatus";
@@ -182,6 +183,7 @@ export function InternationalCredentialForm({
   searchUnavailable.current = onSearchUnavailable;
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [uploadNeedsCheck, setUploadNeedsCheck] = useState(false);
   const [busy, setBusy] = useState(false);
   const saving = useRef(false);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -516,7 +518,7 @@ export function InternationalCredentialForm({
     valid_until: toIsoDateOrRaw(d.valid_until),
   });
   async function save() {
-    if (!selected || saving.current) return;
+    if (!selected || saving.current || uploadNeedsCheck) return;
     // The database refuses valid_until <= issued_on (SP_INVALID_DATES). Said
     // here, in the holder's words, instead of as a generic save failure.
     if (
@@ -546,6 +548,8 @@ export function InternationalCredentialForm({
     saving.current = true;
     setBusy(true);
     setError(null);
+    let evidenceSaved = false;
+    let uploadAttempted = false;
     try {
       if (!savedId.current)
         savedId.current = (
@@ -575,11 +579,13 @@ export function InternationalCredentialForm({
           reader.onload = () => resolve(String(reader.result).split(",")[1]);
           reader.readAsDataURL(file);
         });
+        uploadAttempted = true;
         await onUpload(savedId.current, {
           fileName: file.name,
           mimeType: file.type,
           contentBase64,
         });
+        evidenceSaved = true;
       }
       // There is something a SOURCE can check only when the file carried a signed
       // credential or the holder gave a link. Its failure is not a save failure.
@@ -597,6 +603,28 @@ export function InternationalCredentialForm({
     } catch (cause) {
       const code = cause instanceof Error ? cause.message : "";
       const invalidDates = !savedId.current && code === "SP_INVALID_DATES";
+      const issue = evidenceUploadIssue(cause);
+      if (
+        savedId.current &&
+        uploadAttempted &&
+        !evidenceSaved &&
+        (issue.key === "ev.uploadUnknown" || issue.key === "ev.uploadPending")
+      ) {
+        setUploadNeedsCheck(true);
+      }
+      const savedDetail = evidenceSaved
+        ? copy(
+            "Dokumentet är sparat. Öppna meriten för att fortsätta.",
+            "The document is saved. Open the credential to continue.",
+          )
+        : uploadAttempted
+          ? `${pt(issue.key)}${issue.reference ? ` ${pt("ev.uploadReference")}: ${issue.reference}` : ""}`
+          : file
+            ? copy(
+                "Dokumentet kunde inte läsas. Välj filen igen eller öppna meriten.",
+                "The document could not be read. Choose the file again or open the credential.",
+              )
+            : copy("Öppna meriten för att fortsätta.", "Open the credential to continue.");
       setError(
         invalidDates
           ? copy(
@@ -604,10 +632,7 @@ export function InternationalCredentialForm({
               "Valid until must be after the issue date. Check the dates and try again.",
             )
           : savedId.current
-            ? copy(
-                "Meriten är sparat, men dokumentet kunde inte bifogas. Försök igen eller öppna meriten.",
-                "The credential is saved, but the document could not be attached. Retry or open the credential.",
-              )
+            ? `${copy("Meriten är sparad.", "The credential is saved.")} ${savedDetail}`
             : code === "SP_ISSUER_IS_A_REGULATOR"
               ? copy(
                   "Tillsynsmyndigheten kan inte anges som utfärdare. Ange organisationen som står som utfärdare på intyget.",
@@ -1450,7 +1475,7 @@ export function InternationalCredentialForm({
             )}
             <button
               type="submit"
-              disabled={busy || !definitions || !selected}
+              disabled={busy || uploadNeedsCheck || !definitions || !selected}
               className="inline-flex min-h-11 items-center gap-2 rounded-md bg-primary px-5 text-sm font-semibold text-primary-foreground disabled:opacity-50"
             >
               {busy
