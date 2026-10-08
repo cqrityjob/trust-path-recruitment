@@ -1,5 +1,17 @@
 # RI v0.3: de 22 driftprovens faktiska status
 
+## Tillägg r11, dokumenterat 2026-10-08 14:14 UTC
+
+[Exakta r11-huvuden, katalogbevis och releasegrindar](2026-10-08-live-release.md#tillägg-r11-dokumenterat-2026-10-08-1414-utc) anger main c004/hosted 0909–387. Publicerad app är fortfarande 886 och sista faktiskt avlästa Lovable 517 är från 11:09 UTC; ingen färsk Lovable-synk eller hosted/B-PASS följer av detta tillägg. Äldre 22-fallsrader och datum behålls.
+
+| Omfång | Ny faktiskt utförd kontroll | Kvarstående gräns |
+| --- | --- | --- |
+| OP01, schema/katalog | 080 och 0909 är faktiskt installerade i ordning. 080:s 16 funktioner/5 tabeller/49 kolumner/12 triggers/33 fulla constraints/2 policyer och 0909:s 10 nya fulla funktionskontrakt/14 journalfält/11 fulla constraints/3 policyer/3 index/3 triggers matchar faktisk SELECT och oberoende semantikgranskning. Ledger 387 med prior 386 bevarat; 20 observed_now/14 lås/0 ACK/0 rapporter/status oförändrade. | Ny journal 0; befintlig erasure-kö 11 totalt/0 pending. Detta är inget autentiserat produkt-/Storageprov. Metadata #462/398 har faktiskt PG16 ECR 429-FAIL; övriga CI och planerad avgränsad omkörning återstår. |
+| OP16/17, intervju | Exakt #452/26e7 har terminalt 15/15 CI-PASS efter avgränsad PG16-omkörning; full historik 386/95 P1/56 P0/94 snapshot/28 domänkontroller/51 historiska rollbackkontroller verifierade. Normal merge ingår i main c004. SRC är byteidentiskt med 191d:s native 12+2/Storage 7 och alla 8 noter efter 3 faser. | Första 429-FAIL behålls; 386-beviset omfattar inte 0909/41. Nya native #456/513 pinnar integrerad 40e/schema 1e/387 och är NOT RUN/pending, inte ärvd PASS. Publicering/B återstår. |
+| P1 arbetsyta/native100 | 0508:s 104 Auth/80 privilegierat uppsatta original/100 i baseline 40–25–35 och 27–73/API 23/5 browser PASS består på dess egna pinnar. Slutligt #453/26f har samma produkt-SRC som 7a/3e0; CV-guardens faktiska helperprov bevarar 58 positiva och 14 negativa kontroller. | Exakt #453-slut-CI och #460/6d5:s kombinerade 40e/schema 1e-native återstår. Sourceändring med admin.remove/reupload är fortsatt inget prov av kandidatens consent-endpoint; slutprov 28/72/archive 100 skiljs från baseline. |
+| OP09/13, recovery | A037:s 44 SDK+4 UI-PASS består separat. 0909 är installerad; slutligt #458/128 har integrerad 40e-SRC. D30 rättar strikt script-typning/okänd JSON med 9 negativa typkontrakt och 41 browserassertions bevarade. | A037:s core 7 TS-FAIL bevaras. Nya #461/7b2 och app #458-CI/kombinerad native väntar. Båda äldre samtidiga races gav registration_won; sekventiella båda ordningarna separata. Inget TTL/global-logout-/telefon-PASS eller löst mobilfilnamnswrap påstås. |
+| Databasrådgivare/hosted/innehåll | Faktisk databasrådgivare 13:09: 4 security-definer-view ERROR och 1 mutable-search-path WARN, namn i r11-journalen. Guider och 20 observed_now bevarade. | Rådgivarfynden är ej rättade; inget påstående att hela databasen saknar säkerhetsfynd. Auth/B BLOCKED, fysisk telefon NOT RUN, draft/0 godkännanden/EN- och lint-/repository-/UX-skuld kvarstår. Ingen AI/mail/worker/cron-aktivering. |
+
 ## Tillägg r10, dokumenterat 2026-10-08 13:06 UTC
 
 [Exakta r10-versioner, installeringsbevis och grindar](2026-10-08-live-release.md#tillägg-r10-dokumenterat-2026-10-08-1306-utc) skiljer ny main 2a/hosted 080–386 från fortsatt publicerad 886 och senast avläst Lovable 517. Tidigare A/B-status och daterade FAIL/PASS bevaras; inget native-PASS blir automatiskt hosted/B-PASS.

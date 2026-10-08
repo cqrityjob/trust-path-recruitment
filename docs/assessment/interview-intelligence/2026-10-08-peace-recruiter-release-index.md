@@ -1,10 +1,10 @@
 # PEACE och Recruiter Intelligence: versionsbundet releaseunderlag
 
-Arbetsversion v0.3-LIVE-r10, 2026-10-08. Detta index förbinder den ursprungliga
+Arbetsversion v0.3-LIVE-r11, 2026-10-08. Detta index förbinder den ursprungliga
 intervjuinventeringens dokumentationsplats med det fortsatta releaseunderlaget
 i #449. Det ersätter inte beslutad rollguide eller innehållsgranskning.
 
-[Aktuell r10-releasejournal](../recruiter-intelligence/2026-10-08-live-release.md)
+[Aktuell r11-releasejournal](../recruiter-intelligence/2026-10-08-live-release.md)
 anger exakta huvud-/main-SHA, obligatorisk CI, verkligt installerade migrationer,
 faktisk publicerad releaseidentitet, konstaterade fel, blockerade kontroller och
 återställningsordning. [22driftprovs matris](../recruiter-intelligence/2026-10-08-live-operational-matrix.md)
@@ -21,7 +21,7 @@ rollfrågor/definitioner/probes saknas och säkerhetschefens engelska ankare har
 ytterligare luckor. Engelskt gränssnitt innebär inte en godkänd engelsk metod.
 
 Snapshot-schema 07090000 är installerat och konflikttransport 07100000 är
-verifierad installerad; snapshot-appen #452 väntar på slutgrind/publicering.
+verifierad installerad; snapshot-appen #452 är mergad men ännu inte publicerad.
 Manifestet upptäcker avvikelser. Faktiskt skydd av pågående ärenden kommer från
 bestående användningslås, atomisk full snapshot och att både intervju och
 rapport läser den. Dessa egenskaper får inte blandas ihop.
@@ -37,6 +37,14 @@ och [konflikttransport/historik](../../release/2026-10-08-recruiter-domain-confl
 är skilda från [faktiska isolerade native-intervjuresor](../recruiter-intelligence/evidence/2026-10-08-native-supabase-run4/README.md).
 Ingen sådan teknisk kontroll godkänner metodinnehållet eller ersätter en
 kommersiell innehålls-/språkgranskning.
+
+## Daterat tillägg r11, 2026-10-08 14:14 UTC
+
+Main c004 innehåller mergad snapshot-app #452/26e7 efter 15/15 slut-CI och schema #457/1e efter 15/15 CI. Hosted 080 och 0909 är installerade i ordning, ledger 387 med prior 386 oförändrat. [R11-releasejournalen](../recruiter-intelligence/2026-10-08-live-release.md#tillägg-r11-dokumenterat-2026-10-08-1414-utc) länkar full faktisk katalog-/ACL-/constraint-/policygranskning av 16 P1- och 10 nya journalfunktioner samt bevarande av 20 observed_now/14 permanenta lås/0 ACK/0 rapporter/status. Rättningen av katalogfrågans 42883 ändrade ingen schemafunktion. Manifestdetektion, permanent användningslås/atomisk snapshot och rapportfrysning är skilda skydd; ingen retroaktiv startfrysning eller metodapproval tillkommer.
+
+[Terminalt 26e7-bevis](../recruiter-intelligence/evidence/2026-10-08-ci-26e7-terminal.md) skiljer den genomförda avgränsade omkörningens 15 PASS från första ECR 429-FAIL och omfattar 386, inte 0909/41. Native 191d 12+2/Storage 7, 0508:s 100 facit/API 23/5 browser och a037 44+4 behåller sina egna pinnar. De nya #456/513, #460/6d5 och #461/7b2 pinnar kombinerad app 40e/schema 1e/387 och är NOT RUN/pending. Exakta appgrindar/publicering/hosted B återstår; metadata #462/398 har aktuellt ECR 429/PG16 FAIL och planerad retry är inget PASS.
+
+Publicerad app är fortsatt 886; sista faktiska Lovable 517 från 11:09 är ingen färsk synk på c004. Hosted Auth/B BLOCKED, fysisk telefon NOT RUN, draft/pilot_hypothesis/review open/0 godkännanden, 8Q/6C och EN-luckor består. Projektets rådgivarfynd från 13:09, 4 security-definer-view ERROR och 1 mutable-search-path WARN, är ej rättade; teknisk RI-paritet är inget påstående att hela databasen saknar säkerhetsfynd. Repository-/lint-/UX-skuld och samtliga historiska FAIL/PASS behåller sitt avgränsade omfång.
 
 ## Daterat tillägg r10, 2026-10-08 13:06 UTC
 
