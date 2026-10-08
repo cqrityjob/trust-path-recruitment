@@ -3,6 +3,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import { createHash } from "node:crypto";
 
 const runner = fs.readFileSync("scripts/db-test.sh", "utf8");
 const rollback = fs.readFileSync(
@@ -13,6 +14,65 @@ const migration = fs.readFileSync(
   "supabase/migrations/20270309090000_sp_evidence_upload_recovery.sql",
   "utf8",
 );
+const sqlSuite = fs.readFileSync("supabase/tests/sp_evidence_upload_recovery_test.sql", "utf8");
+function governedFixture(source: string) {
+  assert.doesNotMatch(
+    source,
+    /INSERT INTO public\.sp_claims|DISABLE\s+TRIGGER|session_replication_role|UPDATE public\.sp_claims SET id/i,
+    "retain governed writer and guard",
+  );
+  assert.match(source, /CREATE TEMP TABLE op09_fixture_claim\(id uuid PRIMARY KEY\)/);
+  assert.match(
+    source,
+    /INSERT INTO op09_fixture_claim\(id\)\s+SELECT pg_temp\.as_actor\('a7090000-0000-4000-8000-000000000001',[\s\S]*?sp_save_international_credential\(%L::jsonb\)/,
+  );
+  assert.match(source, /'definition_code','INTL_ASIS_CPP','market_country','','market_region',''/);
+  assert.match(source, /'valid_until',\(current_date\+30\)::text,'no_expiry',false\)\)\)::uuid/);
+  assert.doesNotMatch(
+    source,
+    /a7090000-1000-4000-8000-000000000001/,
+    "all consumers bind the real returned claim UUID",
+  );
+  assert.equal((source.match(/SELECT id FROM pg_temp\.op09_fixture_claim/g) ?? []).length, 5);
+  assert.match(source, /^BEGIN;/m);
+  assert.match(source, /ROLLBACK;\s*$/);
+  const labels = [...source.matchAll(/SELECT pg_temp\.ok[\s\S]*?;(?=\n|$)/g)].map(
+    ([statement]) => statement.match(/,'([^']+)'\);$/)?.[1],
+  );
+  assert.equal(labels.length, 41, "all original41 assertions remain");
+  assert.equal(
+    createHash("sha256").update(JSON.stringify(labels)).digest("hex"),
+    "0183da2de13c22cc2c7759fc18dd5dc909f4ade558e4565340f216fed04e6f0a",
+    "retain all original assertion labels",
+  );
+}
+test("upload SQL fixture creates its governed claim through the existing holder RPC and keeps41 checks", () => {
+  governedFixture(sqlSuite);
+});
+for (const [label, mutate] of [
+  ["direct claim bypass", (s: string) => "INSERT INTO public.sp_claims VALUES(...);\n" + s],
+  ["trigger bypass", (s: string) => "ALTER TABLE public.sp_claims DISABLE TRIGGER ALL;\n" + s],
+  [
+    "wrong writer",
+    (s: string) => s.replace("sp_save_international_credential", "sp_fake_saved_claim"),
+  ],
+  [
+    "hardcoded claim id",
+    (s: string) =>
+      s.replace(
+        "SELECT id FROM pg_temp.op09_fixture_claim",
+        "SELECT 'a7090000-1000-4000-8000-000000000001'",
+      ),
+  ],
+  [
+    "renamed assertion",
+    (s: string) => s.replace("one metadata row after duplicate", "one row maybe"),
+  ],
+  ["committed SQL fixture", (s: string) => s.replace(/ROLLBACK;\s*$/, "COMMIT;")],
+] as const)
+  test(`governed-fixture negative control: ${label}`, () => {
+    assert.throws(() => governedFixture(mutate(sqlSuite)));
+  });
 const historical = fs.readFileSync(
   "supabase/rollback/20261119090000_sp_international_credential_wallet_rollback.sql",
   "utf8",
@@ -32,43 +92,25 @@ function check(source: string, reversal: string) {
   ];
   const positions = anchors.map((anchor) => source.indexOf(anchor));
   assert.ok(
-    positions.every(
-      (pos, i) => pos >= 0 && (i === 0 || pos > positions[i - 1]),
-    ),
+    positions.every((pos, i) => pos >= 0 && (i === 0 || pos > positions[i - 1])),
     "complete current schema and strict41+95 must precede0909→080→071→historical",
   );
-  assert.match(
-    source,
-    /\[ "\$RI_UPLOAD_PASSED" -ge 41 \]/,
-    "keep41 upload assertions",
-  );
+  assert.match(source, /\[ "\$RI_UPLOAD_PASSED" -ge 41 \]/, "keep41 upload assertions");
   assert.match(source, /\[ "\$RI_P1_PASSED" -lt 95 \]/, "keep95 P1 assertions");
   const probe = source.slice(positions[3], positions[4]);
-  assert.match(
-    probe,
-    /psql -v ON_ERROR_STOP=1 -v VERBOSITY=verbose/,
-    "abort on actual SQL error",
-  );
+  assert.match(probe, /psql -v ON_ERROR_STOP=1 -v VERBOSITY=verbose/, "abort on actual SQL error");
   assert.match(
     probe,
     /<<'SQL'[\s\S]*BEGIN;[\s\S]*INSERT INTO public\.sp_evidence_upload_attempts/,
     "transactional nonempty fixture",
   );
   assert.ok(
-    probe.includes(
-      "\\i supabase/rollback/20270309090000_sp_evidence_upload_recovery_rollback.sql",
-    ),
+    probe.includes("\\i supabase/rollback/20270309090000_sp_evidence_upload_recovery_rollback.sql"),
     "invoke the actual canonical rollback",
   );
-  assert.doesNotMatch(
-    probe,
-    /COMMIT;/,
-    "never commit the synthetic refusal fixture",
-  );
+  assert.doesNotMatch(probe, /COMMIT;/, "never commit the synthetic refusal fixture");
   assert.ok(
-    probe.includes(
-      '[ "$RI_UPLOAD_NONEMPTY_RC" -eq 0 ] || ! echo "$RI_UPLOAD_NONEMPTY_OUT"',
-    ),
+    probe.includes('[ "$RI_UPLOAD_NONEMPTY_RC" -eq 0 ] || ! echo "$RI_UPLOAD_NONEMPTY_OUT"'),
     "successful rollback or a wrong error must fail the proof",
   );
   assert.ok(
@@ -77,9 +119,7 @@ function check(source: string, reversal: string) {
   );
   assert.ok(
     probe.includes('[ "$RI_UPLOAD_EMPTY" = "true" ]') &&
-      probe.includes(
-        "NOT EXISTS(SELECT 1 FROM public.sp_evidence_upload_attempts)",
-      ) &&
+      probe.includes("NOT EXISTS(SELECT 1 FROM public.sp_evidence_upload_attempts)") &&
       probe.includes("NOT EXISTS(SELECT 1 FROM auth.users WHERE id="),
     "require durable absence of the failed probe",
   );
@@ -94,26 +134,11 @@ function check(source: string, reversal: string) {
     "sp_passport_session_active()",
     '[ "$RI_UPLOAD_STOOD_DOWN" = "true" ]',
   ])
-    assert.ok(
-      witness.includes(expected),
-      "require removal and original-function readback",
-    );
-  const guard = reversal.indexOf(
-    "IF EXISTS(SELECT 1 FROM public.sp_evidence_upload_attempts)",
-  );
-  assert.ok(
-    guard >= 0 && guard < reversal.indexOf("DROP "),
-    "nonempty fence before any DROP",
-  );
-  assert.match(
-    reversal,
-    /RAISE EXCEPTION 'SP_UPLOAD_ROLLBACK_REQUIRES_EMPTY_JOURNAL'/,
-  );
-  assert.doesNotMatch(
-    reversal,
-    /\bCASCADE\b/i,
-    "do not hide historical dependencies",
-  );
+    assert.ok(witness.includes(expected), "require removal and original-function readback");
+  const guard = reversal.indexOf("IF EXISTS(SELECT 1 FROM public.sp_evidence_upload_attempts)");
+  assert.ok(guard >= 0 && guard < reversal.indexOf("DROP "), "nonempty fence before any DROP");
+  assert.match(reversal, /RAISE EXCEPTION 'SP_UPLOAD_ROLLBACK_REQUIRES_EMPTY_JOURNAL'/);
+  assert.doesNotMatch(reversal, /\bCASCADE\b/i, "do not hide historical dependencies");
 }
 
 test("actual source dependencies explain why newest recovery consumer must stand down first", () => {
@@ -121,10 +146,7 @@ test("actual source dependencies explain why newest recovery consumer must stand
     migration,
     /CREATE POLICY sp_evidence_upload_own_read[\s\S]*USING \(holder_user_id = \(SELECT auth.uid\(\)\) AND public\.sp_passport_session_active\(\)\)/,
   );
-  assert.match(
-    historical,
-    /DROP FUNCTION public\.sp_passport_session_active\(\);/,
-  );
+  assert.match(historical, /DROP FUNCTION public\.sp_passport_session_active\(\);/);
   assert.doesNotMatch(historical, /sp_evidence_upload|CASCADE/);
 });
 test("strict full history/41/95 plus actual protected rollback and readback contract", () => {
@@ -132,19 +154,12 @@ test("strict full history/41/95 plus actual protected rollback and readback cont
 });
 const mutations: Array<[string, (source: string) => string]> = [
   ["missing rollback", (s) => s.replace(standdown, "")],
-  [
-    "rollback before full-schema tests",
-    (s) => standdown + "\n" + s.replace(standdown, ""),
-  ],
+  ["rollback before full-schema tests", (s) => standdown + "\n" + s.replace(standdown, "")],
   ["shortened41 floor", (s) => s.replace("-ge 41 ]", "-ge 40 ]")],
   ["shortened95 floor", (s) => s.replace("-lt 95 ]", "-lt 94 ]")],
   [
     "ignored nonempty success",
-    (s) =>
-      s.replace(
-        '"$RI_UPLOAD_NONEMPTY_RC" -eq 0',
-        '"$RI_UPLOAD_NONEMPTY_RC" -eq 99',
-      ),
+    (s) => s.replace('"$RI_UPLOAD_NONEMPTY_RC" -eq 0', '"$RI_UPLOAD_NONEMPTY_RC" -eq 99'),
   ],
   [
     "wrong SQLSTATE accepted",
@@ -156,28 +171,14 @@ const mutations: Array<[string, (source: string) => string]> = [
   ],
   [
     "different SQL error accepted",
-    (s) =>
-      s.replace(
-        "P0001: SP_UPLOAD_ROLLBACK_REQUIRES_EMPTY_JOURNAL",
-        "P0001: SOMETHING_ELSE",
-      ),
+    (s) => s.replace("P0001: SP_UPLOAD_ROLLBACK_REQUIRES_EMPTY_JOURNAL", "P0001: SOMETHING_ELSE"),
   ],
   [
     "probe commits fixture",
-    (s) =>
-      s.replace(
-        "BEGIN;\nINSERT INTO auth.users",
-        "BEGIN;\nCOMMIT;\nINSERT INTO auth.users",
-      ),
+    (s) => s.replace("BEGIN;\nINSERT INTO auth.users", "BEGIN;\nCOMMIT;\nINSERT INTO auth.users"),
   ],
-  [
-    "missing probe absence assertion",
-    (s) => s.replace('[ "$RI_UPLOAD_EMPTY" = "true" ]', ":"),
-  ],
-  [
-    "missing standdown readback",
-    (s) => s.replace('[ "$RI_UPLOAD_STOOD_DOWN" = "true" ]', ":"),
-  ],
+  ["missing probe absence assertion", (s) => s.replace('[ "$RI_UPLOAD_EMPTY" = "true" ]', ":")],
+  ["missing standdown readback", (s) => s.replace('[ "$RI_UPLOAD_STOOD_DOWN" = "true" ]', ":")],
 ];
 for (const [label, mutate] of mutations)
   test("negative source control: " + label, () => {
