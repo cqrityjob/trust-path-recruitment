@@ -188,7 +188,10 @@ jobs:
   publish-images:
     name: Commit the before/after images to the PR branch
     needs: [before, after]
-    if: always() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    # Only a COMPLETE pair is committed: a cancelled or failed photograph job
+    # leaves a partial set, and a partial set committed over a complete one
+    # is worse than none. Artifacts of the failed run remain for diagnosis.
+    if: needs.before.result == 'success' && needs.after.result == 'success' && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     permissions:
       contents: write
