@@ -66,7 +66,9 @@
     },
     "observedAt": "2026-10-08T07:36:11.990468+00:00",
     "acknowledgements": 0,
-    "clientCopyVersions": ["ri-interview-copy-v1"]
+    "clientCopyVersions": [
+      "ri-interview-copy-v1"
+    ]
   },
   "comparison": {
     "tables": {
@@ -879,7 +881,9 @@
     "functions": [
       {
         "acl": "{postgres=X/postgres,authenticated=X/postgres}",
-        "config": ["search_path=public, pg_temp"],
+        "config": [
+          "search_path=public, pg_temp"
+        ],
         "bodyMd5": "b7db5b86e43d4b1bd401ce4bd0520f09",
         "definer": true,
         "signature": "public.scp_iv_acknowledge_observed_content(_case_id uuid, _expected_manifest_hash text, _note text)",
@@ -889,7 +893,9 @@
       },
       {
         "acl": "{postgres=X/postgres}",
-        "config": ["search_path=public"],
+        "config": [
+          "search_path=public"
+        ],
         "bodyMd5": "64b9233599fb05f69ec166c26218c3a3",
         "definer": true,
         "signature": "public.scp_iv_build_report_basis(_case_id uuid)",
@@ -899,7 +905,9 @@
       },
       {
         "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
-        "config": ["search_path=public"],
+        "config": [
+          "search_path=public"
+        ],
         "bodyMd5": "dbd2bf0ef90c7e9c5fa9d2023d4d968a",
         "definer": true,
         "signature": "public.scp_iv_can_write_case(_case_id uuid)",
@@ -909,7 +917,9 @@
       },
       {
         "acl": "{postgres=X/postgres,authenticated=X/postgres}",
-        "config": ["search_path=public, pg_temp"],
+        "config": [
+          "search_path=public, pg_temp"
+        ],
         "bodyMd5": "dd7a963676bc18fd86b7a8261a513f10",
         "definer": true,
         "signature": "public.scp_iv_case_content_manifest(_case_id uuid)",
@@ -919,7 +929,9 @@
       },
       {
         "acl": "{postgres=X/postgres,authenticated=X/postgres}",
-        "config": ["search_path=public, pg_temp"],
+        "config": [
+          "search_path=public, pg_temp"
+        ],
         "bodyMd5": "ebd0cae8bff6a941a5eb55203c090a9c",
         "definer": true,
         "signature": "public.scp_iv_case_frozen_content(_case_id uuid)",
@@ -929,7 +941,9 @@
       },
       {
         "acl": "{postgres=X/postgres,authenticated=X/postgres}",
-        "config": ["search_path=public, pg_temp"],
+        "config": [
+          "search_path=public, pg_temp"
+        ],
         "bodyMd5": "424961f06ab420199b6061200e06320a",
         "definer": true,
         "signature": "public.scp_iv_case_frozen_labels(_case_ids uuid[])",
@@ -939,7 +953,9 @@
       },
       {
         "acl": "{postgres=X/postgres,authenticated=X/postgres}",
-        "config": ["search_path=public, pg_temp"],
+        "config": [
+          "search_path=public, pg_temp"
+        ],
         "bodyMd5": "280f3d226b47dd3105f9aabe67f868bb",
         "definer": true,
         "signature": "public.scp_iv_content_inventory(_employer_id uuid)",
@@ -949,7 +965,9 @@
       },
       {
         "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
-        "config": ["search_path=public"],
+        "config": [
+          "search_path=public"
+        ],
         "bodyMd5": "1bb7ed578f4ae85fbcadbfe08c9d1bed",
         "definer": true,
         "signature": "public.scp_iv_create_case(_employer_id uuid, _title text, _pack_version_id uuid, _candidate_display_name text, _candidate_user_id uuid, _candidate_external_ref text, _job_id uuid, _application_id uuid)",
@@ -959,7 +977,9 @@
       },
       {
         "acl": "{postgres=X/postgres}",
-        "config": ["search_path=public, pg_temp"],
+        "config": [
+          "search_path=public, pg_temp"
+        ],
         "bodyMd5": "3850e3dc0cbc3e00ac3319222404aec6",
         "definer": true,
         "signature": "scp_private.interview_capture_content(_case_id uuid, _provenance text)",
@@ -969,7 +989,9 @@
       },
       {
         "acl": "{postgres=X/postgres}",
-        "config": ["search_path=public, pg_temp"],
+        "config": [
+          "search_path=public, pg_temp"
+        ],
         "bodyMd5": "0ca9b5fc5d28fdbb38d9fd8546cb008c",
         "definer": true,
         "signature": "scp_private.interview_case_content_bind()",
@@ -979,7 +1001,9 @@
       },
       {
         "acl": "{postgres=X/postgres}",
-        "config": ["search_path=public, pg_temp"],
+        "config": [
+          "search_path=public, pg_temp"
+        ],
         "bodyMd5": "acc5e2de395d92035b42b672b06dd0f8",
         "definer": true,
         "signature": "scp_private.interview_case_content_capture()",
@@ -989,7 +1013,9 @@
       },
       {
         "acl": "{postgres=X/postgres}",
-        "config": ["search_path=public, pg_temp"],
+        "config": [
+          "search_path=public, pg_temp"
+        ],
         "bodyMd5": "8541f7023bae2a8abf5500f7159b2d8e",
         "definer": true,
         "signature": "scp_private.interview_content_append_only()",
@@ -999,7 +1025,9 @@
       },
       {
         "acl": "{postgres=X/postgres}",
-        "config": ["search_path=public, pg_temp"],
+        "config": [
+          "search_path=public, pg_temp"
+        ],
         "bodyMd5": "f29bf091bac2b014a37f5e8402977bbb",
         "definer": true,
         "signature": "scp_private.interview_content_guard()",
@@ -1009,7 +1037,9 @@
       },
       {
         "acl": "{postgres=X/postgres}",
-        "config": ["search_path=public, pg_temp"],
+        "config": [
+          "search_path=public, pg_temp"
+        ],
         "bodyMd5": "50095705589977c2eb795a769f08ccf4",
         "definer": true,
         "signature": "scp_private.interview_content_lock()",
@@ -1019,7 +1049,9 @@
       },
       {
         "acl": "{postgres=X/postgres}",
-        "config": ["search_path=public, pg_temp"],
+        "config": [
+          "search_path=public, pg_temp"
+        ],
         "bodyMd5": "ed4cca15b2b680a980af8407fb89064a",
         "definer": true,
         "signature": "scp_private.interview_content_manifest(_case_id uuid)",
@@ -1029,7 +1061,9 @@
       },
       {
         "acl": "{postgres=X/postgres}",
-        "config": ["search_path=public, pg_temp"],
+        "config": [
+          "search_path=public, pg_temp"
+        ],
         "bodyMd5": "ef0ae71b7eb4018f0d75565039716d62",
         "definer": true,
         "signature": "scp_private.interview_content_owner(_table text, _row jsonb)",
@@ -1039,7 +1073,9 @@
       },
       {
         "acl": "{postgres=X/postgres}",
-        "config": ["search_path=public, pg_temp"],
+        "config": [
+          "search_path=public, pg_temp"
+        ],
         "bodyMd5": "426862b407f98fb77490236841e51572",
         "definer": true,
         "signature": "scp_private.interview_content_ready(_case_id uuid)",
@@ -1049,7 +1085,9 @@
       },
       {
         "acl": "{postgres=X/postgres}",
-        "config": ["search_path=public, pg_temp"],
+        "config": [
+          "search_path=public, pg_temp"
+        ],
         "bodyMd5": "2bd9a959af1d3c2153a410cdbbc4d192",
         "definer": true,
         "signature": "scp_private.interview_content_review_gate()",
@@ -1059,7 +1097,9 @@
       },
       {
         "acl": "{postgres=X/postgres}",
-        "config": ["search_path=public, pg_temp"],
+        "config": [
+          "search_path=public, pg_temp"
+        ],
         "bodyMd5": "b8269256cb4db947bff115a33d247434",
         "definer": true,
         "signature": "scp_private.interview_content_statement_lock()",
@@ -1069,7 +1109,9 @@
       },
       {
         "acl": "{postgres=X/postgres}",
-        "config": ["search_path=public, pg_temp"],
+        "config": [
+          "search_path=public, pg_temp"
+        ],
         "bodyMd5": "1fa3859de0d80dafa6b75ffab6f322c5",
         "definer": true,
         "signature": "scp_private.interview_frozen_manifest(_case_id uuid)",
