@@ -8,8 +8,8 @@
   "frontier": [
     {
       "file": "20270306090000_recruiter_intelligence_interview_foundation.sql",
-      "hostedState": "pending",
-      "note": "Recruiter Intelligence v0.3 P0: schema-only review. No production application or activation is authorised in this task. The dependent application PR must remain blocked until official integration, read-only verification and a separately reviewed applied record. Existing content approvals and legacy hashes are preserved.",
+      "hostedState": "applied",
+      "note": "Owner authorises necessary merge, production installation and publication in the 2026-10-08 live completion request, after passing checks. #447 is installed by official integration; the dependent #448 may proceed through its mandatory gates. AI activation, retention worker/cron and real candidate messages remain excluded.",
       "rollback": "supabase/rollback/20270306090000_recruiter_intelligence_interview_foundation_rollback.sql",
       "verify": "Replay canonical history and new SQL tests in isolated synthetic PostgreSQL; compare RPC bodies, ACLs, nullable contracts, findings columns/constraints, report builder and event constraint to hosted read-only observations before recording applied. Confirm unchanged pack hashes, approvals, eight questions/six competencies, final report payloads and disabled AI/transcript/retention flags. See docs/release/2026-10-07-recruiter-intelligence-p0.md.",
       "introduces": [
@@ -88,7 +88,10 @@
           "object": "updated_at",
           "table": "scp_interview_findings"
         }
-      ]
+      ],
+      "hostedVersion": "20270306090000",
+      "hostedName": "recruiter_intelligence_interview_foundation",
+      "evidenceSource": "Read-only verification 2026-10-08 after #447 merge and official integration: prior 382 identities unchanged; P0 foundation appended. Seven function bodies, report builder, 11 columns, constraints, triggers and ACLs match isolated PostgreSQL 17 replay. See docs/release/2026-10-08-recruiter-intelligence-foundation-hosted-verification.json."
     },
     {
       "file": "20270305090000_application_retention_lifecycle.sql",

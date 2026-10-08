@@ -409,6 +409,11 @@ for (const scenario of scenarios) {
     await page.getByRole("button", { name: /^Pausa$|^Pause$/ }).click();
     await expect(page.locator("main")).toContainText(/Intervjun är pausad|interview is paused/i);
     await page.reload();
+    await expect(page.locator("main")).toContainText(/(Fråga|Question) 8 (av|of) 8/);
+    await expect(page.locator("#note")).toHaveValue(
+      "Syntetiskt svar Q8: eget ansvar, konkret handling och hypotetiskt resonemang; inte faktisk erfarenhet.",
+      { timeout: 30_000 },
+    );
     await expect(page.locator("#reflect")).toHaveValue(reflection, { timeout: 30_000 });
     await expect(page.locator("#protocol-deviations")).toHaveValue(deviation);
     await page.getByRole("button", { name: /Återuppta|Resume/ }).click();

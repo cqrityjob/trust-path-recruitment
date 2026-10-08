@@ -26,6 +26,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { orNull } from "./rpc";
+import { withdrawAndDeleteEvidence, type WithdrawEvidenceResult } from "./evidence-withdrawal";
 
 export const EVIDENCE_BUCKET = "passport-evidence";
 
@@ -176,7 +177,7 @@ export const listMyEvidence = createServerFn({ method: "GET" })
         "id, claim_id, period_id, file_name, mime_type, size_bytes, uploaded_at, lifecycle_state",
       )
       .eq("holder_user_id", userId)
-      .eq("lifecycle_state", "active")
+      .in("lifecycle_state", ["active", "withdrawn"])
       .order("uploaded_at", { ascending: false });
     if (error) throw new Error(error.message);
     return ((data ?? []) as EvidenceRow[]).map(toEvidence);
@@ -201,6 +202,7 @@ export const getEvidenceViewUrl = createServerFn({ method: "POST" })
       .from("sp_evidence")
       .select("storage_path")
       .eq("id", data.evidenceId)
+      .eq("lifecycle_state", "active")
       .maybeSingle();
     if (error) throw new Error(error.message);
     if (!row) throw new Error("SP_EVIDENCE_NOT_FOUND");
@@ -212,30 +214,58 @@ export const getEvidenceViewUrl = createServerFn({ method: "POST" })
     return { url: signed.data.signedUrl, expiresInSeconds: 300 };
   });
 
-/** Withdrawal removes the bytes and keeps the record. The record is what a
- *  later reviewer needs to understand why a claim stopped being backed; the
- *  bytes are the holder's private document and there is no reason to keep
- *  them once they have taken them back. */
+/** Keep the withdrawn row so deletion can be retried after a reload. Only the
+ * holder can delete their own path; new view links require active evidence.
+ * Existing signed links and downloaded copies have their own lifetime. */
 export const withdrawEvidence = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((data: unknown) => z.object({ evidenceId: z.string().uuid() }).parse(data))
-  .handler(async ({ context, data }): Promise<{ ok: true }> => {
-    const { supabase } = context;
+  .handler(async ({ context, data }): Promise<WithdrawEvidenceResult> => {
+    const { supabase, userId } = context;
     const db = supabase;
 
-    const { data: row } = await db
+    const { data: row, error: readError } = await db
       .from("sp_evidence")
-      .select("storage_path")
+      .select("storage_path,lifecycle_state")
       .eq("id", data.evidenceId)
+      .eq("holder_user_id", userId)
       .maybeSingle();
-
-    const { error } = await db.rpc("sp_withdraw_evidence", { _evidence_id: data.evidenceId });
-    if (error) throw new Error(error.message);
-
-    if (row) {
-      await supabase.storage
-        .from(EVIDENCE_BUCKET)
-        .remove([(row as { storage_path: string }).storage_path]);
+    if (readError) throw new Error(readError.message);
+    if (!row) throw new Error("SP_EVIDENCE_NOT_FOUND");
+    const evidence = row as { storage_path: string; lifecycle_state: string };
+    if (!evidence.storage_path.startsWith(`${userId}/`)) throw new Error("SP_EVIDENCE_PATH");
+    if (!["active", "withdrawn"].includes(evidence.lifecycle_state)) {
+      throw new Error("SP_EVIDENCE_STATE");
     }
-    return { ok: true };
+    const bucket = supabase.storage.from(EVIDENCE_BUCKET);
+    const path = evidence.storage_path;
+    const split = path.lastIndexOf("/");
+    const folder = path.slice(0, split);
+    const name = path.slice(split + 1);
+    return withdrawAndDeleteEvidence({
+      withdraw: async () => {
+        // A retry deletes an already withdrawn file, even if a later review
+        // now uses a different active document on the same Passport entry.
+        if (evidence.lifecycle_state === "withdrawn") return;
+        const { error } = await db.rpc("sp_withdraw_evidence", { _evidence_id: data.evidenceId });
+        if (error) throw new Error(error.message);
+      },
+      remove: async () => {
+        const result = await bucket.remove([path]);
+        return {
+          failed: result.error !== null,
+          deleted: (result.data ?? []).some((object) => object.name === path),
+        };
+      },
+      confirmMissing: async () => {
+        // A successful DELETE can be a no-op. Verify absence with the
+        // holder's own authenticated directory read; an error is not absence.
+        const result = await bucket.list(folder, { search: name, limit: 100 });
+        return (
+          result.error === null &&
+          result.data !== null &&
+          !result.data.some((object) => object.name === name)
+        );
+      },
+    });
   });

@@ -8507,8 +8507,10 @@ export const dictionaries = {
     "ri.control.refresh.failed":
       "Ändringen är sparad men listan kunde inte uppdateras. Läs in ärendet igen för att se den sparade versionen.",
     "ri.content.title": "Innehållets version och granskning",
-    "ri.content.current": "Kontrollen gäller det innehåll som är kopplat till ärendet nu.",
-    "ri.content.frozen": "Versionen nedan sparades med rapporten.",
+    "ri.content.current":
+      "Manifestet observerar innehållet som är kopplat till ärendet nu. Det fryser inte intervjuns innehåll vid start.",
+    "ri.content.frozen":
+      "Manifestet sparades vid fastställandet av rapporten. Det bevisar inte att innehållet var fryst när intervjun startade.",
     "ri.content.match": "Rollguidens lagrade hash stämmer med innehållet.",
     "ri.content.mismatch":
       "Rollguidens lagrade hash stämmer inte med innehållet. Detta behöver granskas före pilot.",
@@ -17328,8 +17330,10 @@ export const dictionaries = {
     "ri.control.refresh.failed":
       "The change is saved but the list could not be refreshed. Reload the case to see the saved version.",
     "ri.content.title": "Content version and review",
-    "ri.content.current": "This check observes the content currently pinned to this case.",
-    "ri.content.frozen": "The version below was saved with this report.",
+    "ri.content.current":
+      "The manifest observes the content currently pinned to this case. It does not freeze interview content at the start.",
+    "ri.content.frozen":
+      "The manifest was saved when the report was finalized. It does not prove that content was frozen when the interview started.",
     "ri.content.match": "The role guide’s stored hash matches its content.",
     "ri.content.mismatch":
       "The role guide’s stored hash does not match its content. Review is required before pilot.",
