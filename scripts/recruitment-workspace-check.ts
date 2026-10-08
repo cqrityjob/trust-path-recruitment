@@ -345,6 +345,15 @@ const sql = read(F.migration);
     "C · a retained job filter does not label stages with organisation-wide numbers",
   );
   ok(
+    /page\?\.intelligenceCounts\?\.received \?\? page\?\.counts\.total/.test(table) &&
+      /hasReceivedApplications \? t\("rec\.table\.emptyFiltered"/.test(table),
+    "C · an empty active view acknowledges already received archived applications",
+  );
+  ok(
+    /view\.stage !== "received" &&\s*view\.stage !== "archived"/.test(table),
+    "C · received and archived views do not offer an active-population reset with a misleading all count",
+  );
+  ok(
     /openApplicationOriginalCv\(\s*\{\s*hasUploadedCv: c\.hasCv,\s*submittedSource: submittedCv\?\.source \?\? null/.test(
       candidate,
     ),

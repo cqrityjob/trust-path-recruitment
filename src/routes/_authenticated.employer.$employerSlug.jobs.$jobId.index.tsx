@@ -450,6 +450,7 @@ function JobHub({
   );
   const total = counts?.total ?? 0;
   const unresolvedCount = counts ? counts.total - counts.decided : 0;
+  const receivedCount = page?.intelligenceCounts?.received ?? counts?.total ?? 0;
   const stepInput: StepInput = {
     requirementsCount: recruitment?.requirements.length ?? 0,
     questionsCount: recruitment?.questions.length ?? 0,
@@ -614,7 +615,7 @@ function JobHub({
             <Plain>
               {counts ? (
                 <span className="tabular-nums">
-                  {counts.total} {tp("rec.case.applicationsCount", counts.total)}
+                  {receivedCount} {tp("rec.case.applicationsCount", receivedCount)}
                 </span>
               ) : applicationsRead === "failed" ? (
                 <span className="text-amber-800 dark:text-amber-200">
@@ -671,7 +672,7 @@ function JobHub({
           active={step}
           employerSlug={employerSlug}
           jobId={jobId}
-          counts={counts ? { applications: counts.total } : undefined}
+          counts={counts ? { applications: receivedCount } : undefined}
         />
       </div>
 

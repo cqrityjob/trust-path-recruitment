@@ -361,6 +361,8 @@ export function CandidateTable(props: Props) {
                   : c.interview;
     return ` (${n})`;
   };
+  const hasReceivedApplications =
+    (page?.intelligenceCounts?.received ?? page?.counts.total ?? 0) > 0;
 
   const selectCls =
     "h-9 max-w-[16rem] rounded-md border border-border bg-background px-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
@@ -765,13 +767,16 @@ export function CandidateTable(props: Props) {
           </button>
         </div>
       ) : !page || page.total === 0 ? (
-        <div className="mt-4 rounded-lg border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
-          {page && page.counts.total > 0 ? t("rec.table.emptyFiltered") : t("rec.table.emptyNone")}
-          {page && page.counts.total > 0 && (
+        <div
+          data-testid="candidate-empty"
+          className="mt-4 rounded-lg border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground"
+        >
+          {hasReceivedApplications ? t("rec.table.emptyFiltered") : t("rec.table.emptyNone")}
+          {hasReceivedApplications && (
             <div className="mt-3">
               <button
                 type="button"
-                onClick={() => onViewChange({})}
+                onClick={() => onViewChange({ stage: "received" })}
                 className="text-sm font-medium text-accent hover:underline"
               >
                 {t("rec.table.clearFilters")}
@@ -1021,18 +1026,21 @@ export function CandidateTable(props: Props) {
                 <>
                   {" – "}
                   {t("rec.pager.filter").replace("{filter}", activeFilterLabel)}
-                  {page.counts.total !== page.total && (
-                    <>
-                      {" · "}
-                      <button
-                        type="button"
-                        className="font-medium text-accent hover:underline"
-                        onClick={() => onViewChange(firstPage({ stage: "all" }))}
-                      >
-                        {t("rec.pager.showAll").replace("{all}", String(page.counts.total))}
-                      </button>
-                    </>
-                  )}
+                  {view.stage !== "received" &&
+                    view.stage !== "archived" &&
+                    page.counts.total !== page.total && (
+                      <>
+                        {" · "}
+                        <button
+                          data-testid="active-population-reset"
+                          type="button"
+                          className="font-medium text-accent hover:underline"
+                          onClick={() => onViewChange(firstPage({ stage: "all" }))}
+                        >
+                          {t("rec.pager.showAll").replace("{all}", String(page.counts.total))}
+                        </button>
+                      </>
+                    )}
                 </>
               )}
             </p>

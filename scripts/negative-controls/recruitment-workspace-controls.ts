@@ -355,6 +355,25 @@ const MUTATIONS: readonly Mutation[] = [
     expect: "the original CV route dispatches uploads independently",
   },
   {
+    id: "RW-P1-ARCHIVES-MEAN-NOBODY-APPLIED",
+    defect:
+      "the empty active view says no applications have arrived when every received application was archived",
+    file: TABLE,
+    find: "page?.intelligenceCounts?.received ?? page?.counts.total ?? 0",
+    replace: "page?.counts.total ?? 0",
+    guard: G,
+    expect: "an empty active view acknowledges already received",
+  },
+  {
+    id: "RW-P1-RECEIVED-ALL-MEANS-ACTIVE",
+    defect: "a received-history view offers Show all using the smaller active population",
+    file: TABLE,
+    find: 'view.stage !== "received" &&',
+    replace: "true &&",
+    guard: G,
+    expect: "received and archived views do not offer an active-population reset",
+  },
+  {
     id: "RW-CHIPS-COUNT-THE-PAGE",
     defect: "the pipeline chips count the 25 rows on screen and call it the vacancy",
     file: HUB,
