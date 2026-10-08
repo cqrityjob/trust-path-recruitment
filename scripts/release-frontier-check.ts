@@ -443,10 +443,10 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // Application retention (#444) was installed by the official integration and
 // verified read-only on 2026-10-06. #445 records the hosted evidence and removes
 // the pending expectation; worker, cron and erasure activation remain off.
-// RI v0.3 P0 schema is reviewed locally; no hosted write is authorised.
-const expectedPending: string[] = [
-  "20270306090000_recruiter_intelligence_interview_foundation.sql",
-];
+// RI v0.3 P0 was installed by the official integration after #447. Read-only
+// ledger, body and privilege parity are recorded in the 2026-10-08 hosted proof.
+// No pending installation remains; future schema releases add their own entry.
+const expectedPending: string[] = [];
 
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
