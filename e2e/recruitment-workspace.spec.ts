@@ -362,9 +362,9 @@ test.describe("recruitment case", () => {
     await expect(pager(page)).toContainText(/Sida 2 av 2/, { timeout: 90_000 });
     const nav = stepNav(page);
     // Every step link carries the view it was opened with.
-    for (const href of await nav.getByRole("link").evaluateAll((as) =>
-      as.map((a) => (a as HTMLAnchorElement).getAttribute("href") ?? ""),
-    )) {
+    for (const href of await nav
+      .getByRole("link")
+      .evaluateAll((as) => as.map((a) => (a as HTMLAnchorElement).getAttribute("href") ?? ""))) {
       expect(href, href).toMatch(/sort=name/);
       expect(href, href).toMatch(/page=2/);
     }
@@ -411,13 +411,48 @@ test.describe("recruitment case", () => {
       page.getByText("Arkiverade ansökningar räknas inte", { exact: false }).first(),
     ).toBeVisible();
     const counts = page.locator("[data-testid='recruiter-counts']");
-    await expect(counts.getByRole("heading")).toHaveText("Kravgranskning av mottagna ansökningar");
+    await expect(counts.getByRole("heading", { level: 2 })).toHaveText(
+      "Kravgranskning av mottagna ansökningar",
+    );
     await counts.locator("[data-testid='counts-explanation'] summary").click();
     await expect(counts.getByText(/gäller rekryteringen/)).toBeVisible();
     // Requirement status is a symbol and a label in each count button.
     for (const status of ["green", "yellow", "gray", "not_established"]) {
       await expect(counts.locator(`[data-testid='count-${status}'] svg`)).toHaveCount(1);
     }
+    // Against the real fixture: the status groups partition "received",
+    // reviewed + remaining = received, and the actionable queue (open
+    // applications without a confirmed review) is never larger than the
+    // historical remainder, which also counts archived and decided ones.
+    const n = async (testId: string) =>
+      Number(await counts.locator(`[data-testid='${testId}'] strong`).innerText());
+    const received = await n("count-received");
+    const groups =
+      (await n("count-green")) +
+      (await n("count-yellow")) +
+      (await n("count-gray")) +
+      (await n("count-not_established"));
+    expect(groups).toBe(received);
+    expect((await n("count-reviewed")) + (await n("count-remaining"))).toBe(received);
+    const queue = counts.locator("[data-testid='review-queue']");
+    await expect(queue.getByText("Att granska nu")).toBeVisible();
+    await expect(queue.locator("[data-testid='review-queue-count']")).not.toHaveText("…", {
+      timeout: 30_000,
+    });
+    const queued = Number(await queue.locator("[data-testid='review-queue-count']").innerText());
+    expect(queued).toBeLessThanOrEqual(await n("count-remaining"));
+    await expect(counts.getByText("Historisk täckning", { exact: false })).toBeVisible();
+    // The queue's button opens the short address the strip also links to, and
+    // the strip then marks the review station.
+    await queue.locator("[data-testid='review-queue-open']").click();
+    await expect(page).toHaveURL(/\/applications\?review=remaining$/);
+    await expect(page.locator("[data-testid='recruitment-flow']").first()).toHaveAttribute(
+      "data-current",
+      "review",
+      { timeout: 90_000 },
+    );
+    await page.goBack();
+    await expect(page.locator("#employer-actions")).toBeVisible({ timeout: 90_000 });
     // The new-applications row opens exactly the submitted ones.
     const todo = page.locator("section[aria-labelledby='employer-actions']");
     const newRow = todo.getByRole("link", { name: /nya ansökningar|ny ansökan/ });
@@ -434,6 +469,12 @@ test.describe("recruitment case", () => {
     await expect(phase.locator("option", { hasText: "Redo att avslutas" })).toHaveCount(1);
     await phase.selectOption("ready");
     await expect(page).toHaveURL(/phase=ready/);
+    // Filtered to what is ready to complete, the list is the decision station.
+    await expect(page.locator("[data-testid='recruitment-flow']").first()).toHaveAttribute(
+      "data-current",
+      "decision",
+    );
+    await expect(page.locator("[data-testid='decision-station-context']")).toBeVisible();
 
     await open(page, `/employer/${SLUG}/applications`);
     await expect(page.locator("[data-testid='recruitment-flow']").first()).toHaveAttribute(
