@@ -110,6 +110,12 @@ DO $$ DECLARE v jsonb;BEGIN v:=public.rec_ri_get_review((SELECT app FROM seq WHE
 SELECT pg_temp.ok(public.rec_ri_get_review((SELECT app FROM seq WHERE n=41))->>'requirementStatus'='yellow','an accepted original explicit no dominates a human clarify draft');
 RESET ROLE;
 ROLLBACK TO explicit_no_priority;
+SAVEPOINT nullable_rule_contract;
+SET LOCAL ROLE authenticated;
+CREATE TEMP TABLE normalized_profile AS SELECT public.rec_ri_confirm_profile((SELECT job FROM fixture),1,gen_random_uuid(),'2026-11-01',(SELECT body#-'{0,instructionEn}'#-'{1,questionId}' FROM rules))v;
+SELECT pg_temp.ok((SELECT v#>'{rules,0,instructionEn}'='null'::jsonb AND v#>'{rules,1,questionId}'='null'::jsonb FROM normalized_profile),'direct profile RPC normalizes missing nullable rule keys to explicit JSON null');
+RESET ROLE;
+ROLLBACK TO nullable_rule_contract;
 SAVEPOINT profile_change;
 SET LOCAL ROLE authenticated;
 SELECT public.rec_ri_confirm_profile((SELECT job FROM fixture),1,'ee100000-3333-4000-8000-000000000002','2026-12-01',(SELECT body FROM rules));

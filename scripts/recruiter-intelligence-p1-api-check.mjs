@@ -186,7 +186,7 @@ const missing = await rpc("rec_ri_get_review", { _application_id: app(96) });
 ok("original missing is gray, no technical AI status or selection mutation", () => {
   assert.equal(missing.body.requirementStatus, "gray");
   assert.equal(missing.body.analysisState, "not_used");
-  assert.equal(((awaitNotUsed) => awaitNotUsed)(pages[0].rows[0].status), "submitted");
+  assert.equal(pages[0].rows[0].status, "submitted");
 });
 console.log(
   JSON.stringify(

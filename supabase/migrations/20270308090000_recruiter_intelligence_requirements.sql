@@ -190,7 +190,7 @@ BEGIN
       IF NOT FOUND OR NOT(r->'acceptedSources' ? 'application_answer') THEN RAISE EXCEPTION 'RI_PROFILE_INVALID' USING ERRCODE='check_violation'; END IF;
     ELSIF r->>'questionId' IS NOT NULL AND NOT EXISTS(SELECT 1 FROM public.recruitment_questions WHERE id::text=r->>'questionId' AND requirement_id=req.id AND job_id=j.id) THEN RAISE EXCEPTION 'RI_PROFILE_INVALID' USING ERRCODE='check_violation'; END IF;
     IF r->>'decisionRule'='valid_at_start' AND (_start_date IS NULL OR EXISTS(SELECT 1 FROM jsonb_array_elements_text(r->'acceptedSources')s WHERE s NOT IN ('application_cv','interview_source'))) THEN RAISE EXCEPTION 'RI_PROFILE_INVALID' USING ERRCODE='check_violation'; END IF;
-    rules:=rules||jsonb_build_array(r||jsonb_build_object('labelSv',req.label_sv,'labelEn',req.label_en,'position',req.position));
+    rules:=rules||jsonb_build_array(r||jsonb_build_object('questionId',r->>'questionId','instructionEn',r->>'instructionEn','labelSv',req.label_sv,'labelEn',req.label_en,'position',req.position));
   END LOOP;
   INSERT INTO public.rec_requirement_profiles(job_id,employer_id,version,start_date,rules,confirmed_by) VALUES(j.id,j.employer_id,v+1,_start_date,rules,auth.uid()) RETURNING id INTO pid;
   result:=recruiter_intelligence.profile_json(j.id);
