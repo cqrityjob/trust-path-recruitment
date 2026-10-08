@@ -1,0 +1,3154 @@
+{
+  "formatVersion": 1,
+  "projectRef": "wrygicdfxwjnrugduxnt",
+  "migration": "20270308090000_recruiter_intelligence_requirements.sql",
+  "migrationSha256": "7c93310a4eceb3346243a7a8f069b0e1d909eed5b9f8c4da35ce26e4094ec141",
+  "headSha": "6039fbc685cad255aae4a4e39c1035e933af883d",
+  "mainBase": "517f1a002e8ae35a10def1ddc42d703082264a13",
+  "mergeSha": "2a4687d7e6ca3886f39a52190bea19b3d54c734e",
+  "installation": "official_supabase_github_integration",
+  "readOnly": true,
+  "before": {
+    "locks": {
+      "count": 14,
+      "aggregateMd5": "2ae6acac5fc9c53a295db47df0dfb48b"
+    },
+    "ledger": {
+      "count": 385,
+      "latest": "20270307100000",
+      "versionNameNewlineMd5": "528db6f9f07ba4ebeee53d1440b4beaa"
+    },
+    "reports": {
+      "count": 0,
+      "aggregateMd5": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "snapshots": {
+      "count": 20,
+      "aggregateMd5": "d8dccb112f9044502dd0163ad2bb4025"
+    },
+    "caseStates": {
+      "draft": 9,
+      "assessed": 1,
+      "evidence_review": 2,
+      "interview_complete": 3,
+      "interview_in_progress": 5
+    },
+    "observedAt": "2026-10-08T12:46:54.949445+00:00",
+    "acknowledgements": {
+      "count": 0,
+      "aggregateMd5": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "newProfileTableExists": false
+  },
+  "after": {
+    "locks": {
+      "count": 14,
+      "aggregateMd5": "2ae6acac5fc9c53a295db47df0dfb48b"
+    },
+    "ledger": {
+      "count": 386,
+      "latest": "20270308090000",
+      "versionNameNewlineMd5": "24c276e06c3b92eb631c46999c6ef9a0"
+    },
+    "reports": {
+      "count": 0,
+      "aggregateMd5": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "snapshots": {
+      "count": 20,
+      "aggregateMd5": "d8dccb112f9044502dd0163ad2bb4025"
+    },
+    "caseStates": {
+      "draft": 9,
+      "assessed": 1,
+      "evidence_review": 2,
+      "interview_complete": 3,
+      "interview_in_progress": 5
+    },
+    "observedAt": "2026-10-08T12:48:40.583305+00:00",
+    "acknowledgements": {
+      "count": 0,
+      "aggregateMd5": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "newProfileTableExists": true
+  },
+  "ledger": {
+    "prior385Unchanged": true,
+    "prior385VersionNameNewlineMd5": "528db6f9f07ba4ebeee53d1440b4beaa",
+    "appended": [
+      {
+        "version": "20270308090000",
+        "name": "recruiter_intelligence_requirements"
+      }
+    ]
+  },
+  "comparison": {
+    "protectedSnapshotsLocksAcknowledgementsReportsCaseStatesUnchanged": true,
+    "functions": {
+      "count": 16,
+      "fullBodyArgumentsDefaultsOwnerConfigFlagsAclEqual": true
+    },
+    "tables": {
+      "count": 5,
+      "columns": 49,
+      "rlsOwnerColumnDefaultsAclEqual": true,
+      "newRows": 0
+    },
+    "triggers": {
+      "count": 12,
+      "targetTypeEnabledEqual": true
+    },
+    "policies": {
+      "count": 2,
+      "memberOnlySelectSourceEqual": true
+    },
+    "constraints": {
+      "count": 33,
+      "allValidatedNondeferrable": true,
+      "checkBodiesFkTargetsDeleteActionsPrimaryUniqueSourceEqual": true,
+      "method": "Independent manual comparison of all full catalog definitions to exact source lines9-73. IN/ANY and BETWEEN/>=/<= deparser forms compared semantically; counts alone are not definition proof."
+    }
+  },
+  "catalog": {
+    "functions": {
+      "functions": [
+        {
+          "acl": [
+            {
+              "grantee": "postgres",
+              "grantor": "postgres",
+              "grantable": false,
+              "privilege": "EXECUTE"
+            },
+            {
+              "grantee": "authenticated",
+              "grantor": "postgres",
+              "grantable": false,
+              "privilege": "EXECUTE"
+            }
+          ],
+          "actual": {
+            "name": "rec_ri_candidate_view",
+            "owner": "postgres",
+            "config": [
+              "search_path=public, pg_temp"
+            ],
+            "schema": "public",
+            "strict": false,
+            "returns": "jsonb",
+            "language": "plpgsql",
+            "parallel": "u",
+            "prosrcMd5": "8e829df5c1793b1976a6aec6ccc1cf40",
+            "returnsSet": false,
+            "volatility": "s",
+            "argumentNames": [
+              "_employer_id",
+              "_job_id",
+              "_filters",
+              "_sort",
+              "_dir",
+              "_page",
+              "_size",
+              "_around"
+            ],
+            "argumentTypes": [
+              "uuid",
+              "uuid",
+              "jsonb",
+              "text",
+              "text",
+              "integer",
+              "integer",
+              "uuid"
+            ],
+            "securityDefiner": true,
+            "argumentDefaults": 0
+          },
+          "aclEqual": true,
+          "expected": {
+            "name": "rec_ri_candidate_view",
+            "owner": "postgres",
+            "config": [
+              "search_path=public, pg_temp"
+            ],
+            "schema": "public",
+            "strict": false,
+            "returns": "jsonb",
+            "language": "plpgsql",
+            "parallel": "u",
+            "prosrcMd5": "8e829df5c1793b1976a6aec6ccc1cf40",
+            "returnsSet": false,
+            "sourceLine": 401,
+            "volatility": "s",
+            "argumentNames": [
+              "_employer_id",
+              "_job_id",
+              "_filters",
+              "_sort",
+              "_dir",
+              "_page",
+              "_size",
+              "_around"
+            ],
+            "argumentTypes": [
+              "uuid",
+              "uuid",
+              "jsonb",
+              "text",
+              "text",
+              "integer",
+              "integer",
+              "uuid"
+            ],
+            "securityDefiner": true,
+            "sourceBodyBytes": 8163,
+            "argumentDefaults": 0,
+            "authenticatedExecute": true
+          },
+          "arguments": "_employer_id uuid, _job_id uuid, _filters jsonb, _sort text, _dir text, _page integer, _size integer, _around uuid",
+          "definitionContractEqual": true
+        },
+        {
+          "acl": [
+            {
+              "grantee": "postgres",
+              "grantor": "postgres",
+              "grantable": false,
+              "privilege": "EXECUTE"
+            },
+            {
+              "grantee": "authenticated",
+              "grantor": "postgres",
+              "grantable": false,
+              "privilege": "EXECUTE"
+            }
+          ],
+          "actual": {
+            "name": "rec_ri_confirm_profile",
+            "owner": "postgres",
+            "config": [
+              "search_path=public, pg_temp"
+            ],
+            "schema": "public",
+            "strict": false,
+            "returns": "jsonb",
+            "language": "plpgsql",
+            "parallel": "u",
+            "prosrcMd5": "e9369ee15b52e3defb9d952127e64362",
+            "returnsSet": false,
+            "volatility": "v",
+            "argumentNames": [
+              "_job_id",
+              "_expected_version",
+              "_operation_id",
+              "_start_date",
+              "_rules"
+            ],
+            "argumentTypes": [
+              "uuid",
+              "integer",
+              "uuid",
+              "date",
+              "jsonb"
+            ],
+            "securityDefiner": true,
+            "argumentDefaults": 0
+          },
+          "aclEqual": true,
+          "expected": {
+            "name": "rec_ri_confirm_profile",
+            "owner": "postgres",
+            "config": [
+              "search_path=public, pg_temp"
+            ],
+            "schema": "public",
+            "strict": false,
+            "returns": "jsonb",
+            "language": "plpgsql",
+            "parallel": "u",
+            "prosrcMd5": "e9369ee15b52e3defb9d952127e64362",
+            "returnsSet": false,
+            "sourceLine": 208,
+            "volatility": "v",
+            "argumentNames": [
+              "_job_id",
+              "_expected_version",
+              "_operation_id",
+              "_start_date",
+              "_rules"
+            ],
+            "argumentTypes": [
+              "uuid",
+              "integer",
+              "uuid",
+              "date",
+              "jsonb"
+            ],
+            "securityDefiner": true,
+            "sourceBodyBytes": 3831,
+            "argumentDefaults": 0,
+            "authenticatedExecute": true
+          },
+          "arguments": "_job_id uuid, _expected_version integer, _operation_id uuid, _start_date date, _rules jsonb",
+          "definitionContractEqual": true
+        },
+        {
+          "acl": [
+            {
+              "grantee": "postgres",
+              "grantor": "postgres",
+              "grantable": false,
+              "privilege": "EXECUTE"
+            },
+            {
+              "grantee": "authenticated",
+              "grantor": "postgres",
+              "grantable": false,
+              "privilege": "EXECUTE"
+            }
+          ],
+          "actual": {
+            "name": "rec_ri_get_profile",
+            "owner": "postgres",
+            "config": [
+              "search_path=public, pg_temp"
+            ],
+            "schema": "public",
+            "strict": false,
+            "returns": "jsonb",
+            "language": "plpgsql",
+            "parallel": "u",
+            "prosrcMd5": "d02f5a62b6df14cc9abd56be8c6051f4",
+            "returnsSet": false,
+            "volatility": "s",
+            "argumentNames": [
+              "_job_id"
+            ],
+            "argumentTypes": [
+              "uuid"
+            ],
+            "securityDefiner": true,
+            "argumentDefaults": 0
+          },
+          "aclEqual": true,
+          "expected": {
+            "name": "rec_ri_get_profile",
+            "owner": "postgres",
+            "config": [
+              "search_path=public, pg_temp"
+            ],
+            "schema": "public",
+            "strict": false,
+            "returns": "jsonb",
+            "language": "plpgsql",
+            "parallel": "u",
+            "prosrcMd5": "d02f5a62b6df14cc9abd56be8c6051f4",
+            "returnsSet": false,
+            "sourceLine": 200,
+            "volatility": "s",
+            "argumentNames": [
+              "_job_id"
+            ],
+            "argumentTypes": [
+              "uuid"
+            ],
+            "securityDefiner": true,
+            "sourceBodyBytes": 261,
+            "argumentDefaults": 0,
+            "authenticatedExecute": true
+          },
+          "arguments": "_job_id uuid",
+          "definitionContractEqual": true
+        },
+        {
+          "acl": [
+            {
+              "grantee": "postgres",
+              "grantor": "postgres",
+              "grantable": false,
+              "privilege": "EXECUTE"
+            },
+            {
+              "grantee": "authenticated",
+              "grantor": "postgres",
+              "grantable": false,
+              "privilege": "EXECUTE"
+            }
+          ],
+          "actual": {
+            "name": "rec_ri_get_review",
+            "owner": "postgres",
+            "config": [
+              "search_path=public, pg_temp"
+            ],
+            "schema": "public",
+            "strict": false,
+            "returns": "jsonb",
+            "language": "plpgsql",
+            "parallel": "u",
+            "prosrcMd5": "6297712f71965933028af8ebf0627d5b",
+            "returnsSet": false,
+            "volatility": "s",
+            "argumentNames": [
+              "_application_id"
+            ],
+            "argumentTypes": [
+              "uuid"
+            ],
+            "securityDefiner": true,
+            "argumentDefaults": 0
+          },
+          "aclEqual": true,
+          "expected": {
+            "name": "rec_ri_get_review",
+            "owner": "postgres",
+            "config": [
+              "search_path=public, pg_temp"
+            ],
+            "schema": "public",
+            "strict": false,
+            "returns": "jsonb",
+            "language": "plpgsql",
+            "parallel": "u",
+            "prosrcMd5": "6297712f71965933028af8ebf0627d5b",
+            "returnsSet": false,
+            "sourceLine": 302,
+            "volatility": "s",
+            "argumentNames": [
+              "_application_id"
+            ],
+            "argumentTypes": [
+              "uuid"
+            ],
+            "securityDefiner": true,
+            "sourceBodyBytes": 3202,
+            "argumentDefaults": 0,
+            "authenticatedExecute": true
+          },
+          "arguments": "_application_id uuid",
+          "definitionContractEqual": true
+        },
+        {
+          "acl": [
+            {
+              "grantee": "postgres",
+              "grantor": "postgres",
+              "grantable": false,
+              "privilege": "EXECUTE"
+            },
+            {
+              "grantee": "authenticated",
+              "grantor": "postgres",
+              "grantable": false,
+              "privilege": "EXECUTE"
+            }
+          ],
+          "actual": {
+            "name": "rec_ri_manual_reference",
+            "owner": "postgres",
+            "config": [
+              "search_path=public, pg_temp"
+            ],
+            "schema": "public",
+            "strict": false,
+            "returns": "jsonb",
+            "language": "plpgsql",
+            "parallel": "u",
+            "prosrcMd5": "e5a23f4b27d7e280d7a319f8b628334e",
+            "returnsSet": false,
+            "volatility": "s",
+            "argumentNames": [
+              "_application_id",
+              "_label"
+            ],
+            "argumentTypes": [
+              "uuid",
+              "text"
+            ],
+            "securityDefiner": true,
+            "argumentDefaults": 0
+          },
+          "aclEqual": true,
+          "expected": {
+            "name": "rec_ri_manual_reference",
+            "owner": "postgres",
+            "config": [
+              "search_path=public, pg_temp"
+            ],
+            "schema": "public",
+            "strict": false,
+            "returns": "jsonb",
+            "language": "plpgsql",
+            "parallel": "u",
+            "prosrcMd5": "e5a23f4b27d7e280d7a319f8b628334e",
+            "returnsSet": false,
+            "sourceLine": 455,
+            "volatility": "s",
+            "argumentNames": [
+              "_application_id",
+              "_label"
+            ],
+            "argumentTypes": [
+              "uuid",
+              "text"
+            ],
+            "securityDefiner": true,
+            "sourceBodyBytes": 656,
+            "argumentDefaults": 0,
+            "authenticatedExecute": true
+          },
+          "arguments": "_application_id uuid, _label text",
+          "definitionContractEqual": true
+        },
+        {
+          "acl": [
+            {
+              "grantee": "postgres",
+              "grantor": "postgres",
+              "grantable": false,
+              "privilege": "EXECUTE"
+            },
+            {
+              "grantee": "authenticated",
+              "grantor": "postgres",
+              "grantable": false,
+              "privilege": "EXECUTE"
+            }
+          ],
+          "actual": {
+            "name": "rec_ri_overview_counts",
+            "owner": "postgres",
+            "config": [
+              "search_path=public, pg_temp"
+            ],
+            "schema": "public",
+            "strict": false,
+            "returns": "jsonb",
+            "language": "plpgsql",
+            "parallel": "u",
+            "prosrcMd5": "17f13d9d8749aeacea08355b50c9964e",
+            "returnsSet": false,
+            "volatility": "s",
+            "argumentNames": [
+              "_employer_id"
+            ],
+            "argumentTypes": [
+              "uuid"
+            ],
+            "securityDefiner": true,
+            "argumentDefaults": 0
+          },
+          "aclEqual": true,
+          "expected": {
+            "name": "rec_ri_overview_counts",
+            "owner": "postgres",
+            "config": [
+              "search_path=public, pg_temp"
+            ],
+            "schema": "public",
+            "strict": false,
+            "returns": "jsonb",
+            "language": "plpgsql",
+            "parallel": "u",
+            "prosrcMd5": "17f13d9d8749aeacea08355b50c9964e",
+            "returnsSet": false,
+            "sourceLine": 504,
+            "volatility": "s",
+            "argumentNames": [
+              "_employer_id"
+            ],
+            "argumentTypes": [
+              "uuid"
+            ],
+            "securityDefiner": true,
+            "sourceBodyBytes": 517,
+            "argumentDefaults": 0,
+            "authenticatedExecute": true
+          },
+          "arguments": "_employer_id uuid",
+          "definitionContractEqual": true
+        },
+        {
+          "acl": [
+            {
+              "grantee": "postgres",
+              "grantor": "postgres",
+              "grantable": false,
+              "privilege": "EXECUTE"
+            },
+            {
+              "grantee": "authenticated",
+              "grantor": "postgres",
+              "grantable": false,
+              "privilege": "EXECUTE"
+            }
+          ],
+          "actual": {
+            "name": "rec_ri_save_review",
+            "owner": "postgres",
+            "config": [
+              "search_path=public, pg_temp"
+            ],
+            "schema": "public",
+            "strict": false,
+            "returns": "jsonb",
+            "language": "plpgsql",
+            "parallel": "u",
+            "prosrcMd5": "9b7389333375607586787798bad6abbd",
+            "returnsSet": false,
+            "volatility": "v",
+            "argumentNames": [
+              "_application_id",
+              "_profile_id",
+              "_expected_revision",
+              "_binding_token",
+              "_operation_id",
+              "_decisions",
+              "_confirm",
+              "_next_action",
+              "_responsible_user_id",
+              "_expected_assignment_version"
+            ],
+            "argumentTypes": [
+              "uuid",
+              "uuid",
+              "integer",
+              "text",
+              "uuid",
+              "jsonb",
+              "boolean",
+              "text",
+              "uuid",
+              "integer"
+            ],
+            "securityDefiner": true,
+            "argumentDefaults": 0
+          },
+          "aclEqual": true,
+          "expected": {
+            "name": "rec_ri_save_review",
+            "owner": "postgres",
+            "config": [
+              "search_path=public, pg_temp"
+            ],
+            "schema": "public",
+            "strict": false,
+            "returns": "jsonb",
+            "language": "plpgsql",
+            "parallel": "u",
+            "prosrcMd5": "9b7389333375607586787798bad6abbd",
+            "returnsSet": false,
+            "sourceLine": 327,
+            "volatility": "v",
+            "argumentNames": [
+              "_application_id",
+              "_profile_id",
+              "_expected_revision",
+              "_binding_token",
+              "_operation_id",
+              "_decisions",
+              "_confirm",
+              "_next_action",
+              "_responsible_user_id",
+              "_expected_assignment_version"
+            ],
+            "argumentTypes": [
+              "uuid",
+              "uuid",
+              "integer",
+              "text",
+              "uuid",
+              "jsonb",
+              "boolean",
+              "text",
+              "uuid",
+              "integer"
+            ],
+            "securityDefiner": true,
+            "sourceBodyBytes": 9311,
+            "argumentDefaults": 0,
+            "authenticatedExecute": true
+          },
+          "arguments": "_application_id uuid, _profile_id uuid, _expected_revision integer, _binding_token text, _operation_id uuid, _decisions jsonb, _confirm boolean, _next_action text, _responsible_user_id uuid, _expected_assignment_version integer",
+          "definitionContractEqual": true
+        },
+        {
+          "acl": [
+            {
+              "grantee": "postgres",
+              "grantor": "postgres",
+              "grantable": false,
+              "privilege": "EXECUTE"
+            },
+            {
+              "grantee": "authenticated",
+              "grantor": "postgres",
+              "grantable": false,
+              "privilege": "EXECUTE"
+            }
+          ],
+          "actual": {
+            "name": "rec_ri_transfer_requirements",
+            "owner": "postgres",
+            "config": [
+              "search_path=public, pg_temp"
+            ],
+            "schema": "public",
+            "strict": false,
+            "returns": "jsonb",
+            "language": "plpgsql",
+            "parallel": "u",
+            "prosrcMd5": "e616b554b11c30acf445e17c05d1e525",
+            "returnsSet": false,
+            "volatility": "v",
+            "argumentNames": [
+              "_application_id",
+              "_case_id",
+              "_expected_revision",
+              "_binding_token",
+              "_operation_id",
+              "_requirement_ids"
+            ],
+            "argumentTypes": [
+              "uuid",
+              "uuid",
+              "integer",
+              "text",
+              "uuid",
+              "uuid[]"
+            ],
+            "securityDefiner": true,
+            "argumentDefaults": 0
+          },
+          "aclEqual": true,
+          "expected": {
+            "name": "rec_ri_transfer_requirements",
+            "owner": "postgres",
+            "config": [
+              "search_path=public, pg_temp"
+            ],
+            "schema": "public",
+            "strict": false,
+            "returns": "jsonb",
+            "language": "plpgsql",
+            "parallel": "u",
+            "prosrcMd5": "e616b554b11c30acf445e17c05d1e525",
+            "returnsSet": false,
+            "sourceLine": 465,
+            "volatility": "v",
+            "argumentNames": [
+              "_application_id",
+              "_case_id",
+              "_expected_revision",
+              "_binding_token",
+              "_operation_id",
+              "_requirement_ids"
+            ],
+            "argumentTypes": [
+              "uuid",
+              "uuid",
+              "integer",
+              "text",
+              "uuid",
+              "uuid[]"
+            ],
+            "securityDefiner": true,
+            "sourceBodyBytes": 3890,
+            "argumentDefaults": 0,
+            "authenticatedExecute": true
+          },
+          "arguments": "_application_id uuid, _case_id uuid, _expected_revision integer, _binding_token text, _operation_id uuid, _requirement_ids uuid[]",
+          "definitionContractEqual": true
+        },
+        {
+          "acl": [
+            {
+              "grantee": "postgres",
+              "grantor": "postgres",
+              "grantable": false,
+              "privilege": "EXECUTE"
+            }
+          ],
+          "actual": {
+            "name": "application_state",
+            "owner": "postgres",
+            "config": [
+              "search_path=public, pg_temp"
+            ],
+            "schema": "recruiter_intelligence",
+            "strict": false,
+            "returns": "jsonb",
+            "language": "plpgsql",
+            "parallel": "u",
+            "prosrcMd5": "6d7a133ff315e35830a1b8adb0a48c17",
+            "returnsSet": false,
+            "volatility": "s",
+            "argumentNames": [
+              "_application"
+            ],
+            "argumentTypes": [
+              "uuid"
+            ],
+            "securityDefiner": true,
+            "argumentDefaults": 0
+          },
+          "aclEqual": true,
+          "expected": {
+            "name": "application_state",
+            "owner": "postgres",
+            "config": [
+              "search_path=public, pg_temp"
+            ],
+            "schema": "recruiter_intelligence",
+            "strict": false,
+            "returns": "jsonb",
+            "language": "plpgsql",
+            "parallel": "u",
+            "prosrcMd5": "6d7a133ff315e35830a1b8adb0a48c17",
+            "returnsSet": false,
+            "sourceLine": 282,
+            "volatility": "s",
+            "argumentNames": [
+              "_application"
+            ],
+            "argumentTypes": [
+              "uuid"
+            ],
+            "securityDefiner": true,
+            "sourceBodyBytes": 2506,
+            "argumentDefaults": 0,
+            "authenticatedExecute": false
+          },
+          "arguments": "_application uuid",
+          "definitionContractEqual": true
+        },
+        {
+          "acl": [
+            {
+              "grantee": "postgres",
+              "grantor": "postgres",
+              "grantable": false,
+              "privilege": "EXECUTE"
+            }
+          ],
+          "actual": {
+            "name": "criterion",
+            "owner": "postgres",
+            "config": [
+              "search_path=public, pg_temp"
+            ],
+            "schema": "recruiter_intelligence",
+            "strict": false,
+            "returns": "jsonb",
+            "language": "plpgsql",
+            "parallel": "u",
+            "prosrcMd5": "5025210741b8de192d6d0bab92684015",
+            "returnsSet": false,
+            "volatility": "s",
+            "argumentNames": [
+              "_application",
+              "_profile",
+              "_rule"
+            ],
+            "argumentTypes": [
+              "uuid",
+              "public.rec_requirement_profiles",
+              "jsonb"
+            ],
+            "securityDefiner": true,
+            "argumentDefaults": 0
+          },
+          "aclEqual": true,
+          "expected": {
+            "name": "criterion",
+            "owner": "postgres",
+            "config": [
+              "search_path=public, pg_temp"
+            ],
+            "schema": "recruiter_intelligence",
+            "strict": false,
+            "returns": "jsonb",
+            "language": "plpgsql",
+            "parallel": "u",
+            "prosrcMd5": "5025210741b8de192d6d0bab92684015",
+            "returnsSet": false,
+            "sourceLine": 243,
+            "volatility": "s",
+            "argumentNames": [
+              "_application",
+              "_profile",
+              "_rule"
+            ],
+            "argumentTypes": [
+              "uuid",
+              "public.rec_requirement_profiles",
+              "jsonb"
+            ],
+            "securityDefiner": true,
+            "sourceBodyBytes": 3252,
+            "argumentDefaults": 0,
+            "authenticatedExecute": false
+          },
+          "arguments": "_application uuid, _profile rec_requirement_profiles, _rule jsonb",
+          "definitionContractEqual": true
+        },
+        {
+          "acl": [
+            {
+              "grantee": "postgres",
+              "grantor": "postgres",
+              "grantable": false,
+              "privilege": "EXECUTE"
+            }
+          ],
+          "actual": {
+            "name": "operation_result",
+            "owner": "postgres",
+            "config": [
+              "search_path=public, pg_temp"
+            ],
+            "schema": "recruiter_intelligence",
+            "strict": false,
+            "returns": "jsonb",
+            "language": "plpgsql",
+            "parallel": "u",
+            "prosrcMd5": "bcfdf67952d8e496c24ff5178209035c",
+            "returnsSet": false,
+            "volatility": "s",
+            "argumentNames": [
+              "_id",
+              "_scope",
+              "_kind",
+              "_request"
+            ],
+            "argumentTypes": [
+              "uuid",
+              "uuid",
+              "text",
+              "jsonb"
+            ],
+            "securityDefiner": true,
+            "argumentDefaults": 0
+          },
+          "aclEqual": true,
+          "expected": {
+            "name": "operation_result",
+            "owner": "postgres",
+            "config": [
+              "search_path=public, pg_temp"
+            ],
+            "schema": "recruiter_intelligence",
+            "strict": false,
+            "returns": "jsonb",
+            "language": "plpgsql",
+            "parallel": "u",
+            "prosrcMd5": "bcfdf67952d8e496c24ff5178209035c",
+            "returnsSet": false,
+            "sourceLine": 151,
+            "volatility": "s",
+            "argumentNames": [
+              "_id",
+              "_scope",
+              "_kind",
+              "_request"
+            ],
+            "argumentTypes": [
+              "uuid",
+              "uuid",
+              "text",
+              "jsonb"
+            ],
+            "securityDefiner": true,
+            "sourceBodyBytes": 401,
+            "argumentDefaults": 0,
+            "authenticatedExecute": false
+          },
+          "arguments": "_id uuid, _scope uuid, _kind text, _request jsonb",
+          "definitionContractEqual": true
+        },
+        {
+          "acl": [
+            {
+              "grantee": "postgres",
+              "grantor": "postgres",
+              "grantable": false,
+              "privilege": "EXECUTE"
+            }
+          ],
+          "actual": {
+            "name": "profile_json",
+            "owner": "postgres",
+            "config": [
+              "search_path=public, pg_temp"
+            ],
+            "schema": "recruiter_intelligence",
+            "strict": false,
+            "returns": "jsonb",
+            "language": "sql",
+            "parallel": "u",
+            "prosrcMd5": "4059ea7c21bd6faaaae215f6ebbfe086",
+            "returnsSet": false,
+            "volatility": "s",
+            "argumentNames": [
+              "_job"
+            ],
+            "argumentTypes": [
+              "uuid"
+            ],
+            "securityDefiner": true,
+            "argumentDefaults": 0
+          },
+          "aclEqual": true,
+          "expected": {
+            "name": "profile_json",
+            "owner": "postgres",
+            "config": [
+              "search_path=public, pg_temp"
+            ],
+            "schema": "recruiter_intelligence",
+            "strict": false,
+            "returns": "jsonb",
+            "language": "sql",
+            "parallel": "u",
+            "prosrcMd5": "4059ea7c21bd6faaaae215f6ebbfe086",
+            "returnsSet": false,
+            "sourceLine": 190,
+            "volatility": "s",
+            "argumentNames": [
+              "_job"
+            ],
+            "argumentTypes": [
+              "uuid"
+            ],
+            "securityDefiner": true,
+            "sourceBodyBytes": 938,
+            "argumentDefaults": 0,
+            "authenticatedExecute": false
+          },
+          "arguments": "_job uuid",
+          "definitionContractEqual": true
+        },
+        {
+          "acl": [
+            {
+              "grantee": "postgres",
+              "grantor": "postgres",
+              "grantable": false,
+              "privilege": "EXECUTE"
+            }
+          ],
+          "actual": {
+            "name": "protect_history",
+            "owner": "postgres",
+            "config": [
+              "search_path=public, pg_temp"
+            ],
+            "schema": "recruiter_intelligence",
+            "strict": false,
+            "returns": "trigger",
+            "language": "plpgsql",
+            "parallel": "u",
+            "prosrcMd5": "4a01878cd767eb36f0f0e3e5bc3e5089",
+            "returnsSet": false,
+            "volatility": "v",
+            "argumentNames": [],
+            "argumentTypes": [],
+            "securityDefiner": false,
+            "argumentDefaults": 0
+          },
+          "aclEqual": true,
+          "expected": {
+            "name": "protect_history",
+            "owner": "postgres",
+            "config": [
+              "search_path=public, pg_temp"
+            ],
+            "schema": "recruiter_intelligence",
+            "strict": false,
+            "returns": "trigger",
+            "language": "plpgsql",
+            "parallel": "u",
+            "prosrcMd5": "4a01878cd767eb36f0f0e3e5bc3e5089",
+            "returnsSet": false,
+            "sourceLine": 118,
+            "volatility": "v",
+            "argumentNames": [],
+            "argumentTypes": [],
+            "securityDefiner": false,
+            "sourceBodyBytes": 1226,
+            "argumentDefaults": 0,
+            "authenticatedExecute": false
+          },
+          "arguments": "",
+          "definitionContractEqual": true
+        },
+        {
+          "acl": [
+            {
+              "grantee": "postgres",
+              "grantor": "postgres",
+              "grantable": false,
+              "privilege": "EXECUTE"
+            }
+          ],
+          "actual": {
+            "name": "protect_profile",
+            "owner": "postgres",
+            "config": [
+              "search_path=public, pg_temp"
+            ],
+            "schema": "recruiter_intelligence",
+            "strict": false,
+            "returns": "trigger",
+            "language": "plpgsql",
+            "parallel": "u",
+            "prosrcMd5": "03251223100b174cc9508970f97bacd5",
+            "returnsSet": false,
+            "volatility": "v",
+            "argumentNames": [],
+            "argumentTypes": [],
+            "securityDefiner": false,
+            "argumentDefaults": 0
+          },
+          "aclEqual": true,
+          "expected": {
+            "name": "protect_profile",
+            "owner": "postgres",
+            "config": [
+              "search_path=public, pg_temp"
+            ],
+            "schema": "recruiter_intelligence",
+            "strict": false,
+            "returns": "trigger",
+            "language": "plpgsql",
+            "parallel": "u",
+            "prosrcMd5": "03251223100b174cc9508970f97bacd5",
+            "returnsSet": false,
+            "sourceLine": 88,
+            "volatility": "v",
+            "argumentNames": [],
+            "argumentTypes": [],
+            "securityDefiner": false,
+            "sourceBodyBytes": 566,
+            "argumentDefaults": 0,
+            "authenticatedExecute": false
+          },
+          "arguments": "",
+          "definitionContractEqual": true
+        },
+        {
+          "acl": [
+            {
+              "grantee": "postgres",
+              "grantor": "postgres",
+              "grantable": false,
+              "privilege": "EXECUTE"
+            }
+          ],
+          "actual": {
+            "name": "protect_used_identity",
+            "owner": "postgres",
+            "config": [
+              "search_path=public, pg_temp"
+            ],
+            "schema": "recruiter_intelligence",
+            "strict": false,
+            "returns": "trigger",
+            "language": "plpgsql",
+            "parallel": "u",
+            "prosrcMd5": "7d6c07cf20f06715059f56e001fbcdd4",
+            "returnsSet": false,
+            "volatility": "v",
+            "argumentNames": [],
+            "argumentTypes": [],
+            "securityDefiner": false,
+            "argumentDefaults": 0
+          },
+          "aclEqual": true,
+          "expected": {
+            "name": "protect_used_identity",
+            "owner": "postgres",
+            "config": [
+              "search_path=public, pg_temp"
+            ],
+            "schema": "recruiter_intelligence",
+            "strict": false,
+            "returns": "trigger",
+            "language": "plpgsql",
+            "parallel": "u",
+            "prosrcMd5": "7d6c07cf20f06715059f56e001fbcdd4",
+            "returnsSet": false,
+            "sourceLine": 101,
+            "volatility": "v",
+            "argumentNames": [],
+            "argumentTypes": [],
+            "securityDefiner": false,
+            "sourceBodyBytes": 490,
+            "argumentDefaults": 0,
+            "authenticatedExecute": false
+          },
+          "arguments": "",
+          "definitionContractEqual": true
+        },
+        {
+          "acl": [
+            {
+              "grantee": "postgres",
+              "grantor": "postgres",
+              "grantable": false,
+              "privilege": "EXECUTE"
+            }
+          ],
+          "actual": {
+            "name": "source_version",
+            "owner": "postgres",
+            "config": [
+              "search_path=public, pg_temp"
+            ],
+            "schema": "recruiter_intelligence",
+            "strict": false,
+            "returns": "text",
+            "language": "plpgsql",
+            "parallel": "u",
+            "prosrcMd5": "59f08b5f2e95a6f474d291b440706831",
+            "returnsSet": false,
+            "volatility": "s",
+            "argumentNames": [
+              "_application",
+              "_kind",
+              "_reference"
+            ],
+            "argumentTypes": [
+              "uuid",
+              "text",
+              "text"
+            ],
+            "securityDefiner": true,
+            "argumentDefaults": 0
+          },
+          "aclEqual": true,
+          "expected": {
+            "name": "source_version",
+            "owner": "postgres",
+            "config": [
+              "search_path=public, pg_temp"
+            ],
+            "schema": "recruiter_intelligence",
+            "strict": false,
+            "returns": "text",
+            "language": "plpgsql",
+            "parallel": "u",
+            "prosrcMd5": "59f08b5f2e95a6f474d291b440706831",
+            "returnsSet": false,
+            "sourceLine": 161,
+            "volatility": "s",
+            "argumentNames": [
+              "_application",
+              "_kind",
+              "_reference"
+            ],
+            "argumentTypes": [
+              "uuid",
+              "text",
+              "text"
+            ],
+            "securityDefiner": true,
+            "sourceBodyBytes": 1673,
+            "argumentDefaults": 0,
+            "authenticatedExecute": false
+          },
+          "arguments": "_application uuid, _kind text, _reference text",
+          "definitionContractEqual": true
+        }
+      ],
+      "sourceSha": "6039fbc685cad255aae4a4e39c1035e933af883d",
+      "foundCount": 16,
+      "observedAt": "2026-10-08T12:53:39.38168+00:00",
+      "unexpected": [],
+      "expectedCount": 16,
+      "defaultPrivileges": [
+        {
+          "acl": "{postgres=rwU/postgres}",
+          "kind": "S",
+          "owner": "postgres",
+          "schema": "public"
+        },
+        {
+          "acl": "{postgres=X/postgres,anon=X/postgres}",
+          "kind": "f",
+          "owner": "postgres",
+          "schema": "public"
+        },
+        {
+          "acl": "{postgres=arwdDxtm/postgres,anon=arwd/postgres,authenticated=arwd/postgres,service_role=Dxtm/postgres}",
+          "kind": "r",
+          "owner": "postgres",
+          "schema": "public"
+        }
+      ]
+    },
+    "structure": {
+      "tables": [
+        {
+          "acl": [
+            {
+              "grantee": "postgres",
+              "grantor": "postgres",
+              "grantable": false,
+              "privilege": "DELETE"
+            },
+            {
+              "grantee": "postgres",
+              "grantor": "postgres",
+              "grantable": false,
+              "privilege": "INSERT"
+            },
+            {
+              "grantee": "postgres",
+              "grantor": "postgres",
+              "grantable": false,
+              "privilege": "MAINTAIN"
+            },
+            {
+              "grantee": "postgres",
+              "grantor": "postgres",
+              "grantable": false,
+              "privilege": "REFERENCES"
+            },
+            {
+              "grantee": "postgres",
+              "grantor": "postgres",
+              "grantable": false,
+              "privilege": "SELECT"
+            },
+            {
+              "grantee": "postgres",
+              "grantor": "postgres",
+              "grantable": false,
+              "privilege": "TRIGGER"
+            },
+            {
+              "grantee": "postgres",
+              "grantor": "postgres",
+              "grantable": false,
+              "privilege": "TRUNCATE"
+            },
+            {
+              "grantee": "postgres",
+              "grantor": "postgres",
+              "grantable": false,
+              "privilege": "UPDATE"
+            }
+          ],
+          "actual": {
+            "rls": true,
+            "name": "rec_requirement_decisions",
+            "owner": "postgres",
+            "schema": "public",
+            "columns": [
+              {
+                "name": "application_id",
+                "type": "uuid",
+                "notNull": true,
+                "defaultExpression": null
+              },
+              {
+                "name": "profile_id",
+                "type": "uuid",
+                "notNull": true,
+                "defaultExpression": null
+              },
+              {
+                "name": "requirement_id",
+                "type": "uuid",
+                "notNull": true,
+                "defaultExpression": null
+              },
+              {
+                "name": "state",
+                "type": "text",
+                "notNull": true,
+                "defaultExpression": null
+              },
+              {
+                "name": "source_kind",
+                "type": "text",
+                "notNull": false,
+                "defaultExpression": null
+              },
+              {
+                "name": "source_reference",
+                "type": "text",
+                "notNull": false,
+                "defaultExpression": null
+              },
+              {
+                "name": "source_version",
+                "type": "text",
+                "notNull": false,
+                "defaultExpression": null
+              },
+              {
+                "name": "source_case_id",
+                "type": "uuid",
+                "notNull": false,
+                "defaultExpression": null
+              },
+              {
+                "name": "source_label",
+                "type": "text",
+                "notNull": false,
+                "defaultExpression": null
+              },
+              {
+                "name": "valid_until",
+                "type": "date",
+                "notNull": false,
+                "defaultExpression": null
+              },
+              {
+                "name": "note",
+                "type": "text",
+                "notNull": true,
+                "defaultExpression": null
+              },
+              {
+                "name": "neutral_question",
+                "type": "text",
+                "notNull": false,
+                "defaultExpression": null
+              },
+              {
+                "name": "updated_by",
+                "type": "uuid",
+                "notNull": false,
+                "defaultExpression": null
+              },
+              {
+                "name": "updated_at",
+                "type": "timestamp with time zone",
+                "notNull": true,
+                "defaultExpression": "now()"
+              }
+            ],
+            "forceRls": false,
+            "constraintCount": 10
+          },
+          "expected": {
+            "rls": true,
+            "name": "rec_requirement_decisions",
+            "owner": "postgres",
+            "schema": "public",
+            "columns": [
+              {
+                "name": "application_id",
+                "type": "uuid",
+                "notNull": true,
+                "defaultExpression": null
+              },
+              {
+                "name": "profile_id",
+                "type": "uuid",
+                "notNull": true,
+                "defaultExpression": null
+              },
+              {
+                "name": "requirement_id",
+                "type": "uuid",
+                "notNull": true,
+                "defaultExpression": null
+              },
+              {
+                "name": "state",
+                "type": "text",
+                "notNull": true,
+                "defaultExpression": null
+              },
+              {
+                "name": "source_kind",
+                "type": "text",
+                "notNull": false,
+                "defaultExpression": null
+              },
+              {
+                "name": "source_reference",
+                "type": "text",
+                "notNull": false,
+                "defaultExpression": null
+              },
+              {
+                "name": "source_version",
+                "type": "text",
+                "notNull": false,
+                "defaultExpression": null
+              },
+              {
+                "name": "source_case_id",
+                "type": "uuid",
+                "notNull": false,
+                "defaultExpression": null
+              },
+              {
+                "name": "source_label",
+                "type": "text",
+                "notNull": false,
+                "defaultExpression": null
+              },
+              {
+                "name": "valid_until",
+                "type": "date",
+                "notNull": false,
+                "defaultExpression": null
+              },
+              {
+                "name": "note",
+                "type": "text",
+                "notNull": true,
+                "defaultExpression": null
+              },
+              {
+                "name": "neutral_question",
+                "type": "text",
+                "notNull": false,
+                "defaultExpression": null
+              },
+              {
+                "name": "updated_by",
+                "type": "uuid",
+                "notNull": false,
+                "defaultExpression": null
+              },
+              {
+                "name": "updated_at",
+                "type": "timestamp with time zone",
+                "notNull": true,
+                "defaultExpression": "now()"
+              }
+            ],
+            "forceRls": false,
+            "constraintCount": 10,
+            "sourceDefinition": "CREATE TABLE public.rec_requirement_decisions (\n  application_id uuid NOT NULL REFERENCES public.job_applications(id) ON DELETE CASCADE,\n  profile_id uuid NOT NULL REFERENCES public.rec_requirement_profiles(id) ON DELETE CASCADE,\n  requirement_id uuid NOT NULL,\n  state text NOT NULL CHECK(state IN ('met','not_met','clarify')),\n  source_kind text CHECK(source_kind IN ('application_answer','application_cv','interview_source','external_reference')),\n  source_reference text,\n  source_version text,\n  -- Opaque provenance for the accompanying human text. No FK: deleting an\n  -- original case must not turn its private note into an unscoped note.\n  source_case_id uuid CHECK(source_kind IS DISTINCT FROM 'interview_source' OR source_case_id IS NOT NULL),\n  source_label text CHECK(source_label IS NULL OR char_length(source_label) BETWEEN 1 AND 500),\n  valid_until date,\n  note text NOT NULL CHECK(char_length(note) BETWEEN 1 AND 3000),\n  neutral_question text CHECK(neutral_question IS NULL OR char_length(neutral_question) BETWEEN 1 AND 3000),\n  updated_by uuid REFERENCES auth.users(id) ON DELETE SET NULL,\n  updated_at timestamptz NOT NULL DEFAULT now(),\n  PRIMARY KEY(application_id, profile_id, requirement_id)\n);",
+            "authenticatedSelect": false
+          },
+          "constraints": [
+            {
+              "name": "rec_requirement_decisions_application_id_fkey",
+              "type": "f",
+              "deferred": false,
+              "validated": true,
+              "deferrable": false,
+              "definition": "FOREIGN KEY (application_id) REFERENCES job_applications(id) ON DELETE CASCADE",
+              "deleteAction": "c",
+              "referencedTable": "job_applications",
+              "referencedSchema": "public"
+            },
+            {
+              "name": "rec_requirement_decisions_check",
+              "type": "c",
+              "deferred": false,
+              "validated": true,
+              "deferrable": false,
+              "definition": "CHECK (source_kind IS DISTINCT FROM 'interview_source'::text OR source_case_id IS NOT NULL)",
+              "deleteAction": " ",
+              "referencedTable": null,
+              "referencedSchema": null
+            },
+            {
+              "name": "rec_requirement_decisions_neutral_question_check",
+              "type": "c",
+              "deferred": false,
+              "validated": true,
+              "deferrable": false,
+              "definition": "CHECK (neutral_question IS NULL OR char_length(neutral_question) >= 1 AND char_length(neutral_question) <= 3000)",
+              "deleteAction": " ",
+              "referencedTable": null,
+              "referencedSchema": null
+            },
+            {
+              "name": "rec_requirement_decisions_note_check",
+              "type": "c",
+              "deferred": false,
+              "validated": true,
+              "deferrable": false,
+              "definition": "CHECK (char_length(note) >= 1 AND char_length(note) <= 3000)",
+              "deleteAction": " ",
+              "referencedTable": null,
+              "referencedSchema": null
+            },
+            {
+              "name": "rec_requirement_decisions_pkey",
+              "type": "p",
+              "deferred": false,
+              "validated": true,
+              "deferrable": false,
+              "definition": "PRIMARY KEY (application_id, profile_id, requirement_id)",
+              "deleteAction": " ",
+              "referencedTable": null,
+              "referencedSchema": null
+            },
+            {
+              "name": "rec_requirement_decisions_profile_id_fkey",
+              "type": "f",
+              "deferred": false,
+              "validated": true,
+              "deferrable": false,
+              "definition": "FOREIGN KEY (profile_id) REFERENCES rec_requirement_profiles(id) ON DELETE CASCADE",
+              "deleteAction": "c",
+              "referencedTable": "rec_requirement_profiles",
+              "referencedSchema": "public"
+            },
+            {
+              "name": "rec_requirement_decisions_source_kind_check",
+              "type": "c",
+              "deferred": false,
+              "validated": true,
+              "deferrable": false,
+              "definition": "CHECK (source_kind = ANY (ARRAY['application_answer'::text, 'application_cv'::text, 'interview_source'::text, 'external_reference'::text]))",
+              "deleteAction": " ",
+              "referencedTable": null,
+              "referencedSchema": null
+            },
+            {
+              "name": "rec_requirement_decisions_source_label_check",
+              "type": "c",
+              "deferred": false,
+              "validated": true,
+              "deferrable": false,
+              "definition": "CHECK (source_label IS NULL OR char_length(source_label) >= 1 AND char_length(source_label) <= 500)",
+              "deleteAction": " ",
+              "referencedTable": null,
+              "referencedSchema": null
+            },
+            {
+              "name": "rec_requirement_decisions_state_check",
+              "type": "c",
+              "deferred": false,
+              "validated": true,
+              "deferrable": false,
+              "definition": "CHECK (state = ANY (ARRAY['met'::text, 'not_met'::text, 'clarify'::text]))",
+              "deleteAction": " ",
+              "referencedTable": null,
+              "referencedSchema": null
+            },
+            {
+              "name": "rec_requirement_decisions_updated_by_fkey",
+              "type": "f",
+              "deferred": false,
+              "validated": true,
+              "deferrable": false,
+              "definition": "FOREIGN KEY (updated_by) REFERENCES auth.users(id) ON DELETE SET NULL",
+              "deleteAction": "n",
+              "referencedTable": "users",
+              "referencedSchema": "auth"
+            }
+          ],
+          "privilegesEqual": true,
+          "effectivePrivileges": [
+            {
+              "role": "anon",
+              "delete": false,
+              "insert": false,
+              "select": false,
+              "update": false,
+              "trigger": false,
+              "truncate": false,
+              "references": false
+            },
+            {
+              "role": "authenticated",
+              "delete": false,
+              "insert": false,
+              "select": false,
+              "update": false,
+              "trigger": false,
+              "truncate": false,
+              "references": false
+            },
+            {
+              "role": "service_role",
+              "delete": false,
+              "insert": false,
+              "select": false,
+              "update": false,
+              "trigger": false,
+              "truncate": false,
+              "references": false
+            }
+          ],
+          "structuralMetadataEqual": true
+        },
+        {
+          "acl": [
+            {
+              "grantee": "postgres",
+              "grantor": "postgres",
+              "grantable": false,
+              "privilege": "DELETE"
+            },
+            {
+              "grantee": "postgres",
+              "grantor": "postgres",
+              "grantable": false,
+              "privilege": "INSERT"
+            },
+            {
+              "grantee": "postgres",
+              "grantor": "postgres",
+              "grantable": false,
+              "privilege": "MAINTAIN"
+            },
+            {
+              "grantee": "postgres",
+              "grantor": "postgres",
+              "grantable": false,
+              "privilege": "REFERENCES"
+            },
+            {
+              "grantee": "postgres",
+              "grantor": "postgres",
+              "grantable": false,
+              "privilege": "SELECT"
+            },
+            {
+              "grantee": "postgres",
+              "grantor": "postgres",
+              "grantable": false,
+              "privilege": "TRIGGER"
+            },
+            {
+              "grantee": "postgres",
+              "grantor": "postgres",
+              "grantable": false,
+              "privilege": "TRUNCATE"
+            },
+            {
+              "grantee": "postgres",
+              "grantor": "postgres",
+              "grantable": false,
+              "privilege": "UPDATE"
+            },
+            {
+              "grantee": "authenticated",
+              "grantor": "postgres",
+              "grantable": false,
+              "privilege": "SELECT"
+            }
+          ],
+          "actual": {
+            "rls": true,
+            "name": "rec_requirement_profiles",
+            "owner": "postgres",
+            "schema": "public",
+            "columns": [
+              {
+                "name": "id",
+                "type": "uuid",
+                "notNull": true,
+                "defaultExpression": "gen_random_uuid()"
+              },
+              {
+                "name": "job_id",
+                "type": "uuid",
+                "notNull": true,
+                "defaultExpression": null
+              },
+              {
+                "name": "employer_id",
+                "type": "uuid",
+                "notNull": true,
+                "defaultExpression": null
+              },
+              {
+                "name": "version",
+                "type": "integer",
+                "notNull": true,
+                "defaultExpression": null
+              },
+              {
+                "name": "start_date",
+                "type": "date",
+                "notNull": false,
+                "defaultExpression": null
+              },
+              {
+                "name": "rules",
+                "type": "jsonb",
+                "notNull": true,
+                "defaultExpression": null
+              },
+              {
+                "name": "confirmed_by",
+                "type": "uuid",
+                "notNull": false,
+                "defaultExpression": null
+              },
+              {
+                "name": "confirmed_at",
+                "type": "timestamp with time zone",
+                "notNull": true,
+                "defaultExpression": "now()"
+              }
+            ],
+            "forceRls": false,
+            "constraintCount": 7
+          },
+          "expected": {
+            "rls": true,
+            "name": "rec_requirement_profiles",
+            "owner": "postgres",
+            "schema": "public",
+            "columns": [
+              {
+                "name": "id",
+                "type": "uuid",
+                "notNull": true,
+                "defaultExpression": "gen_random_uuid()"
+              },
+              {
+                "name": "job_id",
+                "type": "uuid",
+                "notNull": true,
+                "defaultExpression": null
+              },
+              {
+                "name": "employer_id",
+                "type": "uuid",
+                "notNull": true,
+                "defaultExpression": null
+              },
+              {
+                "name": "version",
+                "type": "integer",
+                "notNull": true,
+                "defaultExpression": null
+              },
+              {
+                "name": "start_date",
+                "type": "date",
+                "notNull": false,
+                "defaultExpression": null
+              },
+              {
+                "name": "rules",
+                "type": "jsonb",
+                "notNull": true,
+                "defaultExpression": null
+              },
+              {
+                "name": "confirmed_by",
+                "type": "uuid",
+                "notNull": false,
+                "defaultExpression": null
+              },
+              {
+                "name": "confirmed_at",
+                "type": "timestamp with time zone",
+                "notNull": true,
+                "defaultExpression": "now()"
+              }
+            ],
+            "forceRls": false,
+            "constraintCount": 7,
+            "sourceDefinition": "CREATE TABLE public.rec_requirement_profiles (\n  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),\n  job_id uuid NOT NULL REFERENCES public.jobs(id) ON DELETE CASCADE,\n  employer_id uuid NOT NULL REFERENCES public.employers(id) ON DELETE CASCADE,\n  version integer NOT NULL CHECK (version > 0),\n  start_date date,\n  rules jsonb NOT NULL CHECK (jsonb_typeof(rules) = 'array'),\n  confirmed_by uuid REFERENCES auth.users(id) ON DELETE SET NULL,\n  confirmed_at timestamptz NOT NULL DEFAULT now(),\n  UNIQUE(job_id, version)\n);",
+            "authenticatedSelect": true
+          },
+          "constraints": [
+            {
+              "name": "rec_requirement_profiles_confirmed_by_fkey",
+              "type": "f",
+              "deferred": false,
+              "validated": true,
+              "deferrable": false,
+              "definition": "FOREIGN KEY (confirmed_by) REFERENCES auth.users(id) ON DELETE SET NULL",
+              "deleteAction": "n",
+              "referencedTable": "users",
+              "referencedSchema": "auth"
+            },
+            {
+              "name": "rec_requirement_profiles_employer_id_fkey",
+              "type": "f",
+              "deferred": false,
+              "validated": true,
+              "deferrable": false,
+              "definition": "FOREIGN KEY (employer_id) REFERENCES employers(id) ON DELETE CASCADE",
+              "deleteAction": "c",
+              "referencedTable": "employers",
+              "referencedSchema": "public"
+            },
+            {
+              "name": "rec_requirement_profiles_job_id_fkey",
+              "type": "f",
+              "deferred": false,
+              "validated": true,
+              "deferrable": false,
+              "definition": "FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE CASCADE",
+              "deleteAction": "c",
+              "referencedTable": "jobs",
+              "referencedSchema": "public"
+            },
+            {
+              "name": "rec_requirement_profiles_job_id_version_key",
+              "type": "u",
+              "deferred": false,
+              "validated": true,
+              "deferrable": false,
+              "definition": "UNIQUE (job_id, version)",
+              "deleteAction": " ",
+              "referencedTable": null,
+              "referencedSchema": null
+            },
+            {
+              "name": "rec_requirement_profiles_pkey",
+              "type": "p",
+              "deferred": false,
+              "validated": true,
+              "deferrable": false,
+              "definition": "PRIMARY KEY (id)",
+              "deleteAction": " ",
+              "referencedTable": null,
+              "referencedSchema": null
+            },
+            {
+              "name": "rec_requirement_profiles_rules_check",
+              "type": "c",
+              "deferred": false,
+              "validated": true,
+              "deferrable": false,
+              "definition": "CHECK (jsonb_typeof(rules) = 'array'::text)",
+              "deleteAction": " ",
+              "referencedTable": null,
+              "referencedSchema": null
+            },
+            {
+              "name": "rec_requirement_profiles_version_check",
+              "type": "c",
+              "deferred": false,
+              "validated": true,
+              "deferrable": false,
+              "definition": "CHECK (version > 0)",
+              "deleteAction": " ",
+              "referencedTable": null,
+              "referencedSchema": null
+            }
+          ],
+          "privilegesEqual": true,
+          "effectivePrivileges": [
+            {
+              "role": "anon",
+              "delete": false,
+              "insert": false,
+              "select": false,
+              "update": false,
+              "trigger": false,
+              "truncate": false,
+              "references": false
+            },
+            {
+              "role": "authenticated",
+              "delete": false,
+              "insert": false,
+              "select": true,
+              "update": false,
+              "trigger": false,
+              "truncate": false,
+              "references": false
+            },
+            {
+              "role": "service_role",
+              "delete": false,
+              "insert": false,
+              "select": false,
+              "update": false,
+              "trigger": false,
+              "truncate": false,
+              "references": false
+            }
+          ],
+          "structuralMetadataEqual": true
+        },
+        {
+          "acl": [
+            {
+              "grantee": "postgres",
+              "grantor": "postgres",
+              "grantable": false,
+              "privilege": "DELETE"
+            },
+            {
+              "grantee": "postgres",
+              "grantor": "postgres",
+              "grantable": false,
+              "privilege": "INSERT"
+            },
+            {
+              "grantee": "postgres",
+              "grantor": "postgres",
+              "grantable": false,
+              "privilege": "MAINTAIN"
+            },
+            {
+              "grantee": "postgres",
+              "grantor": "postgres",
+              "grantable": false,
+              "privilege": "REFERENCES"
+            },
+            {
+              "grantee": "postgres",
+              "grantor": "postgres",
+              "grantable": false,
+              "privilege": "SELECT"
+            },
+            {
+              "grantee": "postgres",
+              "grantor": "postgres",
+              "grantable": false,
+              "privilege": "TRIGGER"
+            },
+            {
+              "grantee": "postgres",
+              "grantor": "postgres",
+              "grantable": false,
+              "privilege": "TRUNCATE"
+            },
+            {
+              "grantee": "postgres",
+              "grantor": "postgres",
+              "grantable": false,
+              "privilege": "UPDATE"
+            }
+          ],
+          "actual": {
+            "rls": true,
+            "name": "rec_requirement_review_events",
+            "owner": "postgres",
+            "schema": "public",
+            "columns": [
+              {
+                "name": "id",
+                "type": "uuid",
+                "notNull": true,
+                "defaultExpression": "gen_random_uuid()"
+              },
+              {
+                "name": "application_id",
+                "type": "uuid",
+                "notNull": true,
+                "defaultExpression": null
+              },
+              {
+                "name": "employer_id",
+                "type": "uuid",
+                "notNull": true,
+                "defaultExpression": null
+              },
+              {
+                "name": "profile_id",
+                "type": "uuid",
+                "notNull": true,
+                "defaultExpression": null
+              },
+              {
+                "name": "revision",
+                "type": "integer",
+                "notNull": true,
+                "defaultExpression": null
+              },
+              {
+                "name": "actor_id",
+                "type": "uuid",
+                "notNull": false,
+                "defaultExpression": null
+              },
+              {
+                "name": "confirmed",
+                "type": "boolean",
+                "notNull": true,
+                "defaultExpression": null
+              },
+              {
+                "name": "binding_token",
+                "type": "text",
+                "notNull": true,
+                "defaultExpression": null
+              },
+              {
+                "name": "payload",
+                "type": "jsonb",
+                "notNull": true,
+                "defaultExpression": null
+              },
+              {
+                "name": "created_at",
+                "type": "timestamp with time zone",
+                "notNull": true,
+                "defaultExpression": "now()"
+              }
+            ],
+            "forceRls": false,
+            "constraintCount": 6
+          },
+          "expected": {
+            "rls": true,
+            "name": "rec_requirement_review_events",
+            "owner": "postgres",
+            "schema": "public",
+            "columns": [
+              {
+                "name": "id",
+                "type": "uuid",
+                "notNull": true,
+                "defaultExpression": "gen_random_uuid()"
+              },
+              {
+                "name": "application_id",
+                "type": "uuid",
+                "notNull": true,
+                "defaultExpression": null
+              },
+              {
+                "name": "employer_id",
+                "type": "uuid",
+                "notNull": true,
+                "defaultExpression": null
+              },
+              {
+                "name": "profile_id",
+                "type": "uuid",
+                "notNull": true,
+                "defaultExpression": null
+              },
+              {
+                "name": "revision",
+                "type": "integer",
+                "notNull": true,
+                "defaultExpression": null
+              },
+              {
+                "name": "actor_id",
+                "type": "uuid",
+                "notNull": false,
+                "defaultExpression": null
+              },
+              {
+                "name": "confirmed",
+                "type": "boolean",
+                "notNull": true,
+                "defaultExpression": null
+              },
+              {
+                "name": "binding_token",
+                "type": "text",
+                "notNull": true,
+                "defaultExpression": null
+              },
+              {
+                "name": "payload",
+                "type": "jsonb",
+                "notNull": true,
+                "defaultExpression": null
+              },
+              {
+                "name": "created_at",
+                "type": "timestamp with time zone",
+                "notNull": true,
+                "defaultExpression": "now()"
+              }
+            ],
+            "forceRls": false,
+            "constraintCount": 6,
+            "sourceDefinition": "CREATE TABLE public.rec_requirement_review_events (\n  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),\n  application_id uuid NOT NULL REFERENCES public.job_applications(id) ON DELETE CASCADE,\n  employer_id uuid NOT NULL REFERENCES public.employers(id) ON DELETE CASCADE,\n  profile_id uuid NOT NULL REFERENCES public.rec_requirement_profiles(id) ON DELETE CASCADE,\n  revision integer NOT NULL,\n  actor_id uuid REFERENCES auth.users(id) ON DELETE SET NULL,\n  confirmed boolean NOT NULL,\n  binding_token text NOT NULL,\n  payload jsonb NOT NULL,\n  created_at timestamptz NOT NULL DEFAULT now(),\n  UNIQUE(application_id, revision)\n);",
+            "authenticatedSelect": false
+          },
+          "constraints": [
+            {
+              "name": "rec_requirement_review_events_actor_id_fkey",
+              "type": "f",
+              "deferred": false,
+              "validated": true,
+              "deferrable": false,
+              "definition": "FOREIGN KEY (actor_id) REFERENCES auth.users(id) ON DELETE SET NULL",
+              "deleteAction": "n",
+              "referencedTable": "users",
+              "referencedSchema": "auth"
+            },
+            {
+              "name": "rec_requirement_review_events_application_id_fkey",
+              "type": "f",
+              "deferred": false,
+              "validated": true,
+              "deferrable": false,
+              "definition": "FOREIGN KEY (application_id) REFERENCES job_applications(id) ON DELETE CASCADE",
+              "deleteAction": "c",
+              "referencedTable": "job_applications",
+              "referencedSchema": "public"
+            },
+            {
+              "name": "rec_requirement_review_events_application_id_revision_key",
+              "type": "u",
+              "deferred": false,
+              "validated": true,
+              "deferrable": false,
+              "definition": "UNIQUE (application_id, revision)",
+              "deleteAction": " ",
+              "referencedTable": null,
+              "referencedSchema": null
+            },
+            {
+              "name": "rec_requirement_review_events_employer_id_fkey",
+              "type": "f",
+              "deferred": false,
+              "validated": true,
+              "deferrable": false,
+              "definition": "FOREIGN KEY (employer_id) REFERENCES employers(id) ON DELETE CASCADE",
+              "deleteAction": "c",
+              "referencedTable": "employers",
+              "referencedSchema": "public"
+            },
+            {
+              "name": "rec_requirement_review_events_pkey",
+              "type": "p",
+              "deferred": false,
+              "validated": true,
+              "deferrable": false,
+              "definition": "PRIMARY KEY (id)",
+              "deleteAction": " ",
+              "referencedTable": null,
+              "referencedSchema": null
+            },
+            {
+              "name": "rec_requirement_review_events_profile_id_fkey",
+              "type": "f",
+              "deferred": false,
+              "validated": true,
+              "deferrable": false,
+              "definition": "FOREIGN KEY (profile_id) REFERENCES rec_requirement_profiles(id) ON DELETE CASCADE",
+              "deleteAction": "c",
+              "referencedTable": "rec_requirement_profiles",
+              "referencedSchema": "public"
+            }
+          ],
+          "privilegesEqual": true,
+          "effectivePrivileges": [
+            {
+              "role": "anon",
+              "delete": false,
+              "insert": false,
+              "select": false,
+              "update": false,
+              "trigger": false,
+              "truncate": false,
+              "references": false
+            },
+            {
+              "role": "authenticated",
+              "delete": false,
+              "insert": false,
+              "select": false,
+              "update": false,
+              "trigger": false,
+              "truncate": false,
+              "references": false
+            },
+            {
+              "role": "service_role",
+              "delete": false,
+              "insert": false,
+              "select": false,
+              "update": false,
+              "trigger": false,
+              "truncate": false,
+              "references": false
+            }
+          ],
+          "structuralMetadataEqual": true
+        },
+        {
+          "acl": [
+            {
+              "grantee": "postgres",
+              "grantor": "postgres",
+              "grantable": false,
+              "privilege": "DELETE"
+            },
+            {
+              "grantee": "postgres",
+              "grantor": "postgres",
+              "grantable": false,
+              "privilege": "INSERT"
+            },
+            {
+              "grantee": "postgres",
+              "grantor": "postgres",
+              "grantable": false,
+              "privilege": "MAINTAIN"
+            },
+            {
+              "grantee": "postgres",
+              "grantor": "postgres",
+              "grantable": false,
+              "privilege": "REFERENCES"
+            },
+            {
+              "grantee": "postgres",
+              "grantor": "postgres",
+              "grantable": false,
+              "privilege": "SELECT"
+            },
+            {
+              "grantee": "postgres",
+              "grantor": "postgres",
+              "grantable": false,
+              "privilege": "TRIGGER"
+            },
+            {
+              "grantee": "postgres",
+              "grantor": "postgres",
+              "grantable": false,
+              "privilege": "TRUNCATE"
+            },
+            {
+              "grantee": "postgres",
+              "grantor": "postgres",
+              "grantable": false,
+              "privilege": "UPDATE"
+            },
+            {
+              "grantee": "authenticated",
+              "grantor": "postgres",
+              "grantable": false,
+              "privilege": "SELECT"
+            }
+          ],
+          "actual": {
+            "rls": true,
+            "name": "rec_requirement_review_heads",
+            "owner": "postgres",
+            "schema": "public",
+            "columns": [
+              {
+                "name": "application_id",
+                "type": "uuid",
+                "notNull": true,
+                "defaultExpression": null
+              },
+              {
+                "name": "employer_id",
+                "type": "uuid",
+                "notNull": true,
+                "defaultExpression": null
+              },
+              {
+                "name": "revision",
+                "type": "integer",
+                "notNull": true,
+                "defaultExpression": "0"
+              },
+              {
+                "name": "confirmed_profile_id",
+                "type": "uuid",
+                "notNull": false,
+                "defaultExpression": null
+              },
+              {
+                "name": "confirmed_binding",
+                "type": "text",
+                "notNull": false,
+                "defaultExpression": null
+              },
+              {
+                "name": "reviewed_by",
+                "type": "uuid",
+                "notNull": false,
+                "defaultExpression": null
+              },
+              {
+                "name": "reviewed_at",
+                "type": "timestamp with time zone",
+                "notNull": false,
+                "defaultExpression": null
+              },
+              {
+                "name": "next_action",
+                "type": "text",
+                "notNull": false,
+                "defaultExpression": null
+              },
+              {
+                "name": "updated_at",
+                "type": "timestamp with time zone",
+                "notNull": true,
+                "defaultExpression": "now()"
+              }
+            ],
+            "forceRls": false,
+            "constraintCount": 7
+          },
+          "expected": {
+            "rls": true,
+            "name": "rec_requirement_review_heads",
+            "owner": "postgres",
+            "schema": "public",
+            "columns": [
+              {
+                "name": "application_id",
+                "type": "uuid",
+                "notNull": true,
+                "defaultExpression": null
+              },
+              {
+                "name": "employer_id",
+                "type": "uuid",
+                "notNull": true,
+                "defaultExpression": null
+              },
+              {
+                "name": "revision",
+                "type": "integer",
+                "notNull": true,
+                "defaultExpression": "0"
+              },
+              {
+                "name": "confirmed_profile_id",
+                "type": "uuid",
+                "notNull": false,
+                "defaultExpression": null
+              },
+              {
+                "name": "confirmed_binding",
+                "type": "text",
+                "notNull": false,
+                "defaultExpression": null
+              },
+              {
+                "name": "reviewed_by",
+                "type": "uuid",
+                "notNull": false,
+                "defaultExpression": null
+              },
+              {
+                "name": "reviewed_at",
+                "type": "timestamp with time zone",
+                "notNull": false,
+                "defaultExpression": null
+              },
+              {
+                "name": "next_action",
+                "type": "text",
+                "notNull": false,
+                "defaultExpression": null
+              },
+              {
+                "name": "updated_at",
+                "type": "timestamp with time zone",
+                "notNull": true,
+                "defaultExpression": "now()"
+              }
+            ],
+            "forceRls": false,
+            "constraintCount": 7,
+            "sourceDefinition": "CREATE TABLE public.rec_requirement_review_heads (\n  application_id uuid PRIMARY KEY REFERENCES public.job_applications(id) ON DELETE CASCADE,\n  employer_id uuid NOT NULL REFERENCES public.employers(id) ON DELETE CASCADE,\n  revision integer NOT NULL DEFAULT 0 CHECK(revision >= 0),\n  confirmed_profile_id uuid REFERENCES public.rec_requirement_profiles(id) ON DELETE CASCADE,\n  confirmed_binding text,\n  reviewed_by uuid REFERENCES auth.users(id) ON DELETE SET NULL,\n  reviewed_at timestamptz,\n  next_action text CHECK(next_action IS NULL OR char_length(next_action) BETWEEN 1 AND 2000),\n  updated_at timestamptz NOT NULL DEFAULT now()\n);",
+            "authenticatedSelect": true
+          },
+          "constraints": [
+            {
+              "name": "rec_requirement_review_heads_application_id_fkey",
+              "type": "f",
+              "deferred": false,
+              "validated": true,
+              "deferrable": false,
+              "definition": "FOREIGN KEY (application_id) REFERENCES job_applications(id) ON DELETE CASCADE",
+              "deleteAction": "c",
+              "referencedTable": "job_applications",
+              "referencedSchema": "public"
+            },
+            {
+              "name": "rec_requirement_review_heads_confirmed_profile_id_fkey",
+              "type": "f",
+              "deferred": false,
+              "validated": true,
+              "deferrable": false,
+              "definition": "FOREIGN KEY (confirmed_profile_id) REFERENCES rec_requirement_profiles(id) ON DELETE CASCADE",
+              "deleteAction": "c",
+              "referencedTable": "rec_requirement_profiles",
+              "referencedSchema": "public"
+            },
+            {
+              "name": "rec_requirement_review_heads_employer_id_fkey",
+              "type": "f",
+              "deferred": false,
+              "validated": true,
+              "deferrable": false,
+              "definition": "FOREIGN KEY (employer_id) REFERENCES employers(id) ON DELETE CASCADE",
+              "deleteAction": "c",
+              "referencedTable": "employers",
+              "referencedSchema": "public"
+            },
+            {
+              "name": "rec_requirement_review_heads_next_action_check",
+              "type": "c",
+              "deferred": false,
+              "validated": true,
+              "deferrable": false,
+              "definition": "CHECK (next_action IS NULL OR char_length(next_action) >= 1 AND char_length(next_action) <= 2000)",
+              "deleteAction": " ",
+              "referencedTable": null,
+              "referencedSchema": null
+            },
+            {
+              "name": "rec_requirement_review_heads_pkey",
+              "type": "p",
+              "deferred": false,
+              "validated": true,
+              "deferrable": false,
+              "definition": "PRIMARY KEY (application_id)",
+              "deleteAction": " ",
+              "referencedTable": null,
+              "referencedSchema": null
+            },
+            {
+              "name": "rec_requirement_review_heads_reviewed_by_fkey",
+              "type": "f",
+              "deferred": false,
+              "validated": true,
+              "deferrable": false,
+              "definition": "FOREIGN KEY (reviewed_by) REFERENCES auth.users(id) ON DELETE SET NULL",
+              "deleteAction": "n",
+              "referencedTable": "users",
+              "referencedSchema": "auth"
+            },
+            {
+              "name": "rec_requirement_review_heads_revision_check",
+              "type": "c",
+              "deferred": false,
+              "validated": true,
+              "deferrable": false,
+              "definition": "CHECK (revision >= 0)",
+              "deleteAction": " ",
+              "referencedTable": null,
+              "referencedSchema": null
+            }
+          ],
+          "privilegesEqual": true,
+          "effectivePrivileges": [
+            {
+              "role": "anon",
+              "delete": false,
+              "insert": false,
+              "select": false,
+              "update": false,
+              "trigger": false,
+              "truncate": false,
+              "references": false
+            },
+            {
+              "role": "authenticated",
+              "delete": false,
+              "insert": false,
+              "select": true,
+              "update": false,
+              "trigger": false,
+              "truncate": false,
+              "references": false
+            },
+            {
+              "role": "service_role",
+              "delete": false,
+              "insert": false,
+              "select": false,
+              "update": false,
+              "trigger": false,
+              "truncate": false,
+              "references": false
+            }
+          ],
+          "structuralMetadataEqual": true
+        },
+        {
+          "acl": [
+            {
+              "grantee": "postgres",
+              "grantor": "postgres",
+              "grantable": false,
+              "privilege": "DELETE"
+            },
+            {
+              "grantee": "postgres",
+              "grantor": "postgres",
+              "grantable": false,
+              "privilege": "INSERT"
+            },
+            {
+              "grantee": "postgres",
+              "grantor": "postgres",
+              "grantable": false,
+              "privilege": "MAINTAIN"
+            },
+            {
+              "grantee": "postgres",
+              "grantor": "postgres",
+              "grantable": false,
+              "privilege": "REFERENCES"
+            },
+            {
+              "grantee": "postgres",
+              "grantor": "postgres",
+              "grantable": false,
+              "privilege": "SELECT"
+            },
+            {
+              "grantee": "postgres",
+              "grantor": "postgres",
+              "grantable": false,
+              "privilege": "TRIGGER"
+            },
+            {
+              "grantee": "postgres",
+              "grantor": "postgres",
+              "grantable": false,
+              "privilege": "TRUNCATE"
+            },
+            {
+              "grantee": "postgres",
+              "grantor": "postgres",
+              "grantable": false,
+              "privilege": "UPDATE"
+            }
+          ],
+          "actual": {
+            "rls": true,
+            "name": "operations",
+            "owner": "postgres",
+            "schema": "recruiter_intelligence",
+            "columns": [
+              {
+                "name": "operation_id",
+                "type": "uuid",
+                "notNull": true,
+                "defaultExpression": null
+              },
+              {
+                "name": "actor_id",
+                "type": "uuid",
+                "notNull": true,
+                "defaultExpression": null
+              },
+              {
+                "name": "scope_id",
+                "type": "uuid",
+                "notNull": true,
+                "defaultExpression": null
+              },
+              {
+                "name": "kind",
+                "type": "text",
+                "notNull": true,
+                "defaultExpression": null
+              },
+              {
+                "name": "request_hash",
+                "type": "text",
+                "notNull": true,
+                "defaultExpression": null
+              },
+              {
+                "name": "result",
+                "type": "jsonb",
+                "notNull": true,
+                "defaultExpression": null
+              },
+              {
+                "name": "created_at",
+                "type": "timestamp with time zone",
+                "notNull": true,
+                "defaultExpression": "now()"
+              },
+              {
+                "name": "job_id",
+                "type": "uuid",
+                "notNull": true,
+                "defaultExpression": null
+              }
+            ],
+            "forceRls": false,
+            "constraintCount": 3
+          },
+          "expected": {
+            "rls": true,
+            "name": "operations",
+            "owner": "postgres",
+            "schema": "recruiter_intelligence",
+            "columns": [
+              {
+                "name": "operation_id",
+                "type": "uuid",
+                "notNull": true,
+                "defaultExpression": null
+              },
+              {
+                "name": "actor_id",
+                "type": "uuid",
+                "notNull": true,
+                "defaultExpression": null
+              },
+              {
+                "name": "scope_id",
+                "type": "uuid",
+                "notNull": true,
+                "defaultExpression": null
+              },
+              {
+                "name": "kind",
+                "type": "text",
+                "notNull": true,
+                "defaultExpression": null
+              },
+              {
+                "name": "request_hash",
+                "type": "text",
+                "notNull": true,
+                "defaultExpression": null
+              },
+              {
+                "name": "result",
+                "type": "jsonb",
+                "notNull": true,
+                "defaultExpression": null
+              },
+              {
+                "name": "created_at",
+                "type": "timestamp with time zone",
+                "notNull": true,
+                "defaultExpression": "now()"
+              },
+              {
+                "name": "job_id",
+                "type": "uuid",
+                "notNull": true,
+                "defaultExpression": null
+              }
+            ],
+            "forceRls": false,
+            "constraintCount": 3,
+            "sourceDefinition": "CREATE TABLE recruiter_intelligence.operations (\n  operation_id uuid PRIMARY KEY,\n  actor_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,\n  scope_id uuid NOT NULL,\n  kind text NOT NULL,\n  request_hash text NOT NULL,\n  result jsonb NOT NULL,\n  created_at timestamptz NOT NULL DEFAULT now(),\n  job_id uuid NOT NULL REFERENCES public.jobs(id) ON DELETE CASCADE\n);",
+            "authenticatedSelect": false
+          },
+          "constraints": [
+            {
+              "name": "operations_actor_id_fkey",
+              "type": "f",
+              "deferred": false,
+              "validated": true,
+              "deferrable": false,
+              "definition": "FOREIGN KEY (actor_id) REFERENCES auth.users(id) ON DELETE CASCADE",
+              "deleteAction": "c",
+              "referencedTable": "users",
+              "referencedSchema": "auth"
+            },
+            {
+              "name": "operations_job_id_fkey",
+              "type": "f",
+              "deferred": false,
+              "validated": true,
+              "deferrable": false,
+              "definition": "FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE CASCADE",
+              "deleteAction": "c",
+              "referencedTable": "jobs",
+              "referencedSchema": "public"
+            },
+            {
+              "name": "operations_pkey",
+              "type": "p",
+              "deferred": false,
+              "validated": true,
+              "deferrable": false,
+              "definition": "PRIMARY KEY (operation_id)",
+              "deleteAction": " ",
+              "referencedTable": null,
+              "referencedSchema": null
+            }
+          ],
+          "privilegesEqual": true,
+          "effectivePrivileges": [
+            {
+              "role": "anon",
+              "delete": false,
+              "insert": false,
+              "select": false,
+              "update": false,
+              "trigger": false,
+              "truncate": false,
+              "references": false
+            },
+            {
+              "role": "authenticated",
+              "delete": false,
+              "insert": false,
+              "select": false,
+              "update": false,
+              "trigger": false,
+              "truncate": false,
+              "references": false
+            },
+            {
+              "role": "service_role",
+              "delete": false,
+              "insert": false,
+              "select": false,
+              "update": false,
+              "trigger": false,
+              "truncate": false,
+              "references": false
+            }
+          ],
+          "structuralMetadataEqual": true
+        }
+      ],
+      "policies": [
+        {
+          "name": "rec_requirement_profiles_read",
+          "qual": "rec_is_member(employer_id)",
+          "roles": [
+            "authenticated"
+          ],
+          "table": "rec_requirement_profiles",
+          "schema": "public",
+          "command": "r",
+          "withCheck": null,
+          "permissive": true
+        },
+        {
+          "name": "rec_requirement_heads_read",
+          "qual": "rec_is_member(employer_id)",
+          "roles": [
+            "authenticated"
+          ],
+          "table": "rec_requirement_review_heads",
+          "schema": "public",
+          "command": "r",
+          "withCheck": null,
+          "permissive": true
+        }
+      ],
+      "triggers": [
+        {
+          "actual": {
+            "name": "rec_question_identity_used",
+            "table": "recruitment_questions",
+            "schema": "public",
+            "tgtype": 27,
+            "enabled": "O",
+            "functionName": "protect_used_identity",
+            "functionSchema": "recruiter_intelligence"
+          },
+          "expected": {
+            "name": "rec_question_identity_used",
+            "table": "recruitment_questions",
+            "schema": "public",
+            "tgtype": 27,
+            "enabled": "O",
+            "functionName": "protect_used_identity",
+            "functionSchema": "recruiter_intelligence"
+          },
+          "definition": "CREATE TRIGGER rec_question_identity_used BEFORE DELETE OR UPDATE ON recruitment_questions FOR EACH ROW EXECUTE FUNCTION recruiter_intelligence.protect_used_identity()",
+          "contractEqual": true
+        },
+        {
+          "actual": {
+            "name": "rec_requirement_decisions_truncate",
+            "table": "rec_requirement_decisions",
+            "schema": "public",
+            "tgtype": 34,
+            "enabled": "O",
+            "functionName": "protect_history",
+            "functionSchema": "recruiter_intelligence"
+          },
+          "expected": {
+            "name": "rec_requirement_decisions_truncate",
+            "table": "rec_requirement_decisions",
+            "schema": "public",
+            "tgtype": 34,
+            "enabled": "O",
+            "functionName": "protect_history",
+            "functionSchema": "recruiter_intelligence"
+          },
+          "definition": "CREATE TRIGGER rec_requirement_decisions_truncate BEFORE TRUNCATE ON rec_requirement_decisions FOR EACH STATEMENT EXECUTE FUNCTION recruiter_intelligence.protect_history()",
+          "contractEqual": true
+        },
+        {
+          "actual": {
+            "name": "rec_requirement_events_immutable",
+            "table": "rec_requirement_review_events",
+            "schema": "public",
+            "tgtype": 27,
+            "enabled": "O",
+            "functionName": "protect_history",
+            "functionSchema": "recruiter_intelligence"
+          },
+          "expected": {
+            "name": "rec_requirement_events_immutable",
+            "table": "rec_requirement_review_events",
+            "schema": "public",
+            "tgtype": 27,
+            "enabled": "O",
+            "functionName": "protect_history",
+            "functionSchema": "recruiter_intelligence"
+          },
+          "definition": "CREATE TRIGGER rec_requirement_events_immutable BEFORE DELETE OR UPDATE ON rec_requirement_review_events FOR EACH ROW EXECUTE FUNCTION recruiter_intelligence.protect_history()",
+          "contractEqual": true
+        },
+        {
+          "actual": {
+            "name": "rec_requirement_events_truncate",
+            "table": "rec_requirement_review_events",
+            "schema": "public",
+            "tgtype": 34,
+            "enabled": "O",
+            "functionName": "protect_history",
+            "functionSchema": "recruiter_intelligence"
+          },
+          "expected": {
+            "name": "rec_requirement_events_truncate",
+            "table": "rec_requirement_review_events",
+            "schema": "public",
+            "tgtype": 34,
+            "enabled": "O",
+            "functionName": "protect_history",
+            "functionSchema": "recruiter_intelligence"
+          },
+          "definition": "CREATE TRIGGER rec_requirement_events_truncate BEFORE TRUNCATE ON rec_requirement_review_events FOR EACH STATEMENT EXECUTE FUNCTION recruiter_intelligence.protect_history()",
+          "contractEqual": true
+        },
+        {
+          "actual": {
+            "name": "rec_requirement_heads_truncate",
+            "table": "rec_requirement_review_heads",
+            "schema": "public",
+            "tgtype": 34,
+            "enabled": "O",
+            "functionName": "protect_history",
+            "functionSchema": "recruiter_intelligence"
+          },
+          "expected": {
+            "name": "rec_requirement_heads_truncate",
+            "table": "rec_requirement_review_heads",
+            "schema": "public",
+            "tgtype": 34,
+            "enabled": "O",
+            "functionName": "protect_history",
+            "functionSchema": "recruiter_intelligence"
+          },
+          "definition": "CREATE TRIGGER rec_requirement_heads_truncate BEFORE TRUNCATE ON rec_requirement_review_heads FOR EACH STATEMENT EXECUTE FUNCTION recruiter_intelligence.protect_history()",
+          "contractEqual": true
+        },
+        {
+          "actual": {
+            "name": "rec_requirement_identity_used",
+            "table": "recruitment_requirements",
+            "schema": "public",
+            "tgtype": 27,
+            "enabled": "O",
+            "functionName": "protect_used_identity",
+            "functionSchema": "recruiter_intelligence"
+          },
+          "expected": {
+            "name": "rec_requirement_identity_used",
+            "table": "recruitment_requirements",
+            "schema": "public",
+            "tgtype": 27,
+            "enabled": "O",
+            "functionName": "protect_used_identity",
+            "functionSchema": "recruiter_intelligence"
+          },
+          "definition": "CREATE TRIGGER rec_requirement_identity_used BEFORE DELETE OR UPDATE ON recruitment_requirements FOR EACH ROW EXECUTE FUNCTION recruiter_intelligence.protect_used_identity()",
+          "contractEqual": true
+        },
+        {
+          "actual": {
+            "name": "rec_requirement_operations_immutable",
+            "table": "operations",
+            "schema": "recruiter_intelligence",
+            "tgtype": 27,
+            "enabled": "O",
+            "functionName": "protect_history",
+            "functionSchema": "recruiter_intelligence"
+          },
+          "expected": {
+            "name": "rec_requirement_operations_immutable",
+            "table": "operations",
+            "schema": "recruiter_intelligence",
+            "tgtype": 27,
+            "enabled": "O",
+            "functionName": "protect_history",
+            "functionSchema": "recruiter_intelligence"
+          },
+          "definition": "CREATE TRIGGER rec_requirement_operations_immutable BEFORE DELETE OR UPDATE ON recruiter_intelligence.operations FOR EACH ROW EXECUTE FUNCTION recruiter_intelligence.protect_history()",
+          "contractEqual": true
+        },
+        {
+          "actual": {
+            "name": "rec_requirement_operations_truncate",
+            "table": "operations",
+            "schema": "recruiter_intelligence",
+            "tgtype": 34,
+            "enabled": "O",
+            "functionName": "protect_history",
+            "functionSchema": "recruiter_intelligence"
+          },
+          "expected": {
+            "name": "rec_requirement_operations_truncate",
+            "table": "operations",
+            "schema": "recruiter_intelligence",
+            "tgtype": 34,
+            "enabled": "O",
+            "functionName": "protect_history",
+            "functionSchema": "recruiter_intelligence"
+          },
+          "definition": "CREATE TRIGGER rec_requirement_operations_truncate BEFORE TRUNCATE ON recruiter_intelligence.operations FOR EACH STATEMENT EXECUTE FUNCTION recruiter_intelligence.protect_history()",
+          "contractEqual": true
+        },
+        {
+          "actual": {
+            "name": "rec_requirement_originals_truncate",
+            "table": "recruitment_requirements",
+            "schema": "public",
+            "tgtype": 34,
+            "enabled": "O",
+            "functionName": "protect_history",
+            "functionSchema": "recruiter_intelligence"
+          },
+          "expected": {
+            "name": "rec_requirement_originals_truncate",
+            "table": "recruitment_requirements",
+            "schema": "public",
+            "tgtype": 34,
+            "enabled": "O",
+            "functionName": "protect_history",
+            "functionSchema": "recruiter_intelligence"
+          },
+          "definition": "CREATE TRIGGER rec_requirement_originals_truncate BEFORE TRUNCATE ON recruitment_requirements FOR EACH STATEMENT EXECUTE FUNCTION recruiter_intelligence.protect_history()",
+          "contractEqual": true
+        },
+        {
+          "actual": {
+            "name": "rec_requirement_profiles_immutable",
+            "table": "rec_requirement_profiles",
+            "schema": "public",
+            "tgtype": 27,
+            "enabled": "O",
+            "functionName": "protect_profile",
+            "functionSchema": "recruiter_intelligence"
+          },
+          "expected": {
+            "name": "rec_requirement_profiles_immutable",
+            "table": "rec_requirement_profiles",
+            "schema": "public",
+            "tgtype": 27,
+            "enabled": "O",
+            "functionName": "protect_profile",
+            "functionSchema": "recruiter_intelligence"
+          },
+          "definition": "CREATE TRIGGER rec_requirement_profiles_immutable BEFORE DELETE OR UPDATE ON rec_requirement_profiles FOR EACH ROW EXECUTE FUNCTION recruiter_intelligence.protect_profile()",
+          "contractEqual": true
+        },
+        {
+          "actual": {
+            "name": "rec_requirement_profiles_truncate",
+            "table": "rec_requirement_profiles",
+            "schema": "public",
+            "tgtype": 34,
+            "enabled": "O",
+            "functionName": "protect_history",
+            "functionSchema": "recruiter_intelligence"
+          },
+          "expected": {
+            "name": "rec_requirement_profiles_truncate",
+            "table": "rec_requirement_profiles",
+            "schema": "public",
+            "tgtype": 34,
+            "enabled": "O",
+            "functionName": "protect_history",
+            "functionSchema": "recruiter_intelligence"
+          },
+          "definition": "CREATE TRIGGER rec_requirement_profiles_truncate BEFORE TRUNCATE ON rec_requirement_profiles FOR EACH STATEMENT EXECUTE FUNCTION recruiter_intelligence.protect_history()",
+          "contractEqual": true
+        },
+        {
+          "actual": {
+            "name": "rec_requirement_questions_truncate",
+            "table": "recruitment_questions",
+            "schema": "public",
+            "tgtype": 34,
+            "enabled": "O",
+            "functionName": "protect_history",
+            "functionSchema": "recruiter_intelligence"
+          },
+          "expected": {
+            "name": "rec_requirement_questions_truncate",
+            "table": "recruitment_questions",
+            "schema": "public",
+            "tgtype": 34,
+            "enabled": "O",
+            "functionName": "protect_history",
+            "functionSchema": "recruiter_intelligence"
+          },
+          "definition": "CREATE TRIGGER rec_requirement_questions_truncate BEFORE TRUNCATE ON recruitment_questions FOR EACH STATEMENT EXECUTE FUNCTION recruiter_intelligence.protect_history()",
+          "contractEqual": true
+        }
+      ],
+      "sourceSha": "6039fbc685cad255aae4a4e39c1035e933af883d",
+      "observedAt": "2026-10-08T12:57:53.926929+00:00",
+      "tableCount": 5,
+      "newRowCounts": {
+        "heads": 0,
+        "events": 0,
+        "profiles": 0,
+        "decisions": 0,
+        "operations": 0
+      },
+      "triggerCount": 12,
+      "privateSchema": {
+        "acl": "{postgres=UC/postgres}",
+        "owner": "postgres",
+        "anonUsage": false,
+        "serviceRoleUsage": false,
+        "authenticatedUsage": false
+      },
+      "constraintTypes": {
+        "c": 10,
+        "f": 16,
+        "p": 5,
+        "u": 2
+      }
+    }
+  },
+  "exactHeadChecks": {
+    "runId": 37762014757,
+    "coreJobs": [
+      113260736150,
+      113260736375,
+      113260736383,
+      113260736543,
+      113260736560,
+      113260736600,
+      113260736612,
+      113260736669
+    ],
+    "externalRuns": [
+      37762014710,
+      37762014735,
+      37762014691,
+      37762014794,
+      37762014698,
+      37762014743,
+      37762014738
+    ],
+    "all15Succeeded": true
+  },
+  "limitations": [
+    "Read-only installation proof; no hosted synthetic Auth accounts, applications or messages created.",
+    "Native100 proof is isolated official services at0508192/app3e0/schema6039, not published runtime or physical phone.",
+    "Hosted historical report count0; populated report-history proof belongs to isolated tests.",
+    "Technical snapshot/use locks do not approve draft content or supply missing English guide text."
+  ],
+  "staticExpectationCorrection": "Column source_case_id is nullable; its CHECK requires it only for interview_source. Initial static parser mistook CHECK IS NOT NULL for column NOT NULL. Corrected source-only expectation and reran SELECT; no product/schema mutation."
+}
