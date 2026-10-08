@@ -342,7 +342,8 @@ export function CandidateTable(props: Props) {
   const questionLabel = (q: { promptSv: string | null; promptEn: string | null }) =>
     (lang === "en" ? q.promptEn || q.promptSv : q.promptSv || q.promptEn) ?? "";
   const stageCount = (s: (typeof STAGE_FILTERS)[number]) => {
-    if (!page || s === "archived") return "";
+    // Organisation-wide legacy counts do not describe a retained job filter.
+    if (!page || s === "archived" || (jobId === null && view.job)) return "";
     const c = page.counts;
     const n =
       s === "received"
@@ -402,6 +403,7 @@ export function CandidateTable(props: Props) {
         <label className="flex flex-col gap-0.5 text-xs text-muted-foreground">
           {t("rec.table.stage")}
           <select
+            data-testid="stage-filter"
             className={selectCls}
             value={view.stage ?? "open"}
             onChange={(e) =>

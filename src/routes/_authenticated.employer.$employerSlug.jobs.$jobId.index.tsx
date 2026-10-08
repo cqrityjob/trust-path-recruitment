@@ -171,6 +171,7 @@ function JobHubRoute() {
     <JobsPage employerSlug={employerSlug} wide>
       {(ws) => (
         <JobHub
+          key={jobId}
           employerId={ws.employerId}
           employerSlug={employerSlug}
           employerName={ws.employerName}
@@ -1029,7 +1030,7 @@ function JobHub({
                   {t("continuity.next.retry")}
                 </button>
               </div>
-            ) : counts && counts.total === 0 ? (
+            ) : page?.intelligenceCounts?.received === 0 ? (
               <p className="rounded-lg border border-dashed border-border px-4 py-6 text-sm text-muted-foreground">
                 {status === "published"
                   ? t("employer.jobHub.candidates.emptyPublished")

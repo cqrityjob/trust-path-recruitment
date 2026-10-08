@@ -2,11 +2,15 @@ import type { RequirementReview, RequirementDecision } from "./requirement-intel
 
 /** The submitted snapshot is the original for a structured CV. Its presence
  * must never dispatch a Storage signer or silently fall back to a file. */
-export async function openSubmittedCvSource(
-  source: "upload" | "cqrityjob_cv",
+export async function openApplicationOriginalCv(
+  original: { hasUploadedCv: boolean; submittedSource: "upload" | "cqrityjob_cv" | null },
   actions: { openFile: () => Promise<void>; openSnapshot: () => Promise<void> },
 ) {
-  await (source === "cqrityjob_cv" ? actions.openSnapshot() : actions.openFile());
+  // This candidate read model's hasCv flag means an uploaded path. Its
+  // structured-CV query is deliberately disabled on the uploaded branch.
+  if (original.hasUploadedCv) return actions.openFile();
+  if (original.submittedSource === "cqrityjob_cv") return actions.openSnapshot();
+  throw new Error("ORIGINAL_CV_UNAVAILABLE");
 }
 
 export const decisionsFromReview = (review: RequirementReview): RequirementDecision[] =>

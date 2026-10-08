@@ -59,7 +59,7 @@ export function RequirementProfilePanel({
     );
   return (
     <RequirementProfileEditor
-      key={generation}
+      key={`${jobId}:${generation}`}
       employerId={employerId}
       profile={query.data}
       onReload={async () => {
@@ -125,7 +125,11 @@ export function RequirementProfileEditor({
     setRules((current) => current.map((rule, i) => (i === index ? { ...rule, ...value } : rule)));
   };
   return (
-    <section data-testid="requirement-profile" className="mt-5 rounded-lg border border-border p-4">
+    <section
+      data-testid="requirement-profile"
+      data-job-id={base.jobId}
+      className="mt-5 rounded-lg border border-border p-4"
+    >
       <h3 className="text-lg font-semibold">
         {sv
           ? "Beslutad kravprofil och accepterat underlag"

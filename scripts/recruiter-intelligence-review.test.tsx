@@ -1,6 +1,6 @@
 import {
   decisionsFromReview,
-  openSubmittedCvSource,
+  openApplicationOriginalCv,
 } from "../src/lib/recruitment/requirement-review-draft";
 import { describe, expect, mock, test } from "bun:test";
 import React from "react";
@@ -100,19 +100,37 @@ describe("manual requirements and review surface", () => {
   test("opening structured originals never invokes Storage signing, including when the snapshot cannot be read", async () => {
     const file = mock(async () => undefined);
     const snapshot = mock(async () => undefined);
-    await openSubmittedCvSource("cqrityjob_cv", { openFile: file, openSnapshot: snapshot });
+    await openApplicationOriginalCv(
+      { hasUploadedCv: false, submittedSource: "cqrityjob_cv" },
+      { openFile: file, openSnapshot: snapshot },
+    );
     expect(file).not.toHaveBeenCalled();
     expect(snapshot).toHaveBeenCalledTimes(1);
     await expect(
-      openSubmittedCvSource("cqrityjob_cv", {
-        openFile: file,
-        openSnapshot: async () => {
-          throw new Error("ORIGINAL_CV_UNAVAILABLE");
+      openApplicationOriginalCv(
+        { hasUploadedCv: false, submittedSource: "cqrityjob_cv" },
+        {
+          openFile: file,
+          openSnapshot: async () => {
+            throw new Error("ORIGINAL_CV_UNAVAILABLE");
+          },
         },
-      }),
+      ),
     ).rejects.toThrow("ORIGINAL_CV_UNAVAILABLE");
     expect(file).not.toHaveBeenCalled();
-    await openSubmittedCvSource("upload", { openFile: file, openSnapshot: snapshot });
+    // Actual uploads deliberately have no submitted-CV query result.
+    await openApplicationOriginalCv(
+      { hasUploadedCv: true, submittedSource: null },
+      { openFile: file, openSnapshot: snapshot },
+    );
+    expect(file).toHaveBeenCalledTimes(1);
+    expect(snapshot).toHaveBeenCalledTimes(1);
+    await expect(
+      openApplicationOriginalCv(
+        { hasUploadedCv: false, submittedSource: null },
+        { openFile: file, openSnapshot: snapshot },
+      ),
+    ).rejects.toThrow("ORIGINAL_CV_UNAVAILABLE");
     expect(file).toHaveBeenCalledTimes(1);
     expect(snapshot).toHaveBeenCalledTimes(1);
   });

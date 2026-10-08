@@ -325,6 +325,31 @@ const sql = read(F.migration);
       /\{canManage && \([\s\S]{0,500}setConfirmReject\(true\)/.test(table),
     "C · the organisation list uses the shared table; a batch decision needs management rights on every selected recruitment",
   );
+  const hub = code(F.hub);
+  ok(
+    /page\?\.intelligenceCounts\?\.received === 0/.test(hub),
+    "C · archive-only recruitments retain the candidate table through the received population",
+  );
+  ok(
+    /<JobHub\s+key=\{jobId\}/.test(hub),
+    "C · switching cached recruitments resets the complete JobHub draft state",
+  );
+  ok(
+    /key=\{`\$\{jobId\}:\$\{generation\}`\}/.test(
+      code("src/components/recruitment/RequirementProfilePanel.tsx"),
+    ),
+    "C · requirement editors reset their target and draft when the job changes",
+  );
+  ok(
+    /jobId === null && view\.job/.test(table),
+    "C · a retained job filter does not label stages with organisation-wide numbers",
+  );
+  ok(
+    /openApplicationOriginalCv\(\s*\{\s*hasUploadedCv: c\.hasCv,\s*submittedSource: submittedCv\?\.source \?\? null/.test(
+      candidate,
+    ),
+    "C · the original CV route dispatches uploads independently of the disabled snapshot query",
+  );
 }
 
 /* ================================================================== */

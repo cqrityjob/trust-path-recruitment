@@ -52,7 +52,7 @@ import { SendTestDialog } from "@/components/recruitment/SendTestDialog";
 
 import { PrepareInterviewButton } from "@/components/library/PrepareInterviewButton";
 import { RequirementReviewPanel } from "@/components/recruitment/RequirementReviewPanel";
-import { openSubmittedCvSource } from "@/lib/recruitment/requirement-review-draft";
+import { openApplicationOriginalCv } from "@/lib/recruitment/requirement-review-draft";
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -1003,17 +1003,19 @@ function Candidate360({
           applicationId={applicationId}
           team={rw.team}
           cases={interviewCases}
-          onOpenCv={async () => {
-            if (!submittedCv) throw new Error("ORIGINAL_CV_UNAVAILABLE");
-            await openSubmittedCvSource(submittedCv.source, {
-              openFile: onDownloadCv,
-              openSnapshot: async () => {
-                const original = document.getElementById("candidate-original-cv");
-                if (!original) throw new Error("ORIGINAL_CV_UNAVAILABLE");
-                original.scrollIntoView({ block: "start" });
+          onOpenCv={() =>
+            openApplicationOriginalCv(
+              { hasUploadedCv: c.hasCv, submittedSource: submittedCv?.source ?? null },
+              {
+                openFile: onDownloadCv,
+                openSnapshot: async () => {
+                  const original = document.getElementById("candidate-original-cv");
+                  if (!original) throw new Error("ORIGINAL_CV_UNAVAILABLE");
+                  original.scrollIntoView({ block: "start" });
+                },
               },
-            });
-          }}
+            )
+          }
         />
       )}
 
