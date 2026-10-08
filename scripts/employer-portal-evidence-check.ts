@@ -28,7 +28,15 @@ import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
 
 const ROOT = "artifacts/employer-portal-ux";
-const AREAS = ["overview", "jobs", "applications", "assessments", "interviews", "reports"] as const;
+const AREAS = [
+  "overview",
+  "jobs",
+  "applications",
+  "assessments",
+  "interviews",
+  "reports",
+  "requirements",
+] as const;
 const LANGS = ["sv", "en"] as const;
 const WIDTHS = [1440, 375] as const;
 /** The paths whose change makes a photograph out of date: the same list the

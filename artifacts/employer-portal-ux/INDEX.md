@@ -14,7 +14,7 @@ Supabase; varje serverfunktion besvaras från `e2e/support/employer-portal-fixtu
 | Intervjuärenden | fyra: planerad, redo, evidensgranskning, rapporterad |
 | Språk × bredd | sv/en × 1440 (chromium) och 375 (iPhone 13 Mini-emulering: `isMobile`, `hasTouch`, DPR 3) |
 | Instrument | Sviten, fixturen, harnessen och `playwright.config.ts` tas från PR-huvudet för BÅDA fotograferingarna; bara appen skiljer. Före-bilderna i mobilbredd är därför tagna med samma mobilemulering som efter-bilderna |
-| Sidor | översikt, rekryteringar, ansökningar, tester, intervjuer, rapporter |
+| Sidor | översikt, rekryteringar, ansökningar, tester, intervjuer, rapporter, kravprofil (rekryteringsnavet för Väktare, Uppsala, steget Kravprofil: `requirements`) |
 
 Filnamn: `before-<sida>-<språk>-<bredd>.png` respektive `after-<sida>-<språk>-<bredd>.png`,
 plus `manifest.json` (fil + anteckning per bild) och `SOURCE.txt` (commit som fotograferades).

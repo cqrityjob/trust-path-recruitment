@@ -22,7 +22,7 @@
 export const EMPLOYER_ID = "00000000-0000-4000-8000-00000000e0c1";
 export const SLUG = "exempelvakt";
 const USER = "00000000-0000-4000-8000-0000publicentry".slice(0, 36);
-const JOB_UPPSALA = "00000000-0000-4000-8000-0000000000a1";
+export const JOB_UPPSALA = "00000000-0000-4000-8000-0000000000a1";
 const JOB_DRAFT = "00000000-0000-4000-8000-0000000000a2";
 const JOB_READY = "00000000-0000-4000-8000-0000000000a3";
 const APP = (n: number) => `00000000-0000-4000-8000-0000000000b${n}`;
@@ -296,7 +296,142 @@ const job = (id: string, title: string, status: string, published: boolean) => (
   deadline_at: published ? "2026-11-30T22:59:59.000Z" : null,
   expires_at: null,
   updated_at: AT,
+  city: "Uppsala",
+  location_text: "Uppsala",
+  description_sv: "Bevakning av handelsplats, dag och kväll.",
+  description_en: "Guarding a retail site, days and evenings.",
+  requirements_sv: "Godkänd väktarutbildning. B-körkort är meriterande.",
+  requirements_en: "Approved security guard training. A driving licence is desirable.",
 });
+const jobs = [
+  job(JOB_UPPSALA, "Väktare, Uppsala", "published", true),
+  job(JOB_DRAFT, "Ordningsvakt, Gävle", "draft", false),
+  job(JOB_READY, "Skyddsvakt, Västerås", "published", true),
+];
+
+// ── The recruitment hub's requirement-profile step ───────────────────────
+//
+// Two requirements (one mandatory, one desirable), one yes/no question tied
+// to the mandatory one, and a confirmed profile version 1 -- enough for the
+// form to show every control it has, in the state a recruiter meets most.
+const REQ_TRAINING = "00000000-0000-4000-8000-00000000e001";
+const REQ_LICENCE = "00000000-0000-4000-8000-00000000e002";
+const Q_TRAINING = "00000000-0000-4000-8000-00000000f001";
+const Q_MOTIVATION = "00000000-0000-4000-8000-00000000f002";
+
+export const recruitmentDetail = {
+  jobId: JOB_UPPSALA,
+  settings: {
+    responsibleUserId: USER,
+    completionState: "open",
+    completedAt: null,
+    completionNote: null,
+    version: 1,
+  },
+  receipt: {
+    enabled: true,
+    subjectSv: null,
+    bodySv: null,
+    subjectEn: null,
+    bodyEn: null,
+    updatedAt: null,
+    defaults: {
+      subjectSv: "Vi har tagit emot din ansökan",
+      bodySv: "Tack för din ansökan. Vi återkommer.",
+      subjectEn: "We have received your application",
+      bodyEn: "Thank you for applying. We will be in touch.",
+    },
+  },
+  requirements: [
+    {
+      id: REQ_TRAINING,
+      kind: "mandatory",
+      labelSv: "Godkänd väktarutbildning",
+      labelEn: "Approved security guard training",
+      position: 1,
+    },
+    {
+      id: REQ_LICENCE,
+      kind: "desirable",
+      labelSv: "B-körkort",
+      labelEn: "Driving licence (B)",
+      position: 2,
+    },
+  ],
+  questions: [
+    {
+      id: Q_TRAINING,
+      requirementId: REQ_TRAINING,
+      promptSv: "Har du godkänd väktarutbildning?",
+      promptEn: "Do you have approved security guard training?",
+      answerKind: "yes_no",
+      isRequired: true,
+      position: 1,
+    },
+    {
+      id: Q_MOTIVATION,
+      requirementId: null,
+      promptSv: "Varför söker du tjänsten?",
+      promptEn: "Why are you applying?",
+      answerKind: "text",
+      isRequired: false,
+      position: 2,
+    },
+  ],
+  structureLocked: true,
+  team: [{ userId: USER, name: "Rita Rekryterare", role: "owner", isSelf: true }],
+  role: "owner",
+  myUserId: USER,
+  canManage: true,
+};
+
+export const requirementProfile = {
+  jobId: JOB_UPPSALA,
+  profileId: "00000000-0000-4000-8000-00000000a0f1",
+  version: 1,
+  startDate: "2026-11-01",
+  confirmedAt: "2026-09-12T09:00:00.000Z",
+  confirmedBy: USER,
+  canManage: true,
+  rules: [
+    {
+      requirementId: REQ_TRAINING,
+      kind: "mandatory",
+      acceptedSources: ["application_answer", "external_reference"],
+      decisionRule: "valid_at_start",
+      questionId: Q_TRAINING,
+      instructionSv:
+        "Kontrollera utbildningsbeviset mot utfärdaren; det ska vara giltigt på startdatumet.",
+      instructionEn:
+        "Check the training certificate with the issuer; it must be valid on the start date.",
+      labelSv: "Godkänd väktarutbildning",
+      labelEn: "Approved security guard training",
+      position: 1,
+    },
+    {
+      requirementId: REQ_LICENCE,
+      kind: "desirable",
+      acceptedSources: ["application_cv"],
+      decisionRule: "human_confirmed",
+      questionId: null,
+      instructionSv: "Körkortsklass B enligt CV; bekräftas vid intervju.",
+      instructionEn: "Licence class B per the CV; confirmed at interview.",
+      labelSv: "B-körkort",
+      labelEn: "Driving licence (B)",
+      position: 2,
+    },
+  ],
+  requirements: recruitmentDetail.requirements,
+  questions: recruitmentDetail.questions.map(
+    ({ id, requirementId, promptSv, promptEn, answerKind }) => ({
+      id,
+      requirementId,
+      promptSv,
+      promptEn,
+      answerKind,
+    }),
+  ),
+};
 
 const interviewCase = (n: number, name: string, status: string, proposals = 0) => ({
   id: CASE(n),
@@ -369,11 +504,13 @@ export const table: Record<string, unknown | ((args: Record<string, unknown>) =>
     descriptionEn: "Guarding in Uppland.",
     status: "active",
   },
-  listEmployerJobs: [
-    job(JOB_UPPSALA, "Väktare, Uppsala", "published", true),
-    job(JOB_DRAFT, "Ordningsvakt, Gävle", "draft", false),
-    job(JOB_READY, "Skyddsvakt, Västerås", "published", true),
-  ],
+  listEmployerJobs: jobs,
+  // The recruitment hub (one recruitment, its requirement-profile step).
+  getEmployerJob: (args: Record<string, unknown>) => jobs.find((j) => j.id === args.jobId) ?? null,
+  getRecruitment: (args: Record<string, unknown>) =>
+    args.jobId === JOB_UPPSALA ? recruitmentDetail : null,
+  getRequirementProfile: (args: Record<string, unknown>) =>
+    args.jobId === JOB_UPPSALA ? requirementProfile : null,
   listEmployerAssessmentCatalog: [],
   getEmployerWorkforceSummary: { activeEmployees: 12, rolesRepresented: 3, sitesRepresented: 2 },
   listTrainingStatus: [],

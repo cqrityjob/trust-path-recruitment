@@ -35,18 +35,27 @@ import {
   plantSession,
   shot,
 } from "./support/public-entry-harness";
-import { SLUG, table } from "./support/employer-portal-fixture";
+import { JOB_UPPSALA, SLUG, table } from "./support/employer-portal-fixture";
 
 const SV = dictionaries.sv as Record<string, string>;
 const EN = dictionaries.en as Record<string, string>;
 const BEFORE = process.env.UX_EVIDENCE_MODE === "before";
 
 type Area = {
-  key: "overview" | "jobs" | "applications" | "assessments" | "interviews" | "reports";
+  key:
+    | "overview"
+    | "jobs"
+    | "applications"
+    | "assessments"
+    | "interviews"
+    | "reports"
+    | "requirements";
   path: string;
   /** A locator that proves the page's own content rendered, not the shell. */
   ready: string;
-  flow: string;
+  /** The flow strip's station, or null on a page inside one recruitment,
+   *  which has the recruitment's own step nav instead of the strip. */
+  flow: string | null;
 };
 
 const AREAS: Area[] = [
@@ -66,6 +75,13 @@ const AREAS: Area[] = [
     flow: "interviews",
   },
   { key: "reports", path: "reports", ready: "[data-testid='reports']", flow: "report" },
+  // One recruitment's Kravprofil step: the requirement-profile form.
+  {
+    key: "requirements",
+    path: `jobs/${JOB_UPPSALA}?step=requirements`,
+    ready: "[data-testid='requirement-profile']",
+    flow: null,
+  },
 ];
 
 /** The boundary, a planted session, and the refusals to assert empty. The
@@ -136,6 +152,7 @@ test.describe("employer portal — one journey", () => {
       const refusals = await signedIn(page);
       await primeLang(page, "sv");
       for (const area of AREAS) {
+        if (!area.flow) continue;
         await open(page, area);
         const strip = page.locator("[data-testid='recruitment-flow']").first();
         await expect(strip, `${area.key} has no flow strip`).toBeVisible();
@@ -324,6 +341,46 @@ test.describe("employer portal — one journey", () => {
       await page.keyboard.press("Escape");
       await expect(page.getByRole("dialog")).toHaveCount(0);
       await expect(trigger).toBeFocused();
+      expect(await horizontalOverflow(page)).toBe(0);
+      assertNoRefusals(refusals);
+    });
+
+    test("the requirement profile reads krav → underlag → kontroll → fastställ, ids behind details", async ({
+      page,
+    }) => {
+      const refusals = await signedIn(page);
+      await primeLang(page, "sv");
+      await open(page, AREAS[6]!);
+      const form = page.locator("[data-testid='requirement-profile']");
+      await expect(form.getByText("Fastställd version 1")).toBeVisible();
+      // Per requirement, the three steps in order; then the fourth once.
+      const headings = await form.locator("h4").allInnerTexts();
+      expect(headings.map((h) => h.replace(/^\d\s*/, "").trim())).toEqual([
+        "Krav",
+        "Godtagbart underlag",
+        "Kontrollinstruktion",
+        "Krav",
+        "Godtagbart underlag",
+        "Kontrollinstruktion",
+        "Fastställ",
+      ]);
+      // The rule's help text follows the chosen rule.
+      await expect(form.getByText(/giltigt på referensdatumet nedan/).first()).toBeVisible();
+      await expect(
+        form.getByText(/En person bekräftar kravet enligt instruktionen/).first(),
+      ).toBeVisible();
+      // Identifiers are behind closed details: not visible until opened.
+      const details = form.locator("details");
+      await expect(details).toHaveCount(3);
+      await expect(form.getByText(/Befintligt krav-ID/)).toHaveCount(2);
+      await expect(form.getByText(/Befintligt krav-ID/).first()).toBeHidden();
+      await details.first().locator("summary").click();
+      await expect(form.getByText(/Befintligt krav-ID/).first()).toBeVisible();
+      // The confirmation explains what it does, and stays gated by the acknowledgement.
+      await expect(form.getByText(/skapar version 2 av kravprofilen/)).toBeVisible();
+      await expect(
+        form.getByRole("button", { name: "Fastställ ny kravprofilversion" }),
+      ).toBeDisabled();
       expect(await horizontalOverflow(page)).toBe(0);
       assertNoRefusals(refusals);
     });
