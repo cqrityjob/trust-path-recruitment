@@ -94,8 +94,10 @@ test.describe("employer portal — one journey", () => {
       await setLang(page, lang);
       for (const area of AREAS) {
         await open(page, area);
-        // The shell names the organisation on every page.
-        await expect(page.getByText("Exempelvakt AB").first()).toBeVisible();
+        // The shell names the organisation on every page: in the sidebar on
+        // a desktop, in the top bar on a phone (where the sidebar is a closed
+        // drawer, so the first match in the DOM is hidden by design).
+        await expect(page.getByText("Exempelvakt AB").filter({ visible: true }).first()).toBeVisible();
         expect(
           await horizontalOverflow(page),
           `${area.key} (${lang}, ${width}px) scrolls sideways`,
@@ -122,9 +124,10 @@ test.describe("employer portal — one journey", () => {
         const strip = page.locator("[data-testid='recruitment-flow']").first();
         await expect(strip, `${area.key} has no flow strip`).toBeVisible();
         await expect(strip).toHaveAttribute("data-current", area.flow);
-        // Seven stations, always, in the same order.
+        // Seven stations, always, in the same order (the current one also
+        // carries a visually hidden "you are here").
         const labels = await strip.locator("li a").allInnerTexts();
-        expect(labels.map((l) => l.trim().split("\n")[0])).toEqual([
+        const expected = [
           SV["rec.flow.requirements"],
           SV["rec.flow.applications"],
           SV["rec.flow.review"],
@@ -132,7 +135,13 @@ test.describe("employer portal — one journey", () => {
           SV["rec.flow.interviews"],
           SV["rec.flow.report"],
           SV["rec.flow.decision"],
-        ]);
+        ];
+        expect(labels).toHaveLength(7);
+        expected.forEach((label, i) => expect(labels[i]).toContain(label));
+        // It says it is the order of work, not a checklist.
+        await expect(strip.getByText(SV["rec.flow.lede"]!)).toBeVisible();
+        // "Decision & close" opens the recruitments where decisions are made.
+        await expect(strip.locator("li a").last()).toHaveAttribute("href", /phase=active/);
         if (area.flow !== "overview") {
           await expect(strip.locator("a[aria-current='step']")).toHaveText(
             new RegExp(SV[`rec.flow.${area.flow}`]!),

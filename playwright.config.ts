@@ -1,4 +1,9 @@
 import { defineConfig, devices } from "@playwright/test";
+import { requireNativeMobilePreset } from "./scripts/recruiter-real-ci-mobile-preset";
+
+// Emulated phones (Chromium with the preset's metrics), never physical devices.
+const mobile375 = requireNativeMobilePreset(devices, "iPhone 13 Mini", 375);
+const mobile390 = requireNativeMobilePreset(devices, "iPhone 14", 390);
 
 // H3.4A — Playwright configuration for the beta-critical candidate-to-
 // employer smoke test (e2e/candidate-to-employer-application.spec.ts).
@@ -61,20 +66,34 @@ export default defineConfig({
     // matter here — viewport, DPR, touch and the mobile user agent — are
     // emulated identically, and pinning to the one engine the repository
     // already installs keeps this runnable in CI without a second download.
+    //
+    // The preset NAMES are checked, not assumed. `devices["iPhone 13 mini"]`
+    // (lower-case m) is not a Playwright device: the spread was an empty
+    // object, and "mobile-375" ran for weeks as a 375px-wide DESKTOP window --
+    // no touch, no mobile user agent, DPR 1 -- while every report called it a
+    // phone. requireNativeMobilePreset throws on a missing or non-mobile
+    // preset, and the three fields that make a phone a phone are written out
+    // so a reader of this file sees them rather than trusting a spread.
     {
       name: "mobile-375",
       use: {
-        ...devices["iPhone 13 mini"],
+        ...mobile375,
         browserName: "chromium",
         viewport: { width: 375, height: 812 },
+        isMobile: true,
+        hasTouch: true,
+        deviceScaleFactor: 3,
       },
     },
     {
       name: "mobile-390",
       use: {
-        ...devices["iPhone 14"],
+        ...mobile390,
         browserName: "chromium",
         viewport: { width: 390, height: 844 },
+        isMobile: true,
+        hasTouch: true,
+        deviceScaleFactor: 3,
       },
     },
   ],

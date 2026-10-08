@@ -38,6 +38,7 @@
     // The employer-portal flow guard and its controls (UX pass 2026-10-08).
     "scripts/employer-portal-flow-check.ts",
     "scripts/negative-controls/employer-portal-flow-controls.ts",
+    "scripts/playwright-mobile-presets.test.ts",
     // The security guard is added on its own terms rather than by widening the
     // net: it is new, it carries no pre-existing type debt, and a guard that
     // silently stops enforcing is exactly the failure this file was written about.

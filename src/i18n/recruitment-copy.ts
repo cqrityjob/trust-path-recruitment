@@ -18,13 +18,13 @@ export const recruitmentSv = {
   "rec.lifecycle.restore": "Återställ arkivering",
   "rec.lifecycle.restored": "Arkiveringen har ändrats. Rekryteringens avslut och gallringsdatum är oförändrade.",
   "rec.lifecycle.archivedNotice":
-    "Ansökan är arkiverad. Gallringsdatum är oförändrat; den visas nu bara under Arkiverade.",
+    "Ansökan är arkiverad. Gallringsdatum är oförändrat. Den lämnar de aktiva listorna och visas under Arkiverade och Alla mottagna.",
   "rec.lifecycle.restoredNotice":
     "Arkiveringen är upphävd. Ansökan visas åter i de vanliga listorna; gallringsdatum är oförändrat.",
   "rec.lifecycle.archivedState":
-    "Ansökan är arkiverad. Den visas bara under Arkiverade och räknas inte som ny eller pågående.",
+    "Ansökan är arkiverad. Den ingår inte i de aktiva listorna eller i antalet nya ansökningar, men visas under Arkiverade och Alla mottagna.",
   "rec.lifecycle.archivedStateJob":
-    "Rekryteringen är arkiverad. Den visas bara under Arkiverade.",
+    "Rekryteringen är arkiverad. Den visas bara under Arkiverade i rekryteringslistan.",
   "rec.lifecycle.delete": "Radera ansökningsmaterial permanent",
   "rec.lifecycle.confirm": "Radera materialet permanent?",
   "rec.lifecycle.cancel": "Avbryt",
@@ -426,6 +426,16 @@ export const recruitmentSv = {
   "rec.counts.explain.open":
     "Rekryteringssteg (Ny, Under granskning, Intervju) och beslut är en annan axel. Kravgranskningen ändrar dem inte.",
   "rec.overview.flowHeading": "Arbetsflödet",
+  "rec.flow.lede":
+    "Ordningen i en rekrytering. Tester och intervjuer används när rekryteringen behöver dem; beslut och avslut görs i respektive rekrytering.",
+  "rec.flow.hint.requirements": "Annonsen, kravprofilen och rekryteringens egna steg.",
+  "rec.flow.hint.applications": "Alla mottagna ansökningar och kandidatens underlag.",
+  "rec.flow.hint.review": "Ansökningar som ännu inte är mänskligt granskade mot kravprofilen.",
+  "rec.flow.hint.tests": "Testbibliotek, utskick och resultat. Används när det behövs.",
+  "rec.flow.hint.interviews": "Förbered, genomför och granska intervjuer. Används när det behövs.",
+  "rec.flow.hint.report": "Rapporter från genomförda intervjuer.",
+  "rec.flow.hint.decision":
+    "Pågående rekryteringar: besked till kandidater ges i ansökningarna, avslutet i rekryteringens sista steg.",
   "rec.flow.requirements": "Annons & krav",
   "rec.flow.applications": "Ansökningar & underlag",
   "rec.flow.review": "Kravgranskning",
@@ -757,12 +767,13 @@ export const recruitmentEn: { [K in keyof typeof recruitmentSv]: string } = {
   "rec.lifecycle.restore": "Restore from archive",
   "rec.lifecycle.restored": "Archiving updated. Recruitment completion and retention dates are unchanged.",
   "rec.lifecycle.archivedNotice":
-    "The application is archived. The retention date is unchanged; it now shows only under Archived.",
+    "The application is archived. The retention date is unchanged. It leaves the active lists and shows under Archived and All received.",
   "rec.lifecycle.restoredNotice":
     "Archiving lifted. The application shows in the ordinary lists again; the retention date is unchanged.",
   "rec.lifecycle.archivedState":
-    "This application is archived. It shows only under Archived and is not counted as new or in progress.",
-  "rec.lifecycle.archivedStateJob": "This recruitment is archived. It shows only under Archived.",
+    "This application is archived. It is not in the active lists or the count of new applications, but shows under Archived and All received.",
+  "rec.lifecycle.archivedStateJob":
+    "This recruitment is archived. It shows only under Archived in the recruitment list.",
   "rec.lifecycle.delete": "Permanently delete application material",
   "rec.lifecycle.confirm": "Permanently delete this material?",
   "rec.lifecycle.cancel": "Cancel",
@@ -1167,6 +1178,16 @@ export const recruitmentEn: { [K in keyof typeof recruitmentSv]: string } = {
   "rec.counts.explain.open":
     "Recruitment stage (New, Under review, Interview) and decisions are a separate axis. The requirement review does not change them.",
   "rec.overview.flowHeading": "The workflow",
+  "rec.flow.lede":
+    "The order of work in a recruitment. Tests and interviews are used when the recruitment needs them; decisions and closing happen in each recruitment.",
+  "rec.flow.hint.requirements": "The advert, the requirement profile and the recruitment's own steps.",
+  "rec.flow.hint.applications": "All received applications and the candidate's material.",
+  "rec.flow.hint.review": "Applications not yet human-reviewed against the requirement profile.",
+  "rec.flow.hint.tests": "Test library, dispatch and results. Used when needed.",
+  "rec.flow.hint.interviews": "Prepare, conduct and review interviews. Used when needed.",
+  "rec.flow.hint.report": "Reports from conducted interviews.",
+  "rec.flow.hint.decision":
+    "Active recruitments: candidates get their outcome in the applications, the recruitment closes in its last step.",
   "rec.flow.requirements": "Advert & requirements",
   "rec.flow.applications": "Applications & material",
   "rec.flow.review": "Requirement review",

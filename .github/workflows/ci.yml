@@ -1295,6 +1295,13 @@ jobs:
       - name: Employer portal flow check
         run: bun run employer-portal-flow:check
 
+      # The shared Playwright config's phone projects are phones: the preset
+      # names resolve, and isMobile/hasTouch/deviceScaleFactor are set. The
+      # name "iPhone 13 mini" (lower-case m) was never a device, and the
+      # 375px project ran as a narrow desktop window until this pinned it.
+      - name: Playwright mobile presets
+        run: bun test scripts/playwright-mobile-presets.test.ts
+
       # E3: the context an interview inherits, and what the CANDIDATE is told.
       #
       # The bridge already read the application, the advert and the assessment.

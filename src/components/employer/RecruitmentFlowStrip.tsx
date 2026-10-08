@@ -5,6 +5,13 @@
 // rather than four products. Each step links to the surface where that work
 // is done; the current step is marked for sighted readers and screen readers
 // alike. Nothing here counts anything.
+//
+// It describes the ORDER of work, not a checklist: tests and interviews are
+// used when a recruitment needs them, and the marker says which PAGE the
+// reader is on, never that a candidate has reached a step. The lede under the
+// strip says so in words, and each station carries a one-line hint. On a
+// phone the stations wrap into rows rather than scrolling sideways, so the
+// later steps are never off-screen.
 import { Link } from "@tanstack/react-router";
 import { ChevronRight } from "lucide-react";
 import { useT } from "@/i18n/context";
@@ -51,6 +58,7 @@ export function RecruitmentFlowStrip({
         : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
     );
   const label = (step: RecruitmentFlowStep) => t(`rec.flow.${step}` as TranslationKey);
+  const hint = (step: RecruitmentFlowStep) => t(`rec.flow.hint.${step}` as TranslationKey);
   const marker = (step: RecruitmentFlowStep) =>
     step === current ? <span className="sr-only"> ({t("rec.flow.current")})</span> : null;
   const sep = <ChevronRight className="h-3 w-3 shrink-0 text-muted-foreground/60" aria-hidden />;
@@ -60,14 +68,15 @@ export function RecruitmentFlowStrip({
       aria-label={t("rec.overview.flowHeading")}
       data-testid="recruitment-flow"
       data-current={current ?? "overview"}
-      className={cn("overflow-x-auto", className)}
+      className={className}
     >
-      <ol className="flex min-w-max items-center gap-0.5">
+      <ol className="flex flex-wrap items-center gap-x-0.5 gap-y-1">
         <li className="flex items-center gap-0.5">
           <Link
             to="/employer/$employerSlug/jobs"
             params={params}
             className={linkClass(current === "requirements")}
+            title={hint("requirements")}
             aria-current={current === "requirements" ? "step" : undefined}
           >
             {label("requirements")}
@@ -80,6 +89,7 @@ export function RecruitmentFlowStrip({
             to="/employer/$employerSlug/applications"
             params={params}
             className={linkClass(current === "applications")}
+            title={hint("applications")}
             aria-current={current === "applications" ? "step" : undefined}
           >
             {label("applications")}
@@ -93,6 +103,7 @@ export function RecruitmentFlowStrip({
             params={params}
             search={{ stage: "received" as const, review: "remaining" as const }}
             className={linkClass(current === "review")}
+            title={hint("review")}
             aria-current={current === "review" ? "step" : undefined}
           >
             {label("review")}
@@ -105,6 +116,7 @@ export function RecruitmentFlowStrip({
             to="/employer/$employerSlug/assessments"
             params={params}
             className={linkClass(current === "tests")}
+            title={hint("tests")}
             aria-current={current === "tests" ? "step" : undefined}
           >
             {label("tests")}
@@ -117,6 +129,7 @@ export function RecruitmentFlowStrip({
             to="/employer/$employerSlug/interview-intelligence"
             params={params}
             className={linkClass(current === "interviews")}
+            title={hint("interviews")}
             aria-current={current === "interviews" ? "step" : undefined}
           >
             {label("interviews")}
@@ -129,6 +142,7 @@ export function RecruitmentFlowStrip({
             to="/employer/$employerSlug/reports"
             params={params}
             className={linkClass(current === "report")}
+            title={hint("report")}
             aria-current={current === "report" ? "step" : undefined}
           >
             {label("report")}
@@ -140,8 +154,9 @@ export function RecruitmentFlowStrip({
           <Link
             to="/employer/$employerSlug/jobs"
             params={params}
-            search={{ phase: "closed" as const }}
+            search={{ phase: "active" as const }}
             className={linkClass(current === "decision")}
+            title={hint("decision")}
             aria-current={current === "decision" ? "step" : undefined}
           >
             {label("decision")}
@@ -149,6 +164,7 @@ export function RecruitmentFlowStrip({
           </Link>
         </li>
       </ol>
+      <p className="mt-1 text-[11px] leading-snug text-muted-foreground">{t("rec.flow.lede")}</p>
     </nav>
   );
 }
