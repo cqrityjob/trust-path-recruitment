@@ -1,0 +1,763 @@
+{
+  "formatVersion": 1,
+  "projectRef": "wrygicdfxwjnrugduxnt",
+  "migration": "20270307100000_recruiter_domain_conflict_transport.sql",
+  "headSha": "250623cfb677c931caf70a2354daf774f72f443a",
+  "mainBase": "8498a1ae0aa973012b32d4957ee7ce32a8735989",
+  "mergeSha": "3c1d950593329c390cf209931b27da04d3034410",
+  "installation": "official_supabase_github_integration",
+  "readOnly": true,
+  "before": {
+    "locks": {
+      "count": 14,
+      "aggregateMd5": "aa303cc29a061b55ae16dbaefee9654e"
+    },
+    "ledger": {
+      "count": 384,
+      "latest": "20270307090000",
+      "identityMd5": "fc0aa9a91950b538d45017cf02ffa302"
+    },
+    "reports": {
+      "count": 0,
+      "aggregateMd5": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "snapshots": {
+      "count": 20,
+      "caseCreated": 0,
+      "observedNow": 20,
+      "aggregateMd5": "8c3c06b36b31bafc44524ec0a4e904b5"
+    },
+    "caseStates": {
+      "draft": 9,
+      "assessed": 1,
+      "evidence_review": 2,
+      "interview_complete": 3,
+      "interview_in_progress": 5
+    },
+    "observedAt": "2026-10-08T09:43:08.612643+00:00",
+    "acknowledgements": {
+      "count": 0,
+      "aggregateMd5": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "newJournalExists": false
+  },
+  "after": {
+    "locks": {
+      "count": 14,
+      "aggregateMd5": "aa303cc29a061b55ae16dbaefee9654e"
+    },
+    "ledger": {
+      "count": 385,
+      "latest": "20270307100000",
+      "identityMd5": "781a2b44d3dfda026168517bf87bf3fe"
+    },
+    "reports": {
+      "count": 0,
+      "aggregateMd5": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "appended": [
+      {
+        "name": "recruiter_domain_conflict_transport",
+        "version": "20270307100000"
+      }
+    ],
+    "snapshots": {
+      "count": 20,
+      "caseCreated": 0,
+      "observedNow": 20,
+      "aggregateMd5": "8c3c06b36b31bafc44524ec0a4e904b5"
+    },
+    "caseStates": {
+      "draft": 9,
+      "assessed": 1,
+      "evidence_review": 2,
+      "interview_complete": 3,
+      "interview_in_progress": 5
+    },
+    "observedAt": "2026-10-08T09:59:39.750315+00:00",
+    "acknowledgements": {
+      "count": 0,
+      "aggregateMd5": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "newJournalExists": true,
+    "prior384IdentityMd5": "fc0aa9a91950b538d45017cf02ffa302"
+  },
+  "comparison": {
+    "prior384Unchanged": true,
+    "reportsSnapshotsLocksAcknowledgementsCaseStatesUnchanged": true,
+    "all12DefinitionArgumentOwnerAclConfigEqual": true,
+    "snapshot20GovernanceUnchanged": true,
+    "snapshot19BodyMd5Unchanged": true,
+    "acknowledgeFullDefinitionEqualCurrentReplay": true
+  },
+  "exactHeadChecks": [
+    {
+      "run": 37754392687,
+      "name": "Security Work browser evidence",
+      "jobs": [
+        {
+          "id": 113235237332,
+          "name": "browser",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37754392687/job/113235237332"
+        }
+      ]
+    },
+    {
+      "run": 37754392700,
+      "name": "Role assessment and TestBank regression",
+      "jobs": [
+        {
+          "id": 113235237981,
+          "name": "Assigned officer/manager reports and TestBank (isolated desktop/mobile)",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37754392700/job/113235237981"
+        }
+      ]
+    },
+    {
+      "run": 37754392701,
+      "name": "Passport public pilot — real-backend evidence",
+      "jobs": [
+        {
+          "id": 113235240010,
+          "name": "Passport public pilot browser evidence (isolated local stack)",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37754392701/job/113235240010"
+        }
+      ]
+    },
+    {
+      "run": 37754392728,
+      "name": "Job ad back navigation — routed browser evidence",
+      "jobs": [
+        {
+          "id": 113235237810,
+          "name": "Job ad back navigation browser evidence (isolated local stack)",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37754392728/job/113235237810"
+        }
+      ]
+    },
+    {
+      "run": 37754392706,
+      "name": "Recruitment workspace — routed browser evidence",
+      "jobs": [
+        {
+          "id": 113235237891,
+          "name": "Recruitment workspace browser evidence (isolated local stack)",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37754392706/job/113235237891"
+        }
+      ]
+    },
+    {
+      "run": 37754392774,
+      "name": "Career Center persistence — routed browser evidence",
+      "jobs": [
+        {
+          "id": 113235238836,
+          "name": "Career Center persistence browser evidence (isolated local stack)",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37754392774/job/113235238836"
+        }
+      ]
+    },
+    {
+      "run": 37754392716,
+      "name": "CI",
+      "jobs": [
+        {
+          "id": 113235559825,
+          "name": "Public entry browser — homepage, employers and the employer journey",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37754392716/job/113235559825"
+        },
+        {
+          "id": 113235560070,
+          "name": "Recruiter current schema — PostgreSQL 17 and PostgREST 14",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37754392716/job/113235560070"
+        },
+        {
+          "id": 113235560131,
+          "name": "CV export — PDF and ATS proof",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37754392716/job/113235560131"
+        },
+        {
+          "id": 113235560160,
+          "name": "CV browser — the signed-in journey",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37754392716/job/113235560160"
+        },
+        {
+          "id": 113235560169,
+          "name": "Passport three-market browser — catalogue, cards, pilot access",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37754392716/job/113235560169"
+        },
+        {
+          "id": 113235560177,
+          "name": "Migration replay, RLS and rollback tests",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37754392716/job/113235560177"
+        },
+        {
+          "id": 113235560290,
+          "name": "Lint, typecheck and deterministic checks",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37754392716/job/113235560290"
+        }
+      ]
+    },
+    {
+      "run": 37754392736,
+      "name": "E4 employer final report — routed browser evidence",
+      "jobs": [
+        {
+          "id": 113235238169,
+          "name": "E4 routed browser evidence (isolated local stack)",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37754392736/job/113235238169"
+        }
+      ]
+    }
+  ],
+  "catalog": {
+    "journal": {
+      "rls": true,
+      "relation": "scp_private.interview_conflict_prior_functions",
+      "anonSelect": false,
+      "serviceSelect": false,
+      "storedDefinitions": 12,
+      "authenticatedSelect": false
+    },
+    "functions": [
+      {
+        "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+        "owner": "postgres",
+        "config": [
+          "search_path=public, pg_temp"
+        ],
+        "definer": true,
+        "argnames": [
+          "_job_id",
+          "_state",
+          "_note",
+          "_expected_version"
+        ],
+        "arguments": "_job_id uuid, _state text, _note text DEFAULT NULL::text, _expected_version integer DEFAULT NULL::integer",
+        "signature": "rec_complete_recruitment(uuid,text,text,integer)",
+        "definition_sha256": "f9ffb76244320578ab62178c2fccdb6294c983943885557660c1257d749a3f8a"
+      },
+      {
+        "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+        "owner": "postgres",
+        "config": [
+          "search_path=public, pg_temp"
+        ],
+        "definer": true,
+        "argnames": [
+          "_booking_id",
+          "_application_id",
+          "_starts_at",
+          "_duration_minutes",
+          "_timezone",
+          "_location_kind",
+          "_location_text",
+          "_meeting_url",
+          "_interviewer_names",
+          "_expected_version"
+        ],
+        "arguments": "_booking_id uuid, _application_id uuid, _starts_at timestamp with time zone, _duration_minutes integer, _timezone text, _location_kind text, _location_text text, _meeting_url text, _interviewer_names text, _expected_version integer DEFAULT NULL::integer",
+        "signature": "rec_save_booking(uuid,uuid,timestamp with time zone,integer,text,text,text,text,text,integer)",
+        "definition_sha256": "6707af5f8e2210534263ecf691c92fcf8c918005266080d9eb2cce7ee10fc17b"
+      },
+      {
+        "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+        "owner": "postgres",
+        "config": [
+          "search_path=public, pg_temp"
+        ],
+        "definer": true,
+        "argnames": [
+          "_application_id",
+          "_user_id",
+          "_expected_version"
+        ],
+        "arguments": "_application_id uuid, _user_id uuid, _expected_version integer DEFAULT NULL::integer",
+        "signature": "rec_set_application_responsible(uuid,uuid,integer)",
+        "definition_sha256": "0a576b21e4e0760713420763bff2fda3494871214ee492d186262f94a51f3e23"
+      },
+      {
+        "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+        "owner": "postgres",
+        "config": [
+          "search_path=public, pg_temp"
+        ],
+        "definer": true,
+        "argnames": [
+          "_application_id",
+          "_expected_status",
+          "_new_status",
+          "_note",
+          "application_id",
+          "previous_status",
+          "new_status",
+          "updated_at"
+        ],
+        "arguments": "_application_id uuid, _expected_status text, _new_status text, _note text DEFAULT NULL::text",
+        "signature": "rec_set_application_stage(uuid,text,text,text)",
+        "definition_sha256": "37041511c08db68798661aaea0e4960ec4e350db231a8b6ea0ebc51fffb30c21"
+      },
+      {
+        "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+        "owner": "postgres",
+        "config": [
+          "search_path=public, pg_temp"
+        ],
+        "definer": true,
+        "argnames": [
+          "_booking_id",
+          "_status",
+          "_reason",
+          "_expected_version"
+        ],
+        "arguments": "_booking_id uuid, _status text, _reason text DEFAULT NULL::text, _expected_version integer DEFAULT NULL::integer",
+        "signature": "rec_set_booking_status(uuid,text,text,integer)",
+        "definition_sha256": "26b11b347ba7733f1e1d83a33fdc743baba70113bbc2d3b33f58ef7079022f13"
+      },
+      {
+        "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+        "owner": "postgres",
+        "config": [
+          "search_path=public, pg_temp"
+        ],
+        "definer": true,
+        "argnames": [
+          "_job_id",
+          "_enabled",
+          "_subject_sv",
+          "_body_sv",
+          "_subject_en",
+          "_body_en",
+          "_expected_version"
+        ],
+        "arguments": "_job_id uuid, _enabled boolean, _subject_sv text DEFAULT NULL::text, _body_sv text DEFAULT NULL::text, _subject_en text DEFAULT NULL::text, _body_en text DEFAULT NULL::text, _expected_version integer DEFAULT NULL::integer",
+        "signature": "rec_set_receipt_settings(uuid,boolean,text,text,text,text,integer)",
+        "definition_sha256": "1efab6637695e4e4ddcb2e47add724f9e5b6749a7a86c48616f1195c61dc569a"
+      },
+      {
+        "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+        "owner": "postgres",
+        "config": [
+          "search_path=public, pg_temp"
+        ],
+        "definer": true,
+        "argnames": [
+          "_job_id",
+          "_user_id",
+          "_expected_version"
+        ],
+        "arguments": "_job_id uuid, _user_id uuid, _expected_version integer DEFAULT NULL::integer",
+        "signature": "rec_set_recruitment_responsible(uuid,uuid,integer)",
+        "definition_sha256": "b65da00432d8fca301aaee3e6dfd51a7fea3f50503b91e1967d92f179a0c8c6c"
+      },
+      {
+        "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+        "owner": "postgres",
+        "config": [
+          "search_path=public, pg_temp"
+        ],
+        "definer": true,
+        "argnames": [
+          "_case_id",
+          "_expected_manifest_hash",
+          "_note"
+        ],
+        "arguments": "_case_id uuid, _expected_manifest_hash text, _note text",
+        "signature": "scp_iv_acknowledge_observed_content(uuid,text,text)",
+        "definition_sha256": "d0042c63d2cc3af6eb09eb95fc7c6f3d86b55ff1501579d774fd54725d1a740f"
+      },
+      {
+        "acl": "{postgres=X/postgres}",
+        "owner": "postgres",
+        "config": [
+          "search_path=public, pg_temp"
+        ],
+        "definer": true,
+        "argnames": null,
+        "arguments": "",
+        "signature": "scp_iv_guard_finding_revision()",
+        "definition_sha256": "8e3fd574023e2a57bb3a32f3afb1de663b71484c2e9614a66d3b662896be50c5"
+      },
+      {
+        "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+        "owner": "postgres",
+        "config": [
+          "search_path=public, pg_temp"
+        ],
+        "definer": true,
+        "argnames": [
+          "_finding_id",
+          "_expected_revision",
+          "_resolution_state",
+          "_human_note",
+          "_responsible_label",
+          "_next_action",
+          "_due_on",
+          "finding_id",
+          "revision",
+          "updated_at"
+        ],
+        "arguments": "_finding_id uuid, _expected_revision bigint, _resolution_state text, _human_note text, _responsible_label text, _next_action text, _due_on date",
+        "signature": "scp_iv_review_manual_finding(uuid,bigint,text,text,text,text,date)",
+        "definition_sha256": "1176fb8d5b4d31f14e70f53e9f5cb5f6879c4bfcb808bfd1388ea92c05c4d25c"
+      },
+      {
+        "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+        "owner": "postgres",
+        "config": [
+          "search_path=public, pg_temp"
+        ],
+        "definer": true,
+        "argnames": [
+          "_session_id",
+          "_reflection",
+          "_deviations",
+          "_expected_updated_at",
+          "session_id",
+          "updated_at"
+        ],
+        "arguments": "_session_id uuid, _reflection text, _deviations text, _expected_updated_at timestamp with time zone",
+        "signature": "scp_iv_save_session_process(uuid,text,text,timestamp with time zone)",
+        "definition_sha256": "29f5fa10ba85c15e4fcb46cc20cc013821e9507d14c12dc4c499797d362f6506"
+      },
+      {
+        "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+        "owner": "postgres",
+        "config": [
+          "search_path=public"
+        ],
+        "definer": true,
+        "argnames": [
+          "_session_id",
+          "_status",
+          "_peace_stage",
+          "_process_reflection",
+          "_protocol_deviations"
+        ],
+        "arguments": "_session_id uuid, _status text DEFAULT NULL::text, _peace_stage text DEFAULT NULL::text, _process_reflection text DEFAULT NULL::text, _protocol_deviations text DEFAULT NULL::text",
+        "signature": "scp_iv_set_session_state(uuid,text,text,text,text)",
+        "definition_sha256": "34058b901dcb5f2618e6a437585a00b4e3467dccdea9c06fcb5c65a0c3c6a357"
+      }
+    ],
+    "snapshot20": [
+      {
+        "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+        "name": "public.scp_iv_acknowledge_observed_content",
+        "config": [
+          "search_path=public, pg_temp"
+        ],
+        "bodyMd5": "7092f93f117498ffceab0fabe7639813",
+        "definer": true,
+        "anonExecute": false,
+        "serviceExecute": false,
+        "authenticatedExecute": true
+      },
+      {
+        "acl": "{postgres=X/postgres}",
+        "name": "public.scp_iv_build_report_basis",
+        "config": [
+          "search_path=public"
+        ],
+        "bodyMd5": "64b9233599fb05f69ec166c26218c3a3",
+        "definer": true,
+        "anonExecute": false,
+        "serviceExecute": false,
+        "authenticatedExecute": false
+      },
+      {
+        "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+        "name": "public.scp_iv_can_write_case",
+        "config": [
+          "search_path=public"
+        ],
+        "bodyMd5": "dbd2bf0ef90c7e9c5fa9d2023d4d968a",
+        "definer": true,
+        "anonExecute": false,
+        "serviceExecute": true,
+        "authenticatedExecute": true
+      },
+      {
+        "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+        "name": "public.scp_iv_case_content_manifest",
+        "config": [
+          "search_path=public, pg_temp"
+        ],
+        "bodyMd5": "dd7a963676bc18fd86b7a8261a513f10",
+        "definer": true,
+        "anonExecute": false,
+        "serviceExecute": false,
+        "authenticatedExecute": true
+      },
+      {
+        "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+        "name": "public.scp_iv_case_frozen_content",
+        "config": [
+          "search_path=public, pg_temp"
+        ],
+        "bodyMd5": "ebd0cae8bff6a941a5eb55203c090a9c",
+        "definer": true,
+        "anonExecute": false,
+        "serviceExecute": false,
+        "authenticatedExecute": true
+      },
+      {
+        "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+        "name": "public.scp_iv_case_frozen_labels",
+        "config": [
+          "search_path=public, pg_temp"
+        ],
+        "bodyMd5": "424961f06ab420199b6061200e06320a",
+        "definer": true,
+        "anonExecute": false,
+        "serviceExecute": false,
+        "authenticatedExecute": true
+      },
+      {
+        "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+        "name": "public.scp_iv_content_inventory",
+        "config": [
+          "search_path=public, pg_temp"
+        ],
+        "bodyMd5": "280f3d226b47dd3105f9aabe67f868bb",
+        "definer": true,
+        "anonExecute": false,
+        "serviceExecute": false,
+        "authenticatedExecute": true
+      },
+      {
+        "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+        "name": "public.scp_iv_create_case",
+        "config": [
+          "search_path=public"
+        ],
+        "bodyMd5": "1bb7ed578f4ae85fbcadbfe08c9d1bed",
+        "definer": true,
+        "anonExecute": false,
+        "serviceExecute": true,
+        "authenticatedExecute": true
+      },
+      {
+        "acl": "{postgres=X/postgres}",
+        "name": "scp_private.interview_capture_content",
+        "config": [
+          "search_path=public, pg_temp"
+        ],
+        "bodyMd5": "3850e3dc0cbc3e00ac3319222404aec6",
+        "definer": true,
+        "anonExecute": false,
+        "serviceExecute": false,
+        "authenticatedExecute": false
+      },
+      {
+        "acl": "{postgres=X/postgres}",
+        "name": "scp_private.interview_case_content_bind",
+        "config": [
+          "search_path=public, pg_temp"
+        ],
+        "bodyMd5": "0ca9b5fc5d28fdbb38d9fd8546cb008c",
+        "definer": true,
+        "anonExecute": false,
+        "serviceExecute": false,
+        "authenticatedExecute": false
+      },
+      {
+        "acl": "{postgres=X/postgres}",
+        "name": "scp_private.interview_case_content_capture",
+        "config": [
+          "search_path=public, pg_temp"
+        ],
+        "bodyMd5": "acc5e2de395d92035b42b672b06dd0f8",
+        "definer": true,
+        "anonExecute": false,
+        "serviceExecute": false,
+        "authenticatedExecute": false
+      },
+      {
+        "acl": "{postgres=X/postgres}",
+        "name": "scp_private.interview_content_append_only",
+        "config": [
+          "search_path=public, pg_temp"
+        ],
+        "bodyMd5": "8541f7023bae2a8abf5500f7159b2d8e",
+        "definer": true,
+        "anonExecute": false,
+        "serviceExecute": false,
+        "authenticatedExecute": false
+      },
+      {
+        "acl": "{postgres=X/postgres}",
+        "name": "scp_private.interview_content_guard",
+        "config": [
+          "search_path=public, pg_temp"
+        ],
+        "bodyMd5": "f29bf091bac2b014a37f5e8402977bbb",
+        "definer": true,
+        "anonExecute": false,
+        "serviceExecute": false,
+        "authenticatedExecute": false
+      },
+      {
+        "acl": "{postgres=X/postgres}",
+        "name": "scp_private.interview_content_lock",
+        "config": [
+          "search_path=public, pg_temp"
+        ],
+        "bodyMd5": "50095705589977c2eb795a769f08ccf4",
+        "definer": true,
+        "anonExecute": false,
+        "serviceExecute": false,
+        "authenticatedExecute": false
+      },
+      {
+        "acl": "{postgres=X/postgres}",
+        "name": "scp_private.interview_content_manifest",
+        "config": [
+          "search_path=public, pg_temp"
+        ],
+        "bodyMd5": "ed4cca15b2b680a980af8407fb89064a",
+        "definer": true,
+        "anonExecute": false,
+        "serviceExecute": false,
+        "authenticatedExecute": false
+      },
+      {
+        "acl": "{postgres=X/postgres}",
+        "name": "scp_private.interview_content_owner",
+        "config": [
+          "search_path=public, pg_temp"
+        ],
+        "bodyMd5": "ef0ae71b7eb4018f0d75565039716d62",
+        "definer": true,
+        "anonExecute": false,
+        "serviceExecute": false,
+        "authenticatedExecute": false
+      },
+      {
+        "acl": "{postgres=X/postgres}",
+        "name": "scp_private.interview_content_ready",
+        "config": [
+          "search_path=public, pg_temp"
+        ],
+        "bodyMd5": "426862b407f98fb77490236841e51572",
+        "definer": true,
+        "anonExecute": false,
+        "serviceExecute": false,
+        "authenticatedExecute": false
+      },
+      {
+        "acl": "{postgres=X/postgres}",
+        "name": "scp_private.interview_content_review_gate",
+        "config": [
+          "search_path=public, pg_temp"
+        ],
+        "bodyMd5": "2bd9a959af1d3c2153a410cdbbc4d192",
+        "definer": true,
+        "anonExecute": false,
+        "serviceExecute": false,
+        "authenticatedExecute": false
+      },
+      {
+        "acl": "{postgres=X/postgres}",
+        "name": "scp_private.interview_content_statement_lock",
+        "config": [
+          "search_path=public, pg_temp"
+        ],
+        "bodyMd5": "b8269256cb4db947bff115a33d247434",
+        "definer": true,
+        "anonExecute": false,
+        "serviceExecute": false,
+        "authenticatedExecute": false
+      },
+      {
+        "acl": "{postgres=X/postgres}",
+        "name": "scp_private.interview_frozen_manifest",
+        "config": [
+          "search_path=public, pg_temp"
+        ],
+        "bodyMd5": "1fa3859de0d80dafa6b75ffab6f322c5",
+        "definer": true,
+        "anonExecute": false,
+        "serviceExecute": false,
+        "authenticatedExecute": false
+      }
+    ]
+  },
+  "replay": {
+    "artifactId": 11539899624,
+    "artifactDigest": "sha256:3491a2abc63601375f4d8687942b1a7652fe7a026c3791eb4e57377d7d301702",
+    "sourceVirtualMerge": "295ba6f107aaa5f432245b11de83616337b1bf0f",
+    "headTreeEquivalenceVerified": true,
+    "catalogSha256": "5c42f5486b5dc0b9b0f032f046bed67d036f528dba4bdfd91cbb3202c8708d7f",
+    "manifest": {
+      "sourceCommit": "295ba6f107aaa5f432245b11de83616337b1bf0f",
+      "postgresVersion": "17.11 (Debian 17.11-1.pgdg13+2)",
+      "postgrestImage": "public.ecr.aws/supabase/postgrest:v14.15",
+      "migrationSha256": "aada322beb465a1a927c190eb4d81bafffd9a1f759263c8da4f94ddabf2c3fca",
+      "catalogSha256": "5c42f5486b5dc0b9b0f032f046bed67d036f528dba4bdfd91cbb3202c8708d7f",
+      "checks": [
+        "historical expectation count 3",
+        "current-foundation mandatory 56 assertions",
+        "historical expectation count 1",
+        "current-snapshot mandatory 94 assertions",
+        "current-domain mandatory 31 assertions",
+        "historical expectation count 3",
+        "negative control wrong SQLSTATE is rejected",
+        "rollback restores all12 exact prior definitions",
+        "rollback preserves immutable reports/snapshots/locks byte for byte",
+        "reapply preserves function definitions/defaults/owners/ACL/config",
+        "prior-session-case reproduces exact prior deadlock",
+        "forward-case-session waits then returns finite stale conflict",
+        "direct-rpc-finding waits then returns finite stale conflict",
+        "engine-serialization preserves genuine engine40001",
+        "actual14 rec_set_recruitment_responsible finite409 unchanged message",
+        "actual14 rec_complete_recruitment finite409 unchanged message",
+        "actual14 rec_set_application_responsible finite409 unchanged message",
+        "actual14 rec_set_application_stage finite409 unchanged message",
+        "actual14 rec_save_booking finite409 unchanged message",
+        "actual14 rec_set_booking_status finite409 unchanged message",
+        "actual14 rec_set_receipt_settings finite409 unchanged message",
+        "actual14 scp_iv_save_session_process finite409 unchanged message",
+        "actual14 scp_iv_review_manual_finding finite409 unchanged message",
+        "actual14 scp_iv_acknowledge_observed_content finite409 unchanged message",
+        "actual14 void state RPC returns empty body",
+        "actual14 overlapping state/process waits then finite409 without deadlock",
+        "actual14 winning pause and existing reflection preserved",
+        "actual14 no continuing stale request"
+      ],
+      "scope": "ephemeral PostgreSQL/PostgREST transport; fixture JWT, not GoTrue"
+    }
+  },
+  "limitations": [
+    "Fresh native GoTrue/Storage/browser pipeline remains held: run3 authenticates and seeds successfully but fails before Storage/UI/CAS checks; current fixture correction pending actual rerun.",
+    "No populated hosted historical reports exist (count0); populated byte/history proof belongs to isolated tests.",
+    "Technical snapshot binding/use locks do not approve draft content or fill English gaps."
+  ]
+}
