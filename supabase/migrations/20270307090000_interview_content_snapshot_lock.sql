@@ -17,7 +17,7 @@ INSERT INTO scp_private.interview_content_prior_functions
  SELECT 'constraint:events',pg_get_constraintdef(oid) FROM pg_constraint
  WHERE conrelid='public.scp_interview_case_events'::regclass AND conname='scp_interview_case_events_event_check';
 CREATE TABLE scp_private.interview_content_locks (
- kind text NOT NULL CHECK(kind IN('pack','pack_version','method')),
+ kind text NOT NULL CHECK(kind IN('pack','pack_version','method','role','role_version')),
  content_id uuid NOT NULL, locked_at timestamptz NOT NULL DEFAULT clock_timestamp(),
  PRIMARY KEY(kind,content_id)
 );
@@ -90,6 +90,8 @@ LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path=public,pg_temp AS $$
 DECLARE _id uuid;
 BEGIN
  CASE _table
+ WHEN 'scp_roles' THEN kind:='role'; _id:=(_row->>'id')::uuid;
+ WHEN 'scp_role_versions' THEN kind:='role_version'; _id:=(_row->>'id')::uuid;
  WHEN 'scp_interview_packs' THEN kind:='pack'; _id:=(_row->>'id')::uuid;
  WHEN 'scp_interview_pack_versions' THEN kind:='pack_version'; _id:=(_row->>'id')::uuid;
  WHEN 'scp_interview_methods' THEN kind:='method'; _id:=(_row->>'id')::uuid;
@@ -101,10 +103,22 @@ BEGIN
  WHEN 'scp_interview_question_competencies','scp_interview_evidence_dimensions'
  THEN kind:='pack_version'; SELECT q.pack_version_id INTO _id FROM public.scp_interview_core_questions q WHERE q.id=(_row->>'question_id')::uuid;
  WHEN 'scp_interview_rating_anchors'
- THEN kind:='pack_version';
- SELECT coalesce(q.pack_version_id,c.pack_version_id) INTO _id FROM (SELECT 1) x
- LEFT JOIN public.scp_interview_core_questions q ON q.id=(_row->>'question_id')::uuid
- LEFT JOIN public.scp_interview_pack_competencies c ON c.id=(_row->>'pack_competency_id')::uuid;
+ THEN
+  -- The current CHECK allows exactly one parent. Resolve every populated
+  -- reference anyway, so no future alternate-parent path can omit a use lock.
+  kind:='pack_version';
+  IF _row->>'question_id' IS NOT NULL THEN
+   SELECT q.pack_version_id INTO _id FROM public.scp_interview_core_questions q WHERE q.id=(_row->>'question_id')::uuid;
+   IF _id IS NULL THEN RAISE EXCEPTION 'SCP_IV_CONTENT_PARENT_UNRESOLVED:anchor_question' USING ERRCODE='check_violation'; END IF;
+   content_id:=_id; RETURN NEXT;
+  END IF;
+  IF _row->>'pack_competency_id' IS NOT NULL THEN
+   SELECT c.pack_version_id INTO _id FROM public.scp_interview_pack_competencies c WHERE c.id=(_row->>'pack_competency_id')::uuid;
+   IF _id IS NULL THEN RAISE EXCEPTION 'SCP_IV_CONTENT_PARENT_UNRESOLVED:anchor_competency' USING ERRCODE='check_violation'; END IF;
+   content_id:=_id; RETURN NEXT;
+  END IF;
+  IF _id IS NULL THEN RAISE EXCEPTION 'SCP_IV_CONTENT_PARENT_UNRESOLVED:anchor' USING ERRCODE='check_violation'; END IF;
+  RETURN;
  WHEN 'scp_interview_method_practices','scp_interview_conduct_steps','scp_interview_conduct_guidance',
       'scp_interview_conduct_prohibitions','scp_trust_stages'
  THEN kind:='method'; _id:=(_row->>'method_id')::uuid;
@@ -128,11 +142,12 @@ BEGIN
  IF TG_OP<>'DELETE' THEN _new:=to_jsonb(NEW); END IF;
  -- Lifecycle withdrawal remains available. Identity/hash/normative copy do not.
  IF TG_OP='UPDATE' THEN
+  IF TG_TABLE_NAME='scp_role_versions' AND (_old-ARRAY['content_status','published_at','retired_at','updated_at'])=(_new-ARRAY['content_status','published_at','retired_at','updated_at']) THEN RETURN NEW; END IF;
   IF TG_TABLE_NAME='scp_interview_pack_versions' AND (_old-_lifecycle)=(_new-_lifecycle) THEN RETURN NEW; END IF;
   IF TG_TABLE_NAME='scp_interview_methods' AND
    (_old-ARRAY['approval_state','approved_at','approved_by','updated_at'])=
    (_new-ARRAY['approval_state','approved_at','approved_by','updated_at']) THEN RETURN NEW; END IF;
-  IF TG_TABLE_NAME='scp_interview_packs' AND (_old-'updated_at')=(_new-'updated_at') THEN RETURN NEW; END IF;
+  IF TG_TABLE_NAME IN('scp_interview_packs','scp_roles') AND (_old-'updated_at')=(_new-'updated_at') THEN RETURN NEW; END IF;
  END IF;
  FOREACH _row IN ARRAY ARRAY[_old,_new] LOOP
   IF _row IS NULL THEN CONTINUE; END IF;
@@ -149,7 +164,7 @@ REVOKE ALL ON FUNCTION scp_private.interview_content_guard() FROM PUBLIC,anon,au
 DO $$
 DECLARE _t text;
 BEGIN
- FOREACH _t IN ARRAY ARRAY['scp_interview_packs','scp_interview_pack_versions','scp_interview_pack_competencies',
+ FOREACH _t IN ARRAY ARRAY['scp_roles','scp_role_versions','scp_interview_packs','scp_interview_pack_versions','scp_interview_pack_competencies',
  'scp_interview_core_questions','scp_interview_approved_probes','scp_interview_verification_rules',
  'scp_interview_prohibited_areas','scp_interview_pack_competency_map','scp_interview_question_competencies',
  'scp_interview_evidence_dimensions','scp_interview_rating_anchors','scp_interview_methods',
@@ -166,7 +181,7 @@ INSERT INTO scp_private.interview_client_copy_versions(version_key,copy) VALUES(
 CREATE FUNCTION scp_private.interview_capture_content(_case_id uuid,_provenance text) RETURNS void
 LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path=public,pg_temp AS $$
 DECLARE _c public.scp_interview_cases%ROWTYPE; _manifest jsonb; _content jsonb;
- _copy jsonb; _copy_version text; _at timestamptz:=clock_timestamp(); _pack_id uuid;
+ _copy jsonb; _copy_version text; _at timestamptz:=clock_timestamp(); _pack_id uuid; _role_id uuid;
 BEGIN
  PERFORM scp_private.interview_content_lock();
  SELECT * INTO _c FROM public.scp_interview_cases WHERE id=_case_id;
@@ -175,12 +190,15 @@ BEGIN
  SELECT pack_id INTO _pack_id FROM public.scp_interview_pack_versions WHERE id=_c.pack_version_id;
  INSERT INTO scp_private.interview_content_locks(kind,content_id)
  VALUES('pack',_pack_id),('pack_version',_c.pack_version_id) ON CONFLICT DO NOTHING;
+ SELECT role_id INTO _role_id FROM public.scp_role_versions WHERE id=_c.role_version_id;
+ INSERT INTO scp_private.interview_content_locks(kind,content_id) VALUES('role',_role_id),('role_version',_c.role_version_id) ON CONFLICT DO NOTHING;
  IF _c.trust_method_id IS NOT NULL THEN
  INSERT INTO scp_private.interview_content_locks(kind,content_id) VALUES('method',_c.trust_method_id) ON CONFLICT DO NOTHING;
  END IF;
  SELECT version_key,copy INTO _copy_version,_copy FROM scp_private.interview_client_copy_versions ORDER BY created_at DESC,version_key DESC LIMIT 1;
  _manifest:=scp_private.interview_content_manifest(_case_id);
  _content:=(_manifest->'content')||jsonb_build_object('client_copy',_copy,'client_copy_version',_copy_version,
+ 'role',(SELECT to_jsonb(r) FROM public.scp_roles r WHERE r.id=_role_id),
  'role_version',(SELECT to_jsonb(v) FROM public.scp_role_versions v WHERE v.id=_c.role_version_id),
  'trust_stages',coalesce((SELECT jsonb_agg(to_jsonb(s) ORDER BY s.ordinal,s.id) FROM public.scp_trust_stages s WHERE s.method_id=_c.trust_method_id),'[]'::jsonb),
  'trust_claims',coalesce((SELECT jsonb_agg(to_jsonb(a) ORDER BY a.id) FROM public.scp_trust_stage_claims a JOIN public.scp_trust_stages s ON s.id=a.stage_id WHERE s.method_id=_c.trust_method_id),'[]'::jsonb),

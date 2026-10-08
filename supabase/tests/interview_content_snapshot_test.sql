@@ -64,7 +64,7 @@ SELECT pg_temp.ok((SELECT manifest->>'manifest_hash'=encode(sha256(convert_to((m
 -- Updating identity is rejected before FK checks, including OLD ownership.
 DO $$ DECLARE _table text;_out text;_id uuid;_n integer:=0;
 BEGIN
- FOREACH _table IN ARRAY ARRAY['scp_interview_packs','scp_interview_pack_versions','scp_interview_pack_competencies','scp_interview_core_questions',
+ FOREACH _table IN ARRAY ARRAY['scp_roles','scp_role_versions','scp_interview_packs','scp_interview_pack_versions','scp_interview_pack_competencies','scp_interview_core_questions',
  'scp_interview_approved_probes','scp_interview_verification_rules','scp_interview_prohibited_areas','scp_interview_pack_competency_map',
  'scp_interview_question_competencies','scp_interview_evidence_dimensions','scp_interview_rating_anchors','scp_interview_methods',
  'scp_interview_method_practices','scp_interview_conduct_steps','scp_interview_conduct_guidance','scp_interview_conduct_prohibitions',
@@ -81,7 +81,7 @@ BEGIN
 END $$;
 
 SAVEPOINT unused_reparent_fixture;
-DO $$ DECLARE _pack uuid;_unused uuid;_q uuid;_newq uuid:=gen_random_uuid();_method uuid;_newmethod uuid:=gen_random_uuid();_guidance uuid;_newguidance uuid:=gen_random_uuid();_out text;
+DO $$ DECLARE _pack uuid;_unused uuid;_q uuid;_newq uuid:=gen_random_uuid();_method uuid;_newmethod uuid:=gen_random_uuid();_guidance uuid;_newguidance uuid:=gen_random_uuid();_out text;_comp uuid;_anchor uuid;
 BEGIN
  SELECT c.pack_version_id,c.trust_method_id INTO _pack,_method FROM public.scp_interview_cases c WHERE c.id=(SELECT id FROM fx WHERE label='vaktare-se');
  SELECT id INTO _q FROM public.scp_interview_core_questions WHERE pack_version_id=_pack ORDER BY display_order LIMIT 1;
@@ -91,6 +91,12 @@ BEGIN
  INSERT INTO public.scp_interview_core_questions SELECT (jsonb_populate_record(NULL::public.scp_interview_core_questions,to_jsonb(q)||jsonb_build_object('id',_newq,'pack_version_id',_unused))).* FROM public.scp_interview_core_questions q WHERE id=_q;
  _out:=pg_temp.attempt('service_role',NULL,format('UPDATE public.scp_interview_core_questions SET pack_version_id=%L WHERE id=%L',_pack,_newq));
  PERFORM pg_temp.ok(_out LIKE '23514:%CONTENT_IN_USE%','22 unused-to-used question move rejected');
+ SELECT id INTO _comp FROM public.scp_interview_pack_competencies WHERE pack_version_id=_pack LIMIT 1;
+ SELECT id INTO _anchor FROM public.scp_interview_rating_anchors WHERE question_id=_q LIMIT 1;
+ _out:=pg_temp.attempt('service_role',NULL,format('INSERT INTO public.scp_interview_rating_anchors SELECT (jsonb_populate_record(NULL::public.scp_interview_rating_anchors,to_jsonb(a)||jsonb_build_object(''id'',gen_random_uuid(),''question_id'',NULL,''pack_competency_id'',%L::uuid))).* FROM public.scp_interview_rating_anchors a WHERE id=%L',_comp,_anchor));
+ PERFORM pg_temp.ok(_out LIKE '23514:%CONTENT_IN_USE%','37 exclusive competency anchor parent is protected');
+ _out:=pg_temp.attempt('service_role',NULL,format('INSERT INTO public.scp_interview_rating_anchors SELECT (jsonb_populate_record(NULL::public.scp_interview_rating_anchors,to_jsonb(a)||jsonb_build_object(''id'',gen_random_uuid(),''question_id'',%L::uuid,''pack_competency_id'',%L::uuid))).* FROM public.scp_interview_rating_anchors a WHERE id=%L',_newq,_comp,_anchor));
+ PERFORM pg_temp.ok(_out LIKE '23514:%CONTENT_IN_USE%','38 mixed dual anchor cannot omit used competency ownership');
  INSERT INTO public.scp_interview_methods SELECT (jsonb_populate_record(NULL::public.scp_interview_methods,to_jsonb(m)||jsonb_build_object('id',_newmethod,'slug','snapshot-unused-method','version_number',201,'approval_state','draft','approved_at',NULL,'approved_by',NULL))).* FROM public.scp_interview_methods m WHERE id=_method;
  SELECT id INTO _guidance FROM public.scp_interview_conduct_guidance WHERE method_id=_method LIMIT 1;
  _out:=pg_temp.attempt('service_role',NULL,format('UPDATE public.scp_interview_conduct_guidance SET method_id=%L WHERE id=%L',_newmethod,_guidance));
