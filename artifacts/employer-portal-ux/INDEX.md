@@ -22,7 +22,7 @@ plus `manifest.json` (fil + anteckning per bild) och `SOURCE.txt` (commit som fo
 Artefakter: `employer-portal-ux-before` och `employer-portal-ux-after` på workflow-körningen
 för PR:n. Workflowen committar paret till PR-grenen (som `github-actions[bot]`) bara när
 båda fotograferingsjobben lyckats och paret klarat `employer-portal-evidence:check`
-(24 + 24 bilder, alla filer på plats, `SOURCE.txt` med fotograferad commit). Samma
+(28 + 28 bilder, alla filer på plats, `SOURCE.txt` med fotograferad commit). Samma
 kontroll körs i `ci.yml` (jobbet "Employer portal before/after pair") och faller där
 även när paret är FÖRÅLDRAT: `after/SOURCE.txt` namnger en commit som inte längre
 motsvarar PR-huvudet i någon fotograferad sökväg. En bildcommit på ett nyare huvud
@@ -32,3 +32,20 @@ Syntetiska bilder visar layout, kopia och länkar. De är inte ett bevis för
 inloggade arbetsflöden mot riktig Auth/Storage/Postgres; det beviset är
 `recruitment-evidence.yml` och `e4-evidence.yml` på PR:n (Supabase CLI-stack,
 fixture `scripts/fixtures/recruitment-workspace-fixture.sql`).
+
+## Aktuellt par för schema-först-granskningen 2026-10-09
+
+Detta par fotograferades lokalt med samma befintliga svit och byteidentiskt
+instrument på båda sidor: före `55db1e3b83ace033450899a93ca0961edde05217`,
+efter `b7a077b78bf4d64a6ab6aa08d470c6be951aaaf8`. Båda har samma `src`-träd;
+schema-PR:n ändrar inte portalens appkod. Det föregående paret från #463 finns
+kvar i Git-historiken på `8c367f1fc79cb424963bfc6b2617ba2327ae8b3b`.
+
+Fyra fototester före PASS, 16 avsiktliga head-only-skip; efter 18 PASS och två
+projektbundna desktop/phone-skip. Inga fel eller återförsök. Varje set innehåller
+28 PNG:er. Miljö: macOS arm64, Bun 1.3.14, Node 23.7.0, Chrome for Testing
+149.0.7827.55. Telefonen är emulerad Chromium 375 med touch/DPR 3.
+Egna loopback-servrar stängdes efter provet. Detta är inget CI-, verkligt
+Auth/API/Storage-, fysisk-telefon- eller publicerat runtimebevis.
+
+[Versionsbundet lokalt kvitto och SHA-256 för alla filer](../../docs/assessment/recruiter-intelligence/evidence/2026-10-09-schema-portal-local.json).

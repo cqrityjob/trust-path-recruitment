@@ -1,0 +1,111 @@
+{
+  "kind": "synthetic_local_portal_before_after",
+  "beforeSha": "55db1e3b83ace033450899a93ca0961edde05217",
+  "afterSha": "b7a077b78bf4d64a6ab6aa08d470c6be951aaaf8",
+  "scope": "Same seven employer pages, Swedish/English, desktop1440 and Chromium-emulated phone375, mocked server functions. No real Auth/API/Storage/hosted or physical-phone proof.",
+  "runtime": {
+    "os": "macOS arm64",
+    "bun": "1.3.14",
+    "node": "23.7.0",
+    "browser": "Google Chrome for Testing149.0.7827.55"
+  },
+  "tests": {
+    "before": {
+      "passed": 4,
+      "expectedSkipped": 16,
+      "failed": 0,
+      "exitCode": 0
+    },
+    "after": {
+      "passed": 18,
+      "expectedSkipped": 2,
+      "failed": 0,
+      "exitCode": 0
+    }
+  },
+  "skipReason": "Before skips head-only behaviour; after has two project-specific desktop/phone assertions. No assertion was removed or retried.",
+  "boundary": "Each photographed case asserted zero refused external Supabase/unstubbed server-function requests; this is a synthetic harness boundary, not a service test.",
+  "ownLoopbackServersStopped": true,
+  "instrumentSha256": {
+    "e2e/employer-portal-ux-evidence.spec.ts": "0a1db1c5874ec4958827af7e940414785a9b56bd54ba0a57161f52de708e8d7f",
+    "e2e/support/employer-portal-fixture.ts": "9025c7a022bfbcd5afe17b3f64bb2132c23ddac5b655a68a805ffa9e2a5d6a41",
+    "e2e/support/public-entry-harness.ts": "04050473fa37c1e16bb0f8723242a455853a3a4602b8d07d2e5136d9c31ce332",
+    "playwright.config.ts": "0427179e791e6580e7074f1dd12be9aa5255e27dafe9ff53244ca0f9245e6cc6"
+  },
+  "sets": {
+    "before": {
+      "sourceTree": "d9eb49a51a160ba4573b7b7586064ce9bfe21112",
+      "shots": 28,
+      "startedAt": "2026-10-08T22:18:38.262Z",
+      "fileSha256": {
+        "SOURCE.txt": "5637d4bb31ddf6706bfcd6881441ddb3113c4a6b269d86205330e839b39c6481",
+        "before-applications-en-1440.png": "c6ccfa8d4c1140fed462f8259d8fbe7043203010f8506fc46ec48c75349206e6",
+        "before-applications-en-375.png": "e23e2fcf5c075d3a40ec2a28e4c7293e11ed911d8cae9413ad56d4fb39f6d13b",
+        "before-applications-sv-1440.png": "9255e1d61f4f4a1eee453e19f9d8622dfe55f058e9f2250f1125722fd81f58a1",
+        "before-applications-sv-375.png": "d208f178b8e823ccda8645000b3f17a1ea9a0fd4bd956b04560132fe852c6648",
+        "before-assessments-en-1440.png": "0e63033350e47f6784ec92847abc5cc777c7506a61421badf3709ed474a1f336",
+        "before-assessments-en-375.png": "e145c9407df210550284260534d0d55928389db803cbd2d0c26046b03e5ba009",
+        "before-assessments-sv-1440.png": "f52776c3c05305edfaf37eb5afb682bcc14c19004c7a186f4b0cb3ee37340685",
+        "before-assessments-sv-375.png": "294b6c5a2e23fb5a5effa110270b09538ea3d9d06e110685cfbf0f7c95884d4d",
+        "before-interviews-en-1440.png": "58f1071648349d665170911dd648dd9671ad5c5d769b95db117ffb4559427f2b",
+        "before-interviews-en-375.png": "d80077daeab621f8847956b6e29e512dd3efb4af7bbb9c9ff6a10eb86f3289eb",
+        "before-interviews-sv-1440.png": "1de12ec48649a7e74c61bde3fa64ac42620a535305e5872639c45a9217c3cbc4",
+        "before-interviews-sv-375.png": "e1166cd7a49fa2a6612283e27c5e70bab3669fc4e9ec0058170cceea32bc9c46",
+        "before-jobs-en-1440.png": "d907d1fa3a940f933da7489551fa0e6d076c1d337c8badcf5b33c1bc931e0ba8",
+        "before-jobs-en-375.png": "4a5fe4fa91ae898b157b52fac6d40beac788d5dd3953470734f3f44f3c0bbe3c",
+        "before-jobs-sv-1440.png": "0fd3ded9c3a04c11ab2da1e736b0aa9dc5183d0278147e1783b3124f6901b72f",
+        "before-jobs-sv-375.png": "9b53847efde933e0474eee2985de9f874781812b0e9e02ce792cc2f52cc190bf",
+        "before-overview-en-1440.png": "01cb8aa4f9e71ae7385bf4be14a505fe2ffe429a429017dc1c1bd58653120760",
+        "before-overview-en-375.png": "9b7f4804aad4985177d238a7e5b1fd15e1dce99718563f5d22d86c86b4696202",
+        "before-overview-sv-1440.png": "3ce7cbdad430001680ce4c766e21cae42ca16a62a6f3b07af0e9b6fd8f1a728a",
+        "before-overview-sv-375.png": "a99c1fd2edfe2b922f2f03d19ee780f215b05bcbc41f1420c34a56444fba98e2",
+        "before-reports-en-1440.png": "7b23af3c11ab94d8c5e8df3dfd767fb922b1b6602f84b7f1804e36a5f1bf6506",
+        "before-reports-en-375.png": "39e8aa3233c71a431c7f74a5d7c64de612be051200ac95c8b2f3031af2bfe580",
+        "before-reports-sv-1440.png": "9d2258a296c440d5f8296069be2a54fd034bbf23e871cbe88567cc781bf6a90a",
+        "before-reports-sv-375.png": "f896f69cc997178c82d69d067100821e7e0d279eb5329a46b545e9eef28c0acf",
+        "before-requirements-en-1440.png": "01972dce02b9f64894294872750311c9588ee26f6d81517c43a9fb81dad22e5a",
+        "before-requirements-en-375.png": "4d1b09f7be5dc43df8a27ad74665950b41b326cb45ce838e6bac26f6cb772eae",
+        "before-requirements-sv-1440.png": "e304521bf4e6d3161eb5d522c37edd324b3610baf596df8cec4191fab2a56582",
+        "before-requirements-sv-375.png": "bea92b796c61b73c2bd8f8c78092cc380eb7b53cf9ec60f7306e475f51367b7d",
+        "manifest.json": "3d43e3bc4471d13b36e1e989b608203edeb83f8c9b69ea4c420bf8a66129de37"
+      }
+    },
+    "after": {
+      "sourceTree": "d9eb49a51a160ba4573b7b7586064ce9bfe21112",
+      "shots": 28,
+      "startedAt": "2026-10-08T22:18:40.804Z",
+      "fileSha256": {
+        "SOURCE.txt": "baad495a3bb73a1e2076dbb161861f2753d76ca5c1ef5cbe2588a67adfa76927",
+        "after-applications-en-1440.png": "c6ccfa8d4c1140fed462f8259d8fbe7043203010f8506fc46ec48c75349206e6",
+        "after-applications-en-375.png": "e23e2fcf5c075d3a40ec2a28e4c7293e11ed911d8cae9413ad56d4fb39f6d13b",
+        "after-applications-sv-1440.png": "9255e1d61f4f4a1eee453e19f9d8622dfe55f058e9f2250f1125722fd81f58a1",
+        "after-applications-sv-375.png": "d208f178b8e823ccda8645000b3f17a1ea9a0fd4bd956b04560132fe852c6648",
+        "after-assessments-en-1440.png": "0e63033350e47f6784ec92847abc5cc777c7506a61421badf3709ed474a1f336",
+        "after-assessments-en-375.png": "e145c9407df210550284260534d0d55928389db803cbd2d0c26046b03e5ba009",
+        "after-assessments-sv-1440.png": "f52776c3c05305edfaf37eb5afb682bcc14c19004c7a186f4b0cb3ee37340685",
+        "after-assessments-sv-375.png": "294b6c5a2e23fb5a5effa110270b09538ea3d9d06e110685cfbf0f7c95884d4d",
+        "after-interviews-en-1440.png": "58f1071648349d665170911dd648dd9671ad5c5d769b95db117ffb4559427f2b",
+        "after-interviews-en-375.png": "d80077daeab621f8847956b6e29e512dd3efb4af7bbb9c9ff6a10eb86f3289eb",
+        "after-interviews-sv-1440.png": "1de12ec48649a7e74c61bde3fa64ac42620a535305e5872639c45a9217c3cbc4",
+        "after-interviews-sv-375.png": "e1166cd7a49fa2a6612283e27c5e70bab3669fc4e9ec0058170cceea32bc9c46",
+        "after-jobs-en-1440.png": "d907d1fa3a940f933da7489551fa0e6d076c1d337c8badcf5b33c1bc931e0ba8",
+        "after-jobs-en-375.png": "4a5fe4fa91ae898b157b52fac6d40beac788d5dd3953470734f3f44f3c0bbe3c",
+        "after-jobs-sv-1440.png": "0fd3ded9c3a04c11ab2da1e736b0aa9dc5183d0278147e1783b3124f6901b72f",
+        "after-jobs-sv-375.png": "9b53847efde933e0474eee2985de9f874781812b0e9e02ce792cc2f52cc190bf",
+        "after-overview-en-1440.png": "01cb8aa4f9e71ae7385bf4be14a505fe2ffe429a429017dc1c1bd58653120760",
+        "after-overview-en-375.png": "9b7f4804aad4985177d238a7e5b1fd15e1dce99718563f5d22d86c86b4696202",
+        "after-overview-sv-1440.png": "3ce7cbdad430001680ce4c766e21cae42ca16a62a6f3b07af0e9b6fd8f1a728a",
+        "after-overview-sv-375.png": "a99c1fd2edfe2b922f2f03d19ee780f215b05bcbc41f1420c34a56444fba98e2",
+        "after-reports-en-1440.png": "7b23af3c11ab94d8c5e8df3dfd767fb922b1b6602f84b7f1804e36a5f1bf6506",
+        "after-reports-en-375.png": "39e8aa3233c71a431c7f74a5d7c64de612be051200ac95c8b2f3031af2bfe580",
+        "after-reports-sv-1440.png": "9d2258a296c440d5f8296069be2a54fd034bbf23e871cbe88567cc781bf6a90a",
+        "after-reports-sv-375.png": "f896f69cc997178c82d69d067100821e7e0d279eb5329a46b545e9eef28c0acf",
+        "after-requirements-en-1440.png": "01972dce02b9f64894294872750311c9588ee26f6d81517c43a9fb81dad22e5a",
+        "after-requirements-en-375.png": "4d1b09f7be5dc43df8a27ad74665950b41b326cb45ce838e6bac26f6cb772eae",
+        "after-requirements-sv-1440.png": "e304521bf4e6d3161eb5d522c37edd324b3610baf596df8cec4191fab2a56582",
+        "after-requirements-sv-375.png": "bea92b796c61b73c2bd8f8c78092cc380eb7b53cf9ec60f7306e475f51367b7d",
+        "manifest.json": "89f2ab95f378fb82dce7371c05268061abdddbd886118256427e3028dc65e709"
+      }
+    }
+  }
+}
