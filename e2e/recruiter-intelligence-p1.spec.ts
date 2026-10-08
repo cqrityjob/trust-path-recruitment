@@ -443,7 +443,9 @@ test("explicit chosen clarification reaches the existing PEACE case once without
     expect(await evidence.json()).toEqual([]);
     await page.getByRole("link", { name: "Öppna intervjuförberedelse" }).click();
     await expect(page).toHaveURL(new RegExp(`/interview-intelligence/${caseId}/prepare`));
-    await expect(page.locator('section[aria-labelledby="s-setup"]')).toContainText(selected.label);
+    await expect(
+      page.locator(`section[aria-labelledby="s-saved-sources"] li#source-${selected.id}`),
+    ).toContainText(selected.label);
     const brief = page.locator('section[aria-labelledby="s-selected-requirements"]');
     await expect(brief).toContainText("Which document and validity date can you provide?");
     await expect(brief).toContainText("inte bekräftad intervjuevidens");
