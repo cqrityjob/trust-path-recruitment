@@ -1,0 +1,1196 @@
+{
+  "formatVersion": 1,
+  "projectRef": "wrygicdfxwjnrugduxnt",
+  "migration": "20270307090000_interview_content_snapshot_lock.sql",
+  "headSha": "34a91352c560bbe5ccf6a2540f7de95a05e529cc",
+  "mainBase": "8860223e37cdf648a3438c98133018fcf4587440",
+  "mergeSha": "c1d154420c4477c56f1fbeeecf7933e0171bf5e1",
+  "installation": "official_supabase_github_integration",
+  "readOnly": true,
+  "before": {
+    "ledger": {
+      "md5": "f201ac32cadfc39867f8f5e66d5e3f29",
+      "count": 383,
+      "latest": "20270306090000"
+    },
+    "reports": {
+      "count": 0,
+      "aggregateMd5": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "caseStates": {
+      "draft": 9,
+      "assessed": 1,
+      "evidence_review": 2,
+      "interview_complete": 3,
+      "interview_in_progress": 5
+    },
+    "observedAt": "2026-10-08T07:11:55.797863+00:00",
+    "snapshotTableExists": false
+  },
+  "after": {
+    "locks": {
+      "pack": 3,
+      "role": 3,
+      "method": 2,
+      "pack_version": 3,
+      "role_version": 3
+    },
+    "ledger": {
+      "md5": "abdffce3054bd92bbb6cd7711d95c4a2",
+      "count": 384,
+      "latest": "20270307090000",
+      "appended": [
+        {
+          "name": "interview_content_snapshot_lock",
+          "version": "20270307090000"
+        }
+      ],
+      "prior383Md5": "f201ac32cadfc39867f8f5e66d5e3f29"
+    },
+    "reports": {
+      "count": 0,
+      "aggregateMd5": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "snapshots": {
+      "count": 20,
+      "observedNow": 20,
+      "missingCases": 0,
+      "createdFrozen": 0
+    },
+    "caseStates": {
+      "draft": 9,
+      "assessed": 1,
+      "evidence_review": 2,
+      "interview_complete": 3,
+      "interview_in_progress": 5
+    },
+    "observedAt": "2026-10-08T07:36:11.990468+00:00",
+    "acknowledgements": 0,
+    "clientCopyVersions": [
+      "ri-interview-copy-v1"
+    ]
+  },
+  "comparison": {
+    "tables": {
+      "count": 5,
+      "equal": true
+    },
+    "triggers": {
+      "count": 94,
+      "equal": true
+    },
+    "functions": {
+      "count": 20,
+      "equal": true
+    },
+    "constraints": {
+      "count": 13,
+      "equal": true
+    }
+  },
+  "checks": {
+    "head": "34a91352c560bbe5ccf6a2540f7de95a05e529cc",
+    "base": "8860223e37cdf648a3438c98133018fcf4587440",
+    "checks": [
+      {
+        "name": "Lint, typecheck and deterministic checks",
+        "conclusion": "success",
+        "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37740545611/job/113190005441"
+      },
+      {
+        "name": "CV export — PDF and ATS proof",
+        "conclusion": "success",
+        "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37740545611/job/113190005396"
+      },
+      {
+        "name": "Public entry browser — homepage, employers and the employer journey",
+        "conclusion": "success",
+        "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37740545611/job/113190005391"
+      },
+      {
+        "name": "CV browser — the signed-in journey",
+        "conclusion": "success",
+        "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37740545611/job/113190005370"
+      },
+      {
+        "name": "Passport three-market browser — catalogue, cards, pilot access",
+        "conclusion": "success",
+        "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37740545611/job/113190005352"
+      },
+      {
+        "name": "Migration replay, RLS and rollback tests",
+        "conclusion": "success",
+        "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37740545611/job/113190005130"
+      },
+      {
+        "name": "Passport public pilot browser evidence (isolated local stack)",
+        "conclusion": "success",
+        "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37740545361/job/113190005110"
+      },
+      {
+        "name": "Career Center persistence browser evidence (isolated local stack)",
+        "conclusion": "success",
+        "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37740545380/job/113190005047"
+      },
+      {
+        "name": "E4 routed browser evidence (isolated local stack)",
+        "conclusion": "success",
+        "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37740545388/job/113190004879"
+      },
+      {
+        "name": "browser",
+        "conclusion": "success",
+        "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37740545464/job/113190004849"
+      },
+      {
+        "name": "Assigned officer/manager reports and TestBank (isolated desktop/mobile)",
+        "conclusion": "success",
+        "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37740545364/job/113190004778"
+      },
+      {
+        "name": "Recruitment workspace browser evidence (isolated local stack)",
+        "conclusion": "success",
+        "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37740545372/job/113190004737"
+      },
+      {
+        "name": "Job ad back navigation browser evidence (isolated local stack)",
+        "conclusion": "success",
+        "url": "https://github.com/cqrityjob/trust-path-recruitment/actions/runs/37740545363/job/113190004519"
+      },
+      {
+        "name": "Supabase Preview",
+        "conclusion": "skipped",
+        "url": "https://github.com/cqrityjob/trust-path-recruitment/runs/113189983108"
+      }
+    ],
+    "verifiedAt": "2026-10-08 07:33:29 UTC"
+  },
+  "catalog": {
+    "tables": [
+      {
+        "acl": "{postgres=arwdDxtm/postgres}",
+        "rls": true,
+        "name": "interview_client_copy_versions",
+        "anonRead": false,
+        "forceRls": false,
+        "policyCount": 0,
+        "authenticatedRead": false,
+        "authenticatedWrite": false
+      },
+      {
+        "acl": "{postgres=arwdDxtm/postgres}",
+        "rls": true,
+        "name": "interview_content_acknowledgements",
+        "anonRead": false,
+        "forceRls": false,
+        "policyCount": 0,
+        "authenticatedRead": false,
+        "authenticatedWrite": false
+      },
+      {
+        "acl": "{postgres=arwdDxtm/postgres}",
+        "rls": true,
+        "name": "interview_content_locks",
+        "anonRead": false,
+        "forceRls": false,
+        "policyCount": 0,
+        "authenticatedRead": false,
+        "authenticatedWrite": false
+      },
+      {
+        "acl": "{postgres=arwdDxtm/postgres}",
+        "rls": true,
+        "name": "interview_content_prior_functions",
+        "anonRead": false,
+        "forceRls": false,
+        "policyCount": 0,
+        "authenticatedRead": false,
+        "authenticatedWrite": false
+      },
+      {
+        "acl": "{postgres=arwdDxtm/postgres}",
+        "rls": true,
+        "name": "interview_content_snapshots",
+        "anonRead": false,
+        "forceRls": false,
+        "policyCount": 0,
+        "authenticatedRead": false,
+        "authenticatedWrite": false
+      }
+    ],
+    "triggers": [
+      {
+        "name": "ri_content_in_use",
+        "table": "scp_interview_approved_probes",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_in_use BEFORE INSERT OR DELETE OR UPDATE ON public.scp_interview_approved_probes FOR EACH ROW EXECUTE FUNCTION scp_private.interview_content_guard()"
+      },
+      {
+        "name": "ri_content_serialise",
+        "table": "scp_interview_approved_probes",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_serialise BEFORE INSERT OR DELETE OR UPDATE ON public.scp_interview_approved_probes FOR EACH STATEMENT EXECUTE FUNCTION scp_private.interview_content_statement_lock()"
+      },
+      {
+        "name": "ri_content_truncate",
+        "table": "scp_interview_approved_probes",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_truncate BEFORE TRUNCATE ON public.scp_interview_approved_probes FOR EACH STATEMENT EXECUTE FUNCTION scp_private.interview_content_statement_lock()"
+      },
+      {
+        "name": "ri_content_review",
+        "table": "scp_interview_assessments",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_review BEFORE INSERT OR UPDATE ON public.scp_interview_assessments FOR EACH ROW EXECUTE FUNCTION scp_private.interview_content_review_gate()"
+      },
+      {
+        "name": "ri_content_review",
+        "table": "scp_interview_candidate_facts",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_review BEFORE INSERT OR UPDATE ON public.scp_interview_candidate_facts FOR EACH ROW EXECUTE FUNCTION scp_private.interview_content_review_gate()"
+      },
+      {
+        "name": "ri_content_bind",
+        "table": "scp_interview_cases",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_bind BEFORE INSERT OR UPDATE ON public.scp_interview_cases FOR EACH ROW EXECUTE FUNCTION scp_private.interview_case_content_bind()"
+      },
+      {
+        "name": "ri_content_capture",
+        "table": "scp_interview_cases",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_capture AFTER INSERT ON public.scp_interview_cases FOR EACH ROW EXECUTE FUNCTION scp_private.interview_case_content_capture()"
+      },
+      {
+        "name": "ri_content_review",
+        "table": "scp_interview_cases",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_review BEFORE UPDATE ON public.scp_interview_cases FOR EACH ROW EXECUTE FUNCTION scp_private.interview_content_review_gate()"
+      },
+      {
+        "name": "ri_content_serialise",
+        "table": "scp_interview_cases",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_serialise BEFORE INSERT ON public.scp_interview_cases FOR EACH STATEMENT EXECUTE FUNCTION scp_private.interview_content_statement_lock()"
+      },
+      {
+        "name": "ri_content_truncate",
+        "table": "scp_interview_cases",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_truncate BEFORE TRUNCATE ON public.scp_interview_cases FOR EACH STATEMENT EXECUTE FUNCTION scp_private.interview_content_statement_lock()"
+      },
+      {
+        "name": "ri_content_in_use",
+        "table": "scp_interview_conduct_guidance",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_in_use BEFORE INSERT OR DELETE OR UPDATE ON public.scp_interview_conduct_guidance FOR EACH ROW EXECUTE FUNCTION scp_private.interview_content_guard()"
+      },
+      {
+        "name": "ri_content_serialise",
+        "table": "scp_interview_conduct_guidance",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_serialise BEFORE INSERT OR DELETE OR UPDATE ON public.scp_interview_conduct_guidance FOR EACH STATEMENT EXECUTE FUNCTION scp_private.interview_content_statement_lock()"
+      },
+      {
+        "name": "ri_content_truncate",
+        "table": "scp_interview_conduct_guidance",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_truncate BEFORE TRUNCATE ON public.scp_interview_conduct_guidance FOR EACH STATEMENT EXECUTE FUNCTION scp_private.interview_content_statement_lock()"
+      },
+      {
+        "name": "ri_content_in_use",
+        "table": "scp_interview_conduct_prohibitions",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_in_use BEFORE INSERT OR DELETE OR UPDATE ON public.scp_interview_conduct_prohibitions FOR EACH ROW EXECUTE FUNCTION scp_private.interview_content_guard()"
+      },
+      {
+        "name": "ri_content_serialise",
+        "table": "scp_interview_conduct_prohibitions",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_serialise BEFORE INSERT OR DELETE OR UPDATE ON public.scp_interview_conduct_prohibitions FOR EACH STATEMENT EXECUTE FUNCTION scp_private.interview_content_statement_lock()"
+      },
+      {
+        "name": "ri_content_truncate",
+        "table": "scp_interview_conduct_prohibitions",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_truncate BEFORE TRUNCATE ON public.scp_interview_conduct_prohibitions FOR EACH STATEMENT EXECUTE FUNCTION scp_private.interview_content_statement_lock()"
+      },
+      {
+        "name": "ri_content_in_use",
+        "table": "scp_interview_conduct_steps",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_in_use BEFORE INSERT OR DELETE OR UPDATE ON public.scp_interview_conduct_steps FOR EACH ROW EXECUTE FUNCTION scp_private.interview_content_guard()"
+      },
+      {
+        "name": "ri_content_serialise",
+        "table": "scp_interview_conduct_steps",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_serialise BEFORE INSERT OR DELETE OR UPDATE ON public.scp_interview_conduct_steps FOR EACH STATEMENT EXECUTE FUNCTION scp_private.interview_content_statement_lock()"
+      },
+      {
+        "name": "ri_content_truncate",
+        "table": "scp_interview_conduct_steps",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_truncate BEFORE TRUNCATE ON public.scp_interview_conduct_steps FOR EACH STATEMENT EXECUTE FUNCTION scp_private.interview_content_statement_lock()"
+      },
+      {
+        "name": "ri_content_in_use",
+        "table": "scp_interview_core_questions",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_in_use BEFORE INSERT OR DELETE OR UPDATE ON public.scp_interview_core_questions FOR EACH ROW EXECUTE FUNCTION scp_private.interview_content_guard()"
+      },
+      {
+        "name": "ri_content_serialise",
+        "table": "scp_interview_core_questions",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_serialise BEFORE INSERT OR DELETE OR UPDATE ON public.scp_interview_core_questions FOR EACH STATEMENT EXECUTE FUNCTION scp_private.interview_content_statement_lock()"
+      },
+      {
+        "name": "ri_content_truncate",
+        "table": "scp_interview_core_questions",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_truncate BEFORE TRUNCATE ON public.scp_interview_core_questions FOR EACH STATEMENT EXECUTE FUNCTION scp_private.interview_content_statement_lock()"
+      },
+      {
+        "name": "ri_content_review",
+        "table": "scp_interview_evidence",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_review BEFORE INSERT OR UPDATE ON public.scp_interview_evidence FOR EACH ROW EXECUTE FUNCTION scp_private.interview_content_review_gate()"
+      },
+      {
+        "name": "ri_content_in_use",
+        "table": "scp_interview_evidence_dimensions",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_in_use BEFORE INSERT OR DELETE OR UPDATE ON public.scp_interview_evidence_dimensions FOR EACH ROW EXECUTE FUNCTION scp_private.interview_content_guard()"
+      },
+      {
+        "name": "ri_content_serialise",
+        "table": "scp_interview_evidence_dimensions",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_serialise BEFORE INSERT OR DELETE OR UPDATE ON public.scp_interview_evidence_dimensions FOR EACH STATEMENT EXECUTE FUNCTION scp_private.interview_content_statement_lock()"
+      },
+      {
+        "name": "ri_content_truncate",
+        "table": "scp_interview_evidence_dimensions",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_truncate BEFORE TRUNCATE ON public.scp_interview_evidence_dimensions FOR EACH STATEMENT EXECUTE FUNCTION scp_private.interview_content_statement_lock()"
+      },
+      {
+        "name": "ri_content_review",
+        "table": "scp_interview_evidence_proposals",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_review BEFORE INSERT OR UPDATE ON public.scp_interview_evidence_proposals FOR EACH ROW EXECUTE FUNCTION scp_private.interview_content_review_gate()"
+      },
+      {
+        "name": "ri_content_review",
+        "table": "scp_interview_findings",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_review BEFORE INSERT OR UPDATE ON public.scp_interview_findings FOR EACH ROW EXECUTE FUNCTION scp_private.interview_content_review_gate()"
+      },
+      {
+        "name": "ri_content_in_use",
+        "table": "scp_interview_method_practices",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_in_use BEFORE INSERT OR DELETE OR UPDATE ON public.scp_interview_method_practices FOR EACH ROW EXECUTE FUNCTION scp_private.interview_content_guard()"
+      },
+      {
+        "name": "ri_content_serialise",
+        "table": "scp_interview_method_practices",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_serialise BEFORE INSERT OR DELETE OR UPDATE ON public.scp_interview_method_practices FOR EACH STATEMENT EXECUTE FUNCTION scp_private.interview_content_statement_lock()"
+      },
+      {
+        "name": "ri_content_truncate",
+        "table": "scp_interview_method_practices",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_truncate BEFORE TRUNCATE ON public.scp_interview_method_practices FOR EACH STATEMENT EXECUTE FUNCTION scp_private.interview_content_statement_lock()"
+      },
+      {
+        "name": "ri_content_in_use",
+        "table": "scp_interview_methods",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_in_use BEFORE INSERT OR DELETE OR UPDATE ON public.scp_interview_methods FOR EACH ROW EXECUTE FUNCTION scp_private.interview_content_guard()"
+      },
+      {
+        "name": "ri_content_serialise",
+        "table": "scp_interview_methods",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_serialise BEFORE INSERT OR DELETE OR UPDATE ON public.scp_interview_methods FOR EACH STATEMENT EXECUTE FUNCTION scp_private.interview_content_statement_lock()"
+      },
+      {
+        "name": "ri_content_truncate",
+        "table": "scp_interview_methods",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_truncate BEFORE TRUNCATE ON public.scp_interview_methods FOR EACH STATEMENT EXECUTE FUNCTION scp_private.interview_content_statement_lock()"
+      },
+      {
+        "name": "ri_content_in_use",
+        "table": "scp_interview_pack_competencies",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_in_use BEFORE INSERT OR DELETE OR UPDATE ON public.scp_interview_pack_competencies FOR EACH ROW EXECUTE FUNCTION scp_private.interview_content_guard()"
+      },
+      {
+        "name": "ri_content_serialise",
+        "table": "scp_interview_pack_competencies",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_serialise BEFORE INSERT OR DELETE OR UPDATE ON public.scp_interview_pack_competencies FOR EACH STATEMENT EXECUTE FUNCTION scp_private.interview_content_statement_lock()"
+      },
+      {
+        "name": "ri_content_truncate",
+        "table": "scp_interview_pack_competencies",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_truncate BEFORE TRUNCATE ON public.scp_interview_pack_competencies FOR EACH STATEMENT EXECUTE FUNCTION scp_private.interview_content_statement_lock()"
+      },
+      {
+        "name": "ri_content_in_use",
+        "table": "scp_interview_pack_competency_map",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_in_use BEFORE INSERT OR DELETE OR UPDATE ON public.scp_interview_pack_competency_map FOR EACH ROW EXECUTE FUNCTION scp_private.interview_content_guard()"
+      },
+      {
+        "name": "ri_content_serialise",
+        "table": "scp_interview_pack_competency_map",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_serialise BEFORE INSERT OR DELETE OR UPDATE ON public.scp_interview_pack_competency_map FOR EACH STATEMENT EXECUTE FUNCTION scp_private.interview_content_statement_lock()"
+      },
+      {
+        "name": "ri_content_truncate",
+        "table": "scp_interview_pack_competency_map",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_truncate BEFORE TRUNCATE ON public.scp_interview_pack_competency_map FOR EACH STATEMENT EXECUTE FUNCTION scp_private.interview_content_statement_lock()"
+      },
+      {
+        "name": "ri_content_in_use",
+        "table": "scp_interview_pack_versions",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_in_use BEFORE INSERT OR DELETE OR UPDATE ON public.scp_interview_pack_versions FOR EACH ROW EXECUTE FUNCTION scp_private.interview_content_guard()"
+      },
+      {
+        "name": "ri_content_serialise",
+        "table": "scp_interview_pack_versions",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_serialise BEFORE INSERT OR DELETE OR UPDATE ON public.scp_interview_pack_versions FOR EACH STATEMENT EXECUTE FUNCTION scp_private.interview_content_statement_lock()"
+      },
+      {
+        "name": "ri_content_truncate",
+        "table": "scp_interview_pack_versions",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_truncate BEFORE TRUNCATE ON public.scp_interview_pack_versions FOR EACH STATEMENT EXECUTE FUNCTION scp_private.interview_content_statement_lock()"
+      },
+      {
+        "name": "ri_content_in_use",
+        "table": "scp_interview_packs",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_in_use BEFORE INSERT OR DELETE OR UPDATE ON public.scp_interview_packs FOR EACH ROW EXECUTE FUNCTION scp_private.interview_content_guard()"
+      },
+      {
+        "name": "ri_content_serialise",
+        "table": "scp_interview_packs",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_serialise BEFORE INSERT OR DELETE OR UPDATE ON public.scp_interview_packs FOR EACH STATEMENT EXECUTE FUNCTION scp_private.interview_content_statement_lock()"
+      },
+      {
+        "name": "ri_content_truncate",
+        "table": "scp_interview_packs",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_truncate BEFORE TRUNCATE ON public.scp_interview_packs FOR EACH STATEMENT EXECUTE FUNCTION scp_private.interview_content_statement_lock()"
+      },
+      {
+        "name": "ri_content_review",
+        "table": "scp_interview_panel_members",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_review BEFORE INSERT OR UPDATE ON public.scp_interview_panel_members FOR EACH ROW EXECUTE FUNCTION scp_private.interview_content_review_gate()"
+      },
+      {
+        "name": "ri_content_review",
+        "table": "scp_interview_panels",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_review BEFORE INSERT OR UPDATE ON public.scp_interview_panels FOR EACH ROW EXECUTE FUNCTION scp_private.interview_content_review_gate()"
+      },
+      {
+        "name": "ri_content_review",
+        "table": "scp_interview_prep_items",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_review BEFORE INSERT OR UPDATE ON public.scp_interview_prep_items FOR EACH ROW EXECUTE FUNCTION scp_private.interview_content_review_gate()"
+      },
+      {
+        "name": "ri_content_review",
+        "table": "scp_interview_prep_plans",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_review BEFORE INSERT OR UPDATE ON public.scp_interview_prep_plans FOR EACH ROW EXECUTE FUNCTION scp_private.interview_content_review_gate()"
+      },
+      {
+        "name": "ri_content_review",
+        "table": "scp_interview_probe_usages",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_review BEFORE INSERT OR UPDATE ON public.scp_interview_probe_usages FOR EACH ROW EXECUTE FUNCTION scp_private.interview_content_review_gate()"
+      },
+      {
+        "name": "ri_content_in_use",
+        "table": "scp_interview_prohibited_areas",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_in_use BEFORE INSERT OR DELETE OR UPDATE ON public.scp_interview_prohibited_areas FOR EACH ROW EXECUTE FUNCTION scp_private.interview_content_guard()"
+      },
+      {
+        "name": "ri_content_serialise",
+        "table": "scp_interview_prohibited_areas",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_serialise BEFORE INSERT OR DELETE OR UPDATE ON public.scp_interview_prohibited_areas FOR EACH STATEMENT EXECUTE FUNCTION scp_private.interview_content_statement_lock()"
+      },
+      {
+        "name": "ri_content_truncate",
+        "table": "scp_interview_prohibited_areas",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_truncate BEFORE TRUNCATE ON public.scp_interview_prohibited_areas FOR EACH STATEMENT EXECUTE FUNCTION scp_private.interview_content_statement_lock()"
+      },
+      {
+        "name": "ri_content_in_use",
+        "table": "scp_interview_question_competencies",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_in_use BEFORE INSERT OR DELETE OR UPDATE ON public.scp_interview_question_competencies FOR EACH ROW EXECUTE FUNCTION scp_private.interview_content_guard()"
+      },
+      {
+        "name": "ri_content_serialise",
+        "table": "scp_interview_question_competencies",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_serialise BEFORE INSERT OR DELETE OR UPDATE ON public.scp_interview_question_competencies FOR EACH STATEMENT EXECUTE FUNCTION scp_private.interview_content_statement_lock()"
+      },
+      {
+        "name": "ri_content_truncate",
+        "table": "scp_interview_question_competencies",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_truncate BEFORE TRUNCATE ON public.scp_interview_question_competencies FOR EACH STATEMENT EXECUTE FUNCTION scp_private.interview_content_statement_lock()"
+      },
+      {
+        "name": "ri_content_in_use",
+        "table": "scp_interview_rating_anchors",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_in_use BEFORE INSERT OR DELETE OR UPDATE ON public.scp_interview_rating_anchors FOR EACH ROW EXECUTE FUNCTION scp_private.interview_content_guard()"
+      },
+      {
+        "name": "ri_content_serialise",
+        "table": "scp_interview_rating_anchors",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_serialise BEFORE INSERT OR DELETE OR UPDATE ON public.scp_interview_rating_anchors FOR EACH STATEMENT EXECUTE FUNCTION scp_private.interview_content_statement_lock()"
+      },
+      {
+        "name": "ri_content_truncate",
+        "table": "scp_interview_rating_anchors",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_truncate BEFORE TRUNCATE ON public.scp_interview_rating_anchors FOR EACH STATEMENT EXECUTE FUNCTION scp_private.interview_content_statement_lock()"
+      },
+      {
+        "name": "ri_content_review",
+        "table": "scp_interview_reports",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_review BEFORE INSERT OR UPDATE ON public.scp_interview_reports FOR EACH ROW EXECUTE FUNCTION scp_private.interview_content_review_gate()"
+      },
+      {
+        "name": "ri_content_review",
+        "table": "scp_interview_role_requirements",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_review BEFORE INSERT OR UPDATE ON public.scp_interview_role_requirements FOR EACH ROW EXECUTE FUNCTION scp_private.interview_content_review_gate()"
+      },
+      {
+        "name": "ri_content_review",
+        "table": "scp_interview_session_notes",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_review BEFORE INSERT OR UPDATE ON public.scp_interview_session_notes FOR EACH ROW EXECUTE FUNCTION scp_private.interview_content_review_gate()"
+      },
+      {
+        "name": "ri_content_review",
+        "table": "scp_interview_session_questions",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_review BEFORE INSERT OR UPDATE ON public.scp_interview_session_questions FOR EACH ROW EXECUTE FUNCTION scp_private.interview_content_review_gate()"
+      },
+      {
+        "name": "ri_content_review",
+        "table": "scp_interview_sessions",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_review BEFORE INSERT OR UPDATE ON public.scp_interview_sessions FOR EACH ROW EXECUTE FUNCTION scp_private.interview_content_review_gate()"
+      },
+      {
+        "name": "ri_content_in_use",
+        "table": "scp_interview_verification_rules",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_in_use BEFORE INSERT OR DELETE OR UPDATE ON public.scp_interview_verification_rules FOR EACH ROW EXECUTE FUNCTION scp_private.interview_content_guard()"
+      },
+      {
+        "name": "ri_content_serialise",
+        "table": "scp_interview_verification_rules",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_serialise BEFORE INSERT OR DELETE OR UPDATE ON public.scp_interview_verification_rules FOR EACH STATEMENT EXECUTE FUNCTION scp_private.interview_content_statement_lock()"
+      },
+      {
+        "name": "ri_content_truncate",
+        "table": "scp_interview_verification_rules",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_truncate BEFORE TRUNCATE ON public.scp_interview_verification_rules FOR EACH STATEMENT EXECUTE FUNCTION scp_private.interview_content_statement_lock()"
+      },
+      {
+        "name": "ri_content_in_use",
+        "table": "scp_role_versions",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_in_use BEFORE INSERT OR DELETE OR UPDATE ON public.scp_role_versions FOR EACH ROW EXECUTE FUNCTION scp_private.interview_content_guard()"
+      },
+      {
+        "name": "ri_content_serialise",
+        "table": "scp_role_versions",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_serialise BEFORE INSERT OR DELETE OR UPDATE ON public.scp_role_versions FOR EACH STATEMENT EXECUTE FUNCTION scp_private.interview_content_statement_lock()"
+      },
+      {
+        "name": "ri_content_truncate",
+        "table": "scp_role_versions",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_truncate BEFORE TRUNCATE ON public.scp_role_versions FOR EACH STATEMENT EXECUTE FUNCTION scp_private.interview_content_statement_lock()"
+      },
+      {
+        "name": "ri_content_in_use",
+        "table": "scp_roles",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_in_use BEFORE INSERT OR DELETE OR UPDATE ON public.scp_roles FOR EACH ROW EXECUTE FUNCTION scp_private.interview_content_guard()"
+      },
+      {
+        "name": "ri_content_serialise",
+        "table": "scp_roles",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_serialise BEFORE INSERT OR DELETE OR UPDATE ON public.scp_roles FOR EACH STATEMENT EXECUTE FUNCTION scp_private.interview_content_statement_lock()"
+      },
+      {
+        "name": "ri_content_truncate",
+        "table": "scp_roles",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_truncate BEFORE TRUNCATE ON public.scp_roles FOR EACH STATEMENT EXECUTE FUNCTION scp_private.interview_content_statement_lock()"
+      },
+      {
+        "name": "ri_content_in_use",
+        "table": "scp_trust_stage_ai_tasks",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_in_use BEFORE INSERT OR DELETE OR UPDATE ON public.scp_trust_stage_ai_tasks FOR EACH ROW EXECUTE FUNCTION scp_private.interview_content_guard()"
+      },
+      {
+        "name": "ri_content_serialise",
+        "table": "scp_trust_stage_ai_tasks",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_serialise BEFORE INSERT OR DELETE OR UPDATE ON public.scp_trust_stage_ai_tasks FOR EACH STATEMENT EXECUTE FUNCTION scp_private.interview_content_statement_lock()"
+      },
+      {
+        "name": "ri_content_truncate",
+        "table": "scp_trust_stage_ai_tasks",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_truncate BEFORE TRUNCATE ON public.scp_trust_stage_ai_tasks FOR EACH STATEMENT EXECUTE FUNCTION scp_private.interview_content_statement_lock()"
+      },
+      {
+        "name": "ri_content_in_use",
+        "table": "scp_trust_stage_claims",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_in_use BEFORE INSERT OR DELETE OR UPDATE ON public.scp_trust_stage_claims FOR EACH ROW EXECUTE FUNCTION scp_private.interview_content_guard()"
+      },
+      {
+        "name": "ri_content_serialise",
+        "table": "scp_trust_stage_claims",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_serialise BEFORE INSERT OR DELETE OR UPDATE ON public.scp_trust_stage_claims FOR EACH STATEMENT EXECUTE FUNCTION scp_private.interview_content_statement_lock()"
+      },
+      {
+        "name": "ri_content_truncate",
+        "table": "scp_trust_stage_claims",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_truncate BEFORE TRUNCATE ON public.scp_trust_stage_claims FOR EACH STATEMENT EXECUTE FUNCTION scp_private.interview_content_statement_lock()"
+      },
+      {
+        "name": "ri_content_in_use",
+        "table": "scp_trust_stage_prohibitions",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_in_use BEFORE INSERT OR DELETE OR UPDATE ON public.scp_trust_stage_prohibitions FOR EACH ROW EXECUTE FUNCTION scp_private.interview_content_guard()"
+      },
+      {
+        "name": "ri_content_serialise",
+        "table": "scp_trust_stage_prohibitions",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_serialise BEFORE INSERT OR DELETE OR UPDATE ON public.scp_trust_stage_prohibitions FOR EACH STATEMENT EXECUTE FUNCTION scp_private.interview_content_statement_lock()"
+      },
+      {
+        "name": "ri_content_truncate",
+        "table": "scp_trust_stage_prohibitions",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_truncate BEFORE TRUNCATE ON public.scp_trust_stage_prohibitions FOR EACH STATEMENT EXECUTE FUNCTION scp_private.interview_content_statement_lock()"
+      },
+      {
+        "name": "ri_content_in_use",
+        "table": "scp_trust_stages",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_in_use BEFORE INSERT OR DELETE OR UPDATE ON public.scp_trust_stages FOR EACH ROW EXECUTE FUNCTION scp_private.interview_content_guard()"
+      },
+      {
+        "name": "ri_content_serialise",
+        "table": "scp_trust_stages",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_serialise BEFORE INSERT OR DELETE OR UPDATE ON public.scp_trust_stages FOR EACH STATEMENT EXECUTE FUNCTION scp_private.interview_content_statement_lock()"
+      },
+      {
+        "name": "ri_content_truncate",
+        "table": "scp_trust_stages",
+        "schema": "public",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER ri_content_truncate BEFORE TRUNCATE ON public.scp_trust_stages FOR EACH STATEMENT EXECUTE FUNCTION scp_private.interview_content_statement_lock()"
+      },
+      {
+        "name": "immutable",
+        "table": "interview_client_copy_versions",
+        "schema": "scp_private",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER immutable BEFORE DELETE OR UPDATE ON scp_private.interview_client_copy_versions FOR EACH ROW EXECUTE FUNCTION scp_private.interview_content_append_only()"
+      },
+      {
+        "name": "immutable_truncate",
+        "table": "interview_client_copy_versions",
+        "schema": "scp_private",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER immutable_truncate BEFORE TRUNCATE ON scp_private.interview_client_copy_versions FOR EACH STATEMENT EXECUTE FUNCTION scp_private.interview_content_append_only()"
+      },
+      {
+        "name": "immutable",
+        "table": "interview_content_acknowledgements",
+        "schema": "scp_private",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER immutable BEFORE DELETE OR UPDATE ON scp_private.interview_content_acknowledgements FOR EACH ROW EXECUTE FUNCTION scp_private.interview_content_append_only()"
+      },
+      {
+        "name": "immutable_truncate",
+        "table": "interview_content_acknowledgements",
+        "schema": "scp_private",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER immutable_truncate BEFORE TRUNCATE ON scp_private.interview_content_acknowledgements FOR EACH STATEMENT EXECUTE FUNCTION scp_private.interview_content_append_only()"
+      },
+      {
+        "name": "immutable",
+        "table": "interview_content_locks",
+        "schema": "scp_private",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER immutable BEFORE DELETE OR UPDATE ON scp_private.interview_content_locks FOR EACH ROW EXECUTE FUNCTION scp_private.interview_content_append_only()"
+      },
+      {
+        "name": "immutable_truncate",
+        "table": "interview_content_locks",
+        "schema": "scp_private",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER immutable_truncate BEFORE TRUNCATE ON scp_private.interview_content_locks FOR EACH STATEMENT EXECUTE FUNCTION scp_private.interview_content_append_only()"
+      },
+      {
+        "name": "immutable",
+        "table": "interview_content_snapshots",
+        "schema": "scp_private",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER immutable BEFORE DELETE OR UPDATE ON scp_private.interview_content_snapshots FOR EACH ROW EXECUTE FUNCTION scp_private.interview_content_append_only()"
+      },
+      {
+        "name": "immutable_truncate",
+        "table": "interview_content_snapshots",
+        "schema": "scp_private",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER immutable_truncate BEFORE TRUNCATE ON scp_private.interview_content_snapshots FOR EACH STATEMENT EXECUTE FUNCTION scp_private.interview_content_append_only()"
+      }
+    ],
+    "functions": [
+      {
+        "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+        "config": [
+          "search_path=public, pg_temp"
+        ],
+        "bodyMd5": "b7db5b86e43d4b1bd401ce4bd0520f09",
+        "definer": true,
+        "signature": "public.scp_iv_acknowledge_observed_content(_case_id uuid, _expected_manifest_hash text, _note text)",
+        "anonExecute": false,
+        "serviceExecute": false,
+        "authenticatedExecute": true
+      },
+      {
+        "acl": "{postgres=X/postgres}",
+        "config": [
+          "search_path=public"
+        ],
+        "bodyMd5": "64b9233599fb05f69ec166c26218c3a3",
+        "definer": true,
+        "signature": "public.scp_iv_build_report_basis(_case_id uuid)",
+        "anonExecute": false,
+        "serviceExecute": false,
+        "authenticatedExecute": false
+      },
+      {
+        "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+        "config": [
+          "search_path=public"
+        ],
+        "bodyMd5": "dbd2bf0ef90c7e9c5fa9d2023d4d968a",
+        "definer": true,
+        "signature": "public.scp_iv_can_write_case(_case_id uuid)",
+        "anonExecute": false,
+        "serviceExecute": true,
+        "authenticatedExecute": true
+      },
+      {
+        "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+        "config": [
+          "search_path=public, pg_temp"
+        ],
+        "bodyMd5": "dd7a963676bc18fd86b7a8261a513f10",
+        "definer": true,
+        "signature": "public.scp_iv_case_content_manifest(_case_id uuid)",
+        "anonExecute": false,
+        "serviceExecute": false,
+        "authenticatedExecute": true
+      },
+      {
+        "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+        "config": [
+          "search_path=public, pg_temp"
+        ],
+        "bodyMd5": "ebd0cae8bff6a941a5eb55203c090a9c",
+        "definer": true,
+        "signature": "public.scp_iv_case_frozen_content(_case_id uuid)",
+        "anonExecute": false,
+        "serviceExecute": false,
+        "authenticatedExecute": true
+      },
+      {
+        "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+        "config": [
+          "search_path=public, pg_temp"
+        ],
+        "bodyMd5": "424961f06ab420199b6061200e06320a",
+        "definer": true,
+        "signature": "public.scp_iv_case_frozen_labels(_case_ids uuid[])",
+        "anonExecute": false,
+        "serviceExecute": false,
+        "authenticatedExecute": true
+      },
+      {
+        "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+        "config": [
+          "search_path=public, pg_temp"
+        ],
+        "bodyMd5": "280f3d226b47dd3105f9aabe67f868bb",
+        "definer": true,
+        "signature": "public.scp_iv_content_inventory(_employer_id uuid)",
+        "anonExecute": false,
+        "serviceExecute": false,
+        "authenticatedExecute": true
+      },
+      {
+        "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+        "config": [
+          "search_path=public"
+        ],
+        "bodyMd5": "1bb7ed578f4ae85fbcadbfe08c9d1bed",
+        "definer": true,
+        "signature": "public.scp_iv_create_case(_employer_id uuid, _title text, _pack_version_id uuid, _candidate_display_name text, _candidate_user_id uuid, _candidate_external_ref text, _job_id uuid, _application_id uuid)",
+        "anonExecute": false,
+        "serviceExecute": true,
+        "authenticatedExecute": true
+      },
+      {
+        "acl": "{postgres=X/postgres}",
+        "config": [
+          "search_path=public, pg_temp"
+        ],
+        "bodyMd5": "3850e3dc0cbc3e00ac3319222404aec6",
+        "definer": true,
+        "signature": "scp_private.interview_capture_content(_case_id uuid, _provenance text)",
+        "anonExecute": false,
+        "serviceExecute": false,
+        "authenticatedExecute": false
+      },
+      {
+        "acl": "{postgres=X/postgres}",
+        "config": [
+          "search_path=public, pg_temp"
+        ],
+        "bodyMd5": "0ca9b5fc5d28fdbb38d9fd8546cb008c",
+        "definer": true,
+        "signature": "scp_private.interview_case_content_bind()",
+        "anonExecute": false,
+        "serviceExecute": false,
+        "authenticatedExecute": false
+      },
+      {
+        "acl": "{postgres=X/postgres}",
+        "config": [
+          "search_path=public, pg_temp"
+        ],
+        "bodyMd5": "acc5e2de395d92035b42b672b06dd0f8",
+        "definer": true,
+        "signature": "scp_private.interview_case_content_capture()",
+        "anonExecute": false,
+        "serviceExecute": false,
+        "authenticatedExecute": false
+      },
+      {
+        "acl": "{postgres=X/postgres}",
+        "config": [
+          "search_path=public, pg_temp"
+        ],
+        "bodyMd5": "8541f7023bae2a8abf5500f7159b2d8e",
+        "definer": true,
+        "signature": "scp_private.interview_content_append_only()",
+        "anonExecute": false,
+        "serviceExecute": false,
+        "authenticatedExecute": false
+      },
+      {
+        "acl": "{postgres=X/postgres}",
+        "config": [
+          "search_path=public, pg_temp"
+        ],
+        "bodyMd5": "f29bf091bac2b014a37f5e8402977bbb",
+        "definer": true,
+        "signature": "scp_private.interview_content_guard()",
+        "anonExecute": false,
+        "serviceExecute": false,
+        "authenticatedExecute": false
+      },
+      {
+        "acl": "{postgres=X/postgres}",
+        "config": [
+          "search_path=public, pg_temp"
+        ],
+        "bodyMd5": "50095705589977c2eb795a769f08ccf4",
+        "definer": true,
+        "signature": "scp_private.interview_content_lock()",
+        "anonExecute": false,
+        "serviceExecute": false,
+        "authenticatedExecute": false
+      },
+      {
+        "acl": "{postgres=X/postgres}",
+        "config": [
+          "search_path=public, pg_temp"
+        ],
+        "bodyMd5": "ed4cca15b2b680a980af8407fb89064a",
+        "definer": true,
+        "signature": "scp_private.interview_content_manifest(_case_id uuid)",
+        "anonExecute": false,
+        "serviceExecute": false,
+        "authenticatedExecute": false
+      },
+      {
+        "acl": "{postgres=X/postgres}",
+        "config": [
+          "search_path=public, pg_temp"
+        ],
+        "bodyMd5": "ef0ae71b7eb4018f0d75565039716d62",
+        "definer": true,
+        "signature": "scp_private.interview_content_owner(_table text, _row jsonb)",
+        "anonExecute": false,
+        "serviceExecute": false,
+        "authenticatedExecute": false
+      },
+      {
+        "acl": "{postgres=X/postgres}",
+        "config": [
+          "search_path=public, pg_temp"
+        ],
+        "bodyMd5": "426862b407f98fb77490236841e51572",
+        "definer": true,
+        "signature": "scp_private.interview_content_ready(_case_id uuid)",
+        "anonExecute": false,
+        "serviceExecute": false,
+        "authenticatedExecute": false
+      },
+      {
+        "acl": "{postgres=X/postgres}",
+        "config": [
+          "search_path=public, pg_temp"
+        ],
+        "bodyMd5": "2bd9a959af1d3c2153a410cdbbc4d192",
+        "definer": true,
+        "signature": "scp_private.interview_content_review_gate()",
+        "anonExecute": false,
+        "serviceExecute": false,
+        "authenticatedExecute": false
+      },
+      {
+        "acl": "{postgres=X/postgres}",
+        "config": [
+          "search_path=public, pg_temp"
+        ],
+        "bodyMd5": "b8269256cb4db947bff115a33d247434",
+        "definer": true,
+        "signature": "scp_private.interview_content_statement_lock()",
+        "anonExecute": false,
+        "serviceExecute": false,
+        "authenticatedExecute": false
+      },
+      {
+        "acl": "{postgres=X/postgres}",
+        "config": [
+          "search_path=public, pg_temp"
+        ],
+        "bodyMd5": "1fa3859de0d80dafa6b75ffab6f322c5",
+        "definer": true,
+        "signature": "scp_private.interview_frozen_manifest(_case_id uuid)",
+        "anonExecute": false,
+        "serviceExecute": false,
+        "authenticatedExecute": false
+      }
+    ],
+    "constraints": [
+      {
+        "name": "interview_client_copy_versions_pkey",
+        "table": "interview_client_copy_versions",
+        "definition": "PRIMARY KEY (version_key)"
+      },
+      {
+        "name": "interview_content_acknowledgements_actor_id_fkey",
+        "table": "interview_content_acknowledgements",
+        "definition": "FOREIGN KEY (actor_id) REFERENCES auth.users(id) ON DELETE SET NULL"
+      },
+      {
+        "name": "interview_content_acknowledgements_case_id_fkey",
+        "table": "interview_content_acknowledgements",
+        "definition": "FOREIGN KEY (case_id) REFERENCES scp_private.interview_content_snapshots(case_id) ON DELETE RESTRICT"
+      },
+      {
+        "name": "interview_content_acknowledgements_note_check",
+        "table": "interview_content_acknowledgements",
+        "definition": "CHECK (((length(btrim(note)) >= 1) AND (length(btrim(note)) <= 4000)))"
+      },
+      {
+        "name": "interview_content_acknowledgements_pkey",
+        "table": "interview_content_acknowledgements",
+        "definition": "PRIMARY KEY (case_id)"
+      },
+      {
+        "name": "interview_content_locks_kind_check",
+        "table": "interview_content_locks",
+        "definition": "CHECK ((kind = ANY (ARRAY['pack'::text, 'pack_version'::text, 'method'::text, 'role'::text, 'role_version'::text])))"
+      },
+      {
+        "name": "interview_content_locks_pkey",
+        "table": "interview_content_locks",
+        "definition": "PRIMARY KEY (kind, content_id)"
+      },
+      {
+        "name": "interview_content_snapshots_frozen_by_fkey",
+        "table": "interview_content_snapshots",
+        "definition": "FOREIGN KEY (frozen_by) REFERENCES auth.users(id) ON DELETE SET NULL"
+      },
+      {
+        "name": "interview_content_snapshots_manifest_check",
+        "table": "interview_content_snapshots",
+        "definition": "CHECK ((jsonb_typeof(manifest) = 'object'::text))"
+      },
+      {
+        "name": "interview_content_snapshots_manifest_check1",
+        "table": "interview_content_snapshots",
+        "definition": "CHECK (((manifest ->> 'observation'::text) = 'frozen_case_content'::text))"
+      },
+      {
+        "name": "interview_content_snapshots_pkey",
+        "table": "interview_content_snapshots",
+        "definition": "PRIMARY KEY (case_id)"
+      },
+      {
+        "name": "interview_content_snapshots_provenance_check",
+        "table": "interview_content_snapshots",
+        "definition": "CHECK ((provenance = ANY (ARRAY['case_created'::text, 'observed_now'::text])))"
+      },
+      {
+        "name": "scp_interview_case_events_event_check",
+        "table": "scp_interview_case_events",
+        "definition": "CHECK (((event = ANY (ARRAY['case_created'::text, 'source_added'::text, 'sources_marked_ready'::text, 'source_erased'::text, 'transcript_authorised'::text, 'ai_run_started'::text, 'ai_run_succeeded'::text, 'ai_run_failed'::text, 'source_passage_withheld'::text, 'prep_generated'::text, 'prep_edited'::text, 'prep_approved'::text, 'interview_started'::text, 'interview_paused'::text, 'interview_resumed'::text, 'interview_completed'::text, 'probe_used'::text, 'evidence_review_opened'::text, 'evidence_proposed'::text, 'evidence_confirmed'::text, 'evidence_edited'::text, 'evidence_rejected'::text, 'evidence_authored'::text, 'finding_recorded'::text, 'finding_resolved'::text, 'assessment_recorded'::text, 'assessment_superseded'::text, 'panel_opened'::text, 'panel_individual_submitted'::text, 'panel_revealed'::text, 'panel_concluded'::text, 'report_drafted'::text, 'report_finalised'::text, 'case_cancelled'::text, 'retention_applied'::text])) OR (event = 'session_process_saved'::text) OR (event = 'content_snapshot_acknowledged'::text)))"
+      }
+    ]
+  },
+  "limitations": [
+    "Catalogue/body/ACL/trigger parity is an installation proof, not proof of Auth/Storage/published application or content approval.",
+    "All20 legacy snapshots observed_now; no technical operator acknowledgement and no report payload rewrite.",
+    "A later genuine local two-tab probe exposed PostgREST14 custom40001 retry/deadlock; application release held pending forward transport/lock-order fix. No old migration edited."
+  ]
+}
