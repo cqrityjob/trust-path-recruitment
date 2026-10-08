@@ -1,10 +1,10 @@
 # PEACE och Recruiter Intelligence: versionsbundet releaseunderlag
 
-Arbetsversion v0.3-LIVE-r6, 2026-10-08. Detta index förbinder den ursprungliga
+Arbetsversion v0.3-LIVE-r7, 2026-10-08. Detta index förbinder den ursprungliga
 intervjuinventeringens dokumentationsplats med det fortsatta releaseunderlaget
 i #449. Det ersätter inte beslutad rollguide eller innehållsgranskning.
 
-[Aktuell releasejournal](../recruiter-intelligence/2026-10-08-live-release.md)
+[Aktuell r7-releasejournal](../recruiter-intelligence/2026-10-08-live-release.md)
 anger exakta huvud-/main-SHA, obligatorisk CI, verkligt installerade migrationer,
 faktisk publicerad releaseidentitet, konstaterade fel, blockerade kontroller och
 återställningsordning. [22driftprovs matris](../recruiter-intelligence/2026-10-08-live-operational-matrix.md)

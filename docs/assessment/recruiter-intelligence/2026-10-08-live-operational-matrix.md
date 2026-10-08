@@ -1,5 +1,16 @@
 # RI v0.3: de 22 driftprovens faktiska status
 
+## Tillägg r7, dokumenterat 2026-10-08 11:17 UTC
+
+Aktuell main/Lovable-synk är `517f1a002e8ae35a10def1ddc42d703082264a13`; publicerad app är fortfarande8860223 och hosted frontier071/385. R6-matrisen nedan är historik, och ingen B-status ändras tillPASS. [Exakta r7-versioner, CI-grindar och schemaordning](2026-10-08-live-release.md#tillägg-r7-dokumenterat-2026-10-08-1117-utc).
+
+| Omfång | Senast faktiskt utfört | Kvarstående grind |
+| --- | --- | --- |
+| OP16/17, native snapshot | Run4:s12 UI+2tvåfliksprov PASS bevaras;439 FAIL bevaras. Run6/8b upprepar mobile375/väktare/fristående/sv-felet vid676:11PASS/1FAIL och35 PNG, inga flaky/skipped. | Aktiv fråga/full anteckningsmappning saknas i det gamla8b-felet. Ny b6d/run37767817371 är0PASS/12FAIL på actual own-Auth REST:Q8_BLANK efter Pause+reload, Q1–Q7 markörer passerade. [Originalbevis](live-2026-10-08/r7-native-note-failure/README.md). Produktfel bekräftat, mutationsorsak utreds. #452 HOLD trots14 obligatoriska CI-PASS. |
+| P1 native100 | 5457: riktig stack/386 schema/104 Auth och owner/Bob-sessioner PASS, fixture sedan FAIL. Originalmanifest/hash finns i [fryst bevis](evidence/2026-10-08-native-p1-5457-failure/README.md). |80 Storage-original/100 granskningar/23 API/5 browser är NOT RUN.67a trigger-tidsstämpel/prefix/diagnostikfix är pushad med27 lokala regressions-PASS; ny native väntar. #451:s15 CI-PASS med ersatt Auth/Storage ersätter inte denna grind. |
+| OP09 beständig recovery | #457/4ff PG16/17 misslyckades före41 assertions på felaktig fixture. #458/219 CI misslyckades i äldre mockläslistor efter tillagd journalread. |0a styrd fixturefix är pushad med samtliga41 kontroller bevarade; a5dd-mockrättning/integration är pushad med oförändrat produkt-SRC och52 tester PASS. Ny faktisk CI väntar.41 SQL/native44/reload/cleanup-fence/app-HTTP är ännu inte PASS.0909 är ej installerad. |
+| Hosted/telefon/innehåll | Metadata459 merge/main517 och faktisk Lovable-synk är observerade separat från publicering886; installerat385-schema är bevisat separat. | Syntetisk riktig hosted Auth-fixture/B-matris är BLOCKED, fysisk telefon NOT RUN, metodguider draft/EN-luckor kvar. Ingen teknisk snapshot godkänner innehåll. |
+
 ## Aktuell tilläggsavläsning r6, 2026-10-08 10:34 UTC
 
 Main/Lovable-synk är `3c1d950593329c390cf209931b27da04d3034410`.

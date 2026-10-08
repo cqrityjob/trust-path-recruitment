@@ -1,0 +1,53 @@
+{
+  "kind": "failed_actual_native_gotrue_storage_snapshot_ui_ci",
+  "runId": 37764736604,
+  "jobId": 113269489880,
+  "artifactId": 11544417152,
+  "artifactZipSha256": "8e2c5e5f3f39bd10ddcf852b4a2bdc6074bca1b0f2648e17bc2eeded8f536229",
+  "evidenceCodeSha": "8b781acdae21a67c51e7c250e2ff79de1650fc12",
+  "releaseSchemaSha": "250623cfb677c931caf70a2354daf774f72f443a",
+  "appSha": "a68f22d799769de32230781bba268632e57e796f",
+  "canonicalMigrationCount": 385,
+  "stages": {
+    "official_stack": "passed",
+    "strict_schema_replay": "passed",
+    "real_auth_and_receipt_off_fixture": "passed",
+    "real_storage_upload_recovery": "passed",
+    "pinned_app_start": "passed",
+    "twelve_real_password_ui_journeys": "failed",
+    "owned_stack_stop": "passed"
+  },
+  "errors": [
+    {
+      "stage": "twelve_real_password_ui_journeys",
+      "code": "REAL_CI_BROWSER_PRIMARY_FAILED",
+      "browserFailure": {
+        "code": "parsed",
+        "stats": {
+          "expected": 11,
+          "unexpected": 1,
+          "flaky": 0,
+          "skipped": 0
+        },
+        "failures": [
+          {
+            "project": "mobile-375",
+            "scenario": "guard-standalone-sv",
+            "resultStatus": "failed",
+            "category": "unclassified",
+            "location": {
+              "file": "e2e/recruiter-real-ci-browser.spec.ts",
+              "line": 676,
+              "column": 25
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "curatedImageCount": 35,
+  "allCuratedImageHashesVerified": true,
+  "cause": "not_established",
+  "privateBrowserErrorsPublished": false,
+  "afterBrowser": null
+}

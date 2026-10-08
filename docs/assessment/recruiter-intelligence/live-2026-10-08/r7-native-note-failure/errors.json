@@ -1,0 +1,161 @@
+[
+  {
+    "stage": "twelve_real_password_ui_journeys",
+    "code": "REAL_CI_BROWSER_PRIMARY_FAILED",
+    "browserFailure": {
+      "code": "parsed",
+      "stats": {
+        "expected": 0,
+        "unexpected": 12,
+        "flaky": 0,
+        "skipped": 0
+      },
+      "failures": [
+        {
+          "project": "chromium",
+          "scenario": "guard-standalone-sv",
+          "resultStatus": "failed",
+          "category": "note_readback",
+          "location": {
+            "file": "e2e/recruiter-real-ci-browser.spec.ts",
+            "line": 252,
+            "column": 18
+          },
+          "probeCode": "REAL_CI_NOTE_READBACK_PAUSED_Q8_BLANK"
+        },
+        {
+          "project": "chromium",
+          "scenario": "manager-application-sv",
+          "resultStatus": "failed",
+          "category": "note_readback",
+          "location": {
+            "file": "e2e/recruiter-real-ci-browser.spec.ts",
+            "line": 252,
+            "column": 18
+          },
+          "probeCode": "REAL_CI_NOTE_READBACK_PAUSED_Q8_BLANK"
+        },
+        {
+          "project": "chromium",
+          "scenario": "manager-standalone-en",
+          "resultStatus": "failed",
+          "category": "note_readback",
+          "location": {
+            "file": "e2e/recruiter-real-ci-browser.spec.ts",
+            "line": 252,
+            "column": 18
+          },
+          "probeCode": "REAL_CI_NOTE_READBACK_PAUSED_Q8_BLANK"
+        },
+        {
+          "project": "chromium",
+          "scenario": "guard-application-en",
+          "resultStatus": "failed",
+          "category": "note_readback",
+          "location": {
+            "file": "e2e/recruiter-real-ci-browser.spec.ts",
+            "line": 252,
+            "column": 18
+          },
+          "probeCode": "REAL_CI_NOTE_READBACK_PAUSED_Q8_BLANK"
+        },
+        {
+          "project": "mobile-375",
+          "scenario": "guard-standalone-sv",
+          "resultStatus": "failed",
+          "category": "note_readback",
+          "location": {
+            "file": "e2e/recruiter-real-ci-browser.spec.ts",
+            "line": 252,
+            "column": 18
+          },
+          "probeCode": "REAL_CI_NOTE_READBACK_PAUSED_Q8_BLANK"
+        },
+        {
+          "project": "mobile-375",
+          "scenario": "manager-application-sv",
+          "resultStatus": "failed",
+          "category": "note_readback",
+          "location": {
+            "file": "e2e/recruiter-real-ci-browser.spec.ts",
+            "line": 252,
+            "column": 18
+          },
+          "probeCode": "REAL_CI_NOTE_READBACK_PAUSED_Q8_BLANK"
+        },
+        {
+          "project": "mobile-375",
+          "scenario": "manager-standalone-en",
+          "resultStatus": "failed",
+          "category": "note_readback",
+          "location": {
+            "file": "e2e/recruiter-real-ci-browser.spec.ts",
+            "line": 252,
+            "column": 18
+          },
+          "probeCode": "REAL_CI_NOTE_READBACK_PAUSED_Q8_BLANK"
+        },
+        {
+          "project": "mobile-375",
+          "scenario": "guard-application-en",
+          "resultStatus": "failed",
+          "category": "note_readback",
+          "location": {
+            "file": "e2e/recruiter-real-ci-browser.spec.ts",
+            "line": 252,
+            "column": 18
+          },
+          "probeCode": "REAL_CI_NOTE_READBACK_PAUSED_Q8_BLANK"
+        },
+        {
+          "project": "mobile-390",
+          "scenario": "guard-standalone-sv",
+          "resultStatus": "failed",
+          "category": "note_readback",
+          "location": {
+            "file": "e2e/recruiter-real-ci-browser.spec.ts",
+            "line": 252,
+            "column": 18
+          },
+          "probeCode": "REAL_CI_NOTE_READBACK_PAUSED_Q8_BLANK"
+        },
+        {
+          "project": "mobile-390",
+          "scenario": "manager-application-sv",
+          "resultStatus": "failed",
+          "category": "note_readback",
+          "location": {
+            "file": "e2e/recruiter-real-ci-browser.spec.ts",
+            "line": 252,
+            "column": 18
+          },
+          "probeCode": "REAL_CI_NOTE_READBACK_PAUSED_Q8_BLANK"
+        },
+        {
+          "project": "mobile-390",
+          "scenario": "manager-standalone-en",
+          "resultStatus": "failed",
+          "category": "note_readback",
+          "location": {
+            "file": "e2e/recruiter-real-ci-browser.spec.ts",
+            "line": 252,
+            "column": 18
+          },
+          "probeCode": "REAL_CI_NOTE_READBACK_PAUSED_Q8_BLANK"
+        },
+        {
+          "project": "mobile-390",
+          "scenario": "guard-application-en",
+          "resultStatus": "failed",
+          "category": "note_readback",
+          "location": {
+            "file": "e2e/recruiter-real-ci-browser.spec.ts",
+            "line": 252,
+            "column": 18
+          },
+          "probeCode": "REAL_CI_NOTE_READBACK_PAUSED_Q8_BLANK"
+        }
+      ]
+    }
+  }
+]
