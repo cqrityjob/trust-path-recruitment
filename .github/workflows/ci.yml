@@ -1287,6 +1287,14 @@ jobs:
       - name: Recruitment workspace check
         run: bun run recruitment-workspace:check
 
+      # The employer portal as one journey (UX pass 2026-10-08): the flow strip
+      # on every area page, overview rows that open exactly what they counted,
+      # requirement status as text and symbol, the menu's one-line purposes,
+      # and context that survives the trip into a candidate, a result or an
+      # interview case. Its planted controls run in `negative-controls:all`.
+      - name: Employer portal flow check
+        run: bun run employer-portal-flow:check
+
       # E3: the context an interview inherits, and what the CANDIDATE is told.
       #
       # The bridge already read the application, the advert and the assessment.
@@ -2391,6 +2399,17 @@ jobs:
       - name: Public entry browser suites
         run: bun run e2e:public-entry
 
+      # The employer portal as one journey, photographed: overview,
+      # recruitments, applications, tests, interviews and reports, in Swedish
+      # and English, on a 1440px desktop and a 375px phone, on the stubbed
+      # backend. The before/after pair is produced by
+      # employer-portal-ux-evidence.yml; this run is the head's own proof.
+      - name: Employer portal journey — evidence and behaviour
+        env:
+          E2E_BASE_URL: http://localhost:3100
+          PUBLIC_ENTRY_EVIDENCE_DIR: artifacts/employer-portal-ux/after
+        run: bun run e2e:employer-portal-ux
+
       # The signed-in header on a PC (owner bug report 2026-09-26): the seven
       # destinations in the bar at every width a Windows PC at 125%/150%
       # display scaling produces, no overflow, and a compact sheet that
@@ -2454,7 +2473,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: public-entry-browser-evidence
-          path: artifacts/public-entry-browser/
+          path: |
+            artifacts/public-entry-browser/
+            artifacts/employer-portal-ux/
           # `error` rather than `warn`: the harness creates the directory and
           # an empty manifest at module load, so "no files" means the suites
           # never started, which is a real failure and not merely a red run.
