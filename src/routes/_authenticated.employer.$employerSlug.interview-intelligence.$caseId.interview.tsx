@@ -69,6 +69,7 @@ import { drainInterviewDrafts } from "@/lib/interview-intelligence/draft-save-dr
 import {
   pendingQuestionNoteBody,
   questionNoteBody,
+  mayApplyStoredQuestionNote,
   type QuestionNoteDraft,
 } from "@/lib/interview-intelligence/question-note-draft";
 import { InterviewOpeningDisclosure } from "@/components/employer/interview/InterviewOpeningDisclosure";
@@ -78,6 +79,10 @@ export const Route = createFileRoute(
   "/_authenticated/employer/$employerSlug/interview-intelligence/$caseId/interview",
 )({
   ssr: false,
+  // Question IDs are shared by cases using the same role guide. Drafts and
+  // observed note versions must belong to one case even on a cached SPA move.
+  // Search-only question navigation keeps the current case's save coordinator.
+  remountDeps: ({ params }) => params.caseId,
   validateSearch: (search: Record<string, unknown>): { question?: string } => ({
     question: typeof search.question === "string" ? search.question : undefined,
   }),
@@ -158,6 +163,7 @@ function Page() {
   // not the one captured when the handler was created.
   const draftRef = useRef("");
   const noteDraftRef = useRef<QuestionNoteDraft | null>(null);
+  const noteEditRevision = useRef(0);
   const storedRef = useRef<{ id: string | null; body: string; questionId: string } | null>(null);
   const sessionIdRef = useRef<string | null>(null);
 
@@ -312,6 +318,7 @@ function Page() {
   const setDraft = (body: string, questionId = question?.id) => {
     if (!questionId) return;
     const next = { questionId, body };
+    noteEditRevision.current += 1;
     // A guarded action in the same event must see this edit before the next
     // React render. Its target always travels with its body.
     noteDraftRef.current = next;
@@ -346,7 +353,24 @@ function Page() {
   const reloadNote = async () => {
     const stored = storedRef.current;
     if (!stored) return;
+    const requestedEditRevision = noteEditRevision.current;
     const fresh = await q.refetch();
+    if (!fresh.isSuccess || !fresh.data) {
+      // A failed refetch can still carry cached data. It is not the current
+      // stored version and must not consume the human draft or CAS conflict.
+      setNoteError(true);
+      return;
+    }
+    if (
+      !mayApplyStoredQuestionNote(
+        stored.questionId,
+        storedRef.current?.questionId ?? null,
+        requestedEditRevision,
+        noteEditRevision.current,
+        fresh.isSuccess,
+      )
+    )
+      return;
     const n = fresh.data?.session?.notes.find((x) => x.questionId === stored.questionId) ?? null;
     known.current[stored.questionId] = n
       ? { id: n.id, updatedAt: n.updatedAt, body: n.body }

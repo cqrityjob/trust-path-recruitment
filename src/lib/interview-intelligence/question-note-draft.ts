@@ -28,3 +28,20 @@ export function pendingQuestionNoteBody(
   if (!hasSavedNote && draft.body.trim() === "") return null;
   return draft.body;
 }
+
+/** An explicit reload may apply only to the still-current, unedited draft
+ * it was requested for. A late response must not replace another question
+ * or text typed while the read was pending. */
+export function mayApplyStoredQuestionNote(
+  requestedQuestionId: string,
+  currentQuestionId: string | null,
+  requestedEditRevision: number,
+  currentEditRevision: number,
+  readSucceeded: boolean,
+): boolean {
+  return (
+    readSucceeded &&
+    requestedQuestionId === currentQuestionId &&
+    requestedEditRevision === currentEditRevision
+  );
+}

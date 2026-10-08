@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { readFileSync } from "node:fs";
 import { I18nProvider } from "../src/i18n/context";
 import { CandidateBackgroundStatus } from "../src/components/employer/interview/CandidateBackgroundStatus";
 import { InterviewOpeningDisclosure } from "../src/components/employer/interview/InterviewOpeningDisclosure";
@@ -14,10 +15,62 @@ import { drainInterviewDrafts } from "../src/lib/interview-intelligence/draft-sa
 import {
   pendingQuestionNoteBody,
   questionNoteBody,
+  mayApplyStoredQuestionNote,
   type QuestionNoteDraft,
 } from "../src/lib/interview-intelligence/question-note-draft";
 
 describe("question-bound note draft after reload", () => {
+  test("the interview route remounts its draft and known CAS records when the case changes, not when the question changes", () => {
+    const route = readFileSync(
+      "src/routes/_authenticated.employer.$employerSlug.interview-intelligence.$caseId.interview.tsx",
+      "utf8",
+    );
+    expect(route).toContain("remountDeps: ({ params }) => params.caseId");
+    expect(route).not.toContain("remountDeps: ({ search })");
+    const sharedQuestion = "shared-role-pack-question";
+    const caseADraft = { questionId: sharedQuestion, body: "Case A human draft" };
+    expect(questionNoteBody(sharedQuestion, caseADraft, "Case A saved")).toBe("Case A human draft");
+    // A new route component has a fresh draft/known map even though its pack
+    // reuses the same Q-ID. It must display case B's source and perform no write.
+    expect(questionNoteBody(sharedQuestion, null, "Case B saved")).toBe("Case B saved");
+    expect(pendingQuestionNoteBody(sharedQuestion, null, "Case B saved", true)).toBeNull();
+  });
+  test("a late explicit reload cannot replace text typed on another question or after the reload began", async () => {
+    let draft = { questionId: "Q1", body: "Q1 human draft" };
+    let currentQuestion = "Q1";
+    let revision = 1;
+    let observedVersion = "Q1 old CAS version";
+    let release!: () => void;
+    const pending = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const requestedQuestion = currentQuestion;
+    const requestedRevision = revision;
+    const reload = pending.then(() => {
+      if (
+        !mayApplyStoredQuestionNote(
+          requestedQuestion,
+          currentQuestion,
+          requestedRevision,
+          revision,
+          true,
+        )
+      )
+        return;
+      observedVersion = "Q1 returned CAS version";
+      draft = { questionId: requestedQuestion, body: "Q1 returned stored text" };
+    });
+    currentQuestion = "Q2";
+    revision += 1;
+    draft = { questionId: "Q2", body: "Q2 new human draft" };
+    release();
+    await reload;
+    expect(draft).toEqual({ questionId: "Q2", body: "Q2 new human draft" });
+    expect(observedVersion).toBe("Q1 old CAS version");
+    expect(mayApplyStoredQuestionNote("Q1", "Q1", 1, 2, true)).toBe(false);
+    expect(mayApplyStoredQuestionNote("Q1", "Q1", 2, 2, true)).toBe(true);
+    expect(mayApplyStoredQuestionNote("Q1", "Q1", 2, 2, false)).toBe(false);
+  });
   test("initial loaded Q8 and StrictMode cleanup replay cannot clear a stored note", () => {
     const saved = "Persisted Q8 account before pause";
     const initial: QuestionNoteDraft | null = null;
