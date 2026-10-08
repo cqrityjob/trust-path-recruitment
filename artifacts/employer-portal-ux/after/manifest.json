@@ -1,6 +1,6 @@
 {
   "capturedFrom": "http://localhost:3100",
-  "startedAt": "2026-10-08T17:28:21.840Z",
+  "startedAt": "2026-10-08T17:33:57.539Z",
   "shots": [
     {
       "file": "after-overview-sv-1440.png",
@@ -49,54 +49,6 @@
     {
       "file": "after-reports-en-1440.png",
       "note": "reports in en at 1440px (chromium)"
-    },
-    {
-      "file": "after-overview-sv-375.png",
-      "note": "overview in sv at 375px (mobile-375)"
-    },
-    {
-      "file": "after-jobs-sv-375.png",
-      "note": "jobs in sv at 375px (mobile-375)"
-    },
-    {
-      "file": "after-applications-sv-375.png",
-      "note": "applications in sv at 375px (mobile-375)"
-    },
-    {
-      "file": "after-assessments-sv-375.png",
-      "note": "assessments in sv at 375px (mobile-375)"
-    },
-    {
-      "file": "after-interviews-sv-375.png",
-      "note": "interviews in sv at 375px (mobile-375)"
-    },
-    {
-      "file": "after-reports-sv-375.png",
-      "note": "reports in sv at 375px (mobile-375)"
-    },
-    {
-      "file": "after-overview-en-375.png",
-      "note": "overview in en at 375px (mobile-375)"
-    },
-    {
-      "file": "after-jobs-en-375.png",
-      "note": "jobs in en at 375px (mobile-375)"
-    },
-    {
-      "file": "after-applications-en-375.png",
-      "note": "applications in en at 375px (mobile-375)"
-    },
-    {
-      "file": "after-assessments-en-375.png",
-      "note": "assessments in en at 375px (mobile-375)"
-    },
-    {
-      "file": "after-interviews-en-375.png",
-      "note": "interviews in en at 375px (mobile-375)"
-    },
-    {
-      "file": "after-reports-en-375.png",
-      "note": "reports in en at 375px (mobile-375)"
     }
   ]
 }
