@@ -8,7 +8,7 @@
   "frontier": [
     {
       "file": "20270309090000_sp_evidence_upload_recovery.sql",
-      "hostedState": "pending",
+      "hostedState": "applied",
       "note": "Additive holder-owned upload intents and fenced recovery; no worker, email, AI or historical orphan backfill. Schema only; consumer must wait for official installation and readback. Preserve numeric installation order:07100000 then08090000 then09090000.",
       "rollback": "supabase/rollback/20270309090000_sp_evidence_upload_recovery_rollback.sql",
       "verify": "Mandatory strict full history,41 actual SQL assertions, nonempty-journal rollback refusal; actual GoTrue/Storage bytes, concurrency, own reload/retry and erasure queue proof via isolated real CI. No PASS from stubs. See docs/release/op09-evidence-upload-recovery-contract.md.",
@@ -57,7 +57,10 @@
           "kind": "function",
           "object": "sp_evidence_upload_erasure_manifest"
         }
-      ]
+      ],
+      "hostedVersion": "20270309090000",
+      "hostedName": "sp_evidence_upload_recovery",
+      "evidenceSource": "Read-only verification after #457 exact1e598 normal merge7f899 and official integration installed0909. Ledger387/prior386 unchanged; all10 full function body/args/default/owner/config/ACL,14columns/11constraint predicates/3policies/3indexes/3triggers match authoritative source. Journal0;20snapshots14locksACK0reports0/statuses unchanged; all16P1 function contracts preserved. Full independent capture/review: docs/release/2026-10-08-op09-hosted-verification.json. No production fixtures or workers."
     },
     {
       "file": "20270307100000_recruiter_domain_conflict_transport.sql",
