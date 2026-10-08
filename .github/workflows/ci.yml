@@ -71,6 +71,8 @@ jobs:
 
       - name: Recruiter Intelligence P0 process persistence and frozen readback
         run: bun run recruiter-interview-foundation:check
+      - name: Recruiter Intelligence P1 source-bound human review and list state
+        run: bun run recruiter-requirements:check
 
       - name: Type-check
         run: bunx tsc --noEmit

@@ -8164,6 +8164,8 @@ export const dictionaries = {
     "iiu.pp.background.live.standalone": "Intervjun är fristående och har ingen kopplad ansökan.",
     "iiu.pp.background.live.unavailable":
       "Ansökningsuppgifterna kunde inte läsas. Se lässtatusen ovanför; det är inte ett besked om att uppgifter saknas.",
+    "rec.ri.background.references":
+      "{n} valda kravunderlag innehåller referenser till ansökningssvar eller CV. Originalen finns i ansökan. Referenserna är inte separata CV-kopior eller bekräftad intervjuevidens.",
     "iiu.pp.background.saved.title": "Uttryckligen tillagt kandidatunderlag",
     "iiu.pp.background.saved.available":
       "{n} källor finns sparade i intervjuärendet. Källorna visas nedan.",
@@ -17005,6 +17007,8 @@ export const dictionaries = {
       "This is a standalone interview without a linked application.",
     "iiu.pp.background.live.unavailable":
       "Application information could not be read. See the read status above; this does not mean that information is missing.",
+    "rec.ri.background.references":
+      "{n} selected requirement records contain references to application answers or a CV. Originals remain in the application. These references are separate from attached CV copies and confirmed interview evidence.",
     "iiu.pp.background.saved.title": "Explicitly added candidate material",
     "iiu.pp.background.saved.available":
       "{n} sources are saved in the interview case. The sources are shown below.",

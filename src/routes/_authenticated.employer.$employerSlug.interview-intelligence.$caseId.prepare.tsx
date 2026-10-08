@@ -58,6 +58,7 @@ import { CandidateBackgroundStatus } from "@/components/employer/interview/Candi
 import { InterviewOpeningDisclosure } from "@/components/employer/interview/InterviewOpeningDisclosure";
 import { ManualControlPoints } from "@/components/employer/interview/ManualControlPoints";
 import { ContentIntegrityNotice } from "@/components/employer/interview/ContentIntegrityNotice";
+import { countApplicationSourceReferences } from "@/lib/interview-intelligence/background-source-references";
 import { isOutstandingFinding } from "@/lib/interview-intelligence/finding-state";
 import { getInterviewCaseContext } from "@/lib/interview-intelligence/context.functions";
 import { ContextUnavailable } from "@/components/employer/interview/InterviewContextOutcome";
@@ -850,6 +851,7 @@ function Page() {
                   result={contextQ.data}
                   isLoading={contextQ.isLoading}
                   savedSourceCount={candidateSources.length}
+                  savedReferenceCount={countApplicationSourceReferences(d.sources)}
                 />
                 <Eyebrow>{t("iiu.pp.background.summary.title")}</Eyebrow>
                 {d.plan?.candidateSummary || backgroundItems.length > 0 ? (
