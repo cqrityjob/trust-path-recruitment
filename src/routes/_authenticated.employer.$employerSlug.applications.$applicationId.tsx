@@ -488,6 +488,9 @@ function Candidate360({
     <Link
       to="/employer/$employerSlug/jobs/$jobId"
       params={{ employerSlug, jobId: jobIdForBack }}
+      // The recruitment's candidate list, not whichever step the hub would
+      // compute: a reader going "back" from a candidate expects candidates.
+      search={{ step: "applications" as const }}
       className={backCls}
     >
       <ArrowLeft className="h-4 w-4" aria-hidden="true" />
@@ -749,6 +752,7 @@ function Candidate360({
             <Link
               to="/employer/$employerSlug/jobs/$jobId"
               params={{ employerSlug, jobId: c.jobId }}
+              search={{ step: "applications" as const }}
               className="text-xs font-medium text-accent hover:underline"
             >
               {t("employer.candidate.openJob")}
@@ -1119,6 +1123,7 @@ function Candidate360({
                   <Link
                     to="/employer/$employerSlug/assessments/results/$attemptId"
                     params={{ employerSlug, attemptId: n.attemptId }}
+                    search={{ application: applicationId }}
                     className="text-xs font-medium text-accent hover:underline"
                   >
                     {t("employer.candidate.interview.open")}
@@ -1363,6 +1368,13 @@ function Candidate360({
               </button>
             ))}
           </div>
+        )}
+        {/* A completed recruitment keeps the buttons visible but inert; the
+            reason is said next to them rather than left to the header. */}
+        {completed && nextStatuses.length > 0 && (
+          <p className="mt-2 text-xs text-muted-foreground" data-testid="decision-completed-hint">
+            {t("rec.candidate.decision.completedHint")}
+          </p>
         )}
         {/* Restricted seats see why the decision buttons are absent, rather
             than wondering where they went. The database refuses the act for

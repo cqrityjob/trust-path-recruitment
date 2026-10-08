@@ -13,6 +13,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useT } from "@/i18n/context";
 import type { TranslationKey } from "@/i18n/dictionaries";
 import { EmployerAppShell } from "@/components/employer/EmployerAppShell";
+import { RecruitmentFlowStrip } from "@/components/employer/RecruitmentFlowStrip";
 import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
 import { EmployerAccessDenied } from "@/components/employer/EmployerAccessDenied";
 import { useEmployerWorkspace } from "@/lib/job-intelligence/use-employer-workspace";
@@ -77,13 +78,16 @@ function EmployerReportsPage() {
       employerName={ws.workspace.employerName}
       role={ws.workspace.role}
       status={ws.workspace.employerStatus}
-      activeSection="reports"
+      // A view over the interview cases, so the menu's Intervjuer stays lit
+      // here: the reader came from there and goes back there.
+      activeSection="interviewIntelligence"
       hasMultipleWorkspaces={ws.hasMultipleWorkspaces}
     >
       <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
         {t("reports.title")}
       </h1>
       <p className="mt-2 max-w-3xl text-sm text-muted-foreground">{t("reports.lede")}</p>
+      <RecruitmentFlowStrip employerSlug={employerSlug} current="report" className="mt-4" />
 
       {noCases ? (
         <div className="mt-6">

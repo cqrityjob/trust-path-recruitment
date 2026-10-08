@@ -69,16 +69,11 @@ import {
   type EmployerJobRow,
 } from "@/lib/job-intelligence/employer-jobs.functions";
 import {
-  listApplicationsForEmployer,
-  type EmployerApplicationRow,
-} from "@/lib/job-intelligence/applications.functions";
-import {
   listEmployerAssessmentCatalog,
   type EmployerAssessmentCatalogEntry,
 } from "@/lib/job-intelligence/employer-assessment-catalog.functions";
 import { getEmployerWorkforceSummary } from "@/lib/job-intelligence/employer-workforce.functions";
 import { employerVerificationCounts } from "@/lib/security-passport/verification.functions";
-import { listAssignmentsForEmployer } from "@/lib/job-intelligence/assessment-assignments.functions";
 import { listTrainingStatus } from "@/lib/security-competency/academy-employer.functions";
 import { employerPortalEnabled } from "@/lib/job-intelligence/feature-flag";
 import { LAST_EMPLOYER_SLUG_KEY } from "@/lib/job-intelligence/last-employer-slug";
@@ -86,6 +81,7 @@ import { getRecruitmentOverview } from "@/lib/recruitment/recruitment.functions"
 import { isActiveRecruitment, isReadyToComplete } from "@/lib/recruitment/definitions";
 import { formatDay, formatInZone } from "@/lib/recruitment/format";
 import { RecruiterOverviewCounts } from "@/components/recruitment/RecruiterOverviewCounts";
+import { RecruitmentFlowStrip } from "@/components/employer/RecruitmentFlowStrip";
 import { BookingBadge, PhaseBadge } from "@/components/recruitment/RecruitmentStatus";
 
 export const Route = createFileRoute("/_authenticated/employer/$employerSlug/")({
@@ -267,10 +263,8 @@ function EmployerOverview({
   const loadStats = useServerFn(getEmployerDashboardStats);
   const loadOrg = useServerFn(getEmployerOrganisation);
   const loadJobs = useServerFn(listEmployerJobs);
-  const loadApplications = useServerFn(listApplicationsForEmployer);
   const loadCatalog = useServerFn(listEmployerAssessmentCatalog);
   const loadWorkforce = useServerFn(getEmployerWorkforceSummary);
-  const loadAssignments = useServerFn(listAssignmentsForEmployer);
   const loadTraining = useServerFn(listTrainingStatus);
   const loadInterviewWorkload = useServerFn(getInterviewWorkload);
   const loadPipeline = useServerFn(getEmployerAssessmentPipeline);
@@ -290,10 +284,6 @@ function EmployerOverview({
     queryKey: ["employer", employerId, "jobs"],
     queryFn: () => loadJobs({ data: { employerId } }),
   });
-  const applicationsQuery = useQuery({
-    queryKey: ["employer", employerId, "applications"],
-    queryFn: () => loadApplications({ data: { employerId } }),
-  });
   const catalogQuery = useQuery({
     queryKey: ["employer", employerId, "assessment-catalog"],
     queryFn: () => loadCatalog({ data: { employerId } }),
@@ -301,10 +291,6 @@ function EmployerOverview({
   const workforceQuery = useQuery({
     queryKey: ["employer", employerId, "workforce-summary"],
     queryFn: () => loadWorkforce({ data: { employerId } }),
-  });
-  const assignmentsQuery = useQuery({
-    queryKey: ["employer", employerId, "assignments", "all"],
-    queryFn: () => loadAssignments({ data: { employerId, statusFilter: "all" } }),
   });
   const trainingQuery = useQuery({
     queryKey: ["academy", "training-status", employerId],
@@ -369,9 +355,7 @@ function EmployerOverview({
   // first-run row below says it out loud, so it is only drawn when the read
   // actually succeeded.
   const jobsKnown = jobsQuery.isSuccess;
-  const applications: EmployerApplicationRow[] = applicationsQuery.data ?? [];
   const catalog: EmployerAssessmentCatalogEntry[] = catalogQuery.data ?? [];
-  const assignments = assignmentsQuery.data ?? [];
   // Assessment metrics come from the governed pipeline -- the same rows, the same
   // lifecycle derivation, as the workspace this card links into. Counting
   // assignment.status here would be a second status vocabulary on the
@@ -433,6 +417,14 @@ function EmployerOverview({
     isReadyToComplete(r.phase, r.unresolved),
   );
   const newApplicationsTotal = (overview?.recruitments ?? []).reduce((n, r) => n + r.newCount, 0);
+  // The draft row opens the recruitment list under phase=draft, which is the
+  // not-yet-published recruitments (draft, pending review, rejected). The
+  // dashboard's draftJobs counts status=draft only, so the row counts the same
+  // population the list shows; the dashboard count is the fallback until the
+  // overview has answered.
+  const draftRecruitments = overview
+    ? overview.recruitments.filter((r) => r.phase === "draft" && !r.archivedAt).length
+    : null;
   const upcoming = overview?.upcomingInterviews ?? [];
 
   // Counted by the database over every application (rec_job_counts), not
@@ -447,8 +439,17 @@ function EmployerOverview({
   // Deliberately not "everyone who is not rejected": a candidate still at
   // `submitted` is in the first item above, and counting them twice would make
   // the board describe more work than exists.
+  //
+  // Two rows, not one: `reviewing` and `interview` are two stages the list can
+  // filter on separately, and one row that counted both but opened only one
+  // of them was a number the reader could not land on. Each row now links to
+  // exactly the stage it counted.
   const nextStepCount = (overview?.recruitments ?? []).reduce(
-    (n, r) => n + (r.unresolved - r.newCount),
+    (n, r) => n + (r.unresolved - r.newCount - r.interviewStage),
+    0,
+  );
+  const interviewStageCount = (overview?.recruitments ?? []).reduce(
+    (n, r) => n + r.interviewStage,
     0,
   );
   const publishedNoApplications = (overview?.recruitments ?? []).filter(
@@ -547,7 +548,25 @@ function EmployerOverview({
       linkProps: {
         to: "/employer/$employerSlug/applications",
         params: { employerSlug },
-        search: { status: "reviewing" as const },
+        // The list's own stage filter, so the rows that open are the rows
+        // that were counted: `reviewing` and nothing else.
+        search: { stage: "review" as const },
+      },
+      actionLabel: t("employer.actions.open"),
+      tone: "todo",
+    });
+  }
+
+  if (interviewStageCount > 0) {
+    actions.push({
+      key: "in-interview-stage",
+      icon: <MessagesSquare className="h-4 w-4" />,
+      count: interviewStageCount,
+      text: tp("employer.actions.inInterviewStage", interviewStageCount),
+      linkProps: {
+        to: "/employer/$employerSlug/applications",
+        params: { employerSlug },
+        search: { stage: "interview" as const },
       },
       actionLabel: t("employer.actions.open"),
       tone: "todo",
@@ -581,13 +600,21 @@ function EmployerOverview({
     });
   }
 
-  if (data.draftJobs > 0) {
+  const draftCount = draftRecruitments ?? data.draftJobs;
+  if (draftCount > 0) {
     actions.push({
       key: "draft-jobs",
       icon: <Briefcase className="h-4 w-4" />,
-      count: data.draftJobs,
-      text: tp("employer.actions.draftJobs", data.draftJobs),
-      linkProps: { to: "/employer/$employerSlug/jobs", params: { employerSlug } },
+      count: draftCount,
+      text: tp("employer.actions.draftJobs", draftCount),
+      // The drafts, not the whole list: the list's default view hides nothing
+      // a draft needs, but a count that opens more rows than it names is a
+      // count the reader has to re-find.
+      linkProps: {
+        to: "/employer/$employerSlug/jobs",
+        params: { employerSlug },
+        search: { phase: "draft" as const },
+      },
       actionLabel: t("employer.actions.open"),
       tone: "todo",
     });
@@ -791,7 +818,9 @@ function EmployerOverview({
       linkProps: {
         to: "/employer/$employerSlug/jobs",
         params: { employerSlug },
-        search: { phase: "closed" as const },
+        // `closed` also lists recruitments that still have candidates waiting
+        // for an outcome; `ready` is the predicate this row counted with.
+        search: { phase: "ready" as const },
       },
       actionLabel: t("employer.actions.open"),
       tone: "todo",
@@ -849,10 +878,17 @@ function EmployerOverview({
         )}
       </div>
 
-      {/* B. The summary row. Every number opens the records it counted. */}
+      {/* The journey, in order. The four recruitment areas in the menu are
+          stations on it; this is the map they sit on. */}
+      <RecruitmentFlowStrip employerSlug={employerSlug} className="mt-4" />
+
+      {/* B. The summary row. Every number opens the records it counted, and
+          says in a line what it counted, because the block below counts a
+          different population of the same applications. */}
       <dl className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
         <SummaryStat
           label={t("rec.overview.stat.active")}
+          hint={t("rec.overview.stat.active.hint")}
           value={overviewQuery.isSuccess ? recruitmentRows.length : null}
           failed={overviewQuery.isError}
           linkProps={{
@@ -863,6 +899,7 @@ function EmployerOverview({
         />
         <SummaryStat
           label={t("rec.overview.stat.new")}
+          hint={t("rec.overview.stat.new.hint")}
           value={overviewQuery.isSuccess ? newApplicationsTotal : null}
           failed={overviewQuery.isError}
           linkProps={{
@@ -873,6 +910,7 @@ function EmployerOverview({
         />
         <SummaryStat
           label={t("rec.overview.stat.interviews")}
+          hint={t("rec.overview.stat.interviews.hint")}
           value={overviewQuery.isSuccess ? upcoming.length : null}
           failed={overviewQuery.isError}
           href="#upcoming-interviews"
@@ -1259,15 +1297,28 @@ function EmployerOverview({
               value: interviews.inPreparation + interviews.awaitingPlanApproval,
               loading: interviewQuery.isLoading,
             },
+            // Preparation adds two stages and so has no single filter to open;
+            // it stays a plain number. The other two name exactly one stage
+            // each and open the cases they counted.
             {
               label: t("employer.overview.card.interviews.stat.ready"),
               value: interviews.readyToInterview,
               loading: interviewQuery.isLoading,
+              linkProps: {
+                to: "/employer/$employerSlug/interview-intelligence",
+                params: { employerSlug },
+                search: { stage: "readyToInterview" as const },
+              },
             },
             {
               label: t("employer.overview.card.interviews.stat.evidence"),
               value: interviews.inEvidenceReview,
               loading: interviewQuery.isLoading,
+              linkProps: {
+                to: "/employer/$employerSlug/interview-intelligence",
+                params: { employerSlug },
+                search: { stage: "inEvidenceReview" as const },
+              },
             },
           ]}
           actions={[
@@ -1453,12 +1504,17 @@ function PrimaryCard({
  *  An unknown number is a dash with the reason under it -- never a zero. */
 function SummaryStat({
   label,
+  hint,
   value,
   failed,
   linkProps,
   href,
 }: {
   label: string;
+  /** What the number covers, in one line. A reader who sees two different
+   *  totals for "applications" on one page needs to know which rows each one
+   *  counted before either number means anything. */
+  hint?: string;
   value: number | null;
   failed: boolean;
   linkProps?: LinkComponentProps;
@@ -1474,6 +1530,7 @@ function SummaryStat({
         </span>
         <ArrowRight className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
       </dd>
+      {hint && <p className="mt-1 text-[11px] leading-snug text-muted-foreground">{hint}</p>}
       {failed && (
         <p className="mt-1 text-[11px] text-amber-800 dark:text-amber-200">
           {t("rec.overview.unavailableShort")}

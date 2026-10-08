@@ -17,6 +17,18 @@ export const recruitmentSv = {
   "rec.lifecycle.archive": "Arkivera",
   "rec.lifecycle.restore": "Återställ arkivering",
   "rec.lifecycle.restored": "Arkiveringen har ändrats. Rekryteringens avslut och gallringsdatum är oförändrade.",
+  "rec.lifecycle.archivedNotice":
+    "Ansökan är arkiverad. Gallringsdatum är oförändrat. Den lämnar de aktiva listorna och visas under Arkiverade och Alla mottagna.",
+  "rec.lifecycle.restoredNotice":
+    "Arkiveringen är upphävd. Ansökan visas åter i de vanliga listorna; gallringsdatum är oförändrat.",
+  "rec.lifecycle.archivedState":
+    "Ansökan är arkiverad. Den ingår inte i de aktiva listorna eller i antalet nya ansökningar, men visas under Arkiverade och Alla mottagna.",
+  "rec.lifecycle.archivedStateJob":
+    "Rekryteringen är arkiverad. Den visas bara under Arkiverade i rekryteringslistan.",
+  "rec.lifecycle.archivedNoticeJob":
+    "Rekryteringen är arkiverad. Gallringsdatum är oförändrat. Den visas bara under Arkiverade i rekryteringslistan.",
+  "rec.lifecycle.restoredNoticeJob":
+    "Arkiveringen är upphävd. Rekryteringen visas åter i rekryteringslistan; gallringsdatum är oförändrat.",
   "rec.lifecycle.delete": "Radera ansökningsmaterial permanent",
   "rec.lifecycle.confirm": "Radera materialet permanent?",
   "rec.lifecycle.cancel": "Avbryt",
@@ -208,6 +220,8 @@ export const recruitmentSv = {
   "rec.candidate.backToRecruitment": "Tillbaka till rekryteringen",
   "rec.candidate.completedNotice":
     "Rekryteringen är avslutad. Ansökan finns kvar och kan läsas, men inga steg kan ändras.",
+  "rec.candidate.decision.completedHint":
+    "Rekryteringen är avslutad, så inget nytt beslut kan registreras här.",
   "rec.candidate.firstOpened": "Först öppnad",
   "rec.candidate.navigation": "Navigera mellan kandidater",
   "rec.candidate.next": "Nästa",
@@ -242,7 +256,7 @@ export const recruitmentSv = {
     "Beslut om anställning eller avslag registreras av ägare, administratör eller den som är ansvarig för rekryteringen.",
   "rec.decision.tellCandidate": "Skriv beskedet till kandidaten",
   "rec.error.alreadyCompleted": "Rekryteringen är redan avslutad.",
-  "rec.error.applicationClosed": "Ansökan är avslutad, så ingen ny intervjutid kan planeras.",
+  "rec.error.applicationClosed": "Ansökan är avslutad, så den här åtgärden kan inte utföras.",
   "rec.error.bookingLocation":
     "Ange plats för en intervju på plats och en möteslänk för en videointervju.",
   "rec.error.bookingNotEditable":
@@ -318,13 +332,14 @@ export const recruitmentSv = {
     "Inga pågående rekryteringar eller utkast just nu. Välj Alla i statusfiltret för att se avslutade.",
   "rec.list.emptyPhase": "Inga rekryteringar med den statusen.",
   "rec.list.filterStatus": "Status",
-  "rec.list.heading": "Jobbannonser",
-  "rec.list.lede": "Skapa och hantera organisationens jobbannonser.",
+  "rec.list.heading": "Rekryteringar",
+  "rec.list.lede": "En rekrytering per tjänst: annons, kravprofil, ansökningar och beslut.",
   "rec.list.phase.default": "Pågående och utkast",
   "rec.list.phase.active": "Pågående",
   "rec.list.phase.draft": "Utkast",
   "rec.list.phase.published": "Publicerade",
   "rec.list.phase.closed": "Tar inte emot nya ansökningar",
+  "rec.list.phase.ready": "Redo att avslutas",
   "rec.list.phase.completed": "Avslutade",
   "rec.list.phase.all": "Alla",
   "rec.list.readyToComplete": "Redo att avslutas",
@@ -394,6 +409,54 @@ export const recruitmentSv = {
   "rec.overview.stat.active": "Pågående rekryteringar",
   "rec.overview.stat.interviews": "Kommande intervjuer",
   "rec.overview.stat.new": "Nya ansökningar",
+  "rec.overview.stat.active.hint":
+    "Publicerade rekryteringar, samt stängda där kandidater fortfarande väntar på besked.",
+  "rec.overview.stat.new.hint":
+    "Ansökningar med status Ny i alla rekryteringar som inte är arkiverade. Arkiverade ansökningar räknas inte.",
+  "rec.overview.stat.interviews.hint":
+    "Bokade intervjuer framåt i tiden i pågående processer. De 20 närmaste visas.",
+  "rec.overview.counts.title": "Kravgranskning av mottagna ansökningar",
+  "rec.overview.counts.intro":
+    "Ett annat urval än Nya ansökningar ovan: här räknas alla ansökningar organisationen någonsin tagit emot, även arkiverade och avgjorda, uppdelade efter om en person har granskat dem mot den fastställda kravprofilen.",
+  "rec.counts.queue.label": "Att granska nu",
+  "rec.counts.queue.hint":
+    "Öppna ansökningar utan bekräftad granskning. Arkiverade och avgjorda ansökningar ingår inte här, även om de räknas som återstående nedan.",
+  "rec.counts.queue.cta": "Öppna granskningskön",
+  "rec.counts.queue.unavailable": "Kön kunde inte läsas.",
+  "rec.counts.history.heading": "Historisk täckning: alla mottagna ansökningar",
+  "rec.counts.explainSummary": "Vad räknas här?",
+  "rec.counts.explain.received":
+    "Mottagna: alla ansökningar i urvalet, oavsett rekryteringssteg, beslut eller arkivering.",
+  "rec.counts.explain.reviewed":
+    "Mänskligt granskade: en person har bekräftat granskningen mot den aktuella kravprofilen och det aktuella underlaget. Att öppna en ansökan räknas inte.",
+  "rec.counts.explain.remaining":
+    "Återstående: ännu inte bekräftade, eller granskningar som behöver uppdateras för att kravprofil eller underlag har ändrats. Hit räknas även ansökningar som inte längre kan granskas: avgjorda, arkiverade eller utan fastställd kravprofil.",
+  "rec.counts.explain.status":
+    "Kravstatus: grönt betyder att samtliga fastställda skallkrav är uppfyllda enligt godtagbart underlag. Gult betyder att minst ett skallkrav uttryckligen inte är uppfyllt. Grått betyder att underlag saknas eller behöver klarläggas. ”Skallkrav inte fastställda” gäller rekryteringen, som saknar fastställd kravprofil med skallkrav, inte kandidatens underlag. Kravstatus är inget anställningsbeslut.",
+  "rec.counts.explain.open":
+    "Rekryteringssteg (Ny, Under granskning, Intervju) och beslut är en annan axel. Kravgranskningen ändrar dem inte.",
+  "rec.overview.flowHeading": "Arbetsflödet",
+  "rec.flow.lede":
+    "Ordningen i en rekrytering. Tester och intervjuer används när rekryteringen behöver dem; beslut och avslut görs i respektive rekrytering. Markeringen visar vilken sida du är på, inte hur långt en kandidat har kommit.",
+  "rec.flow.decisionContext":
+    "Pågående rekryteringar. Besked till kandidater ges i respektive ansökan; när alla besked är klara avslutas rekryteringen i dess sista steg.",
+  "rec.flow.hint.requirements": "Annonsen, kravprofilen och rekryteringens egna steg.",
+  "rec.flow.hint.applications": "Alla mottagna ansökningar och kandidatens underlag.",
+  "rec.flow.hint.review":
+    "Öppna ansökningar som ännu inte är mänskligt granskade mot kravprofilen. Arkiverade och avgjorda ingår inte.",
+  "rec.flow.hint.tests": "Testbibliotek, utskick och resultat. Används när det behövs.",
+  "rec.flow.hint.interviews": "Förbered, genomför och granska intervjuer. Används när det behövs.",
+  "rec.flow.hint.report": "Rapporter från genomförda intervjuer.",
+  "rec.flow.hint.decision":
+    "Pågående rekryteringar: besked till kandidater ges i ansökningarna, avslutet i rekryteringens sista steg.",
+  "rec.flow.requirements": "Annons & krav",
+  "rec.flow.applications": "Ansökningar & underlag",
+  "rec.flow.review": "Kravgranskning",
+  "rec.flow.tests": "Tester",
+  "rec.flow.interviews": "Intervjuer",
+  "rec.flow.report": "Rapport",
+  "rec.flow.decision": "Beslut & avslut",
+  "rec.flow.current": "Du är här",
   "rec.overview.unavailable": "Rekryteringsöversikten kunde inte hämtas just nu.",
   "rec.overview.unavailableShort": "Kunde inte hämtas",
   "rec.overview.upcomingEmpty": "Inga intervjuer är planerade.",
@@ -716,6 +779,18 @@ export const recruitmentEn: { [K in keyof typeof recruitmentSv]: string } = {
   "rec.lifecycle.archive": "Archive",
   "rec.lifecycle.restore": "Restore from archive",
   "rec.lifecycle.restored": "Archiving updated. Recruitment completion and retention dates are unchanged.",
+  "rec.lifecycle.archivedNotice":
+    "The application is archived. The retention date is unchanged. It leaves the active lists and shows under Archived and All received.",
+  "rec.lifecycle.restoredNotice":
+    "Archiving lifted. The application shows in the ordinary lists again; the retention date is unchanged.",
+  "rec.lifecycle.archivedState":
+    "This application is archived. It is not in the active lists or the count of new applications, but shows under Archived and All received.",
+  "rec.lifecycle.archivedStateJob":
+    "This recruitment is archived. It shows only under Archived in the recruitment list.",
+  "rec.lifecycle.archivedNoticeJob":
+    "The recruitment is archived. The retention date is unchanged. It shows only under Archived in the recruitment list.",
+  "rec.lifecycle.restoredNoticeJob":
+    "Archiving lifted. The recruitment shows in the recruitment list again; the retention date is unchanged.",
   "rec.lifecycle.delete": "Permanently delete application material",
   "rec.lifecycle.confirm": "Permanently delete this material?",
   "rec.lifecycle.cancel": "Cancel",
@@ -907,6 +982,8 @@ export const recruitmentEn: { [K in keyof typeof recruitmentSv]: string } = {
   "rec.candidate.backToRecruitment": "Back to the recruitment",
   "rec.candidate.completedNotice":
     "The recruitment is completed. The application remains readable, but no stage can change.",
+  "rec.candidate.decision.completedHint":
+    "The recruitment is completed, so no further decision can be recorded here.",
   "rec.candidate.firstOpened": "First opened",
   "rec.candidate.navigation": "Move between candidates",
   "rec.candidate.next": "Next",
@@ -941,8 +1018,7 @@ export const recruitmentEn: { [K in keyof typeof recruitmentSv]: string } = {
     "A hiring or rejection decision is recorded by an owner, administrator or the recruitment's responsible person.",
   "rec.decision.tellCandidate": "Write the outcome to the candidate",
   "rec.error.alreadyCompleted": "The recruitment is already completed.",
-  "rec.error.applicationClosed":
-    "The application is closed, so no new interview time can be planned.",
+  "rec.error.applicationClosed": "The application is closed, so this action cannot be carried out.",
   "rec.error.bookingLocation":
     "Enter a place for an on-site interview and a meeting link for a video interview.",
   "rec.error.bookingNotEditable":
@@ -1020,13 +1096,15 @@ export const recruitmentEn: { [K in keyof typeof recruitmentSv]: string } = {
     "No active recruitments or drafts right now. Choose All in the status filter to see completed ones.",
   "rec.list.emptyPhase": "No recruitments with that status.",
   "rec.list.filterStatus": "Status",
-  "rec.list.heading": "Job adverts",
-  "rec.list.lede": "Create and manage your organisation's job adverts.",
+  "rec.list.heading": "Recruitments",
+  "rec.list.lede":
+    "One recruitment per position: advert, requirement profile, applications and decisions.",
   "rec.list.phase.default": "Active and drafts",
   "rec.list.phase.active": "Active",
   "rec.list.phase.draft": "Drafts",
   "rec.list.phase.published": "Published",
   "rec.list.phase.closed": "Not accepting new applications",
+  "rec.list.phase.ready": "Ready to complete",
   "rec.list.phase.completed": "Completed",
   "rec.list.phase.all": "All",
   "rec.list.readyToComplete": "Ready to complete",
@@ -1096,6 +1174,55 @@ export const recruitmentEn: { [K in keyof typeof recruitmentSv]: string } = {
   "rec.overview.stat.active": "Active recruitments",
   "rec.overview.stat.interviews": "Upcoming interviews",
   "rec.overview.stat.new": "New applications",
+  "rec.overview.stat.active.hint":
+    "Published recruitments, plus closed ones where candidates still await an outcome.",
+  "rec.overview.stat.new.hint":
+    "Applications at status New across every recruitment that is not archived. Archived applications are not counted.",
+  "rec.overview.stat.interviews.hint":
+    "Booked interviews ahead in open processes. The nearest 20 are shown.",
+  "rec.overview.counts.title": "Requirement review of received applications",
+  "rec.overview.counts.intro":
+    "A different selection from New applications above: every application the organisation has ever received, including archived and decided ones, split by whether a person has reviewed it against the confirmed requirement profile.",
+  "rec.counts.queue.label": "To review now",
+  "rec.counts.queue.hint":
+    "Open applications without a confirmed review. Archived and decided applications are not in this queue, even though they count as remaining below.",
+  "rec.counts.queue.cta": "Open the review queue",
+  "rec.counts.queue.unavailable": "The queue could not be loaded.",
+  "rec.counts.history.heading": "Historical coverage: every application received",
+  "rec.counts.explainSummary": "What is counted here?",
+  "rec.counts.explain.received":
+    "Received: every application in the selection, whatever its recruitment stage, decision or archive state.",
+  "rec.counts.explain.reviewed":
+    "Human reviewed: a person has confirmed the review against the current requirement profile and the current material. Opening an application does not count.",
+  "rec.counts.explain.remaining":
+    "Remaining: not yet confirmed, or reviews that need updating because the requirement profile or the material changed. This also includes applications that can no longer be reviewed: decided, archived or without a confirmed requirement profile.",
+  "rec.counts.explain.status":
+    'Requirement status: green means every confirmed mandatory requirement is met by acceptable material. Yellow means at least one mandatory requirement is explicitly not met. Grey means material is missing or needs clarification. "Mandatory requirements not established" is about the recruitment, which has no confirmed requirement profile with mandatory requirements, not about the candidate\'s material. Requirement status is not a hiring decision.',
+  "rec.counts.explain.open":
+    "Recruitment stage (New, Under review, Interview) and decisions are a separate axis. The requirement review does not change them.",
+  "rec.overview.flowHeading": "The workflow",
+  "rec.flow.lede":
+    "The order of work in a recruitment. Tests and interviews are used when the recruitment needs them; decisions and closing happen in each recruitment. The marker shows which page you are on, not how far a candidate has come.",
+  "rec.flow.decisionContext":
+    "Active recruitments. Candidates get their outcome in their application; once every outcome is given, the recruitment is closed in its last step.",
+  "rec.flow.hint.requirements":
+    "The advert, the requirement profile and the recruitment's own steps.",
+  "rec.flow.hint.applications": "All received applications and the candidate's material.",
+  "rec.flow.hint.review":
+    "Open applications not yet human-reviewed against the requirement profile. Archived and decided ones are not included.",
+  "rec.flow.hint.tests": "Test library, dispatch and results. Used when needed.",
+  "rec.flow.hint.interviews": "Prepare, conduct and review interviews. Used when needed.",
+  "rec.flow.hint.report": "Reports from conducted interviews.",
+  "rec.flow.hint.decision":
+    "Active recruitments: candidates get their outcome in the applications, the recruitment closes in its last step.",
+  "rec.flow.requirements": "Advert & requirements",
+  "rec.flow.applications": "Applications & material",
+  "rec.flow.review": "Requirement review",
+  "rec.flow.tests": "Tests",
+  "rec.flow.interviews": "Interviews",
+  "rec.flow.report": "Report",
+  "rec.flow.decision": "Decision & close",
+  "rec.flow.current": "You are here",
   "rec.overview.unavailable": "The recruitment overview could not be loaded right now.",
   "rec.overview.unavailableShort": "Could not be loaded",
   "rec.overview.upcomingEmpty": "No interviews are planned.",

@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import React from "react";
+import { readFileSync } from "node:fs";
 import { renderToStaticMarkup } from "react-dom/server";
+import type { TranslationKey } from "../src/i18n/dictionaries";
 import { I18nProvider, InterviewCopyProvider, useT } from "../src/i18n/context";
 import {
   frozenRows,
@@ -183,5 +185,38 @@ describe("saved interview content contract", () => {
         </I18nProvider>,
       ),
     ).toThrow("INTERVIEW_COPY_MISSING");
+  });
+  test("the route's save-error text renders from pre-existing frozen SV/EN copy", () => {
+    const route = readFileSync(
+      new URL(
+        "../src/routes/_authenticated.employer.$employerSlug.interview-intelligence.$caseId.interview.tsx",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+    const errorKey = route.match(/process\?\.error\s*\?\s*"([^"]+)"/)?.[1];
+    expect(errorKey).toBe("iiu.iv.process.savefailed");
+    // This is the old case's copy, not a copy of today's dictionary. The
+    // newly introduced saveFailed key is intentionally absent in both locales.
+    const copy = {
+      sv: { "iiu.iv.process.savefailed": "Reflektion och avvikelser kunde inte sparas" },
+      en: { "iiu.iv.process.savefailed": "Reflection and changes could not be saved" },
+    };
+    const before = JSON.stringify(copy);
+    function ErrorStatus() {
+      return <p role="status">{useT().t(errorKey as TranslationKey)}</p>;
+    }
+    for (const lang of ["sv", "en"] as const) {
+      const html = renderToStaticMarkup(
+        <I18nProvider initialLang={lang}>
+          <InterviewCopyProvider copy={copy}>
+            <ErrorStatus />
+          </InterviewCopyProvider>
+        </I18nProvider>,
+      );
+      expect(html).toContain(copy[lang]["iiu.iv.process.savefailed"]);
+      expect(html).not.toContain("iiu.iv.process.");
+    }
+    expect(JSON.stringify(copy)).toBe(before);
   });
 });

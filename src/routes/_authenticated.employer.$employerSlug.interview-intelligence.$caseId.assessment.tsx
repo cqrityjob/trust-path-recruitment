@@ -781,6 +781,7 @@ function Page() {
           candidate={d.candidateDisplayName}
           role={d.packName ?? d.title}
           status={d.status}
+          applicationLink={{ employerSlug, applicationId: d.applicationId }}
           action={
             d.status === "assessed" || d.status === "reported" ? (
               <NextStepLink status={d.status} employerSlug={employerSlug} caseId={caseId} />

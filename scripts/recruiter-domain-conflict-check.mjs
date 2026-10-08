@@ -7,6 +7,7 @@ import path from "node:path";
 import cp from "node:child_process";
 import crypto from "node:crypto";
 import net from "node:net";
+import { ensureRegistryImage } from "./registry-image-retry.mjs";
 const base = process.env.TEST_DB;
 if (
   !base ||
@@ -273,6 +274,7 @@ try {
     `PGRST_DB_URI=postgresql://${user}:${password}@host.docker.internal:${process.env.PGPORT ?? 5432}/${db}\nPGRST_DB_SCHEMAS=public\nPGRST_DB_ANON_ROLE=anon\nPGRST_DB_PRE_REQUEST=public.ri_conflict_request\nPGRST_JWT_SECRET=${secret}\nPGRST_SERVER_PORT=3000\nPGRST_LOG_LEVEL=error\n`,
     { mode: 0o600 },
   );
+  await ensureRegistryImage("public.ecr.aws/supabase/postgrest:v14.15");
   cp.execFileSync(
     "docker",
     [

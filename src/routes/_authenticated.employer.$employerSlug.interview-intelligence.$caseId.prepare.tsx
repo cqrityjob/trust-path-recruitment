@@ -371,6 +371,7 @@ function Page() {
           candidate={d.candidateDisplayName}
           role={d.packName ?? d.title}
           status={d.status}
+          applicationLink={{ employerSlug, applicationId: d.applicationId }}
           action={headerAction}
         />
       </div>

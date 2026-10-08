@@ -146,6 +146,7 @@ function Page() {
           candidate={d.candidateDisplayName}
           role={d.packName ?? d.title}
           status={d.status}
+          applicationLink={{ employerSlug, applicationId: d.applicationId }}
         />
       </div>
       <div className="mt-5">

@@ -143,6 +143,7 @@ function Page() {
           candidate={d.candidateDisplayName}
           role={d.packName ?? d.title}
           status={d.status}
+          applicationLink={{ employerSlug, applicationId: d.applicationId }}
           action={
             <Link
               to="/employer/$employerSlug/interview-intelligence/$caseId/report"
