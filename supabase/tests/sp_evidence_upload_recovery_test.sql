@@ -97,6 +97,10 @@ SELECT pg_temp.ok((SELECT count(*)=0 FROM public.sp_evidence_upload_attempts WHE
 DELETE FROM public.sp_experience_periods WHERE id='a7090000-2000-4000-8000-000000000001';
 SELECT pg_temp.ok((pg_temp.as_actor('a7090000-0000-4000-8000-000000000001',$q$SELECT public.sp_list_my_evidence_upload_attempts(NULL,NULL)$q$)::jsonb) @> '[{"id":"a7090000-3000-4000-8000-000000000002"}]','deleted-target intention still discoverable');
 SELECT pg_temp.ok(pg_temp.as_actor('a7090000-0000-4000-8000-000000000001',format($q$SELECT public.sp_list_my_evidence_upload_attempts(%L,'a7090000-2000-4000-8000-000000000001')$q$,(SELECT id FROM pg_temp.op09_fixture_claim))) LIKE 'err:23514:SP_TARGET_AMBIGUOUS%','ambiguous list refused');
+-- The governed writer also creates credential details with ON DELETE RESTRICT.
+-- Remove only this transaction's generated claim detail before deliberately
+-- exercising target deletion, as the existing account-erasure path does.
+DELETE FROM public.sp_credential_details WHERE claim_id=(SELECT id FROM pg_temp.op09_fixture_claim);
 DELETE FROM public.sp_claims WHERE id=(SELECT id FROM pg_temp.op09_fixture_claim);
 SELECT pg_temp.ok((pg_temp.as_actor('a7090000-0000-4000-8000-000000000001',$q$SELECT public.sp_list_my_evidence_upload_attempts(NULL,NULL)$q$)::jsonb) @> '[{"id":"a7090000-3000-4000-8000-000000000001","status":"registered"}]','registered target deletion also retains orphan recovery');
 SELECT pg_temp.ok((pg_temp.as_actor('a7090000-0000-4000-8000-000000000001',$q$SELECT public.sp_authorize_evidence_upload_cleanup('a7090000-3000-4000-8000-000000000001')$q$)::jsonb)->>'status'='cleanup_pending','removed registered target can be explicitly fenced without changing original intent');
