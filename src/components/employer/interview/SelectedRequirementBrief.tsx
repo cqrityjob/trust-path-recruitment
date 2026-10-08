@@ -1,8 +1,30 @@
 import { Link } from "@tanstack/react-router";
 import { useT } from "@/i18n/context";
 import type { CaseDetail } from "@/lib/interview-intelligence/runtime.functions";
-import { selectedRequirementBriefs } from "@/lib/interview-intelligence/selected-requirement-brief";
+import {
+  selectedRequirementBriefs,
+  type SelectedRequirementBrief as Brief,
+} from "@/lib/interview-intelligence/selected-requirement-brief";
 import { Field, Section, Surface } from "./InterviewLayout";
+
+export function SelectedRequirementBriefDetails({ brief }: { brief: Brief }) {
+  const { t } = useT();
+  return (
+    <>
+      <p className="mt-1 text-xs text-muted-foreground">
+        {t("rec.ri.brief.version").replace("{n}", String(brief.profileVersion))}
+      </p>
+      <dl className="mt-3 space-y-3 text-sm">
+        {brief.note && <Field label={t("rec.ri.brief.note")}>{brief.note}</Field>}
+        <Field label={t("rec.ri.brief.question")}>
+          {brief.neutralQuestion ?? t("rec.ri.brief.question.missing")}
+        </Field>
+        {brief.sourceLabel && <Field label={t("rec.ri.brief.source")}>{brief.sourceLabel}</Field>}
+        {brief.nextAction && <Field label={t("rec.ri.brief.next")}>{brief.nextAction}</Field>}
+      </dl>
+    </>
+  );
+}
 
 export function SelectedRequirementBrief({
   sources,
@@ -38,21 +60,7 @@ export function SelectedRequirementBrief({
           <li key={brief.sourceId} data-testid="selected-requirement-brief">
             <Surface>
               <h3 className="text-sm font-semibold text-foreground">{brief.label}</h3>
-              <p className="mt-1 text-xs text-muted-foreground">
-                {t("rec.ri.brief.version").replace("{n}", String(brief.profileVersion))}
-              </p>
-              <dl className="mt-3 space-y-3 text-sm">
-                {brief.note && <Field label={t("rec.ri.brief.note")}>{brief.note}</Field>}
-                <Field label={t("rec.ri.brief.question")}>
-                  {brief.neutralQuestion ?? t("rec.ri.brief.question.missing")}
-                </Field>
-                {brief.sourceLabel && (
-                  <Field label={t("rec.ri.brief.source")}>{brief.sourceLabel}</Field>
-                )}
-                {brief.nextAction && (
-                  <Field label={t("rec.ri.brief.next")}>{brief.nextAction}</Field>
-                )}
-              </dl>
+              <SelectedRequirementBriefDetails brief={brief} />
             </Surface>
           </li>
         ))}
