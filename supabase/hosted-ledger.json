@@ -13,8 +13,8 @@
   ],
   "source": "Supabase connector read-only SQL, explicit project wrygicdfxwjnrugduxnt",
   "projectRef": "wrygicdfxwjnrugduxnt",
-  "readAt": "2026-10-08 05:20:28.716426+00",
-  "readBy": "Read-only verification 2026-10-08 after #447 merge and official integration: prior 382 identities unchanged; P0 foundation appended. Seven function bodies, report builder, 11 columns, constraints, triggers and ACLs match isolated PostgreSQL 17 replay. See docs/release/2026-10-08-recruiter-intelligence-foundation-hosted-verification.json.",
+  "readAt": "2026-10-08T07:36:11.990468+00:00",
+  "readBy": "Read-only verification 2026-10-08 after #450 merge c1d154420c4477c56f1fbeeecf7933e0171bf5e1 and official integration. Prior383 identities unchanged;384 ledger.20 function bodies/ACLs,5 private tables,94 triggers,13 constraints equal isolated PostgreSQL17.20 observed_now snapshots,0 operator acknowledgements,0 reports unchanged. See docs/release/2026-10-08-interview-content-snapshot-hosted-verification.json. Application release held pending separately discovered PostgREST14 CAS retry/lock-order fix.",
   "versions": [
     {
       "version": "20260716153446",
@@ -1547,6 +1547,10 @@
     {
       "version": "20270306090000",
       "name": "recruiter_intelligence_interview_foundation"
+    },
+    {
+      "name": "interview_content_snapshot_lock",
+      "version": "20270307090000"
     }
   ]
 }
