@@ -111,5 +111,12 @@
     "images/en-emulated-375-remaining.png",
     "images/sv-desktop-explicit-peace-handoff.png"
   ],
-  "verification": "Every declared file and redacted runtime summary verified by byte count and SHA-256; no undeclared archive entry. Source private manifest unavailable and not independently verified."
+  "verification": "Every declared file and redacted runtime summary verified by byte count and SHA-256; no undeclared archive entry. Source private manifest unavailable and not independently verified.",
+  "independentlyCountedResults": {
+    "sqlNoticeOk": 93,
+    "apiOkLines": 23,
+    "browserIndexedCases": 5,
+    "baselineSqlNotice": "100 applications: 40 green / 25 yellow / 35 gray, 27 reviewed / 73 remaining",
+    "matchesOriginalManifest": true
+  }
 }

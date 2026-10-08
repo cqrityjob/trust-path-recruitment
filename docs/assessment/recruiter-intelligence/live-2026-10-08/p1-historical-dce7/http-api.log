@@ -1,0 +1,104 @@
+ok 100 received / 27 reviewed / 73 remaining via real API
+ok four complete pages, global color/date/id order and no duplicates
+ok global combined yellow remaining filter gives 18
+ok gray reviewed filter includes its ten human-reviewed gaps
+ok owner filter counts all fifty before paging
+ok search finds candidate on last unfiltered page
+ok around neighbours cross page edge
+ok authorized member can read but cannot manage
+ok member write, outsider read, anonymous RPC denied by direct API
+ok actual parallel legacy assignment/new review never overwrites new owner
+ok deterministic stale assignment changed target returns PT409 without retry
+ok deterministic stale assignment unchanged target returns PT409 without retry
+ok both 409 assignment refusals leave owner, review revision, action and assignment version unchanged
+ok stale profile confirmation returns precise PT409
+ok replaced profile reference returns precise PT409
+ok changed source binding returns precise PT409
+ok changed selected original version returns precise PT409
+ok actual simultaneous HTTP review: one CAS winner, one stale refusal
+ok exact winning operation retry returns same revision
+ok winner contributes one reviewed application, never double counts
+ok stale chosen-source handoff returns precise PT409 without copying any preparation source
+ok API V2 date change recomputes 30/35/35 and invalidates current confirmations
+ok original missing is gray, no technical AI status or selection mutation
+{
+  "kind": "executed-local-postgrest-api",
+  "assertions": 23,
+  "baseline": {
+    "received": 100,
+    "green": 40,
+    "yellow": 25,
+    "gray": 35,
+    "reviewed": 27,
+    "remaining": 73
+  },
+  "concurrentStatuses": [
+    200,
+    409
+  ],
+  "domainConflicts": [
+    {
+      "status": 409,
+      "code": "PT409",
+      "message": "STALE_VERSION",
+      "elapsedMs": 9.37
+    },
+    {
+      "status": 409,
+      "code": "PT409",
+      "message": "STALE_VERSION",
+      "elapsedMs": 8.67
+    },
+    {
+      "status": 409,
+      "code": "PT409",
+      "message": "RI_STALE_VERSION",
+      "elapsedMs": 5.5
+    },
+    {
+      "status": 409,
+      "code": "PT409",
+      "message": "RI_SOURCE_STALE",
+      "elapsedMs": 4.24
+    },
+    {
+      "status": 409,
+      "code": "PT409",
+      "message": "RI_SOURCE_STALE",
+      "elapsedMs": 5.85
+    },
+    {
+      "status": 409,
+      "code": "PT409",
+      "message": "RI_SOURCE_STALE",
+      "elapsedMs": 8.48
+    },
+    {
+      "status": 409,
+      "code": "PT409",
+      "message": "RI_STALE_VERSION",
+      "elapsedMs": 14.91
+    },
+    {
+      "status": 409,
+      "code": "PT409",
+      "message": "RI_SOURCE_STALE",
+      "elapsedMs": 9.63
+    }
+  ],
+  "v2": {
+    "gray": 35,
+    "green": 30,
+    "yellow": 35,
+    "decided": 0,
+    "archived": 0,
+    "filtered": 100,
+    "received": 100,
+    "reviewed": 0,
+    "remaining": 100,
+    "withdrawn": 0,
+    "notEstablished": 0,
+    "filteredReviewed": 0,
+    "filteredRemaining": 100
+  }
+}

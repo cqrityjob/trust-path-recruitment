@@ -1,0 +1,9 @@
+
+Running 5 tests using 1 worker
+
+[1/5] [chromium] › e2e/recruiter-intelligence-p1.spec.ts:92:1 › 100 oracle: global status/counts/order, source-aware manual review, preserved URL and drafts in sv/en desktop and emulated mobile
+[2/5] [chromium] › e2e/recruiter-intelligence-p1.spec.ts:289:1 › direct API reads the same 100 oracle before pagination and refuses anonymous access
+[3/5] [chromium] › e2e/recruiter-intelligence-p1.spec.ts:334:1 › explicit chosen clarification reaches the existing PEACE case once without changing role content or confirming evidence
+[4/5] [chromium] › e2e/recruiter-intelligence-p1.spec.ts:461:1 › cached recruitment navigation resets the profile target and unsaved drafts even at equal version numbers
+[5/5] [chromium] › e2e/recruiter-intelligence-p1.spec.ts:549:1 › archive-only recruitment still exposes all received applications and its archive filter
+  5 passed (3.6m)
