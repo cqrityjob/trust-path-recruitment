@@ -16,7 +16,7 @@ BEGIN
  ALTER TABLE public.scp_interview_case_events DROP CONSTRAINT scp_interview_case_events_event_check;
  EXECUTE 'ALTER TABLE public.scp_interview_case_events ADD CONSTRAINT scp_interview_case_events_event_check '||_check;
  FOR _r IN SELECT t.tgname,c.relname FROM pg_trigger t JOIN pg_class c ON c.oid=t.tgrelid
- WHERE c.relnamespace='public'::regnamespace AND t.tgname IN('ri_content_serialise','ri_content_in_use','ri_content_bind','ri_content_capture','ri_content_review') LOOP
+ WHERE c.relnamespace='public'::regnamespace AND t.tgname IN('ri_content_serialise','ri_content_in_use','ri_content_bind','ri_content_capture','ri_content_review','ri_content_truncate') LOOP
   EXECUTE format('DROP TRIGGER %I ON public.%I',_r.tgname,_r.relname);
  END LOOP;
 END $$;

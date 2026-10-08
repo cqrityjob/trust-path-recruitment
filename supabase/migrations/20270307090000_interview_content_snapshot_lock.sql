@@ -57,7 +57,13 @@ $$;
 REVOKE ALL ON FUNCTION scp_private.interview_content_lock() FROM PUBLIC,anon,authenticated,service_role;
 CREATE FUNCTION scp_private.interview_content_statement_lock() RETURNS trigger
 LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$
-BEGIN PERFORM scp_private.interview_content_lock(); RETURN NULL; END;
+BEGIN
+ PERFORM scp_private.interview_content_lock();
+ IF TG_OP='TRUNCATE' AND EXISTS(SELECT 1 FROM scp_private.interview_content_locks) THEN
+  RAISE EXCEPTION 'SCP_IV_CONTENT_IN_USE: table truncation is forbidden after content adoption' USING ERRCODE='check_violation';
+ END IF;
+ RETURN NULL;
+END;
 $$;
 REVOKE ALL ON FUNCTION scp_private.interview_content_statement_lock() FROM PUBLIC,anon,authenticated,service_role;
 CREATE FUNCTION scp_private.interview_content_append_only() RETURNS trigger
@@ -65,6 +71,7 @@ LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$
 BEGIN
  -- The Auth FK may clear an erased actor, exactly as the existing audit ledgers
  -- do. No client/service table grant exists; all other changes are refused.
+ IF TG_OP='TRUNCATE' THEN RAISE EXCEPTION 'SCP_IV_CONTENT_RECORD_IMMUTABLE' USING ERRCODE='check_violation'; END IF;
  IF TG_OP='UPDATE' AND pg_trigger_depth()>1 THEN
   IF TG_TABLE_NAME='interview_content_snapshots' AND to_jsonb(NEW)->>'frozen_by' IS NULL
    AND (to_jsonb(NEW)-'frozen_by')=(to_jsonb(OLD)-'frozen_by') THEN RETURN NEW; END IF;
@@ -83,6 +90,15 @@ CREATE TRIGGER immutable BEFORE UPDATE OR DELETE ON scp_private.interview_conten
  FOR EACH ROW EXECUTE FUNCTION scp_private.interview_content_append_only();
 CREATE TRIGGER immutable BEFORE UPDATE OR DELETE ON scp_private.interview_client_copy_versions
  FOR EACH ROW EXECUTE FUNCTION scp_private.interview_content_append_only();
+
+CREATE TRIGGER immutable_truncate BEFORE TRUNCATE ON scp_private.interview_content_locks
+ FOR EACH STATEMENT EXECUTE FUNCTION scp_private.interview_content_append_only();
+CREATE TRIGGER immutable_truncate BEFORE TRUNCATE ON scp_private.interview_content_snapshots
+ FOR EACH STATEMENT EXECUTE FUNCTION scp_private.interview_content_append_only();
+CREATE TRIGGER immutable_truncate BEFORE TRUNCATE ON scp_private.interview_content_acknowledgements
+ FOR EACH STATEMENT EXECUTE FUNCTION scp_private.interview_content_append_only();
+CREATE TRIGGER immutable_truncate BEFORE TRUNCATE ON scp_private.interview_client_copy_versions
+ FOR EACH STATEMENT EXECUTE FUNCTION scp_private.interview_content_append_only();
 
 CREATE FUNCTION scp_private.interview_content_owner(_table text,_row jsonb)
 RETURNS TABLE(kind text,content_id uuid)
@@ -192,6 +208,7 @@ BEGIN
  'scp_interview_conduct_prohibitions','scp_trust_stages','scp_trust_stage_prohibitions',
  'scp_trust_stage_ai_tasks','scp_trust_stage_claims'] LOOP
  EXECUTE format('CREATE TRIGGER ri_content_serialise BEFORE INSERT OR UPDATE OR DELETE ON public.%I FOR EACH STATEMENT EXECUTE FUNCTION scp_private.interview_content_statement_lock()',_t);
+ EXECUTE format('CREATE TRIGGER ri_content_truncate BEFORE TRUNCATE ON public.%I FOR EACH STATEMENT EXECUTE FUNCTION scp_private.interview_content_statement_lock()',_t);
  EXECUTE format('CREATE TRIGGER ri_content_in_use BEFORE INSERT OR UPDATE OR DELETE ON public.%I FOR EACH ROW EXECUTE FUNCTION scp_private.interview_content_guard()',_t);
  END LOOP;
 END $$;
@@ -259,6 +276,8 @@ END;
 $$;
 REVOKE ALL ON FUNCTION scp_private.interview_case_content_bind() FROM PUBLIC,anon,authenticated,service_role;
 CREATE TRIGGER ri_content_serialise BEFORE INSERT ON public.scp_interview_cases
+ FOR EACH STATEMENT EXECUTE FUNCTION scp_private.interview_content_statement_lock();
+CREATE TRIGGER ri_content_truncate BEFORE TRUNCATE ON public.scp_interview_cases
  FOR EACH STATEMENT EXECUTE FUNCTION scp_private.interview_content_statement_lock();
 CREATE TRIGGER ri_content_bind BEFORE INSERT OR UPDATE ON public.scp_interview_cases
  FOR EACH ROW EXECUTE FUNCTION scp_private.interview_case_content_bind();

@@ -19,8 +19,8 @@ psql -q -v ON_ERROR_STOP=1 -d "$SNAP_DB" \
  -f supabase/tests/interview_content_snapshot_legacy_fixture.sql \
  -f supabase/migrations/20270307090000_interview_content_snapshot_lock.sql \
  -f supabase/tests/interview_content_snapshot_test.sql >"$SNAP_TMP/suite" 2>&1
-[ "$(grep -c 'NOTICE:  ok  SNAP ' "$SNAP_TMP/suite")" -ge 80 ] || exit 1
-echo '    ok  80 snapshot/backfill/direct-service/report assertions'
+[ "$(grep -c 'NOTICE:  ok  SNAP ' "$SNAP_TMP/suite")" -ge 82 ] || exit 1
+echo '    ok  82 snapshot/backfill/direct-service/report assertions'
 set +e
 psql -q -v ON_ERROR_STOP=1 -d "$SNAP_DB" -f supabase/rollback/20270307090000_interview_content_snapshot_lock_rollback.sql >"$SNAP_TMP/rollback" 2>&1
 SNAP_ROLLBACK_RC=$?

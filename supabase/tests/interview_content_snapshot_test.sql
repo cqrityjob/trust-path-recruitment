@@ -147,6 +147,8 @@ BEGIN
  _out:=pg_temp.attempt('service_role',NULL,format('UPDATE public.scp_interview_pack_versions SET summary_sv=''Changed old draft'' WHERE id=%L',_old));
  PERFORM pg_temp.ok(_out LIKE '23514:%CONTENT_IN_USE%','36 old used draft stays locked after new version');
 END $$;
+SELECT pg_temp.ok(pg_temp.attempt('service_role',NULL,'TRUNCATE public.scp_interview_conduct_guidance') LIKE '23514:%CONTENT_IN_USE%','41 service truncate cannot erase used method text');
+SELECT pg_temp.ok(pg_temp.attempt('postgres',NULL,'TRUNCATE scp_private.interview_content_locks') LIKE '23514:%RECORD_IMMUTABLE%','42 owner truncate cannot erase permanent use locks');
 SELECT pg_temp.ok(NOT (SELECT ai_enabled OR transcript_enabled FROM public.scp_interview_ai_config WHERE id),'30 AI and transcript stay off');
 SELECT pg_temp.ok(pg_temp.attempt('postgres',NULL,format('UPDATE scp_private.interview_content_snapshots SET manifest=manifest||''{"rewrite":true}''::jsonb WHERE case_id=%L',(SELECT id FROM fx WHERE label='vaktare-se'))) LIKE '23514:%RECORD_IMMUTABLE%','31 stored snapshot cannot be edited even by table owner');
 SELECT pg_temp.ok(pg_temp.attempt('postgres',NULL,'DELETE FROM scp_private.interview_content_locks') LIKE '23514:%RECORD_IMMUTABLE%','32 permanent lock cannot be removed even by table owner');
