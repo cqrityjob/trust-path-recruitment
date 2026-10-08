@@ -7,6 +7,16 @@ uses `supabase/tests/recruiter_intelligence_p1_test.sql` with
 `RI_P1_KEEP_FIXTURE=1` as the only authority for the 100-case baseline.
 It does not depend on `db-test.sh`'s destructive historical rollback chain.
 
+For the schema-first CI job, append **`--api-only`**. This runs the same target
+guard, strict migration replay, actual SQL oracle and 15 HTTP assertions,
+including concurrent assignment/review CAS, then exits 0 if those pass. It
+creates/resets only its seed/API databases and starts only its API gateway
+and PostgREST. It never starts the application or browser. Manifest stages
+`runtime` and `browser` are `intentionally_not_run`, never passed. It requires
+Node, Bun, psql and PostgREST/Docker; no application install or Chromium is
+needed by this mode. The application CI job must use full mode without this
+flag to prove the five browser cases.
+
 ```sh
 RI_P1_DISPOSABLE_POSTGRES=1 PGHOST=127.0.0.1 PGPORT=5432 \
   PGUSER=postgres PGPASSWORD=local-synthetic-only \
@@ -18,7 +28,9 @@ Use a fresh report-directory path per run; an existing nonempty path is
 refused so an old screenshot cannot be attributed to a failed new run.
 `--reset` explicitly drops only the three fixed P1 databases, and only when
 each existing database contains the P1 ownership marker. Save needed old
-data/reports first. The default refuses existing names. The trap stops only
+data/reports first. With `--api-only`, reset touches only the two seed/API names,
+even if a previous browser database exists.
+The default refuses existing names. The trap stops only
 processes/containers started by this invocation and leaves databases,
 stopped containers and evidence intact. It does not run a retention worker,
 cron, SMTP, a candidate message or an AI provider.

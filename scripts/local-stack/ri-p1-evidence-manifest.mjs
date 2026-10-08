@@ -4,6 +4,8 @@ import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 const root = process.env.RI_P1_REPORT_DIR;
 if (!root) throw new Error("RI_P1_REPORT_DIR required");
+const runMode = process.env.RI_P1_RUN_MODE ?? "full";
+if (!["full", "api_only"].includes(runMode)) throw new Error("RI_P1_MANIFEST_WRONG_MODE");
 const allowed = [
   "stages.log",
   "bootstrap.log",
@@ -26,7 +28,11 @@ const verification = Object.fromEntries(
       ? "passed"
       : stages.has(`begin ${name}`)
         ? "stopped_or_failed"
-        : "not_run",
+        : stages.has(`intentional ${name}`) &&
+            runMode === "api_only" &&
+            ["runtime", "browser"].includes(name)
+          ? "intentionally_not_run"
+          : "not_run",
   ]),
 );
 const log = (name) => {
@@ -79,6 +85,7 @@ for (const name of inputs)
   );
 const result = {
   schemaVersion: "ri-p1-local-evidence-v1",
+  runMode,
   checkoutSha: execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(),
   workingTreeChanges: execFileSync("git", ["status", "--porcelain"], { encoding: "utf8" })
     .split("\n")
@@ -106,11 +113,15 @@ const result = {
   ],
   substitutes: ["Auth/Storage gateway; not GoTrue or Storage API"],
   browser: {
+    executed: verification.browser === "passed",
     engine: "Chromium",
     languages: ["sv", "en"],
     viewports: ["1440×1000 desktop", "375×812 touch/mobile emulation; not a physical device"],
   },
-  databases: ["ri_p1_seed_ci_test", "ri_p1_browser_ci_test", "ri_p1_api_ci_test"],
+  databases:
+    runMode === "api_only"
+      ? ["ri_p1_seed_ci_test", "ri_p1_api_ci_test"]
+      : ["ri_p1_seed_ci_test", "ri_p1_browser_ci_test", "ri_p1_api_ci_test"],
   excluded: [
     "private service configuration/logs",
     "Playwright traces carrying local bearer tokens",
