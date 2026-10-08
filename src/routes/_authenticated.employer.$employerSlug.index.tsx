@@ -85,6 +85,7 @@ import { LAST_EMPLOYER_SLUG_KEY } from "@/lib/job-intelligence/last-employer-slu
 import { getRecruitmentOverview } from "@/lib/recruitment/recruitment.functions";
 import { isActiveRecruitment, isReadyToComplete } from "@/lib/recruitment/definitions";
 import { formatDay, formatInZone } from "@/lib/recruitment/format";
+import { RecruiterOverviewCounts } from "@/components/recruitment/RecruiterOverviewCounts";
 import { BookingBadge, PhaseBadge } from "@/components/recruitment/RecruitmentStatus";
 
 export const Route = createFileRoute("/_authenticated/employer/$employerSlug/")({
@@ -877,6 +878,8 @@ function EmployerOverview({
           href="#upcoming-interviews"
         />
       </dl>
+
+      <RecruiterOverviewCounts employerId={employerId} employerSlug={employerSlug} />
 
       {/* C. Active recruitments, as a table a recruiter reads down. */}
       <section className="mt-6" aria-labelledby="active-recruitments">

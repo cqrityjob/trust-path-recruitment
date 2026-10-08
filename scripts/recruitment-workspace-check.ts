@@ -61,6 +61,7 @@ const F = {
   booking: "src/components/recruitment/BookingDialog.tsx",
   listContext: "src/lib/recruitment/list-context.ts",
   migration: "supabase/migrations/20261212090000_recruitment_candidate_view.sql",
+  requirements: "supabase/migrations/20270308090000_recruiter_intelligence_requirements.sql",
   receipts: "supabase/migrations/20261213090000_recruitment_application_receipts.sql",
   receiptsSuite: "supabase/tests/recruitment_application_receipts_test.sql",
   receiptSection: "src/components/recruitment/ReceiptSettingsSection.tsx",
@@ -212,8 +213,10 @@ const sql = read(F.migration);
   // same meaning; the list filters `status === "submitted"`.
   const fns = code(F.fns);
   ok(
-    /newCount: Number\(c\.new_count\),/.test(fns) &&
-      /count\(\*\) FILTER \(WHERE ja\.status = 'submitted'\)/.test(sql),
+    /newCount: Number\(c\.counts\.new\),/.test(fns) &&
+      /newCount: mine\.newCount/.test(fns) &&
+      /'new',count\(\*\)FILTER\(WHERE status='submitted'\)/.test(code(F.requirements)) &&
+      /FROM base WHERE employer_archived_at IS NULL/.test(code(F.requirements)),
     "A · the overview's new count is the database's count of 'submitted' -- the same predicate",
   );
   const overview = code(F.overview);
@@ -316,8 +319,45 @@ const sql = read(F.migration);
   );
   const list = code(F.list);
   ok(
-    /canDecideFor\(r\.jobId\) \|\| \(n !== "hired" && n !== "rejected"\)/.test(list),
-    "C · the applications list offers decisions by the same rule",
+    /<CandidateTable/.test(list) &&
+      /jobId=\{null\}/.test(list) &&
+      /selectedRows\.every\(\(r\) => r\.canManage \?\? props\.canManage\)/.test(table) &&
+      /\{canManage && \([\s\S]{0,500}setConfirmReject\(true\)/.test(table),
+    "C · the organisation list uses the shared table; a batch decision needs management rights on every selected recruitment",
+  );
+  const hub = code(F.hub);
+  ok(
+    /page\?\.intelligenceCounts\?\.received === 0/.test(hub),
+    "C · archive-only recruitments retain the candidate table through the received population",
+  );
+  ok(
+    /<JobHub\s+key=\{jobId\}/.test(hub),
+    "C · switching cached recruitments resets the complete JobHub draft state",
+  );
+  ok(
+    /key=\{`\$\{jobId\}:\$\{generation\}`\}/.test(
+      code("src/components/recruitment/RequirementProfilePanel.tsx"),
+    ),
+    "C · requirement editors reset their target and draft when the job changes",
+  );
+  ok(
+    /jobId === null && view\.job/.test(table),
+    "C · a retained job filter does not label stages with organisation-wide numbers",
+  );
+  ok(
+    /page\?\.intelligenceCounts\?\.received \?\? page\?\.counts\.total/.test(table) &&
+      /hasReceivedApplications \? t\("rec\.table\.emptyFiltered"/.test(table),
+    "C · an empty active view acknowledges already received archived applications",
+  );
+  ok(
+    /view\.stage !== "received" &&\s*view\.stage !== "archived"/.test(table),
+    "C · received and archived views do not offer an active-population reset with a misleading all count",
+  );
+  ok(
+    /openApplicationOriginalCv\(\s*\{\s*hasUploadedCv: c\.hasCv,\s*submittedSource: submittedCv\?\.source \?\? null/.test(
+      candidate,
+    ),
+    "C · the original CV route dispatches uploads independently of the disabled snapshot query",
   );
 }
 
@@ -688,7 +728,9 @@ const sql = read(F.migration);
     fns.indexOf("export const getCandidateNeighbours"),
   );
   ok(
-    /rpc\("rec_candidate_view", viewArgs\(data\.jobId, view, null\)\)/.test(pageFn) &&
+    /rpc\("rec_ri_candidate_view", viewArgs\(data\.employerId, data\.jobId, view, null\)\)/.test(
+      pageFn,
+    ) &&
       /_size: PAGE_SIZE,/.test(fns) &&
       !/\.limit\(/.test(pageFn) &&
       !/applyCandidateView|pageSlice/.test(fns),
@@ -699,7 +741,7 @@ const sql = read(F.migration);
     "H · no read ships the ids of the whole list to the browser",
   );
   ok(
-    /_stage: view\.stage \?\? "open",/.test(fns),
+    /stage: view\.stage \?\? "open",/.test(fns),
     "H · the default view is open candidates -- the server asks for 'open' unless the URL says otherwise",
   );
   ok(
@@ -709,12 +751,16 @@ const sql = read(F.migration);
     "H · a page past the end opens the last page, not nothing",
   );
   ok(
-    (fns.match(/rpc\("rec_job_counts"/g) ?? []).length === 2 &&
-      /_job_id: data\.jobId \}\)/.test(pageFn),
-    "H · the case page's counts and the overview's counts are the same database count",
+    /const \{ total, page, pages, from, to, counts, intelligenceCounts \} = envelope;/.test(
+      pageFn,
+    ) &&
+      /candidateEnvelopeSchema\.parse\(pageRes\.data\)/.test(pageFn) &&
+      /rpc\("rec_ri_overview_counts", \{ _employer_id: data\.employerId \}\)/.test(fns) &&
+      /intelligenceCounts: intelligenceByJob\.get\(j\.id\)/.test(fns),
+    "H · the page keeps its server envelope and overview reads the same database count population",
   );
   ok(
-    /viewArgs\(data\.jobId, data\.view, data\.applicationId\)/.test(fns) &&
+    /viewArgs\(data\.employerId, data\.jobId, data\.view, data\.applicationId\)/.test(fns) &&
       /around\.find\(\(r\) => r\.rank === self\.rank - 1\)/.test(fns),
     "H · previous/next are read around ONE application in the same ordering",
   );

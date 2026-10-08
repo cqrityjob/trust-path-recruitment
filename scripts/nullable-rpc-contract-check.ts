@@ -314,6 +314,68 @@ for (const [name, nullable] of foundation) {
     );
   }
 }
+const recruitmentIntelligence = [
+  ["rec_ri_get_profile", []],
+  ["rec_ri_get_review", []],
+  ["rec_ri_confirm_profile", ["_start_date"]],
+  ["rec_ri_save_review", ["_next_action", "_responsible_user_id", "_expected_assignment_version"]],
+  ["rec_ri_manual_reference", []],
+  ["rec_ri_transfer_requirements", []],
+  ["rec_ri_candidate_view", ["_job_id", "_dir", "_around"]],
+  ["rec_ri_overview_counts", []],
+] as const;
+ck(
+  "4.7 only the reviewed P1 functions have additive contracts",
+  JSON.stringify(
+    alias("RecruitmentIntelligenceFunctions")
+      ?.getProperties()
+      .map((p) => p.name)
+      .sort(),
+  ) === JSON.stringify(recruitmentIntelligence.map(([name]) => name).sort()),
+);
+for (const [name, nullable] of recruitmentIntelligence) {
+  const def = latestDefinition(name);
+  const args = field(field(functions, name), "Args");
+  const sqlArgs = def?.args
+    .split(",")
+    .map((v) => v.trim().split(/\s+/)[0])
+    .sort();
+  ck(
+    `4.8 ${name} arguments match versioned SQL`,
+    JSON.stringify(sqlArgs) ===
+      JSON.stringify(
+        args
+          ?.getProperties()
+          .map((p) => p.name)
+          .sort(),
+      ),
+  );
+  ck(
+    `4.9 ${name} has no defaults or STRICT`,
+    Boolean(def) &&
+      !/\bDEFAULT\b|=/i.test(def!.args) &&
+      !/\bSTRICT\b|RETURNS\s+NULL\s+ON\s+NULL\s+INPUT/i.test(def!.header),
+  );
+  for (const key of sqlArgs ?? []) {
+    const type = field(args, key),
+      property = args?.getProperty(key);
+    const sqlType = def!.args
+      .split(",")
+      .find((v) => v.trim().startsWith(`${key} `))
+      ?.trim()
+      .split(/\s+/)[1];
+    ck(
+      `4.10 ${name}.${key} required and reviewed type`,
+      !!type &&
+        !!property &&
+        !(property.flags & ts.SymbolFlags.Optional) &&
+        (sqlType === "jsonb"
+          ? checker.typeToString(type) === "Json"
+          : checker.typeToString(type).includes("null") ===
+            (nullable as readonly string[]).includes(key)),
+    );
+  }
+}
 function diagnostics(p: ts.Program) {
   return ts
     .getPreEmitDiagnostics(p)
