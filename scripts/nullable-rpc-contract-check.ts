@@ -243,6 +243,10 @@ const foundation = [
   ["scp_iv_review_manual_finding", ["_responsible_label", "_due_on"]],
   ["scp_iv_manual_finding_capabilities", []],
   ["scp_iv_case_content_manifest", []],
+  ["scp_iv_case_frozen_content", []],
+  ["scp_iv_acknowledge_observed_content", []],
+  ["scp_iv_content_inventory", []],
+  ["scp_iv_case_frozen_labels", []],
 ] as const;
 ck(
   "4.3 only the reviewed RI foundation functions have additive contracts",
@@ -286,6 +290,27 @@ for (const [name, nullable] of foundation) {
         !(property.flags & ts.SymbolFlags.Optional) &&
         checker.typeToString(type).includes("null") ===
           (nullable as readonly string[]).includes(key),
+    );
+    const declaration = def!.args.split(",").find((v) => v.trim().startsWith(`${key} `));
+    const sqlType = declaration?.trim().split(/\s+/)[1]?.toLowerCase();
+    const reviewedTypes: Record<string, string> = {
+      uuid: "string",
+      text: "string",
+      date: "string",
+      timestamptz: "string",
+      integer: "number",
+      bigint: "number",
+      boolean: "boolean",
+      "uuid[]": "string[]",
+    };
+    const expected = sqlType && reviewedTypes[sqlType];
+    ck(
+      `4.7 ${name}.${key} has its exact reviewed SQL-backed type`,
+      Boolean(expected) &&
+        !!type &&
+        checker.typeToString(type) ===
+          expected + ((nullable as readonly string[]).includes(key) ? " | null" : ""),
+      `SQL ${sqlType ?? "missing"}; expected ${expected ?? "unreviewed"}`,
     );
   }
 }
