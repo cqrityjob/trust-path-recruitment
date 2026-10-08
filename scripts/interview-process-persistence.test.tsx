@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { readFileSync } from "node:fs";
+import { QueryClient, QueryObserver } from "@tanstack/react-query";
 import { I18nProvider } from "../src/i18n/context";
 import { CandidateBackgroundStatus } from "../src/components/employer/interview/CandidateBackgroundStatus";
 import { InterviewOpeningDisclosure } from "../src/components/employer/interview/InterviewOpeningDisclosure";
@@ -11,6 +13,269 @@ import {
 import type { InterviewContextResult, LinkState } from "../src/lib/interview-intelligence/context";
 import { drainInterviewNoteDraft } from "../src/lib/interview-intelligence/note-save-drain";
 import { drainInterviewDrafts } from "../src/lib/interview-intelligence/draft-save-drain";
+import {
+  pendingQuestionNoteBody,
+  questionNoteBody,
+  mayApplyStoredQuestionNote,
+  reloadQuestionNote,
+  type QuestionNoteDraft,
+} from "../src/lib/interview-intelligence/question-note-draft";
+
+describe("question-bound note draft after reload", () => {
+  test("failed explicit reload keeps the shared case successful and retains the draft/conflict/CAS token", async () => {
+    const key = ["ii", "case", "synthetic-case"];
+    const cached = { note: "Stored old text" };
+    const cache = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    cache.setQueryData(key, cached);
+    const failedRead = async () => {
+      throw Error("Synthetic transport failure");
+    };
+    const oldObserver = new QueryObserver(cache, { queryKey: key, queryFn: failedRead });
+    const oldResult = await oldObserver.refetch();
+    expect(oldResult.isError).toBe(true);
+    expect(oldResult.data).toEqual(cached);
+    // The shared CaseContentBoundary unmounts children on this error state.
+    // The explicit reader must never create it for an unsuccessful reload.
+    cache.setQueryData(key, cached);
+    let draft = "Human draft retained";
+    let conflict = true;
+    let knownVersion = "Observed old CAS version";
+    const result = await reloadQuestionNote({
+      read: failedRead,
+      mayApply: () => true,
+      apply: () => {
+        draft = "Discarded";
+        conflict = false;
+        knownVersion = "Incorrect cached version";
+      },
+    });
+    expect(result).toBe("failed");
+    expect(cache.getQueryState(key)?.status).toBe("success");
+    expect(draft).toBe("Human draft retained");
+    expect(conflict).toBe(true);
+    expect(knownVersion).toBe("Observed old CAS version");
+    oldObserver.destroy();
+    cache.clear();
+  });
+  test("successful explicit read applies only once and a late response cannot consume a newer draft", async () => {
+    const applied: string[] = [];
+    expect(
+      await reloadQuestionNote({
+        read: async () => "Actual new stored text",
+        mayApply: () => true,
+        apply: (body) => {
+          applied.push(body);
+        },
+      }),
+    ).toBe("applied");
+    expect(applied).toEqual(["Actual new stored text"]);
+    expect(
+      await reloadQuestionNote({
+        read: async () => "Late old-question text",
+        mayApply: () => false,
+        apply: (body) => {
+          applied.push(body);
+        },
+      }),
+    ).toBe("superseded");
+    expect(applied).toEqual(["Actual new stored text"]);
+  });
+  test("the interview route remounts its draft and known CAS records when the case changes, not when the question changes", () => {
+    const route = readFileSync(
+      "src/routes/_authenticated.employer.$employerSlug.interview-intelligence.$caseId.interview.tsx",
+      "utf8",
+    );
+    expect(route).toContain("remountDeps: ({ params }) => params.caseId");
+    expect(route).not.toContain("remountDeps: ({ search })");
+    const sharedQuestion = "shared-role-pack-question";
+    const caseADraft = { questionId: sharedQuestion, body: "Case A human draft" };
+    expect(questionNoteBody(sharedQuestion, caseADraft, "Case A saved")).toBe("Case A human draft");
+    // A new route component has a fresh draft/known map even though its pack
+    // reuses the same Q-ID. It must display case B's source and perform no write.
+    expect(questionNoteBody(sharedQuestion, null, "Case B saved")).toBe("Case B saved");
+    expect(pendingQuestionNoteBody(sharedQuestion, null, "Case B saved", true)).toBeNull();
+  });
+  test("a late explicit reload cannot replace text typed on another question or after the reload began", async () => {
+    let draft = { questionId: "Q1", body: "Q1 human draft" };
+    let currentQuestion = "Q1";
+    let revision = 1;
+    let observedVersion = "Q1 old CAS version";
+    let release!: () => void;
+    const pending = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const requestedQuestion = currentQuestion;
+    const requestedRevision = revision;
+    const reload = pending.then(() => {
+      if (
+        !mayApplyStoredQuestionNote(
+          requestedQuestion,
+          currentQuestion,
+          requestedRevision,
+          revision,
+          true,
+        )
+      )
+        return;
+      observedVersion = "Q1 returned CAS version";
+      draft = { questionId: requestedQuestion, body: "Q1 returned stored text" };
+    });
+    currentQuestion = "Q2";
+    revision += 1;
+    draft = { questionId: "Q2", body: "Q2 new human draft" };
+    release();
+    await reload;
+    expect(draft).toEqual({ questionId: "Q2", body: "Q2 new human draft" });
+    expect(observedVersion).toBe("Q1 old CAS version");
+    expect(mayApplyStoredQuestionNote("Q1", "Q1", 1, 2, true)).toBe(false);
+    expect(mayApplyStoredQuestionNote("Q1", "Q1", 2, 2, true)).toBe(true);
+    expect(mayApplyStoredQuestionNote("Q1", "Q1", 2, 2, false)).toBe(false);
+  });
+  test("initial loaded Q8 and StrictMode cleanup replay cannot clear a stored note", () => {
+    const saved = "Persisted Q8 account before pause";
+    const initial: QuestionNoteDraft | null = null;
+    expect(questionNoteBody(null, initial, saved)).toBe("");
+    expect(questionNoteBody("Q8", initial, saved)).toBe(saved);
+    const writes: string[] = [];
+    // The route may mount after CaseContentBoundary loaded the saved case.
+    // StrictMode's repeated effect cleanup has no human write intention.
+    for (let cleanup = 0; cleanup < 2; cleanup++) {
+      const body = pendingQuestionNoteBody("Q8", initial, saved, true);
+      if (body !== null) writes.push(body);
+    }
+    expect(writes).toEqual([]);
+    expect(questionNoteBody("Q8", initial, saved)).toBe(saved);
+  });
+  test("a prior question's draft cannot be displayed or saved into a newly selected question", () => {
+    const previous = { questionId: "Q1", body: "Human Q1 text" };
+    expect(questionNoteBody("Q2", previous, "Stored Q2 text")).toBe("Stored Q2 text");
+    expect(pendingQuestionNoteBody("Q2", previous, "Stored Q2 text", true)).toBeNull();
+    expect(questionNoteBody("Q3", previous, "")).toBe("");
+    expect(pendingQuestionNoteBody("Q3", previous, "", false)).toBeNull();
+  });
+  test("an explicit empty edit still drains through the ordinary writer and CAS failure keeps it", async () => {
+    const draft = { questionId: "Q8", body: "" };
+    let saved = "Stored Q8 account";
+    expect(questionNoteBody("Q8", draft, saved)).toBe("");
+    expect(pendingQuestionNoteBody("Q8", draft, saved, true)).toBe("");
+    const writes: string[] = [];
+    expect(
+      await drainInterviewNoteDraft({
+        readDraft: () => questionNoteBody("Q8", draft, saved),
+        readSaved: () => saved,
+        hasSavedNote: () => true,
+        isCurrentQuestion: () => true,
+        write: async (body) => {
+          writes.push(body);
+          saved = body;
+        },
+      }),
+    ).toBe(true);
+    expect(writes).toEqual([""]);
+    expect(pendingQuestionNoteBody("Q8", draft, saved, true)).toBeNull();
+    saved = "Changed in another tab";
+    expect(
+      await drainInterviewNoteDraft({
+        readDraft: () => draft.body,
+        readSaved: () => saved,
+        hasSavedNote: () => true,
+        isCurrentQuestion: () => true,
+        write: async () => {
+          throw Error("SCP_IV_NOTE_STALE");
+        },
+      }),
+    ).toBe(false);
+    expect(saved).toBe("Changed in another tab");
+    expect(draft.body).toBe("");
+    expect(pendingQuestionNoteBody("Q8", draft, saved, true)).toBe("");
+    expect(pendingQuestionNoteBody("Q8", draft, "", false)).toBeNull();
+  });
+  test("human edits survive later stored reads and still drain edits made during a pending write", async () => {
+    let draft: QuestionNoteDraft = { questionId: "Q8", body: "Human A" };
+    let saved = "Stored older account";
+    expect(questionNoteBody("Q8", draft, "Newer query response")).toBe("Human A");
+    let release!: () => void;
+    let started!: () => void;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const requested = new Promise<void>((resolve) => {
+      started = resolve;
+    });
+    const writes: string[] = [];
+    const drain = drainInterviewNoteDraft({
+      readDraft: () => questionNoteBody("Q8", draft, saved),
+      readSaved: () => saved,
+      hasSavedNote: () => true,
+      isCurrentQuestion: () => true,
+      write: async (body) => {
+        writes.push(body);
+        if (writes.length === 1) {
+          started();
+          await held;
+        }
+        saved = body;
+      },
+    });
+    await requested;
+    draft = { questionId: "Q8", body: "Human B while A pending" };
+    release();
+    expect(await drain).toBe(true);
+    expect(writes).toEqual(["Human A", "Human B while A pending"]);
+    expect(saved).toBe(draft.body);
+  });
+  test("a new question-bound edit during the process flush drains before navigation", async () => {
+    let draft: QuestionNoteDraft | null = null;
+    let saved = "Existing Q8";
+    let processDirty = true;
+    let release!: () => void;
+    let started!: () => void;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const requested = new Promise<void>((resolve) => {
+      started = resolve;
+    });
+    const writes: string[] = [];
+    let navigated = false;
+    const guard = drainInterviewDrafts({
+      flushNote: async () => {
+        if (draft?.questionId !== "Q8") return true;
+        return drainInterviewNoteDraft({
+          readDraft: () => questionNoteBody("Q8", draft, saved),
+          readSaved: () => saved,
+          hasSavedNote: () => true,
+          isCurrentQuestion: () => true,
+          write: async (body) => {
+            writes.push(body);
+            saved = body;
+          },
+        });
+      },
+      flushProcess: async () => {
+        if (processDirty) {
+          started();
+          await held;
+          processDirty = false;
+        }
+        return true;
+      },
+      noteIsDirty: () => pendingQuestionNoteBody("Q8", draft, saved, true) !== null,
+      processIsDirty: () => processDirty,
+    }).then((ok) => {
+      navigated = ok;
+      return ok;
+    });
+    await requested;
+    expect(navigated).toBe(false);
+    draft = { questionId: "Q8", body: "New human Q8 during process write" };
+    release();
+    expect(await guard).toBe(true);
+    expect(writes).toEqual(["New human Q8 during process write"]);
+    expect(saved).toBe(draft.body);
+    expect(navigated).toBe(true);
+  });
+});
 
 const t0 = "2026-10-07T12:00:00.000001Z";
 const t1 = "2026-10-07T12:00:00.000002Z";

@@ -8261,12 +8261,12 @@ export const dictionaries = {
     "iiu.cd.trace.selfreview.note":
       "Frågorna handlar om dig, inte om kandidaten. De sparas inte som bedömning av någon.",
     "iiu.cd.trace.closure": "Att avsluta ärligt",
-    "iiu.cd.governed": "Godkänt metodinnehåll. Ingen AI-modell anropas för att visa det.",
+    "iiu.cd.governed": "Versionsbundet metodinnehåll. Ingen AI-modell anropas för att visa det.",
     "iiu.cd.hypothesis":
       "CQrity TRUST är en forskningsgrundad designhypotes under kontrollerad validering. Den är inte vetenskapligt validerad som helhet.",
     "iiu.iv.copilot.title": "Intervjustöd",
     "iiu.iv.copilot.noai":
-      "Stödet lyssnar inte, spelar inte in och använder ingen AI under samtalet. Det du ser är intervjuguidens godkända innehåll och metodstöd — ingenting är genererat.",
+      "Stödet lyssnar inte, spelar inte in och använder ingen AI under samtalet. Det du ser är versionsbundet innehåll från intervjuguiden och metodstödet — ingenting är genererat.",
     "iiu.iv.copilot.listen": "Lyssna efter",
     "iiu.iv.copilot.5enote":
       "5E är CQrityjobs sätt att strukturera en berättelse. Det är ingen poäng och ingen förutsägelse om arbetsprestation — saknas en del är det något att fråga vidare om.",
@@ -8506,6 +8506,29 @@ export const dictionaries = {
     "ri.control.reload": "Läs in sparad kontrollpunkt",
     "ri.control.refresh.failed":
       "Ändringen är sparad men listan kunde inte uppdateras. Läs in ärendet igen för att se den sparade versionen.",
+    "ri.snapshot.title": "Intervjuns innehåll är sparat",
+    "ri.snapshot.created":
+      "Frågor, rollkrav, metodtexter och instruktioner sparades tillsammans när ärendet skapades. Denna intervju läser den kopian.",
+    "ri.snapshot.observed":
+      "Detta är ett äldre ärende. Innehållet sparades först vid den nya innehållskontrollen. Kopian visar vad som fanns då och bevisar inte vilka texter som visades när intervjun började.",
+    "ri.snapshot.status": "Innehållsstatus vid sparandet",
+    "ri.snapshot.review.title": "Granska äldre intervju innan ni fortsätter",
+    "ri.snapshot.review.body":
+      "Jämför de sparade frågorna och metodtexterna med den tidigare planen, underlaget och anteckningarna. Om innehållet ändrat intervjuns förutsättningar behöver ni ett nytt ärende och en ny plan. Den tidigare historiken bevaras. Ett godkännande här bekräftar er granskning av detta ärende; det innehållsvaliderar inte guiden.",
+    "ri.snapshot.review.material": "Frågor, rollkrav och metodstöd som sparats nu",
+    "ri.snapshot.review.previous": "Tidigare plan, underlag och anteckningar",
+    "ri.snapshot.review.owner":
+      "En ägare eller administratör behöver granska detta innan intervjun kan fortsätta.",
+    "ri.snapshot.review.confirm":
+      "Jag har granskat de sparade texterna mot den tidigare planen, underlaget och anteckningarna och bekräftar att ärendet kan fortsätta med denna kopia.",
+    "ri.snapshot.review.note":
+      "Beskriv granskningen, eventuella skillnader och hur planen hanterar dem",
+    "ri.snapshot.review.failed":
+      "Granskningen kunde inte sparas. Texten finns kvar; kontrollera och försök igen.",
+    "ri.snapshot.review.save": "Bekräfta granskningen och fortsätt",
+    "ri.snapshot.review.saving": "Sparar granskningen …",
+    "ri.snapshot.behavioural": "Erfarenhetsfråga",
+    "ri.snapshot.situational": "Scenariofråga",
     "ri.content.title": "Innehållets version och granskning",
     "ri.content.current":
       "Manifestet observerar innehållet som är kopplat till ärendet nu. Det fryser inte intervjuns innehåll vid start.",
@@ -17083,12 +17106,12 @@ export const dictionaries = {
     "iiu.cd.trace.selfreview.note":
       "These questions are about you, not the candidate. They are not stored as an assessment of anyone.",
     "iiu.cd.trace.closure": "Closing honestly",
-    "iiu.cd.governed": "Approved method content. No AI model is called to show it.",
+    "iiu.cd.governed": "Version-bound method content. No AI model is called to show it.",
     "iiu.cd.hypothesis":
       "CQrity TRUST is a research-grounded design hypothesis under controlled validation. It is not scientifically validated as a whole.",
     "iiu.iv.copilot.title": "Interview support",
     "iiu.iv.copilot.noai":
-      "This support does not listen, does not record and uses no AI during the conversation. What you see is the approved content of the interview guide and method support — nothing is generated.",
+      "This support does not listen, does not record and uses no AI during the conversation. What you see is version-bound content from the interview guide and method support — nothing is generated.",
     "iiu.iv.copilot.listen": "Listen for",
     "iiu.iv.copilot.5enote":
       "5E is CQrityjob's way of structuring an account. It is not a score and not a prediction of job performance — a missing part is something to ask more about.",
@@ -17329,6 +17352,29 @@ export const dictionaries = {
     "ri.control.reload": "Load saved checkpoint",
     "ri.control.refresh.failed":
       "The change is saved but the list could not be refreshed. Reload the case to see the saved version.",
+    "ri.snapshot.title": "The interview content is saved",
+    "ri.snapshot.created":
+      "Questions, role requirements, method texts and instructions were saved together when the case was created. This interview reads that copy.",
+    "ri.snapshot.observed":
+      "This is an older case. Its content was first saved at the new content check. The copy records what existed then and does not prove which texts were shown when the interview began.",
+    "ri.snapshot.status": "Content status when saved",
+    "ri.snapshot.review.title": "Review the older interview before continuing",
+    "ri.snapshot.review.body":
+      "Compare the saved questions and method texts with the earlier plan, material and notes. If content changes affect the basis of the interview, you need a new case and a new plan. The earlier history is preserved. Approval here confirms your review of this case; it does not validate the guide content.",
+    "ri.snapshot.review.material": "Questions, role requirements and method support saved now",
+    "ri.snapshot.review.previous": "Earlier plan, material and notes",
+    "ri.snapshot.review.owner":
+      "An owner or administrator needs to review this before the interview can continue.",
+    "ri.snapshot.review.confirm":
+      "I have reviewed the saved texts against the earlier plan, material and notes and confirm that this case can continue with this copy.",
+    "ri.snapshot.review.note":
+      "Describe your review, any differences and how the plan handles them",
+    "ri.snapshot.review.failed":
+      "The review could not be saved. Your text remains; check and try again.",
+    "ri.snapshot.review.save": "Confirm the review and continue",
+    "ri.snapshot.review.saving": "Saving the review …",
+    "ri.snapshot.behavioural": "Experience question",
+    "ri.snapshot.situational": "Scenario question",
     "ri.content.title": "Content version and review",
     "ri.content.current":
       "The manifest observes the content currently pinned to this case. It does not freeze interview content at the start.",

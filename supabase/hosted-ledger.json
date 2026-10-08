@@ -13,8 +13,8 @@
   ],
   "source": "Supabase connector read-only SQL, explicit project wrygicdfxwjnrugduxnt",
   "projectRef": "wrygicdfxwjnrugduxnt",
-  "readAt": "2026-10-08T09:59:39.750315+00:00",
-  "readBy": "Read-only verification2026-10-08 after#455 normal merge3c1d950593329c390cf209931b27da04d3034410 and official integration:385ledger,prior384identities unchanged;12function definitions/defaults/owner/ACL/config equal exact-head PG17/PostgREST14 replay.20snapshot governance unchanged,19bodyMD5 unchanged and acknowledge new full definition matches.20snapshots14locks0ACK0reports and caseStates unchanged. Actual native Auth/Storage/browser and publication gates remain separate. See docs/release/2026-10-08-recruiter-domain-conflict-hosted-verification.json.",
+  "readAt": "2026-10-08T13:37:19.169282+00:00",
+  "readBy": "Read-only verification after #457 exact1e598 normal merge7f899 and official integration installed0909. Ledger387/prior386 unchanged; all10 full function body/args/default/owner/config/ACL,14columns/11constraint predicates/3policies/3indexes/3triggers match authoritative source. Journal0;20snapshots14locksACK0reports0/statuses unchanged; all16P1 function contracts preserved. Full independent capture/review: docs/release/2026-10-08-op09-hosted-verification.json. No production fixtures or workers.",
   "versions": [
     {
       "version": "20260716153446",
@@ -1549,12 +1549,20 @@
       "name": "recruiter_intelligence_interview_foundation"
     },
     {
-      "name": "interview_content_snapshot_lock",
-      "version": "20270307090000"
+      "version": "20270307090000",
+      "name": "interview_content_snapshot_lock"
     },
     {
-      "name": "recruiter_domain_conflict_transport",
-      "version": "20270307100000"
+      "version": "20270307100000",
+      "name": "recruiter_domain_conflict_transport"
+    },
+    {
+      "version": "20270308090000",
+      "name": "recruiter_intelligence_requirements"
+    },
+    {
+      "version": "20270309090000",
+      "name": "sp_evidence_upload_recovery"
     }
   ]
 }
