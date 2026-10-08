@@ -1,0 +1,103 @@
+{
+  "kind": "synthetic_draft2_source_contract_receipt",
+  "baseHead": "9040f73cc26ce940090a037f69bd79c4d5791d36",
+  "contractVersion": "recruiter-ai-v0.3-draft2",
+  "scope": "Declarative candidate_supplement type support in hard-disabled offline contract; no source adapter or product requirement engine/permission/migration changes.",
+  "executed": {
+    "tests": 78,
+    "bunExpect": 205,
+    "previous73Retained": true,
+    "newTests": 5,
+    "oldSourceNegative": {
+      "pass": 0,
+      "fail": 5,
+      "filteredPrevious": 73,
+      "oldHead": "9040f73cc26ce940090a037f69bd79c4d5791d36",
+      "oldContractSha256": "d4638f0d9ad19ff59212462f8b26580922c4d35c55430c7e049515ae035feb66"
+    },
+    "facitCases": 9,
+    "mismatches": 0,
+    "appTypecheckExit": 0,
+    "scriptsTypecheckExit": 0,
+    "scopedLintExit": 0,
+    "finalFormatExit": 0,
+    "diffcheckExit": 0,
+    "oldAiGateExit": 0
+  },
+  "sideEffects": {
+    "fixtureCalls": 1,
+    "modelRequests": 0,
+    "persistentWrites": 0,
+    "statusChanges": 0,
+    "messages": 0,
+    "finalisedReports": 0
+  },
+  "observations": [
+    {
+      "attempt": "first local scoped lint/format",
+      "result": "FAIL",
+      "reason": "multiline acceptedOrigins required formatting; final unchanged semantic content passes scoped lint and format"
+    },
+    {
+      "attempt": "first package-script AI gate",
+      "result": "HARNESS_PATH_FAILURE",
+      "reason": "package command could not find bun on inherited PATH; final configured Bun PATH passes"
+    }
+  ],
+  "sources": [
+    {
+      "path": "src/lib/recruitment/ai/contract.ts",
+      "sha256": "bb6f652b0f10861d9d8768ab6b096276c5d2dd76d659dbaaf6d5db289fdd863f"
+    },
+    {
+      "path": "scripts/recruiter-ai-contract.test.ts",
+      "sha256": "e72cd2f02b85951de10cca6bd8ab3860af142db34a49802b550f34cb5641bc53"
+    }
+  ],
+  "byteUnchangedFromBase": [
+    {
+      "path": "src/lib/recruitment/ai/recruiter-ai.functions.ts",
+      "sha256": "922a4cb03a6c7689df88ce5df76564a94d8a9e4261aa95b27946d2ce8466645b"
+    },
+    {
+      "path": "src/lib/recruitment/ai/synthetic-sandbox.server.ts",
+      "sha256": "5ed617a76cbb2eabede232f95d50bce857f86a285b316b90b4c9075e2c3e10f3"
+    },
+    {
+      "path": "scripts/fixtures/recruiter-ai-synthetic.ts",
+      "sha256": "9d28393bd44e074abe80ae67b89d3f99f1f862226a0c7aafa5fcc419d3932d2b"
+    }
+  ],
+  "logs": [
+    {
+      "kind": "positive",
+      "localPath": "/private/tmp/ri-p4-draft2-contract-tests.log",
+      "sha256": "48050d4cea402a3084d26d387917ad811226df97bc14019d572e22667e6ea1a7"
+    },
+    {
+      "kind": "oldNegative",
+      "localPath": "/private/tmp/ri-p4-draft2-old-negative.log",
+      "sha256": "5c5afbaef5092e2085b47d09e9a74e08a4a445c39c2b61d5973f49168888043f"
+    },
+    {
+      "kind": "gateFinal",
+      "localPath": "/private/tmp/ri-p4-draft2-ai-gate-final.log",
+      "sha256": "3547d400c5e5dc2fb1c1912d7a804d5419c1064aca044f0cc107539d8994bba4"
+    },
+    {
+      "kind": "firstGatePathFailure",
+      "localPath": "/private/tmp/ri-p4-draft2-ai-gate.log",
+      "sha256": "5236afcaaf10ebe953105277a01820f00135559475c549850dc6342408ab62ba"
+    }
+  ],
+  "evaluationSha256": "bb5f6a56052935c6d43b042ececd3706b9eb4b9da6af79debed6b056ca8cbcdc",
+  "notExecuted": [
+    "new exact-head CI",
+    "actual Auth/API/RLS/Storage supplement integration",
+    "provider/model",
+    "durable clustered accounting",
+    "production writes",
+    "activation",
+    "publication"
+  ]
+}

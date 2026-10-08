@@ -2,7 +2,7 @@ import { z } from "zod";
 import { POLICY_SELF_TEST_VOCABULARIES } from "../../interview-intelligence/ai/policy";
 import { screenPassages } from "../../interview-intelligence/ai/injection";
 
-export const RECRUITER_AI_CONTRACT_VERSION = "recruiter-ai-v0.3-draft1";
+export const RECRUITER_AI_CONTRACT_VERSION = "recruiter-ai-v0.3-draft2";
 export const RECRUITER_AI_TASKS = [
   "source_summary",
   "criterion_linking",
@@ -47,6 +47,15 @@ export const RECRUITER_AI_ENTRY_DRAFT = Object.freeze([
 const uuid = z.string().uuid();
 const hash = z.string().regex(/^[a-f0-9]{64}$/);
 const version = z.string().trim().min(1).max(128);
+// Declarative draft support only. A future trusted adapter must still read the
+// profile's actual accepted kinds and current sharing/withdrawal permissions.
+const sourceOrigin = z.enum([
+  "application_answer",
+  "application_cv",
+  "interview_source",
+  "external_reference",
+  "candidate_supplement",
+]);
 export const recruiterAiContextSchema = z
   .object({
     employerId: uuid,
@@ -80,17 +89,7 @@ export const recruiterAiContextSchema = z
                 id: uuid,
                 kind: z.enum(["mandatory", "desirable"]),
                 label: z.string().min(1).max(500),
-                acceptedOrigins: z
-                  .array(
-                    z.enum([
-                      "application_answer",
-                      "application_cv",
-                      "interview_source",
-                      "external_reference",
-                    ]),
-                  )
-                  .min(1)
-                  .max(4),
+                acceptedOrigins: z.array(sourceOrigin).min(1).max(5),
               })
               .strict(),
           )
@@ -119,12 +118,7 @@ export const recruiterAiContextSchema = z
             passageHash: hash,
             employerId: uuid,
             applicationId: uuid,
-            origin: z.enum([
-              "application_answer",
-              "application_cv",
-              "interview_source",
-              "external_reference",
-            ]),
+            origin: sourceOrigin,
             text: z.string().min(1).max(20_000),
             readable: z.boolean(),
             withdrawn: z.boolean(),

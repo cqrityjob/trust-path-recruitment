@@ -56,6 +56,114 @@ function reject(
   });
 }
 
+describe("draft2 requirement-bound candidate supplement contract", () => {
+  const supplementContext = () => {
+    const c = syntheticContext("Kandidatens kompletterande uppgift behöver mänsklig kontroll.");
+    c.passages[0].origin = "candidate_supplement";
+    c.profile.requirements[0].acceptedOrigins = ["candidate_supplement"];
+    return c;
+  };
+  test("new schema version rejects draft1 context and output without opening runtime", () => {
+    const c = supplementContext();
+    expect(RECRUITER_AI_CONTRACT_VERSION).toBe("recruiter-ai-v0.3-draft2");
+    expect(
+      authoritativeContext(
+        { ...c, pins: { ...c.pins, schemaVersion: "recruiter-ai-v0.3-draft1" } },
+        syntheticRequest(),
+      ),
+    ).toBeNull();
+    const out = syntheticOutput(c);
+    expect(
+      validateRecruiterAiProposal(
+        { ...out, contractVersion: "recruiter-ai-v0.3-draft1" },
+        syntheticRequest(),
+        c,
+      ),
+    ).toEqual({ ok: false, reason: "schema_invalid" });
+    for (const task of RECRUITER_AI_TASKS)
+      expect(() => requireRecruiterAiDisabled(task)).toThrow("RECRUITER_AI_V03_DISABLED");
+  });
+  test("all five declared origins are valid only inside the confirmed profile scope", () => {
+    const c = supplementContext();
+    c.profile.requirements[0].acceptedOrigins = [
+      "application_answer",
+      "application_cv",
+      "interview_source",
+      "external_reference",
+      "candidate_supplement",
+    ];
+    expect(authoritativeContext(c, syntheticRequest())).not.toBeNull();
+    expect(
+      authoritativeContext(
+        { ...c, passages: [{ ...c.passages[0], origin: "ai_suggestion" }] },
+        syntheticRequest(),
+      ),
+    ).toBeNull();
+    expect(
+      authoritativeContext(
+        {
+          ...c,
+          profile: {
+            ...c.profile,
+            requirements: [{ ...c.profile.requirements[0], acceptedOrigins: ["unapproved"] }],
+          },
+        },
+        syntheticRequest(),
+      ),
+    ).toBeNull();
+  });
+  test("accepted supplement produces an unreviewed link; an unaccepted origin never links", () => {
+    const c = supplementContext();
+    const task = "criterion_linking";
+    const out = syntheticOutput(c, task);
+    const result = validateRecruiterAiProposal(out, syntheticRequest(11, task), c);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.proposal.humanReviewRequired).toBe(true);
+      expect(result.proposal.reviewState).toBe("unreviewed");
+      expect(result.semanticSupport).toBe("requires_human_review");
+    }
+    c.profile.requirements[0].acceptedOrigins = ["application_cv"];
+    expect(validateRecruiterAiProposal(out, syntheticRequest(11, task), c)).toEqual({
+      ok: false,
+      reason: "criterion_invalid",
+    });
+  });
+  for (const change of ["withdraw", "replace"] as const)
+    test(`supplement ${change} during computation rejects late output and never writes status`, async () => {
+      const c = supplementContext();
+      expect(authoritativeContext(c, syntheticRequest(80, "criterion_linking"))).not.toBeNull();
+      let current = copy(c);
+      const computing = deferred<void>();
+      const started = deferred<void>();
+      const sandbox = new SyntheticRecruiterAiSandbox();
+      const task = "criterion_linking";
+      const result = sandbox.exercise({
+        mode: "synthetic_evaluation",
+        request: syntheticRequest(80, task),
+        snapshot: c,
+        reservedUnits: 10,
+        readCurrent: async () => copy(current),
+        fixture: async () => {
+          started.resolve();
+          await computing.promise;
+          return { output: syntheticOutput(c, task), usedUnits: 4 };
+        },
+      });
+      await started.promise;
+      current = copy(c);
+      if (change === "withdraw") current.passages[0].withdrawn = true;
+      else current.passages[0].sourceVersion = "replacement-v2";
+      computing.resolve();
+      expect(await result).toEqual({ status: "rejected", reason: "stale_context" });
+      expect(sandbox.instrumentation.modelRequests).toBe(0);
+      expect(sandbox.instrumentation.persistentWrites).toBe(0);
+      expect(sandbox.instrumentation.statusChanges).toBe(0);
+      expect(sandbox.instrumentation.messages).toBe(0);
+      expect(sandbox.instrumentation.finalisedReports).toBe(0);
+    });
+});
+
 describe("separate P4 disabled task and provenance contracts", () => {
   test("all four features remain closed and ready entry copy explicitly draft", () => {
     expect(Object.values(RECRUITER_AI_FEATURES)).toEqual([false, false, false, false]);

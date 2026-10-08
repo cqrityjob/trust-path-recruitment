@@ -1,4 +1,8 @@
-# Recruiter Intelligence v0.3: avstängt P4-kontrakt, draft 1
+# Recruiter Intelligence v0.3: avstängt P4-kontrakt, draft 2
+
+Aktuell granskningsversion är `recruiter-ai-v0.3-draft2`. Den kompletterar
+draft 1 med deklarativt stöd för kravbundna kandidatkompletteringar. Äldre
+daterade observationer och testkvitton nedan bevarar sina ursprungliga versioner.
 
 Observation 2026-10-08. Main-bas: `8c9b3138bcb801ac69aa44b14e9cb592da5ea50a`. Kontraktsversion: `recruiter-ai-v0.3-draft1`.
 
@@ -106,6 +110,36 @@ separata tidsgränser; ingen total leverantörs-/API-latensgaranti provas.
 Inga provider-, databas-, status-, meddelande- eller rapportadapters har
 kopplats in, och ingen tjänst, riktig Auth, browser, hosted installation,
 publicering eller aktivering ingår i dessa nya prov.
+
+## Kravbunden komplettering i draft 2, 2026-10-09
+
+Integrationsgranskningen fann att draft 1:s två origin-enum och gräns på fyra
+accepterade källslag inte kunde beskriva `candidate_supplement`. Draft 2 har
+en gemensam strikt enum med fem källslag och en ny schema-/kontraktsversion.
+Äldre draft 1-context och utdata avvisas; inget tidigare kvitto omstämplas.
+Kandidatkomplettering får bara citeras mot ett krav som uttryckligen accepterar
+detta källslag, med samma aktuella scope, källversion, hash, läsrätt och
+återkallningskontroller. En kriteriekoppling är fortfarande ett ogranskat
+förslag och intygar inte att ett skallkrav är uppfyllt.
+
+Detta är en deklarativ utökning av det avstängda kontraktet. Ingen verklig
+underlagsadapter, kravmotor, kandidatdelning, migration eller behörighet
+ändras. Fyra runtimehandlers är byteidentiska med tidigare head och nekar
+ovillkorligen före dessa operationer. En framtida betrodd adapter måste läsa
+den faktiska kravprofilens accepterade källslag och aktuella delning från
+servern; en tillåten enum skapar inget sådant medgivande.
+
+[Nytt versionskvitto](evidence/2026-10-09-p4-supplement-contract/verification.json):
+78 prov/205 assertions PASS, inklusive alla tidigare 73. Fem tillkommande
+prov täcker versionsvägran, fem tillåtna källslag/okända och AI-origins,
+accepterad respektive ej accepterad komplettering samt återkallning och
+källbyte under beräkning utan utdata eller statusbiverkning. De fem nya
+proven gav fem FAIL mot frysta äldre `9040f73c`; de tidigare 73 var medvetet
+filtrerade enbart i detta negativa prov. Nio offlinefacit utan avvikelse,
+app-/scripts-typer, riktad lint/format och de 35 äldre AI-grindarna PASS.
+Första lokala format- respektive PATH-fel bevaras separat från slututfallet.
+Ny full CI på nästa publicerade slut-SHA återstår. Inget faktiskt
+Auth/API/RLS/Storage-, modell-, hosted- eller aktiveringsprov följer av detta.
 
 ## Kvar före eventuell aktivering
 
