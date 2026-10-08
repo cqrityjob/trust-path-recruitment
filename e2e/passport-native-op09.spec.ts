@@ -19,9 +19,42 @@ import {
 
 const context = readContext();
 const temp = path.join(context.stackRoot, "supabase/.temp");
-const status = validateStatus(readPrivateJson(path.join(temp, "status.json")));
+const rawStatus = readPrivateJson(path.join(temp, "status.json"));
+if (
+  typeof rawStatus !== "object" ||
+  rawStatus === null ||
+  !("API_URL" in rawStatus) ||
+  typeof rawStatus.API_URL !== "string" ||
+  !("DB_URL" in rawStatus) ||
+  typeof rawStatus.DB_URL !== "string" ||
+  !("ANON_KEY" in rawStatus) ||
+  typeof rawStatus.ANON_KEY !== "string" ||
+  !("SERVICE_ROLE_KEY" in rawStatus) ||
+  typeof rawStatus.SERVICE_ROLE_KEY !== "string"
+)
+  throw Error("OP09_NATIVE_BROWSER_PRIVATE_STATUS_REQUIRED");
+const status = validateStatus({
+  API_URL: rawStatus.API_URL,
+  DB_URL: rawStatus.DB_URL,
+  ANON_KEY: rawStatus.ANON_KEY,
+  SERVICE_ROLE_KEY: rawStatus.SERVICE_ROLE_KEY,
+});
 const actors = readPrivateJson(path.join(temp, "actors.json"));
-const owner = actors.C1;
+if (typeof actors !== "object" || actors === null || !("C1" in actors))
+  throw Error("OP09_NATIVE_BROWSER_PRIVATE_OWNER_REQUIRED");
+const rawOwner = actors.C1;
+if (
+  typeof rawOwner !== "object" ||
+  rawOwner === null ||
+  !("id" in rawOwner) ||
+  typeof rawOwner.id !== "string" ||
+  !("email" in rawOwner) ||
+  typeof rawOwner.email !== "string" ||
+  !("password" in rawOwner) ||
+  typeof rawOwner.password !== "string"
+)
+  throw Error("OP09_NATIVE_BROWSER_PRIVATE_OWNER_REQUIRED");
+const owner = { id: rawOwner.id, email: rawOwner.email, password: rawOwner.password };
 if (process.env.E2E_BASE_URL !== APP || !validUuid(owner.id) || !owner.email.endsWith(".invalid"))
   throw Error("OP09_NATIVE_BROWSER_TARGET_REFUSED");
 test.use({ actionTimeout: 30_000 });
@@ -56,6 +89,7 @@ function write(name: string, value: unknown) {
 function record(value: unknown) {
   const file = path.join(temp, "browser-journeys.json");
   const rows = fs.existsSync(file) ? readPrivateJson(file) : [];
+  if (!Array.isArray(rows)) throw Error("OP09_NATIVE_BROWSER_PRIVATE_JOURNEYS_REQUIRED");
   rows.push(value);
   write("browser-journeys.json", rows);
 }
@@ -207,6 +241,13 @@ for (const scenario of scenarios)
       expect(good(await journal(cleanedId), "FENCED_INTENT").status).toBe("cleanup_pending");
       expect(await bytes(cleanedId)).toEqual(PDF_BYTES);
       const fault = readPrivateJson(path.join(temp, "cleanup-fault.json"));
+      if (
+        typeof fault !== "object" ||
+        fault === null ||
+        !("injected" in fault) ||
+        !("armed" in fault)
+      )
+        throw Error("OP09_NATIVE_BROWSER_PRIVATE_FAULT_REQUIRED");
       expect(fault.injected).toBe(1);
       expect(fault.armed).toBe(false);
       checks.push("one_exact_own_delete503_leaves_durable_fence_and_bytes");
@@ -221,7 +262,14 @@ for (const scenario of scenarios)
       await expect(page.locator("#sp-evidence-file")).toBeDisabled();
       expect(good(await journal(cleanedId), "RELOADED_FENCE").status).toBe("cleanup_pending");
       expect(await bytes(cleanedId)).toEqual(PDF_BYTES);
-      expect(readPrivateJson(path.join(temp, "cleanup-fault.json")).injected).toBe(1);
+      const reloadedFault = readPrivateJson(path.join(temp, "cleanup-fault.json"));
+      if (
+        typeof reloadedFault !== "object" ||
+        reloadedFault === null ||
+        !("injected" in reloadedFault)
+      )
+        throw Error("OP09_NATIVE_BROWSER_PRIVATE_FAULT_REQUIRED");
+      expect(reloadedFault.injected).toBe(1);
       checks.push("reload_keeps_fence_without_rearming_or_implicit_delete");
       await page.screenshot({
         path: path.join(curated, `${scenario.lang}-${scenario.viewport}-fenced.png`),
