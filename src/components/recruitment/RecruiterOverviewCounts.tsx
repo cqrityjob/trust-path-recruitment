@@ -3,6 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useNavigate } from "@tanstack/react-router";
 import { useT } from "@/i18n/context";
 import { listRecruitmentCandidatesPage } from "@/lib/recruitment/recruitment.functions";
+import { compactView } from "@/lib/recruitment/definitions";
 import { RecruiterCounts } from "./RecruiterStatus";
 
 export function RecruiterOverviewCounts({
@@ -69,10 +70,13 @@ export function RecruiterOverviewCounts({
             : "All applications received by the organisation"
         }
         onView={(search) => {
+          // The same short URL the flow strip links to (`?review=remaining`,
+          // the default stage left out), so the two ways into the queue are
+          // one address.
           void navigate({
             to: "/employer/$employerSlug/applications",
             params: { employerSlug },
-            search,
+            search: compactView(search),
           });
         }}
       />

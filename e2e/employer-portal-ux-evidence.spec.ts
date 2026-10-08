@@ -345,7 +345,9 @@ test.describe("employer portal — one journey", () => {
       }
       // The review block: a heading, an explanation and a disclosure.
       const counts = page.locator("[data-testid='recruiter-counts']");
-      await expect(counts.getByRole("heading")).toHaveText(SV["rec.overview.counts.title"]!);
+      await expect(counts.getByRole("heading", { level: 2 })).toHaveText(
+        SV["rec.overview.counts.title"]!,
+      );
       await expect(counts.getByText(SV["rec.overview.counts.intro"]!)).toBeVisible();
       const details = counts.locator("[data-testid='counts-explanation']");
       await details.locator("summary").click();
