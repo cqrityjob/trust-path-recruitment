@@ -552,6 +552,8 @@ async function mount(page: Page, urlPath: string, scenario: Scenario) {
             : SNAPSHOT,
         );
 
+      case "listMyUploadAttempts":
+        return ok(route, []);
       case "listMyVerificationRequests":
         if (scenario.reviewFails) return boom(route, "verification read failed");
         return ok(route, { requests: [], decisions: [] });

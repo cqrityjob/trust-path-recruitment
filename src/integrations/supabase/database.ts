@@ -1,4 +1,4 @@
-import type { Database as GeneratedDatabase } from "./types";
+import type { Database as GeneratedDatabase, Json } from "./types";
 
 // Keep the generator's output untouched. These SQL arguments have no DEFAULT,
 // and their non-STRICT functions deliberately accept NULL. Lovable/Supabase
@@ -6,6 +6,88 @@ import type { Database as GeneratedDatabase } from "./types";
 type Functions = GeneratedDatabase["public"]["Functions"];
 type RequiredNullable<Args, Keys extends keyof Args> = Omit<Args, Keys> & {
   [Key in Keys]-?: Exclude<Args[Key], undefined> | null;
+};
+type UploadAttemptJson =
+  GeneratedDatabase["public"]["Tables"]["scp_interview_reports"]["Row"]["payload"];
+type EvidenceUploadFunctions = {
+  sp_begin_evidence_upload: {
+    Args: {
+      _attempt_id: string;
+      _claim_id: string | null;
+      _period_id: string | null;
+      _file_name: string;
+      _mime_type: string;
+      _size_bytes: number;
+      _sha256: string;
+    };
+    Returns: UploadAttemptJson;
+  };
+  sp_reconcile_evidence_upload: { Args: { _attempt_id: string }; Returns: UploadAttemptJson };
+  sp_list_my_evidence_upload_attempts: {
+    Args: { _claim_id: string | null; _period_id: string | null };
+    Returns: UploadAttemptJson;
+  };
+  sp_authorize_evidence_upload_cleanup: {
+    Args: { _attempt_id: string };
+    Returns: UploadAttemptJson;
+  };
+  sp_confirm_evidence_upload_cleanup: { Args: { _attempt_id: string }; Returns: UploadAttemptJson };
+  sp_evidence_upload_storage_writable: { Args: { _path: string }; Returns: boolean };
+};
+type RecruitmentIntelligenceFunctions = {
+  rec_ri_get_profile: { Args: { _job_id: string }; Returns: Json };
+  rec_ri_get_review: { Args: { _application_id: string }; Returns: Json };
+  rec_ri_confirm_profile: {
+    Args: {
+      _job_id: string;
+      _expected_version: number;
+      _operation_id: string;
+      _start_date: string | null;
+      _rules: Json;
+    };
+    Returns: Json;
+  };
+  rec_ri_save_review: {
+    Args: {
+      _application_id: string;
+      _profile_id: string;
+      _expected_revision: number;
+      _binding_token: string;
+      _operation_id: string;
+      _decisions: Json;
+      _confirm: boolean;
+      _next_action: string | null;
+      _responsible_user_id: string | null;
+      _expected_assignment_version: number | null;
+    };
+    Returns: Json;
+  };
+  rec_ri_manual_reference: { Args: { _application_id: string; _label: string }; Returns: Json };
+  rec_ri_transfer_requirements: {
+    Args: {
+      _application_id: string;
+      _case_id: string;
+      _expected_revision: number;
+      _binding_token: string;
+      _operation_id: string;
+      _requirement_ids: string[];
+    };
+    Returns: Json;
+  };
+  rec_ri_overview_counts: { Args: { _employer_id: string }; Returns: Json };
+  rec_ri_candidate_view: {
+    Args: {
+      _employer_id: string;
+      _job_id: string | null;
+      _filters: Json;
+      _sort: string;
+      _dir: string | null;
+      _page: number;
+      _size: number;
+      _around: string | null;
+    };
+    Returns: Json;
+  };
 };
 type FoundationFunctions = {
   scp_iv_case_frozen_labels: {
@@ -120,9 +202,14 @@ type TableOverrides = {
 };
 export type Database = Omit<GeneratedDatabase, "public"> & {
   public: Omit<GeneratedDatabase["public"], "Functions" | "Tables"> & {
-    Functions: Omit<Functions, keyof Overrides | keyof FoundationFunctions> &
+    Functions: Omit<
+      Functions,
+      keyof Overrides | keyof FoundationFunctions | keyof EvidenceUploadFunctions | keyof RecruitmentIntelligenceFunctions
+    > &
       Overrides &
-      FoundationFunctions;
+      FoundationFunctions &
+      EvidenceUploadFunctions &
+      RecruitmentIntelligenceFunctions;
     Tables: Omit<Tables, keyof TableOverrides> & TableOverrides;
   };
 };

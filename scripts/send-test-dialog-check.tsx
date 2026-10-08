@@ -434,13 +434,120 @@ const panel = code(read("src/components/academy/ApplicationAssessmentPanel.tsx")
 const candidatePage = code(
   read("src/routes/_authenticated.employer.$employerSlug.applications.$applicationId.tsx"),
 );
+const dialog = code(read("src/components/recruitment/SendTestDialog.tsx"));
+// The organisation list delegates to the same paged table as a recruitment.
+// Follow that real path: both row buttons must keep the unresolved-status
+// boundary and row identity, while the shared dialog owns assignment access.
+function applicationsOfferPerRowSendTest(list: string, table: string, dialog: string): boolean {
+  const delegated = list.match(/<CandidateTable\b[\s\S]*?\/>/)?.[0] ?? "";
+  const buttons = [
+    ...table.matchAll(/\{OPEN\.includes\(r\.status\) && \(\s*<button[\s\S]*?<\/button>\s*\)\}/g),
+  ].map((m) => m[0]);
+  const perRow = table.match(/\{sendTestFor && \(\s*<SendTestDialog\b[\s\S]*?\/>/)?.[0] ?? "";
+  const canSend = dialog.match(/const canSend\s*=\s*[\s\S]*?;/)?.[0] ?? "";
+  return (
+    delegated.includes("employerId={props.employerId}") &&
+    delegated.includes("employerSlug={props.employerSlug}") &&
+    delegated.includes("jobId={null}") &&
+    delegated.includes("page={query.data ?? null}") &&
+    delegated.includes('labelKey="applications"') &&
+    table.includes('const OPEN = ["submitted", "reviewing", "interview"];') &&
+    ["send-test", "send-test-mobile"].every((id) =>
+      buttons.some(
+        (button) =>
+          button.includes(`data-testid="${id}"`) &&
+          button.includes("data-application-id={r.applicationId}") &&
+          button.includes("onClick={() => setSendTestFor(r)}"),
+      ),
+    ) &&
+    perRow.includes("employerId={employerId}") &&
+    perRow.includes("applicationId={sendTestFor.applicationId}") &&
+    dialog.includes("const accessFn = useServerFn(getTestAssignmentAccess);") &&
+    dialog.includes("queryFn: () => accessFn({ data: { employerId } })") &&
+    canSend.includes("access.data?.allowed === true &&") &&
+    dialog.includes(
+      'if (!chosen || chosen.state !== "sendable" || !access.data?.allowed || inFlight.current) return;',
+    )
+  );
+}
 ck(
   "the applications list offers it per row, for an unresolved status, with assignment access checked in the shared dialog",
-  /<SendTestDialog/.test(list) &&
-    /isUnresolved\(r\.status\)/.test(list) &&
-    !/canDecideFor\(r\.jobId\) && isUnresolved/.test(list) &&
-    /data-testid="send-test"/.test(list),
+  applicationsOfferPerRowSendTest(list, table, dialog),
 );
+const guardedButtons = [
+  ...table.matchAll(/\{OPEN\.includes\(r\.status\) && \(\s*<button[\s\S]*?<\/button>\s*\)\}/g),
+].map((m) => m[0]);
+const desktopButton = guardedButtons.find((b) => b.includes('data-testid="send-test"')) ?? "";
+const mobileButton = guardedButtons.find((b) => b.includes('data-testid="send-test-mobile"')) ?? "";
+const entryMutations: readonly {
+  name: string;
+  source: "list" | "table" | "dialog";
+  find: string;
+  replace: string;
+}[] = [
+  {
+    name: "removed table delegation",
+    source: "list",
+    find: "<CandidateTable\n",
+    replace: "<RemovedCandidateTable\n",
+  },
+  {
+    name: "wrong employer context",
+    source: "list",
+    find: "<CandidateTable\n        employerId={props.employerId}",
+    replace: "<CandidateTable\n        employerId={props.employerName}",
+  },
+  {
+    name: "desktop resolved-status send",
+    source: "table",
+    find: desktopButton,
+    replace: desktopButton.replace("OPEN.includes(r.status)", "true"),
+  },
+  {
+    name: "mobile resolved-status send",
+    source: "table",
+    find: mobileButton,
+    replace: mobileButton.replace("OPEN.includes(r.status)", "true"),
+  },
+  {
+    name: "wrong row recipient",
+    source: "table",
+    find: "applicationId={sendTestFor.applicationId}",
+    replace: 'applicationId={selectedRows[0]?.applicationId ?? ""}',
+  },
+  {
+    name: "wrong access-read scope",
+    source: "dialog",
+    find: "queryFn: () => accessFn({ data: { employerId } })",
+    replace: 'queryFn: () => accessFn({ data: { employerId: "wrong-employer" } })',
+  },
+  {
+    name: "assignment permission bypass",
+    source: "dialog",
+    find: "    access.data?.allowed === true &&\n",
+    replace: "",
+  },
+  {
+    name: "direct send permission bypass",
+    source: "dialog",
+    find: 'if (!chosen || chosen.state !== "sendable" || !access.data?.allowed || inFlight.current) return;',
+    replace: 'if (!chosen || chosen.state !== "sendable" || inFlight.current) return;',
+  },
+];
+for (const mutation of entryMutations) {
+  const source = { list, table, dialog }[mutation.source];
+  const changed = source.replace(mutation.find, mutation.replace);
+  ck(
+    `entry-point negative control rejects ${mutation.name}`,
+    mutation.find.length > 0 &&
+      source.split(mutation.find).length - 1 === 1 &&
+      !applicationsOfferPerRowSendTest(
+        mutation.source === "list" ? changed : list,
+        mutation.source === "table" ? changed : table,
+        mutation.source === "dialog" ? changed : dialog,
+      ),
+  );
+}
 ck(
   "the recruitment's candidate table offers it in the Test column, per row, without a selection",
   /<SendTestDialog/.test(table) &&

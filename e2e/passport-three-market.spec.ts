@@ -555,6 +555,8 @@ async function mount(
           },
           eventCount: 2,
         });
+      case "listMyUploadAttempts":
+        return ok(route, []);
       case "listMyVerificationRequests":
         return ok(route, { requests: [], decisions: [] });
       // The markets the Passport's BROWSING filter offers. Reading this

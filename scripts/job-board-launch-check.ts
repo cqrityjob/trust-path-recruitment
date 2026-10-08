@@ -36,6 +36,7 @@ import {
 import { checkJobReadiness, publishDateProblems } from "../src/lib/job-intelligence/job-readiness";
 import { isAmbiguousSubmissionFailure } from "../src/lib/job-intelligence/submission-failure";
 import { matchesDefaultListView, matchesPhaseFilter } from "../src/lib/recruitment/definitions";
+import { openApplicationOriginalCv } from "../src/lib/recruitment/requirement-review-draft";
 
 const ROOT = join(import.meta.dir, "..");
 const read = (p: string) => readFileSync(join(ROOT, p), "utf8");
@@ -353,13 +354,64 @@ console.log("the all-applications list and the CV chip");
     "it says which door the CV came through",
     /cvSource: \(r\.cv_source as ApplicationCvSource\) \?\? "upload"/.test(employerList),
   );
-  const chip = code(APPS_LIST);
-  const at = chip.indexOf('r.cvSource === "cqrityjob_cv"');
+  // The organisation route now shares CandidateTable. Its CV marker opens
+  // the application, where the selected original dispatches by source kind.
+  const list = code(APPS_LIST);
+  const table = code("src/components/recruitment/CandidateTable.tsx");
+  const detail = code(
+    "src/routes/_authenticated.employer.$employerSlug.applications.$applicationId.tsx",
+  );
+  const wired =
+    /<CandidateTable\b/.test(list) &&
+    table.includes('to="/employer/$employerSlug/applications/$applicationId"') &&
+    /applicationId: r\.applicationId/.test(table) &&
+    /openApplicationOriginalCv\(\s*\{\s*hasUploadedCv: c\.hasCv,\s*submittedSource: submittedCv\?\.source \?\? null/.test(
+      detail,
+    ) &&
+    /openFile: onDownloadCv/.test(detail) &&
+    detail.includes('id="candidate-original-cv"');
+  const calls: string[] = [];
+  const actions = {
+    openFile: async () => {
+      calls.push("file");
+    },
+    openSnapshot: async () => {
+      calls.push("snapshot");
+    },
+  };
+  await openApplicationOriginalCv(
+    { hasUploadedCv: false, submittedSource: "cqrityjob_cv" },
+    actions,
+  );
+  let correct = calls.join() === "snapshot";
+  calls.length = 0;
+  await openApplicationOriginalCv({ hasUploadedCv: true, submittedSource: null }, actions);
+  correct = correct && calls.join() === "file";
+  calls.length = 0;
+  let unreadableRefused = false;
+  try {
+    await openApplicationOriginalCv(
+      { hasUploadedCv: false, submittedSource: "cqrityjob_cv" },
+      {
+        ...actions,
+        openSnapshot: async () => {
+          throw new Error("ORIGINAL_CV_UNAVAILABLE");
+        },
+      },
+    );
+  } catch (error) {
+    unreadableRefused = error instanceof Error && error.message === "ORIGINAL_CV_UNAVAILABLE";
+  }
+  correct = correct && unreadableRefused && calls.length === 0;
+  let missingRefused = false;
+  try {
+    await openApplicationOriginalCv({ hasUploadedCv: false, submittedSource: null }, actions);
+  } catch (error) {
+    missingRefused = error instanceof Error && error.message === "ORIGINAL_CV_UNAVAILABLE";
+  }
   ck(
     "a CQrityjob CV opens the application; only a file offers a download",
-    at > 0 &&
-      chip.indexOf("<Link", at) > at &&
-      chip.indexOf("onDownloadCv(r.id)") > chip.indexOf("<Link", at),
+    wired && correct && missingRefused && calls.length === 0,
   );
 }
 

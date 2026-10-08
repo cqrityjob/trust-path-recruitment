@@ -73,6 +73,13 @@ import {
 } from "@/lib/recruitment/recruitment.functions";
 import { formatDay, formatInZone } from "@/lib/recruitment/format";
 import { recruitmentErrorKey } from "@/components/recruitment/errors";
+import {
+  AnalysisStatusBadge,
+  RecruiterCounts,
+  RequirementStatusBadge,
+  ReviewStatusBadge,
+} from "./RecruiterStatus";
+import { requirementLabels, reviewLabels } from "@/lib/recruitment/requirement-presentation";
 
 type Props = {
   employerId: string;
@@ -80,7 +87,7 @@ type Props = {
   employerName: string;
   /** The vacancy this list belongs to: what the candidate page asks the
    *  server about when it wants previous/next in this list. */
-  jobId: string;
+  jobId: string | null;
   jobTitle: string;
   /** The page as the server returned it, or null while loading / failed. */
   page: CandidatePage | null;
@@ -116,7 +123,7 @@ type ItemResult = {
 };
 
 export function CandidateTable(props: Props) {
-  const { employerId, employerSlug, jobId, page, view, onViewChange, team, canManage } = props;
+  const { employerId, employerSlug, jobId, page, view, onViewChange, team } = props;
   const { t, lang } = useT();
   const location = useRouterState({ select: (s) => s.location });
   const listHref = location.href;
@@ -173,16 +180,36 @@ export function CandidateTable(props: Props) {
   // in the words of the filter, and offers everyone.
   const stageValue = view.stage ?? "open";
   const filterActive =
-    stageValue !== "all" || Boolean(view.q) || Boolean(view.owner) || Boolean(view.ans);
+    stageValue !== "all" ||
+    Boolean(view.status) ||
+    Boolean(view.q) ||
+    Boolean(view.owner) ||
+    Boolean(view.ans) ||
+    Boolean(view.requirement) ||
+    Boolean(view.review) ||
+    Boolean(view.analysis) ||
+    Boolean(view.assessment);
   const activeFilterLabel = [
-    stageValue !== "all" ? t(`rec.filter.stage.${stageValue}` as TranslationKey) : null,
+    stageValue === "received"
+      ? lang === "sv"
+        ? "Alla mottagna inklusive arkiv"
+        : "All received including archives"
+      : stageValue !== "all"
+        ? t(`rec.filter.stage.${stageValue}` as TranslationKey)
+        : null,
     view.q ? `"${view.q}"` : null,
     view.owner ? t("rec.filter.owner") : null,
     view.ans ? t("rec.filter.answers") : null,
+    view.requirement ? requirementLabels[lang][view.requirement] : null,
+    view.review ? reviewLabels[lang][view.review] : null,
   ]
     .filter(Boolean)
     .join(", ");
   const selectedRows = rows.filter((r) => selected.has(r.applicationId));
+  const canManage =
+    selectedRows.length > 0
+      ? selectedRows.every((r) => r.canManage ?? props.canManage)
+      : props.canManage || rows.some((r) => r.canManage);
   const allOnPage = rows.length > 0 && rows.every((r) => selected.has(r.applicationId));
   const one = selectedRows.length === 1 ? selectedRows[0] : null;
   const none = selectedRows.length === 0;
@@ -301,6 +328,11 @@ export function CandidateTable(props: Props) {
     (view.q ? 1 : 0) +
     (view.stage && view.stage !== "open" ? 1 : 0) +
     (view.owner ? 1 : 0) +
+    (view.requirement ? 1 : 0) +
+    (view.review ? 1 : 0) +
+    (view.analysis ? 1 : 0) +
+    (view.assessment ? 1 : 0) +
+    (view.status ? 1 : 0) +
     answerFilters.length;
   function setAnswer(questionId: string, v: "" | "y" | "n") {
     const rest = answerFilters.filter((f) => f.questionId !== questionId);
@@ -310,22 +342,27 @@ export function CandidateTable(props: Props) {
   const questionLabel = (q: { promptSv: string | null; promptEn: string | null }) =>
     (lang === "en" ? q.promptEn || q.promptSv : q.promptSv || q.promptEn) ?? "";
   const stageCount = (s: (typeof STAGE_FILTERS)[number]) => {
-    if (!page || s === "archived") return "";
+    // Organisation-wide legacy counts do not describe a retained job filter.
+    if (!page || s === "archived" || (jobId === null && view.job)) return "";
     const c = page.counts;
     const n =
-      s === "all"
-        ? c.total
-        : s === "open"
-          ? c.total - c.decided
-          : s === "decided"
-            ? c.decided
-            : s === "new"
-              ? c.new
-              : s === "review"
-                ? c.review
-                : c.interview;
+      s === "received"
+        ? (page.intelligenceCounts?.received ?? c.total)
+        : s === "all"
+          ? c.total
+          : s === "open"
+            ? c.total - c.decided
+            : s === "decided"
+              ? c.decided
+              : s === "new"
+                ? c.new
+                : s === "review"
+                  ? c.review
+                  : c.interview;
     return ` (${n})`;
   };
+  const hasReceivedApplications =
+    (page?.intelligenceCounts?.received ?? page?.counts.total ?? 0) > 0;
 
   const selectCls =
     "h-9 max-w-[16rem] rounded-md border border-border bg-background px-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
@@ -333,7 +370,22 @@ export function CandidateTable(props: Props) {
     "inline-flex min-h-9 items-center gap-1.5 rounded-md border border-border bg-background px-3 text-sm font-medium text-foreground hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50";
 
   return (
-    <div>
+    <div data-testid="candidate-table">
+      {page?.intelligenceCounts && (
+        <RecruiterCounts
+          counts={page.intelligenceCounts}
+          scopeLabel={
+            jobId === null
+              ? lang === "sv"
+                ? "Organisationens samtliga mottagna ansökningar"
+                : "All applications received by the organisation"
+              : lang === "sv"
+                ? "Rekryteringens samtliga mottagna ansökningar"
+                : "All applications received for this recruitment"
+          }
+          onView={onViewChange}
+        />
+      )}
       {/* ── Filters ─────────────────────────────────────────────────── */}
       <section aria-label={t("rec.filters.aria")} className="flex flex-wrap items-end gap-2">
         <label className="relative min-w-[11rem] flex-1 sm:max-w-xs">
@@ -353,6 +405,7 @@ export function CandidateTable(props: Props) {
         <label className="flex flex-col gap-0.5 text-xs text-muted-foreground">
           {t("rec.table.stage")}
           <select
+            data-testid="stage-filter"
             className={selectCls}
             value={view.stage ?? "open"}
             onChange={(e) =>
@@ -361,10 +414,83 @@ export function CandidateTable(props: Props) {
           >
             {STAGE_FILTERS.map((s) => (
               <option key={s} value={s}>
-                {t(`rec.filter.stage.${s}` as TranslationKey)}
+                {s === "received"
+                  ? lang === "sv"
+                    ? "Alla mottagna inklusive arkiv"
+                    : "All received including archives"
+                  : t(`rec.filter.stage.${s}` as TranslationKey)}
                 {stageCount(s)}
               </option>
             ))}
+          </select>
+        </label>
+        <label className="flex flex-col gap-0.5 text-xs text-muted-foreground">
+          {lang === "sv" ? "Kravstatus" : "Requirement status"}
+          <select
+            data-testid="requirement-filter"
+            className={selectCls}
+            value={view.requirement ?? ""}
+            onChange={(e) =>
+              onViewChange(
+                firstPage({
+                  ...view,
+                  requirement: (e.target.value as CandidateView["requirement"]) || undefined,
+                }),
+              )
+            }
+          >
+            <option value="">
+              {lang === "sv" ? "Alla kravstatusar" : "All requirement statuses"}
+            </option>
+            {(["green", "yellow", "gray", "not_established"] as const).map((status) => (
+              <option key={status} value={status}>
+                {requirementLabels[lang][status]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex flex-col gap-0.5 text-xs text-muted-foreground">
+          {lang === "sv" ? "Mänsklig granskning" : "Human review"}
+          <select
+            data-testid="review-filter"
+            className={selectCls}
+            value={view.review ?? ""}
+            onChange={(e) =>
+              onViewChange(
+                firstPage({
+                  ...view,
+                  review: (e.target.value as CandidateView["review"]) || undefined,
+                }),
+              )
+            }
+          >
+            <option value="">{lang === "sv" ? "Alla granskningar" : "All reviews"}</option>
+            {(["remaining", "reviewed", "pending", "stale"] as const).map((status) => (
+              <option key={status} value={status}>
+                {reviewLabels[lang][status]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex flex-col gap-0.5 text-xs text-muted-foreground">
+          {lang === "sv" ? "Teknisk analys" : "Technical analysis"}
+          <select
+            data-testid="analysis-filter"
+            className={selectCls}
+            value={view.analysis ?? ""}
+            onChange={(e) =>
+              onViewChange(
+                firstPage({
+                  ...view,
+                  analysis: e.target.value === "not_used" ? "not_used" : undefined,
+                }),
+              )
+            }
+          >
+            <option value="">
+              {lang === "sv" ? "Alla analysstatusar" : "All analysis statuses"}
+            </option>
+            <option value="not_used">{lang === "sv" ? "Används inte" : "Not used"}</option>
           </select>
         </label>
         <label className="flex flex-col gap-0.5 text-xs text-muted-foreground">
@@ -409,7 +535,7 @@ export function CandidateTable(props: Props) {
           <span className="flex gap-1">
             <select
               className={selectCls}
-              value={view.sort ?? "applied"}
+              value={view.sort ?? "requirements"}
               onChange={(e) =>
                 onViewChange(
                   firstPage({
@@ -422,7 +548,11 @@ export function CandidateTable(props: Props) {
             >
               {CANDIDATE_SORTS.map((s) => (
                 <option key={s} value={s}>
-                  {t(`rec.sort.${s}` as TranslationKey)}
+                  {s === "requirements"
+                    ? lang === "sv"
+                      ? "Kravgrupp, sedan ansökningsdatum"
+                      : "Requirement group, then application date"
+                    : t(`rec.sort.${s}` as TranslationKey)}
                 </option>
               ))}
             </select>
@@ -574,14 +704,16 @@ export function CandidateTable(props: Props) {
         {!canManage && (
           <span className="text-xs text-muted-foreground">
             {t("rec.batch.restrictedHint")}{" "}
-            <Link
-              to="/employer/$employerSlug/jobs/$jobId"
-              params={{ employerSlug, jobId }}
-              search={{ view: "team" }}
-              className="font-medium text-accent hover:underline"
-            >
-              {t("rec.batch.restrictedTeamLink")}
-            </Link>
+            {(jobId ?? one?.jobId ?? view.job) && (
+              <Link
+                to="/employer/$employerSlug/jobs/$jobId"
+                params={{ employerSlug, jobId: (jobId ?? one?.jobId ?? view.job)! }}
+                search={{ view: "team" }}
+                className="font-medium text-accent hover:underline"
+              >
+                {t("rec.batch.restrictedTeamLink")}
+              </Link>
+            )}
           </span>
         )}
       </div>
@@ -635,13 +767,16 @@ export function CandidateTable(props: Props) {
           </button>
         </div>
       ) : !page || page.total === 0 ? (
-        <div className="mt-4 rounded-lg border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
-          {page && page.counts.total > 0 ? t("rec.table.emptyFiltered") : t("rec.table.emptyNone")}
-          {page && page.counts.total > 0 && (
+        <div
+          data-testid="candidate-empty"
+          className="mt-4 rounded-lg border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground"
+        >
+          {hasReceivedApplications ? t("rec.table.emptyFiltered") : t("rec.table.emptyNone")}
+          {hasReceivedApplications && (
             <div className="mt-3">
               <button
                 type="button"
-                onClick={() => onViewChange({})}
+                onClick={() => onViewChange({ stage: "received" })}
                 className="text-sm font-medium text-accent hover:underline"
               >
                 {t("rec.table.clearFilters")}
@@ -672,6 +807,10 @@ export function CandidateTable(props: Props) {
                   <th className="w-10 px-2 py-1.5 tabular-nums">#</th>
                   <th className="px-2 py-1.5">{t("rec.col.candidate")}</th>
                   <th className="px-2 py-1.5">{t("rec.col.stage")}</th>
+                  <th className="px-2 py-1.5">{lang === "sv" ? "Kravstatus" : "Requirements"}</th>
+                  <th className="px-2 py-1.5">
+                    {lang === "sv" ? "Granskning / analys" : "Review / analysis"}
+                  </th>
                   <th className="px-2 py-1.5">{t("rec.col.applied")}</th>
                   <th className="px-2 py-1.5">{t("rec.col.responsible")}</th>
                   {questions.slice(0, 3).map((q) => (
@@ -690,6 +829,7 @@ export function CandidateTable(props: Props) {
                 {rows.map((r, i) => (
                   <tr
                     key={r.applicationId}
+                    data-application-id={r.applicationId}
                     className={selected.has(r.applicationId) ? "bg-accent/5" : "hover:bg-muted/20"}
                   >
                     <td className="px-2 py-1.5 align-middle">
@@ -721,6 +861,9 @@ export function CandidateTable(props: Props) {
                       >
                         {nameOf(r)}
                       </Link>
+                      {jobId === null && (
+                        <p className="mt-1 text-xs text-muted-foreground">{r.jobTitle}</p>
+                      )}
                       {!r.firstViewedAt && r.status === "submitted" && (
                         <span className="ml-2 inline-flex items-center gap-1 text-xs font-medium text-sky-800 dark:text-sky-200">
                           <span
@@ -738,6 +881,15 @@ export function CandidateTable(props: Props) {
                     </td>
                     <td className="px-2 py-1.5 align-middle">
                       <StageBadge status={r.status} />
+                    </td>
+                    <td className="px-2 py-1.5 align-middle">
+                      <RequirementStatusBadge status={r.requirementStatus ?? "not_established"} />
+                    </td>
+                    <td className="px-2 py-1.5 align-middle">
+                      <ReviewStatusBadge status={r.reviewState ?? "pending"} />
+                      <div className="mt-1">
+                        <AnalysisStatusBadge />
+                      </div>
                     </td>
                     <td className="px-2 py-1.5 align-middle tabular-nums text-muted-foreground">
                       {formatDay(r.appliedAt, lang)}
@@ -775,6 +927,7 @@ export function CandidateTable(props: Props) {
                     </td>
                     <td className="px-2 py-1.5 align-middle">
                       <NextActivity row={r} lang={lang} />
+                      {r.nextAction && <p className="mt-1 text-xs">{r.nextAction}</p>}
                     </td>
                   </tr>
                 ))}
@@ -787,6 +940,7 @@ export function CandidateTable(props: Props) {
             {rows.map((r) => (
               <li
                 key={r.applicationId}
+                data-application-id={r.applicationId}
                 className="rounded-lg border border-border bg-background p-3"
               >
                 <div className="flex items-start gap-3">
@@ -814,8 +968,14 @@ export function CandidateTable(props: Props) {
                     >
                       {nameOf(r)}
                     </Link>
+                    {jobId === null && (
+                      <p className="mt-1 text-xs text-muted-foreground">{r.jobTitle}</p>
+                    )}
                     <div className="mt-1.5 flex flex-wrap items-center gap-2">
                       <StageBadge status={r.status} />
+                      <RequirementStatusBadge status={r.requirementStatus ?? "not_established"} />
+                      <ReviewStatusBadge status={r.reviewState ?? "pending"} />
+                      <AnalysisStatusBadge />
                       <span className="text-xs text-muted-foreground">
                         {formatDay(r.appliedAt, lang)}
                       </span>
@@ -833,6 +993,7 @@ export function CandidateTable(props: Props) {
                     </div>
                     <div className="mt-1">
                       <NextActivity row={r} lang={lang} />
+                      {r.nextAction && <p className="mt-1 text-xs">{r.nextAction}</p>}
                     </div>
                     {OPEN.includes(r.status) && (
                       <button
@@ -865,18 +1026,21 @@ export function CandidateTable(props: Props) {
                 <>
                   {" – "}
                   {t("rec.pager.filter").replace("{filter}", activeFilterLabel)}
-                  {page.counts.total !== page.total && (
-                    <>
-                      {" · "}
-                      <button
-                        type="button"
-                        className="font-medium text-accent hover:underline"
-                        onClick={() => onViewChange(firstPage({ stage: "all" }))}
-                      >
-                        {t("rec.pager.showAll").replace("{all}", String(page.counts.total))}
-                      </button>
-                    </>
-                  )}
+                  {view.stage !== "received" &&
+                    view.stage !== "archived" &&
+                    page.counts.total !== page.total && (
+                      <>
+                        {" · "}
+                        <button
+                          data-testid="active-population-reset"
+                          type="button"
+                          className="font-medium text-accent hover:underline"
+                          onClick={() => onViewChange(firstPage({ stage: "all" }))}
+                        >
+                          {t("rec.pager.showAll").replace("{all}", String(page.counts.total))}
+                        </button>
+                      </>
+                    )}
                 </>
               )}
             </p>
@@ -935,7 +1099,7 @@ export function CandidateTable(props: Props) {
           recipients={selectedRows.map((r) => ({
             applicationId: r.applicationId,
             name: r.name,
-            jobTitle: props.jobTitle,
+            jobTitle: r.jobTitle ?? props.jobTitle,
           }))}
           onClose={(sent) => {
             setMessaging(false);
@@ -966,7 +1130,7 @@ export function CandidateTable(props: Props) {
           employerSlug={employerSlug}
           applicationId={sendTestFor.applicationId}
           candidateName={sendTestFor.name}
-          jobTitle={props.jobTitle}
+          jobTitle={sendTestFor.jobTitle ?? props.jobTitle}
           onClose={(sent) => {
             setSendTestFor(null);
             if (sent) props.onChanged();
