@@ -13,8 +13,8 @@
   ],
   "source": "Supabase connector read-only SQL, explicit project wrygicdfxwjnrugduxnt",
   "projectRef": "wrygicdfxwjnrugduxnt",
-  "readAt": "2026-10-08T07:36:11.990468+00:00",
-  "readBy": "Read-only verification 2026-10-08 after #450 merge c1d154420c4477c56f1fbeeecf7933e0171bf5e1 and official integration. Prior383 identities unchanged;384 ledger.20 function bodies/ACLs,5 private tables,94 triggers,13 constraints equal isolated PostgreSQL17.20 observed_now snapshots,0 operator acknowledgements,0 reports unchanged. See docs/release/2026-10-08-interview-content-snapshot-hosted-verification.json. Application release held pending separately discovered PostgREST14 CAS retry/lock-order fix.",
+  "readAt": "2026-10-08T09:59:39.750315+00:00",
+  "readBy": "Read-only verification2026-10-08 after#455 normal merge3c1d950593329c390cf209931b27da04d3034410 and official integration:385ledger,prior384identities unchanged;12function definitions/defaults/owner/ACL/config equal exact-head PG17/PostgREST14 replay.20snapshot governance unchanged,19bodyMD5 unchanged and acknowledge new full definition matches.20snapshots14locks0ACK0reports and caseStates unchanged. Actual native Auth/Storage/browser and publication gates remain separate. See docs/release/2026-10-08-recruiter-domain-conflict-hosted-verification.json.",
   "versions": [
     {
       "version": "20260716153446",
@@ -1551,6 +1551,10 @@
     {
       "name": "interview_content_snapshot_lock",
       "version": "20270307090000"
+    },
+    {
+      "name": "recruiter_domain_conflict_transport",
+      "version": "20270307100000"
     }
   ]
 }
