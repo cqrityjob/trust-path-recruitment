@@ -2,14 +2,21 @@
 
 Run against a **disposable PostgreSQL instance on loopback**, with installed
 `psql`, Node, Bun, Chromium for Playwright and either executable
-`POSTGREST_BIN` or Docker. The runner replays every migration strictly, then
+`POSTGREST_BIN` or Docker. Docker defaults to `postgrest/postgrest:v14.15`,
+the version used by the real local Supabase stack. An explicit
+`RI_P1_POSTGREST_IMAGE` override is for a separate version comparison;
+measured PostgreSQL/PostgREST versions are recorded in public version logs
+and the manifest rather than inferred from the requested tag. The runner replays every migration strictly, then
 uses `supabase/tests/recruiter_intelligence_p1_test.sql` with
 `RI_P1_KEEP_FIXTURE=1` as the only authority for the 100-case baseline.
 It does not depend on `db-test.sh`'s destructive historical rollback chain.
 
 For the schema-first CI job, append **`--api-only`**. This runs the same target
-guard, strict migration replay, actual SQL oracle and 15 HTTP assertions,
-including concurrent assignment/review CAS, then exits 0 if those pass. It
+guard, strict migration replay, actual SQL oracle and 23 HTTP assertions,
+including concurrent assignment/review CAS and precise PT409/HTTP409 refusals
+for stale profiles, source bindings, selected originals, assignments and
+PEACE handoff. Each request is bounded at eight seconds so a domain retry
+loop fails the proof. Then it exits 0 if those pass. It
 creates/resets only its seed/API databases and starts only its API gateway
 and PostgREST. It never starts the application or browser. Manifest stages
 `runtime` and `browser` are `intentionally_not_run`, never passed. It requires

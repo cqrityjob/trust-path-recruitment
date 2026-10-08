@@ -6,6 +6,14 @@ import { tmpdir } from "node:os";
 
 const runner = "scripts/local-stack/run-ri-p1-evidence.sh";
 describe("P1 disposable evidence target guards", () => {
+  test("mandatory API proof defaults to deployed PostgREST14.15 and bounds each RPC attempt", () => {
+    const source = readFileSync(runner, "utf8");
+    const api = readFileSync("scripts/recruiter-intelligence-p1-api-check.mjs", "utf8");
+    expect(source).toContain("${RI_P1_POSTGREST_IMAGE:-postgrest/postgrest:v14.15}");
+    expect(api).toContain("AbortSignal.timeout(8000)");
+    expect(api).toContain("assert.equal(result.status, 409");
+    expect(api).toContain('assert.equal(result.body.code, "PT409")');
+  });
   for (const args of [[], ["--api-only"]])
     for (const [name, env, message] of [
       [

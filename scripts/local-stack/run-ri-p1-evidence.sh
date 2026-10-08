@@ -26,6 +26,7 @@ DATABASES=(ri_p1_seed_ci_test ri_p1_browser_ci_test ri_p1_api_ci_test)
 REPORT="${RI_P1_REPORT_DIR:-/tmp/cqrity-ri-p1-evidence-$$}"
 [ ! -d "$REPORT" ] || [ -z "$(ls -A "$REPORT")" ] || fail "report directory must be fresh; old images must not be attributed to this run"
 mkdir -p "$REPORT/private" "$REPORT/images"
+psql -tAq -d postgres -c "SHOW server_version;" > "$REPORT/postgres-version.log"
 stage() { printf '%s %s\n' "$1" "$2" >> "$REPORT/stages.log"; }
 AUTH_PASSWORD="${RI_P1_AUTHENTICATOR_PASSWORD:-localp1authenticator}"
 [[ "$AUTH_PASSWORD" =~ ^[A-Za-z0-9_-]+$ ]] || fail "synthetic authenticator password contains unsupported characters"
@@ -94,6 +95,7 @@ jwt-secret = "${LOCAL_JWT_SECRET}"
 server-host = "127.0.0.1"
 server-port = ${port}
 CONF
+  "$POSTGREST_BIN" --version > "$REPORT/$label-postgrest-version.log"
   "$POSTGREST_BIN" "$REPORT/private/$label.conf" > "$REPORT/private/$label.log" 2>&1 &
   PIDS+=("$!")
  else
@@ -105,8 +107,9 @@ CONF
    -e "PGRST_DB_URI=postgresql://authenticator:${AUTH_PASSWORD}@host.docker.internal:${PGPORT}/${db}" \
    -e PGRST_DB_SCHEMAS=public -e PGRST_DB_ANON_ROLE=anon -e 'PGRST_DB_EXTRA_SEARCH_PATH=public, extensions' \
    -e "PGRST_JWT_SECRET=$LOCAL_JWT_SECRET" -e PGRST_SERVER_HOST='*' -e PGRST_SERVER_PORT=3000 \
-   "${RI_P1_POSTGREST_IMAGE:-public.ecr.aws/supabase/postgrest:v16.2}" > "$REPORT/private/$label-container.log"
+   "${RI_P1_POSTGREST_IMAGE:-postgrest/postgrest:v14.15}" > "$REPORT/private/$label-container.log"
   CONTAINERS+=("$name")
+  docker exec "$name" /bin/postgrest --version > "$REPORT/$label-postgrest-version.log"
  fi
 }
 start_gateway() {
