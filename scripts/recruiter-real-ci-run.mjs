@@ -29,7 +29,8 @@ fs.chmodSync(temp, 0o700);
 const report = {
   schemaVersion: "recruiter-real-ci-v1",
   startedAt: new Date().toISOString(),
-  schemaSha: process.env.RI_REAL_SCHEMA_SHA,
+  releaseSchemaSha: context.releaseSchemaSha,
+  evidenceCodeSha: context.evidenceCodeSha,
   appSha: APP_SHA,
   project: PROJECT,
   apiOrigin: API,
@@ -218,8 +219,12 @@ try {
       throw Error("REAL_CI_CLI_VERSION_MISMATCH");
     fs.writeFileSync(path.join(context.stackRoot, "supabase/config.toml"), CONFIG);
     stackStarted = true;
-    run("supabase", ["start", "--workdir", context.stackRoot, "--exclude", EXCLUDED], "cli-start");
-    const raw = output("supabase", ["status", "--workdir", context.stackRoot, "-o", "json"]);
+    run("supabase", ["start", "--workdir", context.stackRoot, "--exclude", EXCLUDED], "cli-start", {
+      cwd: context.stackRoot,
+    });
+    const raw = output("supabase", ["status", "--workdir", context.stackRoot, "-o", "json"], {
+      cwd: context.stackRoot,
+    });
     fs.writeFileSync(privateFile("ri-local-status.json"), raw, { mode: 0o600 });
     status = readPrivateStatus(context);
     const pg = sql("SHOW server_version");
@@ -289,6 +294,7 @@ try {
         ...files.map((name) => name.slice(0, 14)),
       ],
       "local-ledger",
+      { cwd: context.stackRoot },
     );
     const ledger = JSON.parse(
       sql(
@@ -520,6 +526,7 @@ try {
           "supabase",
           ["stop", "--workdir", context.stackRoot, "--project-id", PROJECT, "--no-backup"],
           "cli-stop",
+          { cwd: context.stackRoot },
         ),
       );
     } catch {

@@ -58,6 +58,8 @@ export function validateTarget(env, actualSchemaSha, actualAppSha) {
     env.RI_REAL_SCHEMA_SHA !== actualSchemaSha
   )
     throw Error("REAL_CI_SCHEMA_SHA_MISMATCH");
+  const releaseSchemaSha = env.RI_REAL_RELEASE_SCHEMA_SHA ?? actualSchemaSha;
+  if (!/^[a-f0-9]{40}$/.test(releaseSchemaSha)) throw Error("REAL_CI_RELEASE_SCHEMA_SHA_REQUIRED");
   if (actualAppSha !== APP_SHA) throw Error("REAL_CI_UNREVIEWED_APP_HEAD");
   const root = path.resolve(env.GITHUB_WORKSPACE);
   if (env.RI_OPS_STACK_ROOT !== path.join(root, "real-stack"))
@@ -74,7 +76,39 @@ export function validateTarget(env, actualSchemaSha, actualAppSha) {
     appRoot: path.join(root, "app"),
     stackRoot: path.join(root, "real-stack"),
     publicRoot: path.join(root, "real-public"),
+    evidenceCodeSha: actualSchemaSha,
+    releaseSchemaSha,
   };
+}
+
+/** A test-only descendant may add evidence code, but may not alter the
+ * released schema whose exact contents are being witnessed. */
+export function requireReleaseSchemaWitness(root, releaseSchemaSha, evidenceCodeSha) {
+  try {
+    cp.execFileSync("git", ["merge-base", "--is-ancestor", releaseSchemaSha, evidenceCodeSha], {
+      cwd: root,
+      stdio: "ignore",
+    });
+  } catch {
+    throw Error("REAL_CI_RELEASE_SCHEMA_ANCESTOR_REQUIRED");
+  }
+  try {
+    cp.execFileSync(
+      "git",
+      [
+        "diff",
+        "--exit-code",
+        releaseSchemaSha,
+        evidenceCodeSha,
+        "--",
+        "supabase/migrations",
+        "supabase/config.toml",
+      ],
+      { cwd: root, stdio: "ignore" },
+    );
+  } catch {
+    throw Error("REAL_CI_RELEASE_SCHEMA_DIFF_REFUSED");
+  }
 }
 
 export function readCIContext(env = process.env) {
@@ -83,6 +117,7 @@ export function readCIContext(env = process.env) {
   const sha = (cwd) =>
     cp.execFileSync("git", ["rev-parse", "HEAD"], { cwd, encoding: "utf8" }).trim();
   const context = validateTarget(env, sha(root), sha(path.join(root, "app")));
+  requireReleaseSchemaWitness(root, context.releaseSchemaSha, context.evidenceCodeSha);
   for (const cwd of [context.root, context.appRoot]) {
     if (
       cp

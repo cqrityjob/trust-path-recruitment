@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
+import cp from "node:child_process";
 import {
   APP_SHA,
   CONFIG,
@@ -11,6 +12,7 @@ import {
   readPrivateStatus,
   requireCompleteHistory,
   requireBrowserCounts,
+  requireReleaseSchemaWitness,
 } from "./recruiter-real-ci-contract.mjs";
 import { validatePublicReport, writePublicReport } from "./recruiter-real-ci-public.mjs";
 
@@ -43,6 +45,76 @@ describe("official real Supabase CI target", () => {
     expect(() =>
       validateTarget(env, env.RI_REAL_SCHEMA_SHA, "ea43ad734e80347d56957794f56cd483595fce4a"),
     ).toThrow("UNREVIEWED_APP_HEAD");
+  });
+  test("release schema binding is separate from test code and requires a full SHA", () => {
+    const release = "e02226195f99baa13544d1b968ae80ce7fc99974";
+    const context = validateTarget(
+      { ...env, RI_REAL_RELEASE_SCHEMA_SHA: release },
+      env.RI_REAL_SCHEMA_SHA,
+      APP_SHA,
+    );
+    expect(context.releaseSchemaSha).toBe(release);
+    expect(context.evidenceCodeSha).toBe(env.RI_REAL_SCHEMA_SHA);
+    expect(validateTarget(env, env.RI_REAL_SCHEMA_SHA, APP_SHA).releaseSchemaSha).toBe(
+      env.RI_REAL_SCHEMA_SHA,
+    );
+    expect(() =>
+      validateTarget(
+        { ...env, RI_REAL_RELEASE_SCHEMA_SHA: "main" },
+        env.RI_REAL_SCHEMA_SHA,
+        APP_SHA,
+      ),
+    ).toThrow("RELEASE_SCHEMA_SHA_REQUIRED");
+  });
+  test("release witness permits test-only descendants but refuses SQL/config drift and unrelated history", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "real-ci-schema-witness-"));
+    const git = (...args: string[]) =>
+      cp
+        .execFileSync("git", args, {
+          cwd: root,
+          encoding: "utf8",
+          stdio: ["ignore", "pipe", "pipe"],
+        })
+        .trim();
+    try {
+      git("init", "--quiet");
+      git("config", "user.name", "Synthetic CI witness");
+      git("config", "user.email", "witness@fixture.invalid");
+      git("config", "core.hooksPath", path.join(root, "no-hooks"));
+      fs.mkdirSync(path.join(root, "supabase/migrations"), { recursive: true });
+      const migration = path.join(root, "supabase/migrations/20270307100000_fixture.sql");
+      const config = path.join(root, "supabase/config.toml");
+      fs.writeFileSync(migration, "SELECT 1;\n");
+      fs.writeFileSync(config, 'project_id = "synthetic"\n');
+      const commit = (message: string) => {
+        git("add", ".");
+        git("-c", "commit.gpgsign=false", "commit", "--quiet", "-m", message);
+        return git("rev-parse", "HEAD");
+      };
+      const release = commit("synthetic schema");
+      fs.writeFileSync(path.join(root, "test-only.txt"), "evidence code\n");
+      const code = commit("synthetic test only");
+      expect(() => requireReleaseSchemaWitness(root, release, code)).not.toThrow();
+      fs.writeFileSync(migration, "SELECT 2;\n");
+      expect(() =>
+        requireReleaseSchemaWitness(root, release, commit("synthetic SQL drift")),
+      ).toThrow("SCHEMA_DIFF_REFUSED");
+      fs.writeFileSync(migration, "SELECT 1;\n");
+      fs.writeFileSync(config, 'project_id = "changed"\n');
+      expect(() =>
+        requireReleaseSchemaWitness(root, release, commit("synthetic config drift")),
+      ).toThrow("SCHEMA_DIFF_REFUSED");
+      git("checkout", "--quiet", "--orphan", "unrelated-synthetic");
+      const unrelated = commit("synthetic unrelated schema");
+      expect(() => requireReleaseSchemaWitness(root, unrelated, code)).toThrow(
+        "SCHEMA_ANCESTOR_REQUIRED",
+      );
+      expect(() => requireReleaseSchemaWitness(root, "f".repeat(40), code)).toThrow(
+        "SCHEMA_ANCESTOR_REQUIRED",
+      );
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
   });
   test("new stack config keeps exact owned ports, PG17 and side-effect services disabled", () => {
     expect(CONFIG).toContain('project_id = "cqj-ri-real-20261008b"');
@@ -107,6 +179,8 @@ describe("real CI execution and publication cannot silently narrow", () => {
     expect(job["runs-on"]).toBe("ubuntu-latest");
     expect(job.if).toBeUndefined();
     expect(job["continue-on-error"]).toBeUndefined();
+    expect(job.env.RI_REAL_RELEASE_SCHEMA_SHA).toBe("e02226195f99baa13544d1b968ae80ce7fc99974");
+    expect(job.steps[0].with["fetch-depth"]).toBe(0);
     expect(job.steps.every((step: { [key: string]: unknown }) => !step["continue-on-error"])).toBe(
       true,
     );
