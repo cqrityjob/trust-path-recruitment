@@ -1,6 +1,6 @@
 {
-  "capturedFrom": "http://127.0.0.1:35931",
-  "startedAt": "2026-10-08T22:18:38.262Z",
+  "capturedFrom": "http://localhost:3100",
+  "startedAt": "2026-10-09T09:57:42.695Z",
   "shots": [
     {
       "file": "before-overview-sv-1440.png",
@@ -31,6 +31,14 @@
       "note": "requirements in sv at 1440px (chromium)"
     },
     {
+      "file": "before-application-sv-1440.png",
+      "note": "application in sv at 1440px (chromium)"
+    },
+    {
+      "file": "before-closed-sv-1440.png",
+      "note": "closed in sv at 1440px (chromium)"
+    },
+    {
       "file": "before-overview-en-1440.png",
       "note": "overview in en at 1440px (chromium)"
     },
@@ -57,6 +65,14 @@
     {
       "file": "before-requirements-en-1440.png",
       "note": "requirements in en at 1440px (chromium)"
+    },
+    {
+      "file": "before-application-en-1440.png",
+      "note": "application in en at 1440px (chromium)"
+    },
+    {
+      "file": "before-closed-en-1440.png",
+      "note": "closed in en at 1440px (chromium)"
     },
     {
       "file": "before-overview-sv-375.png",
@@ -87,6 +103,14 @@
       "note": "requirements in sv at 375px (mobile-375)"
     },
     {
+      "file": "before-application-sv-375.png",
+      "note": "application in sv at 375px (mobile-375)"
+    },
+    {
+      "file": "before-closed-sv-375.png",
+      "note": "closed in sv at 375px (mobile-375)"
+    },
+    {
       "file": "before-overview-en-375.png",
       "note": "overview in en at 375px (mobile-375)"
     },
@@ -113,6 +137,14 @@
     {
       "file": "before-requirements-en-375.png",
       "note": "requirements in en at 375px (mobile-375)"
+    },
+    {
+      "file": "before-application-en-375.png",
+      "note": "application in en at 375px (mobile-375)"
+    },
+    {
+      "file": "before-closed-en-375.png",
+      "note": "closed in en at 375px (mobile-375)"
     }
   ]
 }
