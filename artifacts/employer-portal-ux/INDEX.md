@@ -44,3 +44,6 @@ omkördes. Detta är lokal syntetisk UI-evidens med stubbade serverfunktioner,
 inte CI-, riktig Auth/API/Storage-, fysisk telefon- eller publicerad runtime-
 evidens. Bilderna visar ingen ny AI-native-/UI-effekt; AI-funktionerna är
 fortfarande avstängda.
+
+Samma par gäller byteidentiskt för schemagrenen #464 (`codex/recruiter-workspace-schema-v03`);
+dess fotograferade UI-sökvägar är oförändrade, så inga bilder, manifest eller `SOURCE.txt` ändras där.

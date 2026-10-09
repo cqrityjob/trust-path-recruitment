@@ -445,8 +445,12 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // the pending expectation; worker, cron and erasure activation remain off.
 // RI v0.3 P0 was installed by the official integration after #447. Read-only
 // ledger, body and privilege parity are recorded in the 2026-10-08 hosted proof.
-// Conflict transport071, requirements080 and upload recovery0909 are verified installed; none is pending.
+// Conflict transport071, requirements080 and upload recovery0909 are verified installed.
+// These two forward corrections remain pending until authorized installation
+// and exact hosted catalog/ledger verification; no earlier identity changes.
 const expectedPending: string[] = [
+  "20270310090000_interview_method_lifecycle_revocation.sql",
+  "20270310100000_recruiter_profile_change_review.sql",
 ];
 
 const hostedIdentities = [

@@ -1,0 +1,37 @@
+{
+  "kind": "ci_failure_observation",
+  "observedAt": "2026-10-08 22:24:07 UTC",
+  "pr": 464,
+  "evidenceSha": "b7a077b78bf4d64a6ab6aa08d470c6be951aaaf8",
+  "mainBase": "55db1e3b83ace033450899a93ca0961edde05217",
+  "result": "FAILED",
+  "scope": "Four observed failed checks; this is not a terminal summary of all jobs and not a replacement for the original job logs.",
+  "failures": [
+    {
+      "jobId": 113566454756,
+      "check": "Employer portal before/after pair",
+      "code": "STALE_BEFORE_SOURCE",
+      "reason": "Before source8c9 differs from current base55db; no fresh photograph was triggered by schema-only paths."
+    },
+    {
+      "jobId": 113566454421,
+      "check": "Real GoTrue Storage PostgREST snapshot app",
+      "code": "REAL_CI_RELEASE_SCHEMA_DIFF_REFUSED",
+      "reason": "Published schema witness1e598(387) lacks the two new migrations."
+    },
+    {
+      "jobId": 113566454394,
+      "check": "Current schema PG17 PostgREST14",
+      "code": "HISTORICAL_STATEMENT_LOCK_DEPENDENCY",
+      "reason": "The domain test clone attempts older070 DOWN while the additive pilot-grant serialisation trigger still depends on its statement-lock function."
+    },
+    {
+      "jobId": 113566453732,
+      "check": "Native OP09",
+      "code": "OP09_NATIVE_EXACT_COMPLETE_HISTORY_REQUIRED",
+      "reason": "Exact387 history gate refuses current389 migration set."
+    }
+  ],
+  "productionWrites": 0,
+  "aiActivation": false
+}

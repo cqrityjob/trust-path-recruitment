@@ -1,0 +1,104 @@
+{
+  "scope": "owned loopback native PostgreSQL16 SQL/auth-stub; no Docker, HTTP, GoTrue, hosted or whole DB PASS",
+  "database": "ri_v03_standdown_464_ci_test",
+  "postgres": "16.14 (Homebrew)",
+  "counts": {
+    "lifecycle_before": 124,
+    "workspace_before": 36,
+    "foundation": 56,
+    "snapshot": 94,
+    "domain": 31,
+    "lifecycle_after": 124,
+    "workspace_after": 36,
+    "old_p1": 95
+  },
+  "checks": [
+    "owned clone starts empty",
+    "lifecycle contract digest readable",
+    "original omitted standdown reproduces dependency failure",
+    "lifecycle contract digest readable",
+    "failed original rollback transaction preserves M1 contracts",
+    "unsafe M1 DOWN still refuses empty clone",
+    "lifecycle contract digest readable",
+    "unsafe DOWN leaves all four contracts unchanged",
+    "interview_method_lifecycle_test.sql 124 assertions",
+    "recruiter_workspace_test.sql 36 assertions",
+    "reconstruction 20270307100000_recruiter_domain_conflict_transport_rollback.sql",
+    "reconstruction interview_method_lifecycle_historical_standdown.sql",
+    "reconstruction 20270307090000_interview_content_snapshot_lock_rollback.sql",
+    "reconstruction interview_content_snapshot_legacy_fixture.sql",
+    "reconstruction 20270307090000_interview_content_snapshot_lock.sql",
+    "reconstruction 20270307100000_recruiter_domain_conflict_transport.sql",
+    "reconstruction 20270310090000_interview_method_lifecycle_revocation.sql",
+    "lifecycle contract digest readable",
+    "exact M1 bodies owner ACL config restored after 070 and 071",
+    "grant statement lock restored before current-schema suites",
+    "recruiter_intelligence_interview_foundation_test.sql original expected conflict count preserved",
+    "recruiter_intelligence_interview_foundation_test.sql 56 assertions",
+    "interview_content_snapshot_test.sql original expected conflict count preserved",
+    "interview_content_snapshot_test.sql 94 assertions",
+    "recruiter_domain_conflict_transport_test.sql 31 assertions",
+    "interview_method_lifecycle_test.sql 124 assertions",
+    "recruiter_workspace_test.sql 36 assertions",
+    "adopted synthetic history digest readable",
+    "adopted history refuses test-only standdown",
+    "lifecycle contract digest readable",
+    "adopted synthetic history digest readable",
+    "standdown refusal preserves cases snapshots locks reports and M1 contracts",
+    "adopted snapshot DOWN still refuses",
+    "adopted synthetic history digest readable",
+    "snapshot refusal preserves adopted synthetic history",
+    "unsafe M1 DOWN still refuses adopted clone",
+    "lifecycle contract digest readable",
+    "adopted synthetic history digest readable",
+    "unsafe M1 refusal preserves contracts and adopted history"
+  ],
+  "m1_contract_digest_before_after": "72be87b9b26c043021b90fd7ecaaed33",
+  "adopted_synthetic_history_digest": "e8b7b28388ff2c5eedf5842b532b7d8f",
+  "migration_files_unchanged": {
+    "supabase/migrations/20270310090000_interview_method_lifecycle_revocation.sql": "ec0167c55fb3780589263247e8513db75f1c7fc78626b8212ebcd3a97e96c89b",
+    "supabase/migrations/20270310100000_recruiter_profile_change_review.sql": "62ca2f9219de746e802480c9c9eab064853cc436dcb112f38d4ca1362956aa81"
+  },
+  "observation_utc": "2026-10-08T22:23:10Z",
+  "reviewed_base": "b7a077b78bf4d64a6ab6aa08d470c6be951aaaf8",
+  "ci_failure": {
+    "job_id": 113566454394,
+    "postgres_major": 17,
+    "phase": "independent domain clone historical070 DOWN",
+    "error": "cannot drop function scp_private.interview_content_statement_lock() because other objects depend on it",
+    "dependent_trigger": "ri_pilot_grant_serialise",
+    "whole_attempt_pass": false
+  },
+  "races": {
+    "lifecycle": {
+      "real_sql_connections": 2,
+      "assertions": 13,
+      "orders": 4,
+      "pass": true
+    },
+    "workspace": {
+      "real_sql_connections": 2,
+      "assertions": 14,
+      "scenarios": [
+        "profile CAS/idempotent winner",
+        "audit writer vs empty DOWN"
+      ],
+      "pass": true
+    }
+  },
+  "workspace_down_reapply": {
+    "nonempty_refusal": true,
+    "empty_down_preserves_old_p1_bodies_acl_config": true,
+    "same_36_assertions_repeated": true,
+    "new_unique_assertions": false
+  },
+  "runner_sha256": "6073de8ecb5186507f5829068103c89335d04a30eb5c827825f249931c2963a7",
+  "not_executed": [
+    "full DB runner",
+    "actual PostgREST14.15 HTTP",
+    "genuine GoTrue or Storage",
+    "browser or physical phone",
+    "remote CI rerun",
+    "hosted installation or publication"
+  ]
+}

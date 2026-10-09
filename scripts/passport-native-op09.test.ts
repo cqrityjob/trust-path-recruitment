@@ -13,6 +13,7 @@ import {
   CONFIG,
   STAGES,
   validateTarget,
+  requireSchemaWitness,
   validateStatus,
   history,
   sdkSummary,
@@ -56,10 +57,11 @@ test("native target refuses workstations, hosted/inherited credentials and wrong
   ])
     assert.throws(() => validateTarget({ ...valid, ...mutation }, evidence, APP_SHA));
   assert.throws(() => validateTarget(valid, evidence, SCHEMA_SHA));
+  assert.throws(() => validateTarget(valid, evidence, "40e5775de5195050571421827434ec2872a61506"));
   assert.throws(() => validateTarget(valid, evidence, "cce2c8a238522d51396b52697d25bc9d54a8a8bd"));
   assert.throws(() => validateTarget(valid, evidence, "a5dd89ebee2c30f4d2ff18df7117d07e2bb125d2"));
 });
-test("native service target/key roles and exact387 history fail closed", () => {
+test("native service target/key roles and exact389 history fail closed", () => {
   const status = {
     API_URL: API,
     DB_URL: "postgresql://postgres:private@127.0.0.1:55821/postgres",
@@ -76,10 +78,88 @@ test("native service target/key roles and exact387 history fail closed", () => {
   ])
     assert.throws(() => validateStatus({ ...status, ...patch }));
   const files = fs.readdirSync(path.join(root, "supabase/migrations"));
-  assert.equal(history(files).length, 387);
-  for (const prefix of ["20270307100000", "20270308090000", "20270309090000"])
+  assert.equal(APP_SHA, "55db1e3b83ace033450899a93ca0961edde05217");
+  assert.equal(SCHEMA_SHA, "8dfec6c47e42074d808c30939cebf0c63defce55");
+  assert.equal(history(files).length, 389);
+  assert.throws(() => history(files.filter((f) => !/^20270310(?:090000|100000)_/.test(f))));
+  for (const prefix of [
+    "20270307100000",
+    "20270308090000",
+    "20270309090000",
+    "20270310090000",
+    "20270310100000",
+  ]) {
+    const omitted = files.filter((f) => !f.startsWith(prefix));
     assert.throws(() => history(files.filter((f) => !f.startsWith(prefix))));
+    assert.throws(() => history([...omitted, "20270311100000_other.sql"]));
+  }
   assert.throws(() => history([...files, files.find((f) => f.endsWith(".sql"))!]));
+});
+test("exact389 witness preserves all387 historic blobs and refuses old schema or changed/missing new migrations", () => {
+  const oldSchema = "1e5988c6f9c7121a0fefd22c0db06f6b573f0ae9";
+  const git = (cwd: string, args: string[], input?: string) =>
+    execFileSync("git", args, {
+      cwd,
+      input,
+      encoding: "utf8",
+      stdio: ["pipe", "pipe", "pipe"],
+    }).trim();
+  const blobs = (sha: string) =>
+    new Map(
+      git(root, ["ls-tree", `${sha}:supabase/migrations`])
+        .split("\n")
+        .map((line) => {
+          const [metadata, name] = line.split("\t");
+          return [name, metadata] as const;
+        }),
+    );
+  const oldBlobs = blobs(oldSchema);
+  const newBlobs = blobs(SCHEMA_SHA);
+  const oldFiles = [...oldBlobs.keys()];
+  const newFiles = [...newBlobs.keys()];
+  assert.equal(oldFiles.length, 387);
+  assert.equal(newFiles.length, 389);
+  assert.equal(git(root, ["merge-base", "--is-ancestor", oldSchema, SCHEMA_SHA]), "");
+  for (const name of oldFiles) {
+    assert.ok(newFiles.includes(name));
+    assert.equal(
+      newBlobs.get(name),
+      oldBlobs.get(name),
+      `historic migration blob retained: ${name}`,
+    );
+  }
+  const additions = newFiles.filter((name) => !oldFiles.includes(name));
+  assert.deepEqual(additions, [
+    "20270310090000_interview_method_lifecycle_revocation.sql",
+    "20270310100000_recruiter_profile_change_review.sql",
+  ]);
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), "op09-exact-schema-"));
+  try {
+    // Shared no-checkout clone: only our temporary refs/index/objects are
+    // written. No schema replay, service or source checkout is needed.
+    git(root, ["clone", "--quiet", "--shared", "--no-checkout", root, temp]);
+    git(temp, ["config", "user.name", "Synthetic schema witness"]);
+    git(temp, ["config", "user.email", "witness@fixture.invalid"]);
+    const commit = () => {
+      const tree = git(temp, ["write-tree"]);
+      return git(temp, ["commit-tree", tree, "-p", SCHEMA_SHA, "-m", "Synthetic native witness"]);
+    };
+    git(temp, ["read-tree", SCHEMA_SHA]);
+    assert.doesNotThrow(() => requireSchemaWitness(temp, commit()));
+    assert.throws(() => requireSchemaWitness(temp, oldSchema), /SCHEMA_WITNESS_CHANGED/);
+    for (const name of additions) {
+      const file = `supabase/migrations/${name}`;
+      git(temp, ["read-tree", SCHEMA_SHA]);
+      git(temp, ["update-index", "--force-remove", file]);
+      assert.throws(() => requireSchemaWitness(temp, commit()), /SCHEMA_WITNESS_CHANGED/);
+      git(temp, ["read-tree", SCHEMA_SHA]);
+      const changedBlob = git(temp, ["hash-object", "-w", "--stdin"], "SELECT 'changed';\n");
+      git(temp, ["update-index", "--cacheinfo", "100644", changedBlob, file]);
+      assert.throws(() => requireSchemaWitness(temp, commit()), /SCHEMA_WITNESS_CHANGED/);
+    }
+  } finally {
+    fs.rmSync(temp, { recursive: true, force: true });
+  }
 });
 test("stdout JSON remains separate from real subprocess stderr with private outputs", () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "op09-output-"));
@@ -254,6 +334,9 @@ test("preparation preserves schema/app pins and native Auth/Storage with no Auth
   );
   assert.match(sdk, /context.appRoot, "scripts\/passport-upload-recovery-operational.ts"/);
   assert.match(workflow, new RegExp(APP_SHA));
+  assert.match(workflow, new RegExp(`ref: ${APP_SHA}\\n\\s+path: app\\n`));
+  assert.match(workflow, /Complete389 native schema, Auth8, actual44 and browser4/);
+  assert.doesNotMatch(workflow, /ref: (?:main|latest)|continue-on-error:/);
   assert.match(source("scripts/passport-native-op09-contract.mjs"), new RegExp(SCHEMA_SHA));
   assert.match(workflow, /passport-native-op09-evidence/);
   assert.doesNotMatch(workflow, /real-public\/|p1-native-public\//);

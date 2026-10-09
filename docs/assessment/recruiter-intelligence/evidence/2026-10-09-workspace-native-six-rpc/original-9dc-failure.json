@@ -1,0 +1,14 @@
+{
+  "kind": "bounded-completed-job-readback",
+  "head": "9dc163e2399eed9716bec8d9156d3912136ba5a1",
+  "jobId": 113579235631,
+  "result": "FAILED",
+  "source": "GitHub completed job logs",
+  "lines": [
+    "2026-10-08T23:04:02.9270403Z   FAIL EPE-BEFORE-MANIFEST-IS-NOT-JSON — anchor appears 0 times, expected exactly 1",
+    "2026-10-08T23:04:02.9471117Z negative-controls:employer-portal-evidence FAILED (1 of 3).",
+    "2026-10-08T23:04:02.9472030Z   - EPE-BEFORE-MANIFEST-IS-NOT-JSON: anchor appears 0 times in artifacts/employer-portal-ux/before/manifest.json, expected exactly 1"
+  ],
+  "remainingChecks": "not inferred from this failure excerpt",
+  "nativeWorkspaceStage": "not present at this historical head"
+}

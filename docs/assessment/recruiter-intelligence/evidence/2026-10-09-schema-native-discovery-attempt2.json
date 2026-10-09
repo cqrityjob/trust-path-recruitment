@@ -1,0 +1,43 @@
+{
+  "kind": "ci_failure_observation",
+  "observedAt": "2026-10-08 22:44:02 UTC",
+  "pr": 464,
+  "evidenceSha": "06c9641121ce1740adf73d65c244122642128b4c",
+  "mainBase": "55db1e3b83ace033450899a93ca0961edde05217",
+  "result": "FAILED",
+  "scope": "Two observed guard-discovery failures. Native service runners were skipped after the guard failures; this is not a terminal summary of every check or a new Auth/Storage/runtime test.",
+  "failures": [
+    {
+      "jobId": 113573166592,
+      "check": "Real GoTrue, Storage, PostgREST 14 and snapshot app",
+      "phase": "Bun contract guard discovery",
+      "code": "PLAYWRIGHT_SECOND_INITIALIZATION",
+      "observed": "The name-filter argument scripts/recruiter-real-ci.test.ts collected both root and app/scripts tests after two independent dependency installations. The actual error was Requiring @playwright/test second time.",
+      "guardResults": {
+        "pass": 31,
+        "fail": 1,
+        "error": 1
+      },
+      "nativeServiceRunner": "SKIPPED"
+    },
+    {
+      "jobId": 113573166492,
+      "check": "104 GoTrue accounts, 80 Storage originals and 100 applications",
+      "phase": "Bun contract guard discovery",
+      "code": "OBSOLETE_APP_TEST_COLLECTED",
+      "observed": "The name-filter argument collected app/scripts/recruiter-p1-native.test.ts. At line 52 its older git show40e lookup failed: the required SQL path exists on disk but not in40e. The current intended root test uses app55db.",
+      "guardResults": {
+        "pass": 34,
+        "fail": 1,
+        "error": 1
+      },
+      "nativeServiceRunner": "SKIPPED"
+    }
+  ],
+  "repair": {
+    "approach": "Use explicit ./scripts/<exact-name>.test.ts in all three native workflows and add actual nested-discovery regression. Preserve intended root guards, exact389 history, blob hashes, mobile preset assertions, native runners and manifest failure gates.",
+    "ciAfterRepair": "PENDING"
+  },
+  "productionWrites": 0,
+  "aiActivation": false
+}

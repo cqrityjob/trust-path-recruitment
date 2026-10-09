@@ -7,6 +7,7 @@ import { devices } from "@playwright/test";
 import { requireNativeMobilePreset } from "./recruiter-real-ci-mobile-preset";
 import {
   APP_SHA,
+  SCHEMA_SHA,
   CONFIG,
   EXCLUDED,
   childEnvironment,
@@ -196,7 +197,18 @@ describe("native mobile preset validation", () => {
 
 describe("official real Supabase CI target", () => {
   test("the revised application pin is exact and old native evidence cannot stand in for it", () => {
-    expect(APP_SHA).toBe("40e5775de5195050571421827434ec2872a61506");
+    expect(APP_SHA).toBe("55db1e3b83ace033450899a93ca0961edde05217");
+    expect(SCHEMA_SHA).toBe("8dfec6c47e42074d808c30939cebf0c63defce55");
+    expect(() =>
+      validateTarget(env, env.RI_REAL_SCHEMA_SHA, "40e5775de5195050571421827434ec2872a61506"),
+    ).toThrow("REAL_CI_UNREVIEWED_APP_HEAD");
+    expect(() =>
+      validateTarget(
+        { ...env, RI_REAL_RELEASE_SCHEMA_SHA: "1e5988c6f9c7121a0fefd22c0db06f6b573f0ae9" },
+        env.RI_REAL_SCHEMA_SHA,
+        APP_SHA,
+      ),
+    ).toThrow("REAL_CI_UNREVIEWED_RELEASE_SCHEMA");
     expect(() =>
       validateTarget(env, env.RI_REAL_SCHEMA_SHA, "a68f22d799769de32230781bba268632e57e796f"),
     ).toThrow("REAL_CI_UNREVIEWED_APP_HEAD");
@@ -223,7 +235,7 @@ describe("official real Supabase CI target", () => {
     ).toThrow("UNREVIEWED_APP_HEAD");
   });
   test("release schema binding is separate from test code and requires a full SHA", () => {
-    const release = "1e5988c6f9c7121a0fefd22c0db06f6b573f0ae9";
+    const release = "8dfec6c47e42074d808c30939cebf0c63defce55";
     const context = validateTarget(
       { ...env, RI_REAL_RELEASE_SCHEMA_SHA: release },
       env.RI_REAL_SCHEMA_SHA,
@@ -231,9 +243,7 @@ describe("official real Supabase CI target", () => {
     );
     expect(context.releaseSchemaSha).toBe(release);
     expect(context.evidenceCodeSha).toBe(env.RI_REAL_SCHEMA_SHA);
-    expect(validateTarget(env, env.RI_REAL_SCHEMA_SHA, APP_SHA).releaseSchemaSha).toBe(
-      env.RI_REAL_SCHEMA_SHA,
-    );
+    expect(validateTarget(env, env.RI_REAL_SCHEMA_SHA, APP_SHA).releaseSchemaSha).toBe(SCHEMA_SHA);
     expect(() =>
       validateTarget(
         { ...env, RI_REAL_RELEASE_SCHEMA_SHA: "main" },
@@ -380,7 +390,7 @@ describe("real CI execution and publication cannot silently narrow", () => {
     expect(job["runs-on"]).toBe("ubuntu-latest");
     expect(job.if).toBeUndefined();
     expect(job["continue-on-error"]).toBeUndefined();
-    expect(job.env.RI_REAL_RELEASE_SCHEMA_SHA).toBe("1e5988c6f9c7121a0fefd22c0db06f6b573f0ae9");
+    expect(job.env.RI_REAL_RELEASE_SCHEMA_SHA).toBe("8dfec6c47e42074d808c30939cebf0c63defce55");
     expect(job.steps[0].with["fetch-depth"]).toBe(0);
     expect(job.steps.every((step: { [key: string]: unknown }) => !step["continue-on-error"])).toBe(
       true,
@@ -461,13 +471,25 @@ describe("real CI execution and publication cannot silently narrow", () => {
       "20270307100000_forward.sql",
       "20270308090000_requirements.sql",
       "20270309090000_upload.sql",
+      "20270310090000_lifecycle.sql",
+      "20270310100000_workspace.sql",
     );
-    expect(requireCompleteHistory(files)).toHaveLength(387);
+    expect(requireCompleteHistory(files)).toHaveLength(389);
+    expect(() => requireCompleteHistory(files.slice(0, -2))).toThrow(
+      "COMPLETE_CANONICAL_HISTORY_REQUIRED",
+    );
     for (const version of ["20270308090000_", "20270309090000_"]) {
       const omitted = files.filter((name) => !name.startsWith(version));
       expect(() => requireCompleteHistory(omitted)).toThrow("COMPLETE_CANONICAL_HISTORY_REQUIRED");
-      expect(() => requireCompleteHistory([...omitted, "20270310100000_other.sql"])).toThrow(
+      expect(() => requireCompleteHistory([...omitted, "20270311100000_other.sql"])).toThrow(
         "REQUIREMENTS_UPLOAD_FORWARD_REQUIRED",
+      );
+    }
+    for (const version of ["20270310090000_", "20270310100000_"]) {
+      const omitted = files.filter((name) => !name.startsWith(version));
+      expect(() => requireCompleteHistory(omitted)).toThrow("COMPLETE_CANONICAL_HISTORY_REQUIRED");
+      expect(() => requireCompleteHistory([...omitted, "20270311100000_other.sql"])).toThrow(
+        "METHOD_WORKSPACE_FORWARD_REQUIRED",
       );
     }
     expect(() => requireCompleteHistory(files.slice(0, -1))).toThrow();

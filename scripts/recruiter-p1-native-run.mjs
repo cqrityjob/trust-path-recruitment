@@ -43,6 +43,7 @@ import {
   BROWSER_HASH,
 } from "./recruiter-p1-native-fixture.mjs";
 import { writeNativePublic } from "./recruiter-p1-native-public.mjs";
+import { WORKSPACE_STAGE, runWorkspaceHttp } from "./recruiter-p1-native-workspace.mjs";
 import { createNativeCvBucket, storageFailure } from "./recruiter-p1-native-storage.mjs";
 import { summarizeNativeBrowser } from "./recruiter-p1-native-browser-summary.mjs";
 import {
@@ -102,6 +103,7 @@ const report = {
       "canonical_23_http_two_real_reviewers",
       "actual_source_revoke_replace",
       "historical_synthetic_ai_never_green",
+      WORKSPACE_STAGE,
       "owned_job_cascade_fresh_browser_baseline",
       "actual_password_browser_five_cases",
     ].map((stage) => [stage, "not_run"]),
@@ -581,6 +583,30 @@ try {
     };
     report.afterApi = safety(2);
   });
+  await stage(WORKSPACE_STAGE, async () => {
+    // The same104 Auth users; one genuine session for the existing A095 holder.
+    // No fabricated claims, new account, fixture DML or service-role judgment.
+    await login("candidate-95");
+    report.workspaceHttp = await runWorkspaceHttp({
+      clients,
+      anonymous: client(status.ANON_KEY),
+      candidate: clients["candidate-95"],
+      readInvariant: (version) => {
+        if (!Number.isInteger(version) || version < 2)
+          throw Error("P1_NATIVE_WORKSPACE_PROFILE_VERSION_REQUIRED");
+        return sql(
+          `SELECT jsonb_build_object(
+ 'profiles',coalesce((SELECT jsonb_agg(to_jsonb(p) ORDER BY p.version) FROM public.rec_requirement_profiles p WHERE job_id='${JOB}' AND version<=${version}),'[]'),
+ 'heads',coalesce((SELECT jsonb_agg(to_jsonb(h) ORDER BY h.application_id) FROM public.rec_requirement_review_heads h JOIN public.job_applications a ON a.id=h.application_id WHERE a.job_id='${JOB}'),'[]'),
+ 'decisions',coalesce((SELECT jsonb_agg(to_jsonb(d) ORDER BY d.application_id,d.profile_id,d.requirement_id) FROM public.rec_requirement_decisions d JOIN public.job_applications a ON a.id=d.application_id WHERE a.job_id='${JOB}'),'[]'),
+ 'events',coalesce((SELECT jsonb_agg(to_jsonb(e) ORDER BY e.id) FROM public.rec_requirement_review_events e JOIN public.job_applications a ON a.id=e.application_id WHERE a.job_id='${JOB}'),'[]'),
+ 'snapshots',coalesce((SELECT jsonb_agg(jsonb_build_object('id',s.case_id,'manifest',s.manifest,'frozenAt',s.frozen_at) ORDER BY s.case_id) FROM scp_private.interview_content_snapshots s JOIN public.scp_interview_cases c ON c.id=s.case_id WHERE c.employer_id='${EMPLOYER}'),'[]'))`,
+          "workspace-invariant",
+        );
+      },
+    });
+    report.afterWorkspace = safety(2);
+  });
   await stage("owned_job_cascade_fresh_browser_baseline", async () => {
     const before = sql(
       `SELECT jsonb_agg(jsonb_build_object('id',s.case_id,'manifest',s.manifest,'frozenAt',s.frozen_at) ORDER BY s.case_id) FROM scp_private.interview_content_snapshots s JOIN public.scp_interview_cases c ON c.id=s.case_id WHERE c.employer_id='${EMPLOYER}'`,
@@ -597,6 +623,13 @@ try {
       `SELECT jsonb_agg(jsonb_build_object('id',s.case_id,'manifest',s.manifest,'frozenAt',s.frozen_at) ORDER BY s.case_id) FROM scp_private.interview_content_snapshots s JOIN public.scp_interview_cases c ON c.id=s.case_id WHERE c.employer_id='${EMPLOYER}'`,
     );
     if (after !== before) throw Error("P1_NATIVE_CASE_SNAPSHOT_CHANGED_DURING_RESET");
+    if (
+      sql(
+        `SELECT count(*) FROM recruiter_intelligence.profile_change_reviews WHERE job_id='${JOB}'`,
+      ) !== "0"
+    )
+      throw Error("P1_NATIVE_WORKSPACE_AUDIT_CASCADE_RESET_REQUIRED");
+    report.workspaceAuditCascadeReset = true;
     report.jobCascadeRetainsSnapshots = true;
     report.browserBaseline = await seedHumanReviews();
   });
