@@ -6,12 +6,13 @@ skrivits till; ingen publicering, ingen AI, ingen gallring, inga riktiga kandida
 
 ## Leveranser
 
+Status 2026-10-09 efter ägarens beslut att låta Claude merga de tre PR:arna när de är rätt.
+
 | Del | Var | Exakt SHA | Status |
 |---|---|---|---|
-| App på befintligt schema (vyer, understeg, Fler filter, nästa steg, kravsammanfattning i sidhuvudet, Ej aktuell-flöde, C1–C6 en gång) | PR #466, gren `claude/amazing-clarke-ferjkh` | `9d6e9b2b` | byggd, pushad, CI pågår |
-| Klient för v0.3 (komplettering som eget ärende, återöppning med orsak, intervjuupplägg), tolerant mot oinstallerat schema | PR #466 | `c98abc0e` | byggd, pushad, CI pågår |
-| Schema: `20270311100000_recruitment_supplement_and_reopen.sql`, `20270312100000_interview_question_composition.sql`, rollbackar, SQL-svit (51 påståenden), release-state pending, db-test-registrering | lokal gren `claude/amazing-clarke-ferjkh-schema` (2 commits ovanpå main) | `e3c00c1c` | byggd och lokalt verifierad; **ej pushad** – kräver ägarens tillstånd att öppna en andra gren/PR |
-| #464 (Astras schema v0.3) | PR #464 | `e2edfae1` | konfliktlösning för `INDEX.md` lämnad som kommentar; inte mergad (produktionsskrivningsförbud) |
+| #464 (Astras schema v0.3: `20270310090000`, `20270310100000`) | PR #464 → `main` | merge-commit `dfe08858` (head `8de03944`, 20/20 jobb gröna) | **mergad**; den officiella Supabase-integrationen har installerat båda slots, hosted ledger slutar på `20270310100000` (läst 2026-10-09). Registrering i `release-state.json` (pending → applied) görs i ett samlat steg efter #467. |
+| Schema: `20270311100000_recruitment_supplement_and_reopen.sql`, `20270312100000_interview_question_composition.sql`, rollbackar, SQL-svit (51), release-state pending, db-test-registrering, ompinnat exakt schema-vittne (391 filer, `SCHEMA_SHA = 05520f29`) | PR #467, gren `claude/amazing-clarke-ferjkh-schema`, bas `main` | `4978f3d8` | pushad, draft, CI på slutcommit pågår; mergas när grön |
+| App på befintligt schema (vyer, understeg, Fler filter, nästa steg, kravsammanfattning i sidhuvudet, Ej aktuell-flöde, C1–C6 en gång) + klient för v0.3 (komplettering som eget ärende, återöppning med orsak, intervjuupplägg), tolerant mot oinstallerat schema | PR #466, gren `claude/amazing-clarke-ferjkh` | `9d6e9b2b` … `34b7d6d8`, `main` inmergad i `2098a53f`; slutcommit = den commit som bär denna not | pushad; CI på `2098a53f` pågår; mergas efter #467 och registreringen |
 
 ## Matris per krav i uppdraget
 
@@ -39,10 +40,11 @@ skrivits till; ingen publicering, ingen AI, ingen gallring, inga riktiga kandida
 
 ## Blockerare och beslut som är ägarens
 
-1. **Pusha schemagrenen.** Sessionens regler tillåter inte push till annan gren än `claude/amazing-clarke-ferjkh` utan uttryckligt tillstånd. Schemat ligger därför lokalt (`e3c00c1c`). Med tillstånd öppnas en separat draft-PR som stackas efter #464.
-2. **Merge-ordning.** #464 → schema-PR (111, 121) → verifiering av hosted ledger/ACL → registrering → #466 (eller #466 före schemat: klienten är tolerant och visar "inte installerad"-meningar tills slots finns).
+1. ~~Pusha schemagrenen.~~ Tillstånd givet; #467 öppnad.
+2. **Merge-ordning (beslutad, pågår):** #464 (klar) → #467 → verifiering av hosted ledger/funktionskroppar/ACL → registrering i `release-state.json` → #466. Klienten är tolerant, men release-paritetsguarden på `main` kräver att slots 111/121 är registrerade innan klientens referenser mergas.
 3. **Innehåll.** Inledning/avslut-frågor och EN-versioner av kärnfrågor kräver mänskligt godkännande; inget sådant har skapats.
-4. **120 kontroller.** Astras förberedda native-stage behöver köras på nya pinnar (app-SHA + schema-SHA) innan de får kallas PASS.
+4. **120 kontroller.** Astras förberedda native-stage körs i #467:s CI på de nya pinnarna (app `55db1e3b`, schema `05520f29`); NOT_RUN förblir NOT_RUN tills jobbet faktiskt passerat.
+5. **CI-fynd rättade på vägen (#466):** kompletteringsknappen utan schema, sidledsskroll på avslutad ansökan (leveransbadge), beslutsåtgärder utan kravprofil, identisk sv/en-etikett, real-stack-specens veck- och dialogroller (`alertdialog`).
 
 ## Releasesteg (oförändrade)
 

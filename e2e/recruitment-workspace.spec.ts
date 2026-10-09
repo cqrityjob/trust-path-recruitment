@@ -612,7 +612,8 @@ test.describe("recruitment case", () => {
     // The decision: "Ej aktuell", confirmed, saved, and SAID -- where the
     // application went and that nothing was sent.
     await summary.locator("[data-testid='summary-action-reject']").click();
-    const dialog = page.getByRole("dialog");
+    // The decision is confirmed in an alert dialog (ConfirmAction), not a plain one.
+    const dialog = page.getByRole("alertdialog");
     await expect(dialog).toContainText(name);
     await dialog.getByRole("button", { name: "Markera som ej aktuell" }).click();
     const saved = page.locator("[data-testid='decision-saved']");
