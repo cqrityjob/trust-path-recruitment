@@ -1,0 +1,123 @@
+{
+  "schemaVersion": "recruiter-ai-offline-witness-v1",
+  "observedAt": "2026-10-08T20:15:18.241Z",
+  "baseSha": "8c9b3138bcb801ac69aa44b14e9cb592da5ea50a",
+  "contractVersion": "recruiter-ai-v0.3-draft1",
+  "scope": "local_synthetic_contract_only",
+  "files": [
+    {
+      "path": "src/lib/recruitment/ai/contract.ts",
+      "sha256": "d4638f0d9ad19ff59212462f8b26580922c4d35c55430c7e049515ae035feb66"
+    },
+    {
+      "path": "src/lib/recruitment/ai/recruiter-ai.functions.ts",
+      "sha256": "922a4cb03a6c7689df88ce5df76564a94d8a9e4261aa95b27946d2ce8466645b"
+    },
+    {
+      "path": "src/lib/recruitment/ai/synthetic-sandbox.server.ts",
+      "sha256": "fbee949100a241b5efd3a20999b3462565088f0f57f233a279be8f49e90797af"
+    },
+    {
+      "path": "scripts/fixtures/recruiter-ai-synthetic.ts",
+      "sha256": "9d28393bd44e074abe80ae67b89d3f99f1f862226a0c7aafa5fcc419d3932d2b"
+    },
+    {
+      "path": "scripts/recruiter-ai-contract.test.ts",
+      "sha256": "87e3c3e1bed66445c47a7f198b1c1c8da7f64fa839258d90652a58c4c025489e"
+    },
+    {
+      "path": "scripts/recruiter-ai-contract.types.ts",
+      "sha256": "effb98dd7e3defa8145ba367a57d90274e719c85ac5e954fa9cc1458a7b987ea"
+    },
+    {
+      "path": "scripts/recruiter-ai-synthetic-evaluation.ts",
+      "sha256": "c917050889a6a3f0053e79a841186d99042f8eaf0fe31d7bec0cb75c0b56afd8"
+    },
+    {
+      "path": "docs/assessment/recruiter-intelligence/2026-10-08-p4-disabled-contract.md",
+      "sha256": "7957fe8a9da38cbac6d332ff4faf27e58b8673e59cee6e3c3abfad5eac021d6a"
+    },
+    {
+      "path": "docs/assessment/recruiter-intelligence/evidence/2026-10-08-p4-synthetic-contract/README.md",
+      "sha256": "8f7f1bceed79084c714e133fb37ae5ae9b8a9f62957f9865f4e0a413c4c15484"
+    },
+    {
+      "path": "docs/assessment/recruiter-intelligence/evidence/2026-10-08-p4-synthetic-contract/evaluation.json",
+      "sha256": "d250a04f9598c8345e3a33663a4bef697b576037af2b4ab14d0d24f216f64c2c"
+    },
+    {
+      "path": "package.json",
+      "sha256": "4ec8af97ee33779fd488358208bfeb16e80072f55b5b896251a598c40137b6ee"
+    },
+    {
+      "path": "tsconfig.scripts.json",
+      "sha256": "8aeab48a903549ba596a705902f9de82527c05fd9e86c990b631a9572b453fdf"
+    }
+  ],
+  "checks": {
+    "unit": {
+      "status": "PASS",
+      "tests": 68,
+      "assertions": 151,
+      "failures": 0
+    },
+    "offlineFacit": {
+      "status": "PASS",
+      "cases": 9,
+      "mismatches": 0,
+      "provider": "none"
+    },
+    "appTypes": {
+      "status": "PASS",
+      "exitCode": 0
+    },
+    "scriptTypes": {
+      "status": "PASS",
+      "exitCode": 0,
+      "negativeTypeContracts": 9
+    },
+    "newFileEslint": {
+      "status": "PASS",
+      "exitCode": 0,
+      "ruleDisabling": false
+    },
+    "newFilePrettier": {
+      "status": "PASS",
+      "exitCode": 0
+    },
+    "existingGenerativeAiGate": {
+      "status": "PASS",
+      "controls": 35,
+      "externalProviderCalls": 0
+    },
+    "diffCheck": {
+      "status": "PASS",
+      "exitCode": 0
+    }
+  },
+  "featureGates": {
+    "source_summary": false,
+    "criterion_linking": false,
+    "neutral_clarifications": false,
+    "reviewed_report_draft": false
+  },
+  "sideEffects": {
+    "fixtureCalls": 1,
+    "modelRequests": 0,
+    "persistentWrites": 0,
+    "statusChanges": 0,
+    "messages": 0,
+    "finalisedReports": 0
+  },
+  "boundaries": {
+    "actualModelEvaluation": "NOT_RUN",
+    "realAuthApiRlsBrowser": "NOT_RUN",
+    "hostedInstallationPublication": "NOT_RUN",
+    "durableClusterBudgetQueueCache": "NOT_IMPLEMENTED",
+    "uiWiring": "NOT_IMPLEMENTED",
+    "semanticTruthValidation": "NOT_CLAIMED",
+    "entryCopyApproval": "DRAFT",
+    "originalAttachmentReRead": "UNAVAILABLE_AT_ORIGINAL_PATH",
+    "existingGeneratedTypesSentinelPermissions": "UNCHANGED"
+  }
+}

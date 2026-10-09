@@ -1,0 +1,178 @@
+{
+  "kind": "offline_recruiter_ai_contract_fresh_main_integration",
+  "observedAt": "2026-10-08T22:17:06.973068+00:00",
+  "contractVersion": "recruiter-ai-v0.3-draft1",
+  "mainBase": "55db1e3b83ace033450899a93ca0961edde05217",
+  "normalMergeCommit": "2c6723f0e59c6e5f476d7f7faf2953102b17806b",
+  "mergeParents": [
+    "425beabecc4e6ddcf0839b5b4d9f452721f2bc47",
+    "55db1e3b83ace033450899a93ca0961edde05217"
+  ],
+  "originalContractHead": "425beabecc4e6ddcf0839b5b4d9f452721f2bc47",
+  "definitionCommit": "a066c387cf767851541d6e62e33c50e6bd6221db",
+  "sourceFilesSha256": {
+    "src/lib/recruitment/ai/contract.ts": "d4638f0d9ad19ff59212462f8b26580922c4d35c55430c7e049515ae035feb66",
+    "src/lib/recruitment/ai/recruiter-ai.functions.ts": "922a4cb03a6c7689df88ce5df76564a94d8a9e4261aa95b27946d2ce8466645b",
+    "src/lib/recruitment/ai/synthetic-sandbox.server.ts": "fbee949100a241b5efd3a20999b3462565088f0f57f233a279be8f49e90797af",
+    "scripts/recruiter-ai-contract.test.ts": "87e3c3e1bed66445c47a7f198b1c1c8da7f64fa839258d90652a58c4c025489e",
+    "scripts/recruiter-ai-contract.types.ts": "effb98dd7e3defa8145ba367a57d90274e719c85ac5e954fa9cc1458a7b987ea",
+    "scripts/recruiter-ai-synthetic-evaluation.ts": "c917050889a6a3f0053e79a841186d99042f8eaf0fe31d7bec0cb75c0b56afd8",
+    "scripts/fixtures/recruiter-ai-synthetic.ts": "9d28393bd44e074abe80ae67b89d3f99f1f862226a0c7aafa5fcc419d3932d2b"
+  },
+  "allSevenAiCodeTestFixtureFilesByteIdenticalToOriginalContractHead": true,
+  "ciPackageTsconfig": {
+    "bothParentRegistrationsPreserved": true,
+    "removedJobs": 0,
+    "removedCheckStepNames": 0,
+    "removedRunUsesLines": 0,
+    "removedScriptKeys": 0,
+    "removedNegativeControlCommandSegments": 0,
+    "removedTypecheckIncludes": 0
+  },
+  "executed": {
+    "contractAndSandbox": {
+      "status": "PASS",
+      "exitCode": 0,
+      "tests": 68,
+      "bunExpectCalls": 151,
+      "command": "bun --no-env-file test scripts/recruiter-ai-contract.test.ts",
+      "log": {
+        "localPath": "/private/tmp/ri-v03-next/recruiter-ai-fresh55db-contract.log",
+        "sha256": "8e5b7e51ac51eaeb27a5aff01054a2e39fdfd651cf9677c2e4b8f1db4122fef9",
+        "bytes": 8640
+      }
+    },
+    "syntheticFacit": {
+      "status": "PASS",
+      "exitCode": 0,
+      "cases": 9,
+      "mismatches": 0,
+      "command": "bun --no-env-file scripts/recruiter-ai-synthetic-evaluation.ts --output <fresh-local-path>",
+      "originalFreshEvaluationSha256": "297a88855992c6ca5a6b3f276d3421889d21c71dc66592540fe59125e826ce4d",
+      "allOriginalCaseHashesVerdictsAndSideEffectsPreserved": true
+    },
+    "existingAiGate": {
+      "status": "PASS",
+      "exitCode": 0,
+      "checks": 35,
+      "command": "bun --no-env-file scripts/generative-ai-gate-check.ts",
+      "log": {
+        "localPath": "/private/tmp/ri-v03-next/recruiter-ai-fresh55db-existing35.log",
+        "sha256": "3b680c662378203d555c571808a0735d3f68803f38696b3c01251fe6db51b3e9",
+        "bytes": 3031
+      }
+    },
+    "appTypecheck": {
+      "status": "PASS",
+      "exitCode": 0,
+      "command": "bun --no-env-file x tsc --noEmit -p tsconfig.json",
+      "log": {
+        "localPath": "/private/tmp/ri-v03-next/recruiter-ai-fresh55db-app-ts.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      }
+    },
+    "scriptsTypecheck": {
+      "status": "PASS",
+      "exitCode": 0,
+      "compileOnlyNegativeTypeContracts": 9,
+      "command": "bun --no-env-file x tsc --noEmit -p tsconfig.scripts.json",
+      "log": {
+        "localPath": "/private/tmp/ri-v03-next/recruiter-ai-fresh55db-scripts-ts.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      }
+    },
+    "scopedEslint": {
+      "status": "PASS",
+      "exitCode": 0,
+      "warnings": 0,
+      "scope": [
+        "src/lib/recruitment/ai/contract.ts",
+        "src/lib/recruitment/ai/recruiter-ai.functions.ts",
+        "src/lib/recruitment/ai/synthetic-sandbox.server.ts",
+        "scripts/recruiter-ai-contract.test.ts",
+        "scripts/recruiter-ai-contract.types.ts",
+        "scripts/recruiter-ai-synthetic-evaluation.ts",
+        "scripts/fixtures/recruiter-ai-synthetic.ts"
+      ],
+      "log": {
+        "localPath": "/private/tmp/ri-v03-next/recruiter-ai-fresh55db-eslint.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      }
+    },
+    "scopedPrettier": {
+      "status": "PASS",
+      "exitCode": 0,
+      "scope": [
+        "src/lib/recruitment/ai/contract.ts",
+        "src/lib/recruitment/ai/recruiter-ai.functions.ts",
+        "src/lib/recruitment/ai/synthetic-sandbox.server.ts",
+        "scripts/recruiter-ai-contract.test.ts",
+        "scripts/recruiter-ai-contract.types.ts",
+        "scripts/recruiter-ai-synthetic-evaluation.ts",
+        "scripts/fixtures/recruiter-ai-synthetic.ts",
+        "package.json",
+        "tsconfig.scripts.json"
+      ],
+      "log": {
+        "localPath": "/private/tmp/ri-v03-next/recruiter-ai-fresh55db-prettier.log",
+        "sha256": "17aa973d3f004560237d9a95171210b0671deff23d61628eecf7322ff5938f20",
+        "bytes": 66
+      }
+    },
+    "scopedDiffCheck": {
+      "status": "PASS",
+      "exitCode": 0,
+      "scope": "Merged ci.yml/package/tsconfig plus AI delta relative to fresh main"
+    }
+  },
+  "serverBoundary": {
+    "handlers": 4,
+    "taskHandlerAction": "unconditional RECRUITER_AI_V03_DISABLED throw after existing authentication and request validation",
+    "providerOrApplicationSourceAdapterAdded": false,
+    "databaseStatusMessageReportAdapterAdded": false,
+    "uiEntryActivated": false,
+    "permissionsOrGeneratedTypesChanged": false,
+    "proof": "unchanged source bytes plus executed contract tests; no real authenticated API request"
+  },
+  "sideEffects": {
+    "fixtureCalls": 1,
+    "modelRequests": 0,
+    "persistentWrites": 0,
+    "statusChanges": 0,
+    "messages": 0,
+    "finalisedReports": 0
+  },
+  "syntheticBudgetObservation": {
+    "reserved": 0,
+    "spent": 4,
+    "active": 0,
+    "waiting": 0
+  },
+  "limits": [
+    "In-memory sandbox only; no durable idempotency, budget journal, cross-process queue or production capacity guarantee",
+    "Synthetic accounting units are not provider money or tokens",
+    "No provider/model quality or semantic truth proof",
+    "No Auth/API/RLS/browser/mobile/hosted/publication/production activation proof"
+  ],
+  "preservedOriginalEvidence": "2026-10-08-p4-synthetic-contract/evaluation.json and verification.json unchanged",
+  "inheritedMainDiagnostic": {
+    "fullMergeDiffCheckExitCode": 2,
+    "path": ".github/workflows/employer-portal-ux-evidence.yml",
+    "line": 315,
+    "observation": "new blank line at EOF in file inherited byte-for-byte from main55db",
+    "productOrAiFaultClaim": false,
+    "fileChangedHere": false
+  },
+  "notPerformed": [
+    "push",
+    "new PR",
+    "production merge",
+    "hosted write",
+    "provider cost activation",
+    "DB or status or message write",
+    "retention worker/cron"
+  ]
+}

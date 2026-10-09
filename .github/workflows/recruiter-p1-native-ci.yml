@@ -66,7 +66,7 @@ jobs:
         run: bunx playwright install --with-deps chromium
       - name: Native isolation, canonical source and publication guards
         run: |
-          bun test scripts/recruiter-p1-native.test.ts
+          bun test ./scripts/recruiter-p1-native.test.ts
           bunx tsc --noEmit --allowJs --checkJs false --skipLibCheck --module preserve --moduleResolution bundler --target ES2022 --types node scripts/recruiter-p1-native.test.ts scripts/recruiter-p1-native-browser.config.ts
       - name: Strict schema, actual Auth and Storage, 23 API assertions and five browser cases
         run: node scripts/recruiter-p1-native-run.mjs

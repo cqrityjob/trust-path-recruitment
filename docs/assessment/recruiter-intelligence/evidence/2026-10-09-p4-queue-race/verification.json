@@ -1,0 +1,132 @@
+{
+  "observedAt": "2026-10-08T22:49:45.621Z",
+  "reviewBase": "452a3f090d8f8ebb32f1cbfced5d492a321f4aa5",
+  "mainBase": "55db1e3b83ace033450899a93ca0961edde05217",
+  "scope": "local in-memory synthetic sandbox only; no service, provider, database or runtime handler execution",
+  "sources": [
+    {
+      "path": "src/lib/recruitment/ai/synthetic-sandbox.server.ts",
+      "baseSha256": "fbee949100a241b5efd3a20999b3462565088f0f57f233a279be8f49e90797af",
+      "correctedSha256": "5ed617a76cbb2eabede232f95d50bce857f86a285b316b90b4c9075e2c3e10f3"
+    },
+    {
+      "path": "scripts/recruiter-ai-contract.test.ts",
+      "baseSha256": "87e3c3e1bed66445c47a7f198b1c1c8da7f64fa839258d90652a58c4c025489e",
+      "correctedSha256": "4b0bdb764244a8fb27207b4329e8653cdccf15fc707aabb10c78b62c79fd3fef"
+    }
+  ],
+  "positive": {
+    "command": "bun test --no-env-file ./scripts/recruiter-ai-contract.test.ts",
+    "exitCode": 0,
+    "passed": 73,
+    "failed": 0,
+    "expectCalls": 176,
+    "priorExecutedTests": 68,
+    "priorLiteralTestNames": 31,
+    "priorSourceAllPreserved": true,
+    "testDeletedLines": 0,
+    "testAddedLines": 243,
+    "newRegressions": [
+      "woken waiter rechecks the slot taken by an incoming context read",
+      "cancelled already-woken waiter passes the free slot onward without leaks",
+      "a retry cancellation is bounded without cancelling the original operation",
+      "a retry checks revocation after shared work without modifying the original result",
+      "a retry deadline bounds its latest read without affecting the original reservation"
+    ],
+    "privateLogSha256": "1051bfd637f272df48e2e4651d456d39342fb0a9e8aea3048dce3102176d0d56"
+  },
+  "negative": {
+    "fixture": "private temporary fixture using unchanged base sandbox plus exact current regression suite",
+    "baseSandboxSha256": "fbee949100a241b5efd3a20999b3462565088f0f57f233a279be8f49e90797af",
+    "regressionTestSha256": "4b0bdb764244a8fb27207b4329e8653cdccf15fc707aabb10c78b62c79fd3fef",
+    "expectedExitCode": 1,
+    "passed": 0,
+    "failed": 5,
+    "priorTestsFiltered": 68,
+    "allFiveNewRegressionsFailed": true,
+    "privateLogSha256": "6aeb2149ae6c8db4b3d50a9c84e47b75424a35b96ae878a5064fcdccfbf46683"
+  },
+  "checks": {
+    "appTypecheck": {
+      "command": "tsc --noEmit",
+      "exitCode": 0
+    },
+    "scriptsTypecheck": {
+      "command": "tsc -p tsconfig.scripts.json --noEmit",
+      "exitCode": 0
+    },
+    "negativeTypeDirectives": 9,
+    "changedCodeEslint": {
+      "exitCode": 0,
+      "warnings": 0,
+      "disabledRules": 0
+    },
+    "changedCodePrettier": {
+      "exitCode": 0
+    },
+    "scopedDiffCheck": {
+      "exitCode": 0
+    },
+    "existingAiGate": {
+      "passed": 35,
+      "failed": 0,
+      "privateLogSha256": "3b680c662378203d555c571808a0735d3f68803f38696b3c01251fe6db51b3e9"
+    },
+    "offlineFacit": {
+      "file": "evaluation.json",
+      "sha256": "c84abb2d3a2c9f4298c3a1c58a04b1c5228713c7c0f438ddaa20dd67fb5ee024",
+      "cases": 9,
+      "mismatches": 0,
+      "modelRequests": 0,
+      "persistentWrites": 0,
+      "statusChanges": 0,
+      "messages": 0,
+      "finalisedReports": 0
+    }
+  },
+  "unchangedContracts": [
+    {
+      "path": "src/lib/recruitment/ai/contract.ts",
+      "sha256": "d4638f0d9ad19ff59212462f8b26580922c4d35c55430c7e049515ae035feb66",
+      "byteIdenticalToBase": true
+    },
+    {
+      "path": "src/lib/recruitment/ai/recruiter-ai.functions.ts",
+      "sha256": "922a4cb03a6c7689df88ce5df76564a94d8a9e4261aa95b27946d2ce8466645b",
+      "byteIdenticalToBase": true
+    },
+    {
+      "path": "scripts/recruiter-ai-contract.types.ts",
+      "sha256": "effb98dd7e3defa8145ba367a57d90274e719c85ac5e954fa9cc1458a7b987ea",
+      "byteIdenticalToBase": true
+    },
+    {
+      "path": "scripts/recruiter-ai-synthetic-evaluation.ts",
+      "sha256": "c917050889a6a3f0053e79a841186d99042f8eaf0fe31d7bec0cb75c0b56afd8",
+      "byteIdenticalToBase": true
+    },
+    {
+      "path": "scripts/fixtures/recruiter-ai-synthetic.ts",
+      "sha256": "9d28393bd44e074abe80ae67b89d3f99f1f862226a0c7aafa5fcc419d3932d2b",
+      "byteIdenticalToBase": true
+    }
+  ],
+  "runtime": {
+    "handlerCount": 4,
+    "allUnconditionalDisabled": true,
+    "providersAdded": 0,
+    "databaseAdaptersAdded": 0,
+    "statusAdaptersAdded": 0,
+    "messageAdaptersAdded": 0,
+    "reportAdaptersAdded": 0,
+    "schemaChanges": 0,
+    "activation": false
+  },
+  "limitations": [
+    "Local synthetic injected contexts do not prove actual Auth, tenant RLS, source sharing, or trusted context adapters",
+    "Accounting, idempotency and cache are process-local memory only, not durable or multi-cluster guarantees",
+    "First context-read and exercise execution use separate deadlines; no total runtime/provider latency guarantee",
+    "No actual model, token price, provider budget, network behavior, browser, hosted or publication verification",
+    "Exact citation does not certify semantic support; human review remains required"
+  ]
+}

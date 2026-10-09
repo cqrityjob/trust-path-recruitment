@@ -1,0 +1,155 @@
+# Recruiter Intelligence v0.3: avstängt P4-kontrakt, draft 2
+
+Aktuell granskningsversion är `recruiter-ai-v0.3-draft2`. Den kompletterar
+draft 1 med deklarativt stöd för kravbundna kandidatkompletteringar. Äldre
+daterade observationer och testkvitton nedan bevarar sina ursprungliga versioner.
+
+Observation 2026-10-08. Main-bas: `8c9b3138bcb801ac69aa44b14e9cb592da5ea50a`. Kontraktsversion: `recruiter-ai-v0.3-draft1`.
+
+Detta är en granskbar kontraktsleverans inför ett senare AI-beslut. Fyra autentiserade serveringångar finns, men samtliga avvisar anrop med `RECRUITER_AI_V03_DISABLED` före underlagsläsning eller leverantörsanrop. Det finns ingen miljö-, plan-, request- eller laboratorieflagga som kan öppna dem. Inga manuella arbetsflöden, kravstatusar, rapporter, frågor, meddelanden, modeller, behörigheter eller genererade databastyper ändras.
+
+## Fyra uppgifter och föreslagna ingångar
+
+Ordalydelsen nedan är ett versionsbundet SV/EN-förslag för innehållsgranskning. De fyra intentionerna kommer från v0.3-uppdraget; formuleringarna är inte innehållsgodkända. Den ursprungliga bifogade textfilen hade lästs tidigare men kunde inte återöppnas vid denna leverans, eftersom dess ursprungliga Downloads-sökväg inte längre fanns. Ingen ny fullständig paragrafjämförelse mot bilagan påstås.
+
+| Uppgift                  | Föreslagen svensk ingång                             | Proposed English entry                                                  | Tillåten utdata                                                                          |
+| ------------------------ | ---------------------------------------------------- | ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `source_summary`         | Vilket underlag finns för de beslutade skallkraven?  | What evidence is available for the agreed mandatory requirements?       | Källciterade uppgifter märkta kandidatens uppgift eller oklar extraktion.                |
+| `criterion_linking`      | Vilka uppgifter behöver klarläggas mot kravprofilen? | Which information needs clarification against the requirements profile? | Möjligen relevant, otillräckligt eller motstridigt underlag till ett befintligt krav-ID. |
+| `neutral_clarifications` | Vilka neutrala följdfrågor kan förberedas?           | Which neutral follow-up questions can be prepared?                      | Förslag på klarläggande fråga, krav-ID, källa, informationslucka och nästa handling.     |
+| `reviewed_report_draft`  | Vilka kontroller återstår efter intervjun?           | Which checks remain after the interview?                                | Utkast sammansatt av redan uttryckligen valda mänskliga textstycken, oförändrade.        |
+
+Utdata kan aldrig intyga mänsklig granskning, avgöra att ett krav är uppfyllt, bli grönt, rangordna kandidater, bedöma personlighet eller trovärdighet, fatta urvalsbeslut, skicka frågor eller fastställa rapporter. Alla förslag har `humanReviewRequired=true`, `reviewState=unreviewed` och `semanticSupport=requires_human_review`.
+
+## Käll- och versionskontrakt
+
+Det strikta kontraktet binder arbetsgivare, ansökan, annons, aktör, planversion, bekräftad och icke tom kravprofil, krav-ID, accepterade källtyper samt modell-, modellversions-, prompt-, prompthash-, kolumn- och schemaversion. Källpassager har egna ID, käll-ID, version, innehållshash, passagehash, scope, ursprung, åtkomst och återkallningsstatus. Mänskliga underlag binder ID, text, väljande aktör, tidpunkt och eventuell intervjufråga.
+
+Context-flaggor som `mayReadApplication` är ett krav på en framtida betrodd serveradapter. Att ett lokalt objekt matchar detta schema bevisar inte faktisk tenantbehörighet eller kandidatens delning. De avstängda serveringångarna tar endast request-scope och läser ingen sådan context från användaren. Vid framtida aktivering måste context, plan, roll och budget hämtas och kontrolleras server-side mot aktuella behörigheter och beslutade versioner.
+
+Varje citering kräver rätt passage, rätt källversion/hash och exakt textintervall i UTF-16 utan delat Unicode-tecken. Den syntetiska sandlådan kontrollerar SHA-256 av passage-UTF-8. Hash av originalfilens byte måste däremot hämtas från en betrodd underlagsadapter; den kan inte härledas från ett textutdrag. Kriteriekoppling till en otillåten källtyp avvisas. Rapportutkast kan bara återge exakt ett mänskligt valt textstycke; ingen fri AI-parafrasering godtas av detta kontrakt.
+
+En korrekt citering bevisar att texten finns, inte att påståendet är sant, att OCR är korrekt eller att texten stödjer slutsatsen. Utvärderingen innehåller därför en fabricerad erfarenhetsparafras och felaktigt OCR-årtal som passerar strukturkontrollen men ska avvisas enligt mänskligt facit. Inga modellrapporterade säkerhets- eller sanningspoäng används som bevis.
+
+## Hårt avstängt runtime, separat syntetisk sandlåda
+
+De fyra [serveringångarna](../../../src/lib/recruitment/ai/recruiter-ai.functions.ts) använder befintlig autentiseringsmiddleware och uppgiftsspecifik request-validering. Deras enda handleråtgärd är den ovillkorliga spärren i [kontraktet](../../../src/lib/recruitment/ai/contract.ts). Ingen AI-leverantör, administrativ klient, underlags-RPC, databasläsning, meddelandefunktion eller rapportskrivning anropas av dessa handlers. Befintlig autentiseringsmiddleware kan verifiera JWT via Supabase; dess faktiska nätbeteende provas inte av offlinekontraktet. Inga UI-knappar kopplas in.
+
+[Den syntetiska sandlådan](../../../src/lib/recruitment/ai/synthetic-sandbox.server.ts) är endast en offlineövning med injicerade lokala facitfunktioner. Den visar kontrakt för idempotens, versionsbunden cache, reservation och konservativ kostnadsdebitering, högst två samtidiga övningar och åtta köade per arbetsgivar-/planversion. Kontext läses före, före beräkning och efter beräkning. Stale, återkallade, oläsbara eller ändrade källor avvisas; sena svar efter avbrott eller timeout publiceras och cachas inte. En beräkning som ignorerar avbrott håller sin plats och reservation tills den avslutas.
+
+Idempotens och cache omfattar scope, aktör, profil, accepterade källtyper, mänskliga val samt alla modell-/prompt-/kolumn- och källversioner. Ändrad payload under samma operations-ID avvisas. Resultat kopieras, så senare mutationer inte kan ändra lagrat facit. Högst 1 024 operationsposter och 256 cachade resultat lagras i minnet.
+
+Detta är inte en installerad kö, en beständig kostnadsjournal, en produktionscache eller en budgetgaranti över flera processer. Inga leverantörspriser, tokenräkningar eller faktiska modellanrop provas. Dessa måste implementeras och verifieras före ett separat aktiveringsbeslut; sandlådan får inte kopplas direkt till ett produktionsanrop.
+
+## Utförd verifiering
+
+| Kontroll                      | Utfört resultat                                                                                                                                     | Gräns                                                                                               |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| Kontrakts- och sandlådetester | 68 tester, 151 assertions, PASS                                                                                                                     | Lokala syntetiska objekt; ingen Auth/API/RLS eller modell.                                          |
+| Offline facit                 | 9 fall, 0 avvikelser                                                                                                                                | 4 tillåtna uppgifter samt fabricerad citering, injection, ledande fråga, felaktig parafras och OCR. |
+| Typkontroll                   | App- och scripts-typkontroll PASS; 9 negativa typkontrakt kontrollerade                                                                             | Handwritten kontrakt; genererade typer orörda.                                                      |
+| Repo-ESLint/Prettier          | Nya kodfiler kontrollerade utan avstängda regler                                                                                                    | Inget påstående om att all befintlig repo-skuld är löst.                                            |
+| Befintlig AI-spärrkontroll    | 35 kontroller PASS                                                                                                                                  | Befintlig testad labbstub, inga externa leverantörsanrop.                                           |
+| Noll sidoeffekter             | Ingen transport i testets fetch-fångst; ingen persistent adapter; offline-evidens visar 0 modell-/skriv-/status-/meddelande-/fastställandehändelser | Syntetisk provning och källgranskning; ingen hosted observation.                                    |
+
+Enhetstesterna täcker bland annat scopefel, otillåten roll, obekräftad/tom profil, fel krav- och käll-ID, accepterad källtyp, Unicode-offset, exakt citat, återkallning, injection, otillåtna slutsatser, avsiktlig idempotens, cachelinjering, reservbudget, överdrag, separat tenantkö, avbrott, timeout och sena svar. Namn-/formatvariationer visar att detta kontrakts bindning är oförändrad i fem syntetiska format; de är ingen modellbaserad rättvise- eller biasutvärdering.
+
+[Original offline-evidens, källhashar och återkörningskommandon](evidence/2026-10-08-p4-synthetic-contract/README.md) hålls åtskilda från framtida modell- och driftprov. Inga kandidater, credentials eller privata originalfiler ingår.
+
+## Lokal integration med färsk main, 2026-10-09
+
+Main `55db1e3b83ace033450899a93ca0961edde05217` har normalt integrerats i denna separat avstängda kontraktsgren genom merge `2c6723f0e59c6e5f476d7f7faf2953102b17806b`. Föräldrarna är den frysta kontraktsgrenen `425beabecc4e6ddcf0839b5b4d9f452721f2bc47` och exakt main ovan. Ingen historik har skrivits om. Detta är en lokal grenintegration, inte en merge till main, installation eller aktivering.
+
+Samtliga sju AI-kod-, test- och fixturefiler är byte-identiska med den ursprungliga kontraktsleveransen. Alla fyra handlers har fortfarande endast den ovillkorliga `RECRUITER_AI_V03_DISABLED`-spärren efter befintlig autentisering och request-validering. Ingen provider-, underlags-, databas-, status-, meddelande- eller rapportadapter tillkommer. Main- och kontraktsgrenens CI-jobb, scriptregistreringar, negativa spärrar och typecheck-includes bevaras tillsammans; genererade typer och permissions ändras inte.
+
+Den förenade koden har återprovats lokalt: **68 tester/151 Bun-expect-kontroller, nio facitfall utan avvikelse och samtliga 35 äldre AI-spärrkontroller PASS**. Appens och scripts fulla typkontroller, nio compile-only negativa typkontrakt, riktad ESLint utan varningar samt riktad Prettier är exit 0. Källhashar, återlästa ursprungliga facithashar och faktiska körningslogghashar finns i [den nya verifieringskvittensen](evidence/2026-10-09-p4-fresh-main/verification.json); [ny evaluatorobservation](evidence/2026-10-09-p4-fresh-main/evaluation.json) sparas separat från originalet.
+
+De utförda proven är fortfarande offlinekontrakt och lokala syntetiska objekt. Sandlådans kostnads-, idempotens-, cache- och kötillstånd är **inte beständigt eller samordnat över processer**. Syntetiska debiteringsenheter är inte pengar, tokenräkningar eller leverantörsfakturor. Ingen riktig Auth/API/RLS-, browser-, modell-, hosted- eller publicerad runtime verifieras här. Det finns inget nytt aktiveringsbeslut.
+
+Den riktade diffkontrollen är grön. En extra kontroll av hela merge-diffen fann en tom slutrad i den oförändrat ärvda main-filen `employer-portal-ux-evidence.yml:315`; detta redovisas i kvittensen och räknas inte som ett AI-produktfel eller som att hela merge-diffen är ren.
+
+## Kö- och retrykorrigering, 2026-10-09
+
+En separat granskning av frysta `452a3f090d8f8ebb32f1cbfced5d492a321f4aa5`
+hittade två konkreta fel i minnessandlådan. En ny begäran kunde ta en frigjord
+plats innan en redan väckt väntare ökade aktivantalet. Den första minnesproben
+visade `maxConcurrent=1` men `active=2`. En avbruten retry av en pågående
+operation väntade också vidare och returnerade ett förslag. De tidigare 68
+kontrollerna var gröna men täckte inte dessa ordningar. [Första felutfall och
+ursprunglig källhash](evidence/2026-10-09-p4-queue-race/initial-readback.json)
+bevaras; detta är inte en AI-aktiveringsläcka.
+
+Sandlådan återkontrollerar nu platsen efter varje väckning, utan ett await
+mellan ledighetskontroll och ökning av aktivantalet. Om en väckt väntare
+avbryts väcks nästa när platsen är fri. Väntarantal och reservation städas
+även när väntan upprepas, avbryts eller löper ut. Retry-väntan har egen
+avbrottssignal/deadline och en ny läsning av aktuell context innan samma
+operationsresultat återges. Den ändrar inte originaloperationen, dess
+reservation eller dess giltiga resultat.
+
+Faktisk lokal verifiering efter fix: **73 tester/176 assertions PASS**, alla
+tidigare 68 tester bevarade. Fem nya tester omfattar den deterministiska
+väckt-väntare/inkommande-context-racen, avbrott efter väckning utan resursläcka,
+retry-avbrott med fortsatt giltig originaloperation samt aktuell återkallning
+och deadline vid retry. Samma fem nya tester kördes mot den oförändrade gamla
+452a-källan i en privat temporär fixture: **fem FAIL**, vilket bevisar att de
+upptäcker de gamla luckorna. De 68 övriga testerna var avsiktligt filtrerade
+bort i just detta negativa prov, inte borttagna ur den riktiga sviten.
+
+Nio offlinefacitfall utan avvikelse, appens och scripts fulla typkontroller,
+nio negativa typkontrakt samt de 35 äldre AI-spärrkontrollerna är gröna.
+Repo-ESLint/Prettier för ändrade kodfiler och riktad diff-check är gröna.
+[Ny avgränsad kvittens](evidence/2026-10-09-p4-queue-race/verification.json)
+binds till källhashar och provloggar. De fyra avstängda handlers, fasta
+featureflaggor, övriga kontraktsfält, fixture/facit och schema är oförändrade.
+
+Korrigeringen är fortfarande endast i en syntetisk minnessandlåda. Den ger
+ingen beständig idempotens, flerprocessbudget, produktionskö eller betrodd
+tenant-/delningsadapter. Första context-läsningen och själva övningen har
+separata tidsgränser; ingen total leverantörs-/API-latensgaranti provas.
+Inga provider-, databas-, status-, meddelande- eller rapportadapters har
+kopplats in, och ingen tjänst, riktig Auth, browser, hosted installation,
+publicering eller aktivering ingår i dessa nya prov.
+
+## Kravbunden komplettering i draft 2, 2026-10-09
+
+Integrationsgranskningen fann att draft 1:s två origin-enum och gräns på fyra
+accepterade källslag inte kunde beskriva `candidate_supplement`. Draft 2 har
+en gemensam strikt enum med fem källslag och en ny schema-/kontraktsversion.
+Äldre draft 1-context och utdata avvisas; inget tidigare kvitto omstämplas.
+Kriteriekoppling till en kandidatkomplettering kräver ett krav som uttryckligen
+accepterar detta källslag, med samma aktuella scope, källversion, hash, läsrätt
+och återkallningskontroller. Neutrala klarlägganden kräver ett giltigt krav-ID
+och en giltig källhänvisning men intygar inte att underlaget är accepterat.
+En kriteriekoppling är fortfarande ett ogranskat förslag och intygar inte att
+ett skallkrav är uppfyllt.
+
+Detta är en deklarativ utökning av det avstängda kontraktet. Ingen verklig
+underlagsadapter, kravmotor, kandidatdelning, migration eller behörighet
+ändras. Fyra runtimehandlers är byteidentiska med tidigare head och nekar
+ovillkorligen före dessa operationer. En framtida betrodd adapter måste läsa
+den faktiska kravprofilens accepterade källslag och aktuella delning från
+servern; en tillåten enum skapar inget sådant medgivande.
+
+[Nytt versionskvitto](evidence/2026-10-09-p4-supplement-contract/verification.json):
+78 prov/205 assertions PASS, inklusive alla tidigare 73. Fem tillkommande
+prov täcker versionsvägran, fem tillåtna källslag/okända och AI-origins,
+accepterad respektive ej accepterad komplettering samt återkallning och
+källbyte under beräkning utan utdata eller statusbiverkning. De fem nya
+proven gav fem FAIL mot frysta äldre `9040f73c`; de tidigare 73 var medvetet
+filtrerade enbart i detta negativa prov. Nio offlinefacit utan avvikelse,
+app-/scripts-typer, riktad lint/format och de 35 äldre AI-grindarna PASS.
+Första lokala format- respektive PATH-fel bevaras separat från slututfallet.
+Ny full CI på nästa publicerade slut-SHA återstår. Inget faktiskt
+Auth/API/RLS/Storage-, modell-, hosted- eller aktiveringsprov följer av detta.
+
+## Kvar före eventuell aktivering
+
+1. Lås uppgifter, SV/EN-ordalydelse, human-reviewflöde och vad som får användas som accepterat underlag. Håll PEACE-arbetssätt och mänsklig rollbedömning separata.
+2. Implementera betrodd serveradapter för tenant-/ansökningsbehörighet, aktuell delning, kravprofilversion och mänskligt valda intervjuevidens. Prova kandidatens återkallning och direkt API-åtkomst med verklig Auth/RLS.
+3. Implementera beständig idempotens, transaktionell budgetreservation, kvot, begränsad flerprocesskö, cancellation och återkallnings-/stalefence utan status-, meddelande- eller rapportbiverkningar.
+4. Lås leverantör, modell-/prompt-/kolumnversioner, token-/kostnadsgräns och databehandling separat. Leverantörsfel, nätförlust och sena svar måste omfattas.
+5. Utvärdera verkliga modellförslag mot syntetiskt originalfacit, inklusive fel OCR, förfalskade citeringar, injection, neutrala frågor, varierade namn/format och manuell avvisning av semantiskt ostödda förslag. Nuvarande lexikala policykontroll är en begränsad mitigation.
+6. Ta ett uttryckligt aktiverings- och pilotbeslut efter dessa kontroller. Ingen av punkterna ovan blir uppfylld av att de fyra avstängda funktionerna typkontrollerar.
+
+Återställning för denna leverans är en normal kompatibel app-revert av dessa nya filer och scriptregistreringar. Inga schema- eller dataskrivningar, inga aktiverade funktioner och inga nya rapporter behöver återställas. Ingen merge till main, publicering eller hosted installation har utförts av denna arbetsgren.

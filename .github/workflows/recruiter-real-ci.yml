@@ -64,7 +64,7 @@ jobs:
       - name: Chromium and operating-system dependencies
         run: bunx playwright install --with-deps chromium
       - name: Real-stack SHA, isolation and publication guards
-        run: bun test scripts/recruiter-real-ci.test.ts
+        run: bun test ./scripts/recruiter-real-ci.test.ts
       - name: Fresh real Supabase, strict history, Storage and 12 UI journeys plus 2 CAS probes
         run: node scripts/recruiter-real-ci-run.mjs
       - name: Validate public manifest and curated synthetic PNG only
