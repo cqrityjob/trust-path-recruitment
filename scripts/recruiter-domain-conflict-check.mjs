@@ -116,10 +116,23 @@ try {
   // Preserve the exact old-stage suites: reconstruct legacy cases before450,
   // reinstall450 and this forward patch, then run explicit PT409 expectations.
   fileSql(rollback);
+  // This clone still contains the later lifecycle trigger. Stand down only
+  // its EMPTY disposable-test dependency before the historical070 helper DOWN.
+  // The main runner's later standdown does not affect this independent clone.
+  fileSql("supabase/tests/interview_method_lifecycle_historical_standdown.sql");
   fileSql("supabase/rollback/20270307090000_interview_content_snapshot_lock_rollback.sql");
   fileSql("supabase/tests/interview_content_snapshot_legacy_fixture.sql");
   fileSql("supabase/migrations/20270307090000_interview_content_snapshot_lock.sql");
   fileSql(migration);
+  // Restore the exact current lifecycle guards before any current-schema
+  // assertion, including the grant statement lock and terminal-start denial.
+  fileSql("supabase/migrations/20270310090000_interview_method_lifecycle_revocation.sql");
+  ok(
+    sql(
+      `SELECT EXISTS(SELECT 1 FROM pg_trigger WHERE tgrelid='public.scp_interview_pack_pilot_grants'::regclass AND tgname='ri_pilot_grant_serialise' AND tgtype=22 AND tgenabled='O') AND position('suspended' IN pg_get_functiondef('public.scp_iv_case_start_basis(uuid,uuid,uuid)'::regprocedure))>0 AND position('retired' IN pg_get_functiondef('public.scp_iv_case_start_basis(uuid,uuid,uuid)'::regprocedure))>0`,
+    ) === "t",
+    "current lifecycle grant lock and terminal-start guard restored after historical install",
+  );
   suite(
     replaceExpected(
       fs.readFileSync(

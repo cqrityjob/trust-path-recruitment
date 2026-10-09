@@ -1,8 +1,8 @@
 import type { BinaryLike } from "node:crypto";
 
 /** Test-only native runner exports. Parsed private JSON remains unknown. */
-export const SCHEMA_SHA: "1e5988c6f9c7121a0fefd22c0db06f6b573f0ae9";
-export const APP_SHA: "40e5775de5195050571421827434ec2872a61506";
+export const SCHEMA_SHA: "8dfec6c47e42074d808c30939cebf0c63defce55";
+export const APP_SHA: "55db1e3b83ace033450899a93ca0961edde05217";
 export const PROJECT: "cqj-ri-native-op09-20261008";
 export const API: "http://127.0.0.1:55820";
 export const APP: "http://127.0.0.1:35820";
@@ -68,6 +68,7 @@ export function validateTarget(
   evidenceSha: string,
   appSha: string,
 ): NativeContext;
+export function requireSchemaWitness(root: string, evidenceSha: string): void;
 export function readContext(env?: NativeEnvironment): NativeContext;
 export function readPrivateJson(file: string): unknown;
 export function validateStatus<T extends NativeStatus>(status: T): T;

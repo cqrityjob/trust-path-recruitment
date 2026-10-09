@@ -1,0 +1,111 @@
+{
+  "kind": "native_pin_forward_local_guards",
+  "schemaSha": "8dfec6c47e42074d808c30939cebf0c63defce55",
+  "appSha": "55db1e3b83ace033450899a93ca0961edde05217",
+  "localBaseAtFreeze": "8d274b2f3bed949b8b872f506519d7e8d5d0e654",
+  "canonicalMigrationCount": 389,
+  "prior387BlobsIdentical": true,
+  "requiredAdditionalMigrations": [
+    "20270310090000_interview_method_lifecycle_revocation.sql",
+    "20270310100000_recruiter_profile_change_review.sql"
+  ],
+  "guards": {
+    "passed": 79,
+    "failed": 0,
+    "bunExpect": 221
+  },
+  "types": {
+    "scripts": 0
+  },
+  "format": 0,
+  "lint": {
+    "matchedPaths": 6,
+    "errors": 0,
+    "warnings": 0,
+    "declarationCoveredBy": "full scripts TS and Prettier; ESLint has no matching declaration config"
+  },
+  "notExecuted": [
+    "database_replay",
+    "real_auth",
+    "storage",
+    "browser_service_journeys",
+    "hosted_write",
+    "CI"
+  ],
+  "retainedFirstAttempt": {
+    "kind": "local_harness_timeout",
+    "tests": {
+      "passed": 77,
+      "failed": 1
+    },
+    "cause": "batched ls-tree replaced 774 separate Git subprocesses; same historical blob assertions retained"
+  },
+  "sources": [
+    {
+      "path": ".github/workflows/recruiter-real-ci.yml",
+      "sha256": "c5faa3a0cd24cfc995ca90c0b0243f113a15c9fe98aacd5d656b865554a51817"
+    },
+    {
+      "path": ".github/workflows/recruiter-p1-native-ci.yml",
+      "sha256": "c7f53eabe3ccf71c9f320d52af3928fedb296f1b1486c4f6385f89b557d5497c"
+    },
+    {
+      "path": ".github/workflows/passport-native-op09-ci.yml",
+      "sha256": "2aef8af0da8af7a96a83b009491592faf5d8dd72c2e336057d9f59f9b0b29dd6"
+    },
+    {
+      "path": "scripts/recruiter-real-ci-contract.mjs",
+      "sha256": "8663158bb37c750064d9e4046a37c6500900f14037b33e4f82156180f010f325"
+    },
+    {
+      "path": "scripts/recruiter-p1-native-contract.mjs",
+      "sha256": "ac3d4138c3197cd5c9d21747b5110fb76736a29c5ba26e02c6b2cdc0a2d6102f"
+    },
+    {
+      "path": "scripts/passport-native-op09-contract.mjs",
+      "sha256": "f10d482716406455d1ac1801e12bdf13688cb51b2e89b5640090fb55242c4f09"
+    },
+    {
+      "path": "scripts/passport-native-op09-contract.d.mts",
+      "sha256": "701a424ee36386fdc7d4fee2b49e6b6333a90a0a0d4c237ee91b9979ff6d6a18"
+    },
+    {
+      "path": "scripts/recruiter-real-ci.test.ts",
+      "sha256": "ce1a80c0a75f721ee1bf52ead78b3e573a117dcdbabef5c254e38582211a258b"
+    },
+    {
+      "path": "scripts/recruiter-p1-native.test.ts",
+      "sha256": "4faab37b95c52322efa59a454d4c804c75f8e80bd6af916619c16763dca84da4"
+    },
+    {
+      "path": "scripts/passport-native-op09.test.ts",
+      "sha256": "3cbaa76848450be996ccff952343a653b557799bbc145ab3bb5597544270bb03"
+    }
+  ],
+  "logs": [
+    {
+      "path": "/private/tmp/ri-v03-next/workspace-native389-guards.log",
+      "sha256": "be1a9d4808963f8be6a2ab4658142c978fee0cd80c06df867bea39e6b32c4ee9"
+    },
+    {
+      "path": "/private/tmp/ri-v03-next/workspace-native389-guards-final.log",
+      "sha256": "0604c14d5c5f3cb57eacf21e2733a8f461ba206cbd327832ed006164fac399ad"
+    },
+    {
+      "path": "/private/tmp/ri-v03-next/workspace-native389-scripts-ts.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/private/tmp/ri-v03-next/workspace-native389-eslint.log",
+      "sha256": "fb9ec62c8162279d11907a199f04544ca040f3ef91d441ee8dc7fcd9454a45ec"
+    },
+    {
+      "path": "/private/tmp/ri-v03-next/workspace-native389-eslint-final.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/private/tmp/ri-v03-next/workspace-native389-prettier.log",
+      "sha256": "17aa973d3f004560237d9a95171210b0671deff23d61628eecf7322ff5938f20"
+    }
+  ]
+}

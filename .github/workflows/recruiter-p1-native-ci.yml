@@ -32,13 +32,13 @@ jobs:
       - name: Exact reviewed P1 application
         uses: actions/checkout@v4
         with:
-          ref: 40e5775de5195050571421827434ec2872a61506
+          ref: 55db1e3b83ace033450899a93ca0961edde05217
           path: app
           persist-credentials: false
       - name: Exact reviewed schema including native hash fix
         uses: actions/checkout@v4
         with:
-          ref: 1e5988c6f9c7121a0fefd22c0db06f6b573f0ae9
+          ref: 8dfec6c47e42074d808c30939cebf0c63defce55
           path: schema
           persist-credentials: false
           sparse-checkout: |
@@ -68,7 +68,7 @@ jobs:
         run: |
           bun test ./scripts/recruiter-p1-native.test.ts
           bunx tsc --noEmit --allowJs --checkJs false --skipLibCheck --module preserve --moduleResolution bundler --target ES2022 --types node scripts/recruiter-p1-native.test.ts scripts/recruiter-p1-native-browser.config.ts
-      - name: Strict schema, actual Auth and Storage, 23 API assertions and five browser cases
+      - name: Strict schema, actual Auth and Storage, canonical23 plus workspace70 HTTP checks and five browser cases
         run: node scripts/recruiter-p1-native-run.mjs
       - name: Validate redacted manifest and original synthetic PNG only
         id: public_evidence
@@ -76,9 +76,11 @@ jobs:
         run: |
           node --input-type=module -e '
             import fs from "node:fs";
+            import {requireWorkspaceProof} from "./scripts/recruiter-p1-native-workspace.mjs";
             const p="p1-native-public/manifest.json";
             const m=JSON.parse(fs.readFileSync(p,"utf8"));
             if(!["PASS","FAILED"].includes(m.result)||m.evidenceSha!==process.env.RI_P1_NATIVE_EVIDENCE_SHA)throw Error("P1_NATIVE_PUBLIC_MANIFEST_REQUIRED");
+            requireWorkspaceProof(m);
             if(/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+|Bearer\s|"(?:password|access_token|refresh_token|SERVICE_ROLE_KEY|DB_URL)"\s*:/.test(JSON.stringify(m)))throw Error("P1_NATIVE_PUBLIC_SECRET_REFUSED");
           '
       - name: Redacted native P1 evidence

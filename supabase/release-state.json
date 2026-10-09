@@ -7,6 +7,14 @@
   "$comment": "RELEASE PARITY STATE. Enforced by scripts/release-parity-check.ts, which runs in CI and before a release. This file records, for every canonical migration at the release frontier, whether it is believed applied on the hosted database, and which database objects it introduces. The guard fails when application code on this branch references an object whose migration is not applied -- the exact class of failure that stopped employers saving jobs during UAT. It NEVER connects to a database, holds no credentials and applies no migration; it compares this repository against itself. Edit it deliberately: every entry is an owner-level statement about production.", 
   "frontier": [
     {
+      "file": "20270310090000_interview_method_lifecycle_revocation.sql",
+      "hostedState": "pending",
+      "introduces": [],
+      "rollback": "supabase/rollback/20270310090000_interview_method_lifecycle_revocation_rollback.sql",
+      "note": "Schema-only forward correction of existing method/grant guards. Suspended/retired versions cannot start new cases; genuine grant revocation remains possible. Existing frozen cases, content versions and final reports are preserved. This migration is not installed or approved for production by the 2026-10-08 final-review assignment. A merge carrying this migration would trigger a production installation, so keep this PR unmerged pending a deployment decision. No AI, retention worker, candidate send or publication.",
+      "verify": "Run strict history, the 124 lifecycle SQL assertions including planted controls, the 13 actual two-session race assertions, snapshot/integrity regressions and data-preserving rollback refusal in an isolated database. Before any production installation, reverify exact CI head and current release dependencies, then record actual Auth/PostgREST start/revoke/suspend/retire and frozen-case/report readback; SQL fixtures are not real Auth or published runtime evidence."
+    },
+    {
       "file": "20270309090000_sp_evidence_upload_recovery.sql",
       "hostedState": "applied",
       "note": "Additive holder-owned upload intents and fenced recovery; no worker, email, AI or historical orphan backfill. Schema only; consumer must wait for official installation and readback. Preserve numeric installation order:07100000 then08090000 then09090000.",
@@ -3639,6 +3647,43 @@
           "object": "rec_requirement_review_events"
         }
       ]
+    },
+    {
+      "file": "20270310100000_recruiter_profile_change_review.sql",
+      "hostedState": "pending",
+      "introduces": [
+        {
+          "kind": "function",
+          "object": "rec_ri_profile_change_impact"
+        },
+        {
+          "kind": "function",
+          "object": "rec_ri_confirm_reviewed_profile"
+        },
+        {
+          "kind": "function",
+          "object": "rec_ri_profile_change_history"
+        },
+        {
+          "kind": "function",
+          "object": "rec_ri_compare_applications"
+        },
+        {
+          "kind": "function",
+          "object": "rec_ri_next_unreviewed"
+        },
+        {
+          "kind": "function",
+          "object": "rec_ri_page_evidence"
+        },
+        {
+          "kind": "table",
+          "object": "profile_change_reviews"
+        }
+      ],
+      "rollback": "supabase/rollback/20270310100000_recruiter_profile_change_review_rollback.sql",
+      "note": "Schema-only, stacked after lifecycle20270310090000. Read-only comparison/page evidence/next-unreviewed and a human-reviewed profile-confirmation wrapper reuse existing member/manage/source/redaction and PT409 contracts. One private append-only profile-change audit. No client consumers, AI, stage changes, candidate sends, snapshot/report mutation or hosted installation. Keep unmerged pending owner release decision because a merge may trigger automatic installation.",
+      "verify": "Run the 36 synthetic workspace SQL assertions, unchanged95 P1 assertions, actual two-SQL-session profile CAS/idempotency and locked empty/nonempty DOWN/reapply witness in an isolated ci_test database. Require strict full replay/history and actual PostgREST14/Auth/API/browser proof separately; local bootstrap role fixtures are not real Auth. Before any authorized installation compare exact six function bodies/ACL and private audit definition, verify prior ledgers/snapshots/locks/reports unchanged and record actual hosted evidence."
     }
   ], 
   "policyVersion": 2, 

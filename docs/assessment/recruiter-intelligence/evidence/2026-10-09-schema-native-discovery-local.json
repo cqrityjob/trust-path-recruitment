@@ -1,0 +1,122 @@
+{
+  "kind": "native_root_guard_discovery_local_receipt",
+  "commit": "85a68b52fa5abb2e830021ba8aa5318f9e168921",
+  "failedCIHead": "06c9641121ce1740adf73d65c244122642128b4c",
+  "failures": [
+    {
+      "jobId": 113573166592,
+      "guardStep": "Real-stack SHA, isolation and publication guards",
+      "guard": {
+        "pass": 31,
+        "fail": 1,
+        "error": 1
+      },
+      "observed": "Requiring @playwright/test second time: root/node_modules/playwright/lib/index.js then app/node_modules/playwright/lib/index.js",
+      "nativeServiceStep": "skipped",
+      "publicManifestStep": "failure; downstream of guard refusal"
+    },
+    {
+      "jobId": 113573166492,
+      "guardStep": "Native isolation, canonical source and publication guards",
+      "guard": {
+        "pass": 34,
+        "fail": 1,
+        "error": 1
+      },
+      "observed": "app/scripts/recruiter-p1-native.test.ts:52 executed obsolete git show40e; fatal path exists on disk but not in40e",
+      "nativeServiceStep": "skipped",
+      "publicManifestStep": "failure; downstream of guard refusal"
+    }
+  ],
+  "confirmedCause": "Bun non-prefixed filename argument is a discovery filter and collected both root/scripts and app/scripts versions",
+  "fix": "All three native workflows use explicit ./scripts/<test>.test.ts; no canonical source/pin/history/runner/schema changes",
+  "localExecuted": {
+    "guards": {
+      "pass": 81,
+      "fail": 0,
+      "bunExpect": 241,
+      "durationSeconds": 4.2,
+      "previous79Retained": true
+    },
+    "reproduction": {
+      "actualInstalledSeparatePackageTrees": true,
+      "packages": [
+        "@playwright/test",
+        "playwright",
+        "playwright-core"
+      ],
+      "immutableHardlinksOnly": true,
+      "installs": 0,
+      "devicePresets": [
+        {
+          "name": "iPhone 13 Mini",
+          "width": 375,
+          "isMobile": true,
+          "hasTouch": true,
+          "deviceScaleFactor": 3
+        },
+        {
+          "name": "iPhone 14",
+          "width": 390,
+          "isMobile": true,
+          "hasTouch": true,
+          "deviceScaleFactor": 3
+        }
+      ],
+      "filterDetectsDuplicatePlaywrightInit": true,
+      "filterDetectsObsoleteAppGitReadWithAbsentObject": true,
+      "exactRootSelectsOneCurrentGuardInBothCases": true
+    },
+    "scriptsTypecheckExit": 0,
+    "scopedLintExit": 0,
+    "formatExit": 0,
+    "diffcheckExit": 0
+  },
+  "notExecuted": [
+    "newCI",
+    "nativeStack",
+    "database",
+    "Auth",
+    "Storage",
+    "browser service journeys",
+    "hosted write",
+    "push"
+  ],
+  "retainedLocalFirstDraftFailure": "Initial new workflow-map regression used two incorrect workflow filenames (ENOENT), corrected explicit mapping; successful actual subprocess reproduction already passed. This is not a CI/native PASS.",
+  "sources": [
+    {
+      "path": ".github/workflows/recruiter-real-ci.yml",
+      "sha256": "66c61cc66ed9f5cd64ae7b5ecd27f4764d69409cc36ff1b7af104a819cc3c634"
+    },
+    {
+      "path": ".github/workflows/recruiter-p1-native-ci.yml",
+      "sha256": "ddaf10b067be59dd1dd29bf1d51a0f1c4ba9aa9ccb8a249b7473687457c96064"
+    },
+    {
+      "path": ".github/workflows/passport-native-op09-ci.yml",
+      "sha256": "91010dbb33faced98c4d20f12523199dc0bf33f2c9450a4c5255e995df35e019"
+    },
+    {
+      "path": "scripts/recruiter-real-ci.test.ts",
+      "sha256": "35c2a3981814f159afed42645215d66216727c25139d8d8db2092904e6abd26c"
+    }
+  ],
+  "logs": [
+    {
+      "path": "/private/tmp/ri-v03-next/workspace-native389-discovery-guards.log",
+      "sha256": "ce6f714c2b762133c8818782bd9511f3aa0cb0262eda4c7fc5ddb9805fcf1461"
+    },
+    {
+      "path": "/private/tmp/ri-v03-next/workspace-native389-discovery-guards-final.log",
+      "sha256": "ea5ed2329e52db126630a457e206013f23eb77b15cf86a565bf68fe13326cd1d"
+    },
+    {
+      "path": "/private/tmp/ri-v03-next/workspace-native389-discovery-scripts-ts-final.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/private/tmp/ri-v03-next/workspace-native389-discovery-eslint.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ]
+}

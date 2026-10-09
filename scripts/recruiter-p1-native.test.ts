@@ -33,6 +33,14 @@ import {
   decisions,
 } from "./recruiter-p1-native-fixture.mjs";
 import { writeNativePublic } from "./recruiter-p1-native-public.mjs";
+import {
+  WORKSPACE_STAGE,
+  WORKSPACE_HTTP_IDS,
+  WORKSPACE_HTTP_COUNT,
+  WORKSPACE_RPC_COUNT,
+  WORKSPACE_SUPPORTING_COUNT,
+  requireWorkspaceProof,
+} from "./recruiter-p1-native-workspace.mjs";
 import { CV_BUCKET, createNativeCvBucket, storageFailure } from "./recruiter-p1-native-storage.mjs";
 import { summarizeNativeBrowser } from "./recruiter-p1-native-browser-summary.mjs";
 import {
@@ -53,6 +61,255 @@ const sql = canonical("supabase/tests/recruiter_intelligence_p1_test.sql");
 const api = canonical("scripts/recruiter-intelligence-p1-api-check.mjs");
 const browser = canonical("e2e/recruiter-intelligence-p1.spec.ts");
 const ns = "ri-p1-123456abcdef";
+
+function workspaceReport() {
+  const status = (id: string) => {
+    if (id.startsWith("anon_") || id.startsWith("outsider_") || id === "member_confirm_denied")
+      return 403;
+    if (id === "concurrent_bob" || /stale|old_profile/.test(id)) return 409;
+    if (id === "owner_archive_closed") return 204;
+    return id.endsWith("_denied") ? 400 : 200;
+  };
+  return {
+    result: "PASS",
+    stages: { [WORKSPACE_STAGE]: "passed" },
+    canonicalHttpAssertions: 23,
+    browser: { expected: 5, unexpected: 0, flaky: 0, skipped: 0 },
+    workspaceAuditCascadeReset: true,
+    jobCascadeRetainsSnapshots: true,
+    workspaceHttp: {
+      kind: "executed-native-workspace-six-rpc-http",
+      httpRequests: 70,
+      workspaceRpcRequests: 60,
+      supportingRpcRequests: 10,
+      checks: WORKSPACE_HTTP_IDS.map((id: string) => ({ id, passed: true, status: status(id) })),
+      concurrentStatuses: [200, 409],
+      oldReviewsAndSnapshotsUnchanged: true,
+      priorProfilePreserved: true,
+      queueBefore: { remaining: 100, historicalExcluded: 0 },
+      queueAfterProfile: { remaining: 100, historicalExcluded: 0 },
+      queueAfterExclusions: { remaining: 97, historicalExcluded: 3 },
+      impactAfterExclusions: { received: 100, active: 97, archived: 1, withdrawn: 1, decided: 2 },
+      existingCandidateSession: true,
+    },
+  };
+}
+test("new workspace HTTP proof requires all70 fixed calls (60 new RPC and10 support), exact denials and both real reviewer outcomes; original23/5 and reset stay required", () => {
+  assert.equal(WORKSPACE_HTTP_COUNT, 70);
+  assert.equal(WORKSPACE_HTTP_IDS.length, 70);
+  assert.equal(new Set(WORKSPACE_HTTP_IDS).size, 70);
+  assert.equal(WORKSPACE_RPC_COUNT, 60);
+  assert.equal(WORKSPACE_SUPPORTING_COUNT, 10);
+  const baseline = workspaceReport();
+  assert.doesNotThrow(() => requireWorkspaceProof(baseline));
+  for (const mutate of [
+    (r: typeof baseline) => {
+      r.stages[WORKSPACE_STAGE] = "not_run";
+    },
+    (r: typeof baseline) => {
+      r.stages[WORKSPACE_STAGE] = "skipped";
+    },
+    (r: typeof baseline) => {
+      r.workspaceHttp.kind = "prepared-native-workspace-six-rpc-http";
+    },
+    (r: typeof baseline) => {
+      r.workspaceHttp.httpRequests = 69;
+    },
+    (r: typeof baseline) => {
+      r.workspaceHttp.workspaceRpcRequests = 59;
+    },
+    (r: typeof baseline) => {
+      r.workspaceHttp.supportingRpcRequests = 9;
+    },
+    (r: typeof baseline) => {
+      r.workspaceHttp.checks.pop();
+    },
+    (r: typeof baseline) => {
+      r.workspaceHttp.checks[0].id = r.workspaceHttp.checks[1].id;
+    },
+    (r: typeof baseline) => {
+      r.workspaceHttp.checks[0].passed = false;
+    },
+    (r: typeof baseline) => {
+      r.workspaceHttp.checks.find((c) => c.id === "member_confirm_denied")!.status = 200;
+    },
+    (r: typeof baseline) => {
+      r.workspaceHttp.concurrentStatuses = [200, 200];
+    },
+    (r: typeof baseline) => {
+      r.workspaceHttp.checks.find((c) => c.id === "concurrent_bob")!.status = 200;
+    },
+    (r: typeof baseline) => {
+      r.workspaceHttp.oldReviewsAndSnapshotsUnchanged = false;
+    },
+    (r: typeof baseline) => {
+      r.workspaceHttp.priorProfilePreserved = false;
+    },
+    (r: typeof baseline) => {
+      r.workspaceHttp.queueAfterExclusions.remaining = 100;
+    },
+    (r: typeof baseline) => {
+      r.workspaceHttp.impactAfterExclusions.decided = 1;
+    },
+    (r: typeof baseline) => {
+      r.workspaceAuditCascadeReset = false;
+    },
+    (r: typeof baseline) => {
+      r.jobCascadeRetainsSnapshots = false;
+    },
+    (r: typeof baseline) => {
+      r.canonicalHttpAssertions = 22;
+    },
+    (r: typeof baseline) => {
+      r.browser.expected = 4;
+    },
+    (r: typeof baseline) => {
+      r.browser.skipped = 1;
+    },
+  ]) {
+    const changed = structuredClone(baseline);
+    mutate(changed);
+    assert.throws(
+      () => requireWorkspaceProof(changed),
+      /^Error: P1_NATIVE_WORKSPACE_EXECUTED_PROOF_REQUIRED$/,
+    );
+  }
+  assert.throws(
+    () => requireWorkspaceProof({ ...baseline, workspaceHttp: undefined }),
+    /EXECUTED_PROOF_REQUIRED/,
+  );
+});
+function requireWorkspaceWiring(source: string) {
+  const start = source.indexOf('await stage("historical_synthetic_ai_never_green"');
+  const actual = source.indexOf("await stage(WORKSPACE_STAGE");
+  const reset = source.indexOf('await stage("owned_job_cascade_fresh_browser_baseline"');
+  if (
+    !(start > 0 && actual > start && reset > actual) ||
+    !source.includes("      WORKSPACE_STAGE,") ||
+    !/^ {2}await stage\(WORKSPACE_STAGE,/m.test(source) ||
+    !source.includes("report.workspaceHttp = await runWorkspaceHttp({") ||
+    !source.includes('await login("candidate-95")') ||
+    !source.includes("report.workspaceAuditCascadeReset = true") ||
+    !source.includes("P1_NATIVE_WORKSPACE_AUDIT_CASCADE_RESET_REQUIRED")
+  )
+    throw Error("WORKSPACE_NATIVE_STAGE_REQUIRED");
+  const stage = source.slice(actual, reset);
+  assert.doesNotMatch(stage, /INSERT INTO|UPDATE public|DELETE FROM|request\.jwt|SET LOCAL ROLE/);
+  for (const table of [
+    "rec_requirement_profiles",
+    "rec_requirement_review_heads",
+    "rec_requirement_decisions",
+    "rec_requirement_review_events",
+    "interview_content_snapshots",
+  ])
+    if (!stage.includes(table)) throw Error("WORKSPACE_NATIVE_IMMUTABILITY_WITNESS_REQUIRED");
+}
+test("workspace stage is additive after AI isolation before the original owned reset; remove, skip, mocked result and incomplete old-source witness are refused", () => {
+  const source = fs.readFileSync(path.join(root, "scripts/recruiter-p1-native-run.mjs"), "utf8");
+  requireWorkspaceWiring(source);
+  for (const changed of [
+    source.replace("      WORKSPACE_STAGE,", ""),
+    source.replace("  await stage(WORKSPACE_STAGE,", "  if (false) await stage(WORKSPACE_STAGE,"),
+    source.replace(
+      "report.workspaceHttp = await runWorkspaceHttp({",
+      "report.workspaceHttp = await fakePreparedResult({",
+    ),
+    source.replace(
+      "report.workspaceAuditCascadeReset = true",
+      "report.workspaceAuditCascadeReset = false",
+    ),
+    source.replace(
+      "FROM scp_private.interview_content_snapshots s JOIN",
+      "FROM scp_private.unrelated_snapshot_table s JOIN",
+    ),
+  ]) {
+    assert.notEqual(changed, source);
+    assert.throws(() => requireWorkspaceWiring(changed));
+  }
+  const helper = fs.readFileSync(
+    path.join(root, "scripts/recruiter-p1-native-workspace.mjs"),
+    "utf8",
+  );
+  for (const fn of [
+    "rec_ri_profile_change_impact",
+    "rec_ri_profile_change_history",
+    "rec_ri_compare_applications",
+    "rec_ri_page_evidence",
+    "rec_ri_next_unreviewed",
+    "rec_ri_confirm_reviewed_profile",
+  ])
+    assert.ok(helper.includes(fn));
+  assert.match(helper, /same_actor_operation_retry/);
+  assert.match(helper, /writes\[winningIndex\]/);
+  const pageBinding = (text: string) => {
+    assert.match(text, /owned_empty_profile_read/);
+    assert.match(text, /owned_empty_profile_confirm/);
+    assert.match(
+      text,
+      /combined_cross_job_binding: \{ _job_id: emptyJob, _profile_id: emptyProfile\.profileId \}/,
+    );
+    assert.match(text, /error\("23514", 400\)/);
+    assert.doesNotMatch(text, /kind === "combined_cross_job_binding" \? "PT409"/);
+  };
+  pageBinding(helper);
+  const wrongPageProfile = helper.replace(
+    "combined_cross_job_binding: { _job_id: emptyJob, _profile_id: emptyProfile.profileId }",
+    "combined_cross_job_binding: { _job_id: emptyJob, _profile_id: profile.profileId }",
+  );
+  assert.notEqual(wrongPageProfile, helper);
+  assert.throws(() => pageBinding(wrongPageProfile));
+  const noPrivilegedAdapter = (text: string) =>
+    assert.doesNotMatch(
+      text.replace(/\bArray\.from\(/g, "arrayFactory("),
+      /createClient|admin\.|auth\.admin|request\.jwt|console\.|\.from\(|fetch\(/,
+    );
+  noPrivilegedAdapter(helper);
+  for (const forbidden of [
+    "client.from('private')",
+    "admin.rpc('write')",
+    "fetch('https://hosted.invalid')",
+    "request.jwt.claim.sub",
+  ])
+    assert.throws(() => noPrivilegedAdapter(helper + forbidden));
+});
+test("workspace public proof fails closed on original payloads and false PASS, while truthful pre-stage failure remains publishable", () => {
+  const baseline = workspaceReport();
+  for (const report of [
+    {
+      ...baseline,
+      workspaceHttp: { ...baseline.workspaceHttp, privateOriginal: "private_secret_canary" },
+    },
+    {
+      ...baseline,
+      workspaceHttp: {
+        ...baseline.workspaceHttp,
+        checks: baseline.workspaceHttp.checks.map((c, i) =>
+          i === 0 ? { ...c, rawError: "private_secret_canary" } : c,
+        ),
+      },
+    },
+    { ...baseline, stages: { [WORKSPACE_STAGE]: "failed" } },
+  ])
+    assert.throws(() => requireWorkspaceProof(report), /EXECUTED_PROOF_REQUIRED/);
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "p1-workspace-public-"));
+  try {
+    const context = { stackRoot: path.join(dir, "stack"), publicRoot: path.join(dir, "public") };
+    assert.throws(() => writeNativePublic(context, { result: "PASS" }), /EXECUTED_PROOF_REQUIRED/);
+    assert.equal(fs.existsSync(context.publicRoot), false);
+    assert.equal(
+      writeNativePublic(context, { result: "FAILED", stages: { [WORKSPACE_STAGE]: "not_run" } })
+        .result,
+      "FAILED",
+    );
+  } finally {
+    fs.rmSync(dir, { recursive: true });
+  }
+  const workflow = fs.readFileSync(
+    path.join(root, ".github/workflows/recruiter-p1-native-ci.yml"),
+    "utf8",
+  );
+  assert.match(workflow, /requireWorkspaceProof\(m\)/);
+});
 const sha = "a".repeat(40);
 const valid = {
   GITHUB_ACTIONS: "true",
@@ -193,6 +450,14 @@ test("target guard accepts only an explicit GitHub-hosted disposable run and the
       /^Error: P1_NATIVE_/,
     );
   assert.throws(() => validateTarget(valid, sha, "b".repeat(40), SCHEMA_SHA), /SHA_MISMATCH/);
+  assert.throws(
+    () => validateTarget(valid, sha, "40e5775de5195050571421827434ec2872a61506", SCHEMA_SHA),
+    /SHA_MISMATCH/,
+  );
+  assert.throws(
+    () => validateTarget(valid, sha, APP_SHA, "1e5988c6f9c7121a0fefd22c0db06f6b573f0ae9"),
+    /SHA_MISMATCH/,
+  );
   assert.throws(() => validateTarget(valid, sha, APP_SHA, "b".repeat(40)), /SHA_MISMATCH/);
   assert.throws(() => validateTarget(valid, sha, APP_SHA, undefined), /SHA_MISMATCH/);
 });
@@ -490,12 +755,23 @@ test("human decisions preserve explicit NO, actual missing sources and checked e
 });
 test("history/count contracts fail closed on missing full schema, skipped or flaky browser evidence", () => {
   const files = fs.readdirSync(path.join(root, "supabase/migrations"));
-  assert.ok(history(files).length >= 387);
-  for (const prefix of ["20270308090000_", "20270309090000_"])
-    assert.throws(
-      () => history(files.filter((name) => !name.startsWith(prefix))),
-      /COMPLETE_HISTORY/,
-    );
+  assert.equal(APP_SHA, "55db1e3b83ace033450899a93ca0961edde05217");
+  assert.equal(SCHEMA_SHA, "8dfec6c47e42074d808c30939cebf0c63defce55");
+  assert.equal(history(files).length, 389);
+  assert.throws(
+    () => history(files.filter((name) => !/^20270310(?:090000|100000)_/.test(name))),
+    /COMPLETE_HISTORY/,
+  );
+  for (const prefix of [
+    "20270308090000_",
+    "20270309090000_",
+    "20270310090000_",
+    "20270310100000_",
+  ]) {
+    const omitted = files.filter((name) => !name.startsWith(prefix));
+    assert.throws(() => history(omitted), /COMPLETE_HISTORY/);
+    assert.throws(() => history([...omitted, "20270311100000_other.sql"]), /COMPLETE_HISTORY/);
+  }
   assert.throws(
     () => history([...files, files.find((name) => name.endsWith(".sql"))]),
     /COMPLETE_HISTORY/,
@@ -511,6 +787,17 @@ test("history/count contracts fail closed on missing full schema, skipped or fla
       () => requireBrowserCounts({ expected: 5, unexpected: 0, flaky: 0, skipped: 0, ...patch }),
       /FIVE_BROWSER/,
     );
+});
+test("workflow checkouts bind the exact389 schema and fresh reviewed app without floating refs", () => {
+  const workflow = fs.readFileSync(
+    path.join(root, ".github/workflows/recruiter-p1-native-ci.yml"),
+    "utf8",
+  );
+  assert.match(workflow, new RegExp(`ref: ${APP_SHA}\\n\\s+path: app\\n`));
+  assert.match(workflow, new RegExp(`ref: ${SCHEMA_SHA}\\n\\s+path: schema\\n`));
+  assert.match(workflow, /fetch-depth: 0/);
+  assert.doesNotMatch(workflow, /ref: (?:main|latest)|continue-on-error:/);
+  assert.match(workflow, /run: node scripts\/recruiter-p1-native-run\.mjs/);
 });
 test("provider login remains enabled while signup/mail/runtime workers remain disabled", () => {
   const auth = CONFIG.split("[auth]")[1].split("[auth.email]")[0];

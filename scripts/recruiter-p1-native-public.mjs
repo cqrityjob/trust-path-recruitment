@@ -1,11 +1,13 @@
 import fs from "node:fs";
 import path from "node:path";
 import { sha256 } from "./recruiter-p1-native-contract.mjs";
+import { requireWorkspaceProof } from "./recruiter-p1-native-workspace.mjs";
 const leaked =
   /\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+|Bearer\s+[A-Za-z0-9_.-]+|\b(?:sb_secret_|sb_publishable_|sbp_)[A-Za-z0-9_-]+|"(?:password|access_token|refresh_token|SERVICE_ROLE_KEY|DB_URL)"\s*:/i;
 const image =
   /^(sv|en)-(desktop|emulated-375)-(remaining|archive-only-received|gray-human-reviewed|concurrent-explicit-reload|explicit-peace-handoff|cached-job-profile-target)\.png$/;
 export function writeNativePublic(context, report) {
+  requireWorkspaceProof(report);
   if (fs.existsSync(context.publicRoot)) throw Error("P1_NATIVE_PUBLIC_FRESH_ROOT_REQUIRED");
   const source = path.join(context.stackRoot, "supabase/.temp/browser/curated");
   const images = [];
