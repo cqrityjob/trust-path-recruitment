@@ -399,6 +399,32 @@ export async function setLang(page: Page, lang: "sv" | "en"): Promise<void> {
 
 /* ── Measurement ─────────────────────────────────────────────────────── */
 
+/** The elements that reach past the viewport's right edge: what a sideways
+ *  scroll is made of, named so a failure says which element and not only how
+ *  many pixels. Diagnostic only. */
+export async function overflowingElements(page: Page): Promise<string[]> {
+  return page.evaluate(() => {
+    const limit = window.innerWidth + 1;
+    const out: string[] = [];
+    for (const el of Array.from(document.body.querySelectorAll<HTMLElement>("*"))) {
+      const r = el.getBoundingClientRect();
+      if (r.width === 0 || r.right <= limit) continue;
+      const id = el.getAttribute("data-testid") ?? el.id ?? "";
+      out.push(
+        `${el.tagName.toLowerCase()}${id ? `#${id}` : ""}.${el.className
+          .toString()
+          .split(/\s+/)
+          .slice(0, 4)
+          .join(
+            ".",
+          )} right=${Math.round(r.right)} text=${(el.textContent ?? "").trim().slice(0, 40)}`,
+      );
+      if (out.length >= 8) break;
+    }
+    return out;
+  });
+}
+
 export async function horizontalOverflow(page: Page): Promise<number> {
   return page.evaluate(
     () => document.documentElement.scrollWidth - document.documentElement.clientWidth,

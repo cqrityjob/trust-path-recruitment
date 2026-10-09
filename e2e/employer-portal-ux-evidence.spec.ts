@@ -31,6 +31,7 @@ import {
   BASE,
   horizontalOverflow,
   installBoundary,
+  overflowingElements,
   observeSupabaseStorageKey,
   plantSession,
   shot,
@@ -59,6 +60,9 @@ type Area = {
     | "application"
     | "closed";
   path: string;
+  /** The base commit (main c2be0b39) scrolls sideways on this page at 375px;
+   *  the head is asserted, the base only recorded. */
+  overflowOnBase?: boolean;
   /** A locator that proves the page's own content rendered, not the shell. */
   ready: string;
   /** The flow strip's station, or null on a page inside one recruitment,
@@ -106,6 +110,7 @@ const AREAS: Area[] = [
     path: `applications/${APP_CLOSED}`,
     ready: "#candidate-decision",
     flow: null,
+    overflowOnBase: true,
   },
 ];
 
@@ -166,10 +171,24 @@ test.describe("employer portal — one journey", () => {
         await expect(
           page.getByText("Exempelvakt AB").filter({ visible: true }).first(),
         ).toBeVisible();
-        expect(
-          await horizontalOverflow(page),
-          `${area.key} (${lang}, ${width}px) scrolls sideways`,
-        ).toBe(0);
+        const overflow = await horizontalOverflow(page);
+        if (overflow !== 0) {
+          // Which element, not only how many pixels.
+          const culprits = await overflowingElements(page);
+          // The base commit is photographed as it is; its own sideways scroll
+          // on a page this pass changed is recorded in the trace, not asserted
+          // -- the head asserts it.
+          if (!(BEFORE && area.overflowOnBase)) {
+            expect(
+              overflow,
+              `${area.key} (${lang}, ${width}px) scrolls sideways: ${culprits.join(" | ")}`,
+            ).toBe(0);
+          } else {
+            console.warn(
+              `base: ${area.key} (${lang}, ${width}px) scrolls ${overflow}px: ${culprits.join(" | ")}`,
+            );
+          }
+        }
         await shot(
           page,
           `${BEFORE ? "before" : "after"}-${area.key}-${lang}-${width}`,
@@ -266,7 +285,7 @@ test.describe("employer portal — one journey", () => {
         0,
       );
       await expect(summary.locator("[data-testid='requirement-summary-gaps']")).toContainText(
-        "Oklart eller otillräckligt underlag: Godkänd väktarutbildning",
+        /Oklart eller otillräckligt underlag:\s*Godkänd väktarutbildning/,
       );
       // Colour + text + symbol, from the server's status.
       const badge = summary.locator("[data-testid='requirement-status']");
