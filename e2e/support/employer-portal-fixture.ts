@@ -641,6 +641,11 @@ const requirementReview = (args: Record<string, unknown>) => {
 /** The whole stubbed backend for a signed-in owner. */
 export const table: Record<string, unknown | ((args: Record<string, unknown>) => unknown)> = {
   // ── The application page ──
+  // Lifecycle v0.3 slots are not installed on the stubbed backend: the reads
+  // say so, and the screens fall back to what exists today.
+  getSupplementState: { installed: false },
+  getInterviewComposition: { installed: false },
+  getCaseComposition: { installed: false },
   getApplicationCandidate: applicationCandidate,
   getApplicationWorkspace: applicationWorkspace,
   getRequirementReview: requirementReview,

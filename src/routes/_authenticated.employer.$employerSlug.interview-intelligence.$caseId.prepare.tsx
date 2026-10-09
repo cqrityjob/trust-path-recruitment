@@ -57,6 +57,7 @@ import { InterviewContextPanel } from "@/components/employer/interview/Interview
 import { CandidateBackgroundStatus } from "@/components/employer/interview/CandidateBackgroundStatus";
 import { SelectedRequirementBrief } from "@/components/employer/interview/SelectedRequirementBrief";
 import { SavedCaseSources } from "@/components/employer/interview/SavedCaseSources";
+import { CaseCompositionRail } from "@/components/employer/interview/CaseCompositionRail";
 import { InterviewOpeningDisclosure } from "@/components/employer/interview/InterviewOpeningDisclosure";
 import { ManualControlPoints } from "@/components/employer/interview/ManualControlPoints";
 import { ContentIntegrityNotice } from "@/components/employer/interview/ContentIntegrityNotice";
@@ -1050,6 +1051,9 @@ function Page() {
           }
           rail={
             <>
+              {/* ---- The recruitment's setup this case follows ---- */}
+              <CaseCompositionRail caseId={caseId} jobId={d.jobId} employerSlug={employerSlug} />
+
               {/* ---- How the conversation runs ---- */}
               <RailPanel id="s-plan" title={t("iiu.pp.plan.title")}>
                 {d.plan ? (

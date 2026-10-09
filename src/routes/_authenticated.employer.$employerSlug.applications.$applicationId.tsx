@@ -53,6 +53,10 @@ import { SendTestDialog } from "@/components/recruitment/SendTestDialog";
 import { PrepareInterviewButton } from "@/components/library/PrepareInterviewButton";
 import { RequirementReviewPanel } from "@/components/recruitment/RequirementReviewPanel";
 import { RequirementSummary } from "@/components/recruitment/RequirementSummary";
+import { SupplementPanel } from "@/components/recruitment/SupplementPanel";
+import { supplementQueryKey } from "@/lib/recruitment/interview-composition";
+import { ReopenDecision } from "@/components/recruitment/ReopenDecision";
+import { requestSupplement } from "@/lib/recruitment/lifecycle-v03.functions";
 import { candidateNoticeStateOf } from "@/lib/recruitment/application-workflow";
 import { openApplicationOriginalCv } from "@/lib/recruitment/requirement-review-draft";
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
@@ -419,6 +423,55 @@ function Candidate360({
   });
   const hiredEmployeeId = hiredNow ?? hiredEmployeeQuery.data?.employeeId ?? null;
 
+  // "Begär komplettering" as its own record (slot 20270311100000): a draft
+  // message of its own kind plus the request row, idempotent by operation id.
+  // Where the slot is not installed, the act falls back to what exists today:
+  // a plain message draft carrying the reviewer's own neutral questions.
+  const scrollTo = (id: string) =>
+    window.setTimeout(
+      () => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" }),
+      50,
+    );
+  const supplementFn = useServerFn(requestSupplement);
+  const supplementOperation = useRef<string>(crypto.randomUUID());
+  const [supplementNotice, setSupplementNotice] = useState<string | null>(null);
+  const supplement = useMutation({
+    mutationFn: (input: { body: string; profileId: string; requirementIds: string[] }) =>
+      supplementFn({
+        data: {
+          employerId,
+          applicationId,
+          profileId: input.profileId,
+          requirementIds: input.requirementIds,
+          subject:
+            lang === "sv" ? "Komplettering av din ansökan" : "Supplement to your application",
+          body: input.body,
+          language: lang,
+          operationId: supplementOperation.current,
+        },
+      }),
+    onSuccess: () => {
+      supplementOperation.current = crypto.randomUUID();
+      setSupplementNotice(t("rec.supplement.requested"));
+      void qc.invalidateQueries({ queryKey: supplementQueryKey(employerId, applicationId) });
+      refreshRecruitment();
+      scrollTo("candidate-communication");
+    },
+    onError: (e: unknown, input) => {
+      const code = (e as Error).message;
+      if (code === "SCHEMA_NOT_INSTALLED") {
+        setComposeRequest({
+          kind: "information",
+          bookingId: null,
+          nonce: Date.now(),
+          body: input.body,
+        });
+        scrollTo("candidate-communication");
+        return;
+      }
+      setSupplementNotice(t(recruitmentErrorKey(code)));
+    },
+  });
   // A ref, so the mutation reads the list position the page SHOWS at the
   // moment of the click, not the one the closure was built with.
   const nextIdRef = useRef<string | null>(null);
@@ -720,11 +773,6 @@ function Candidate360({
   const completed = rw ? rw.completionState !== "open" : false;
   const canDecide = rw?.canManage ?? false;
   const decisionNext = nextStatuses.filter((n) => canDecide || (n !== "hired" && n !== "rejected"));
-  const scrollTo = (id: string) =>
-    window.setTimeout(
-      () => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" }),
-      50,
-    );
   const sectionLinks: [string, TranslationKey][] = [
     ["candidate-application", "rec.section.application"],
     ["candidate-assessment", "rec.section.tests"],
@@ -850,14 +898,19 @@ function Candidate360({
               !completed && status !== null && isUnresolved(status)
                 ? {
                     confirm: () => scrollTo("requirement-review"),
-                    requestSupplement: (body) => {
-                      setComposeRequest({
-                        kind: "information",
-                        bookingId: null,
-                        nonce: Date.now(),
-                        body,
-                      });
-                      scrollTo("candidate-communication");
+                    requestSupplement: ({ body, profileId, requirementIds }) => {
+                      setSupplementNotice(null);
+                      if (!profileId || requirementIds.length === 0) {
+                        setComposeRequest({
+                          kind: "information",
+                          bookingId: null,
+                          nonce: Date.now(),
+                          body,
+                        });
+                        scrollTo("candidate-communication");
+                        return;
+                      }
+                      supplement.mutate({ body, profileId, requirementIds });
                     },
                     prepareInterview: () => scrollTo("candidate-structured-interview"),
                     proceed:
@@ -875,6 +928,23 @@ function Candidate360({
                   }
                 : null
             }
+          />
+        )}
+        {supplementNotice && (
+          <p
+            role="status"
+            data-testid="supplement-notice"
+            className="mt-3 rounded-md border border-border bg-muted/40 px-3 py-2 text-sm"
+          >
+            {supplementNotice}
+          </p>
+        )}
+        {rw && c.jobId && (
+          <SupplementPanel
+            employerId={employerId}
+            applicationId={applicationId}
+            canManage={canDecide}
+            open={!completed && status !== null && isUnresolved(status)}
           />
         )}
         {workspaceQuery.isError && (
@@ -1488,6 +1558,17 @@ function Candidate360({
               </p>
             )}
             <p className="mt-1">{t("rec.decision.reopenNote")}</p>
+            {c.applicationStatus === "rejected" && canDecide && !completed && (
+              <ReopenDecision
+                employerId={employerId}
+                applicationId={applicationId}
+                onReopened={() => {
+                  setDecisionNotice(null);
+                  qc.invalidateQueries({ queryKey: candidateKey });
+                  refreshRecruitment();
+                }}
+              />
+            )}
           </div>
         ) : (
           <div className="mt-4 flex flex-wrap gap-2">

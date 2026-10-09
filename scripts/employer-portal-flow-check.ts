@@ -733,6 +733,87 @@ const UI = "src/components/employer/interview/InterviewUi.tsx";
   );
 }
 
+/* 16 · Lifecycle v0.3 on the client: tolerant of an uninstalled schema, never a hidden fallback. */
+{
+  const fn = code("src/lib/recruitment/lifecycle-v03.functions.ts");
+  const cand = code(CANDIDATE);
+  const sup = code("src/components/recruitment/SupplementPanel.tsx");
+  const reopen = code("src/components/recruitment/ReopenDecision.tsx");
+  const comp = code("src/components/recruitment/InterviewCompositionPanel.tsx");
+  const lib = code("src/lib/recruitment/interview-composition.ts");
+  expect(
+    /error\.code === "PGRST202"/.test(fn) &&
+      /if \(isSchemaMissing\(error\)\) return new Error\("SCHEMA_NOT_INSTALLED"\);/.test(fn) &&
+      (fn.match(/if \(isSchemaMissing\(result\.error\)\) return \{ installed: false \};/g) ?? [])
+        .length >= 4,
+    "lifecycle-v03.functions: a missing RPC is 'not installed' on every read and SCHEMA_NOT_INSTALLED on every write, never a generic failure.",
+  );
+  expect(
+    /if \(code === "SCHEMA_NOT_INSTALLED"\) \{\s*setComposeRequest\(\{\s*kind: "information"/.test(
+      cand,
+    ) && /supplement\.mutate\(\{ body, profileId, requirementIds \}\)/.test(cand),
+    "Application page: 'Begär komplettering' uses the supplement record when installed and falls back to the plain message draft when not -- the same words either way.",
+  );
+  expect(
+    /data-testid="supplement-not-installed"/.test(sup) &&
+      /data-testid="supplement-awaiting"/.test(sup) &&
+      /data-testid="supplement-answered"/.test(sup) &&
+      /data-testid="supplement-withdraw"/.test(sup),
+    "SupplementPanel: says when the slot is not installed, shows the open request, and lets a person resolve it.",
+  );
+  expect(
+    /c\.applicationStatus === "rejected" && canDecide && !completed && \(\s*<ReopenDecision/.test(
+      cand,
+    ) &&
+      /expectedStatus: "rejected"/.test(reopen) &&
+      /reason\.trim\(\)\.length < 5/.test(reopen) &&
+      /code === "SCHEMA_NOT_INSTALLED"\s*\? t\("rec\.reopen\.notInstalled"\)/.test(reopen),
+    "ReopenDecision: only on a rejected application a manager may act on, with the page's status as expected status, a reason of at least five characters, and the honest sentence when the slot is missing.",
+  );
+  expect(
+    /export const COMPOSITION_GROUPS = \[\s*"intro",\s*"competence",\s*"scenarios",\s*"probes",\s*"beskt",\s*"clarifications",\s*"closing",\s*\] as const;/.test(
+      lib,
+    ) && /new Set\(\[\s*"competence",\s*"scenarios",\s*"probes",\s*\]\)/.test(lib),
+    "interview-composition: the seven groups in the brief's order; only the three with governed content are selectable.",
+  );
+  expect(
+    /kind: "core_question",\s*itemId: q\.id,/.test(lib) &&
+      !/checked=\{chosen\.has\(q\.id\)\}/.test(comp),
+    "The core questions are always in the selection and never offered as a checkbox; only approved probes are chosen.",
+  );
+  expect(
+    /data-testid="composition-not-installed"/.test(comp) &&
+      /rec\.composition\.noAi/.test(comp) &&
+      /data-testid="composition-coverage"/.test(comp) &&
+      /data-testid="composition-reason"/.test(comp) &&
+      /window\.sessionStorage\.setItem\(\s*draftKey/.test(comp),
+    "InterviewCompositionPanel: not-installed sentence, no-AI sentence, order/time/coverage, a reason field for a new version, and a resumable draft.",
+  );
+  expect(
+    /<InterviewCompositionPanel\s+employerId=\{employerId\}\s+employerSlug=\{employerSlug\}\s+jobId=\{jobId\}\s*\/>/.test(
+      code(HUB),
+    ) &&
+      /<CaseCompositionRail caseId=\{caseId\} jobId=\{d\.jobId\} employerSlug=\{employerSlug\} \/>/.test(
+        code(`${R}interview-intelligence.$caseId.prepare.tsx`),
+      ),
+    "The setup is edited on the recruitment and read, pinned, on the case.",
+  );
+  for (const k of [
+    "rec.supplement.notInstalled",
+    "rec.reopen.notInstalled",
+    "rec.composition.notInstalled",
+    "rec.composition.noAi",
+    "rec.composition.group.besktHint",
+    "rec.error.schemaNotInstalled",
+  ]) {
+    expect(Boolean(sv[k]) && Boolean(en[k]), `${k} is missing in sv or en.`);
+  }
+  expect(
+    /endast rekryteringsläget får användas/i.test(sv["rec.composition.group.besktHint"] ?? ""),
+    "rec.composition.group.besktHint must say only the recruitment mode may be used in the interview guide.",
+  );
+}
+
 if (errors.length > 0) {
   for (const e of errors) console.error("[employer-portal-flow:check][error]", e);
   console.error(`\n${errors.length} problem(s).`);

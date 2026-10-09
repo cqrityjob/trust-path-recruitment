@@ -893,6 +893,107 @@ export const recruitmentSv = {
     "Intervjuguidens rollkrav (C1–C6), sparade i ärendet som citerbart underlag när det skapades. Definitionerna visas en gång, i panelen Rollens krav.",
   "rec.ri.savedSources.guideCopyLink": "Gå till Rollens krav",
   "rec.ri.savedSources.guideCopyShow": "Visa den sparade ordalydelsen",
+  // ── Lifecycle v0.3: supplement, reopen, interview composition ──
+  "rec.error.supplementInvalid":
+    "Kompletteringen kunde inte begäras: välj minst ett skallkrav i aktuell kravprofilversion och skriv en text.",
+  "rec.error.supplementOpen":
+    "En kompletteringsbegäran är redan öppen för ansökan. Avsluta den först.",
+  "rec.error.supplementResolved": "Kompletteringsbegäran är redan avslutad.",
+  "rec.error.reopenReason": "Ange en orsak (minst 5 tecken) för att återöppna beslutet.",
+  "rec.error.reopenNotAllowed":
+    "Bara beslutet Ej aktuell kan återöppnas. Anställd har en anställningspost och återtagen är kandidatens eget beslut.",
+  "rec.error.reopenArchived":
+    "Ansökan är arkiverad. Återställ arkiveringen först; återöppning kringgår inte arkivet.",
+  "rec.error.erasurePending":
+    "En gallring pågår för rekryteringen. Inga ändringar kan göras förrän den är klar.",
+  "rec.error.compositionInvalid":
+    "Intervjuupplägget kunde inte sparas: varje post måste vara en fråga eller godkänd följdfråga ur paketversionen.",
+  "rec.error.compositionCore":
+    "Alla kärnfrågor i paketversionen måste ingå. Upplägget får inte vara en delmängd av kärnan.",
+  "rec.error.compositionDuplicate": "Samma fråga eller samma position förekommer två gånger.",
+  "rec.error.compositionReason": "Ange orsaken till ändringen av det delade upplägget.",
+  "rec.error.compositionPackFixed":
+    "Rekryteringens upplägg är bundet till en paketversion. Byt inte paket mitt i en rekrytering.",
+  "rec.error.schemaNotInstalled":
+    "Funktionen kräver en databasuppdatering som inte är installerad i den här miljön ännu.",
+  "rec.supplement.heading": "Komplettering",
+  "rec.supplement.awaiting": "Väntar på komplettering från kandidaten",
+  "rec.supplement.awaitingHint":
+    "Begärd {date}. Ett utkast finns under Kommunikation; ingenting skickas förrän en person skickar det. När svaret kommit granskar du kravet och markerar begäran som besvarad.",
+  "rec.supplement.none": "Ingen öppen kompletteringsbegäran.",
+  "rec.supplement.request": "Begär komplettering",
+  "rec.supplement.requested":
+    "Kompletteringsbegäran sparad som utkast. Öppna Kommunikation för att granska och skicka den.",
+  "rec.supplement.markAnswered": "Markera som besvarad",
+  "rec.supplement.withdraw": "Dra tillbaka begäran",
+  "rec.supplement.resolveNote": "Anteckning (valfri)",
+  "rec.supplement.history": "Tidigare begäranden",
+  "rec.supplement.outcome.answered": "Besvarad",
+  "rec.supplement.outcome.withdrawn": "Tillbakadragen",
+  "rec.supplement.message.draft": "utkast – inte skickat",
+  "rec.supplement.message.sent": "lämnat i kandidatens inkorg",
+  "rec.supplement.notInstalled":
+    "Kompletteringsbegäran som eget ärende kräver databasuppdateringen 20270311100000. Tills den är installerad öppnas ett vanligt meddelandeutkast med granskarens frågor.",
+  "rec.reopen.action": "Återöppna beslutet",
+  "rec.reopen.title": "Återöppna beslutet Ej aktuell?",
+  "rec.reopen.body":
+    "Ansökan går tillbaka till Under granskning och syns igen i den aktiva listan. Orsaken sparas i historiken. Ingenting skickas till kandidaten.",
+  "rec.reopen.reason": "Orsak",
+  "rec.reopen.reasonPlaceholder": "Varför återöppnas beslutet?",
+  "rec.reopen.confirm": "Återöppna",
+  "rec.reopen.done":
+    "Beslutet är återöppnat. Ansökan är under granskning igen och finns i Aktiva. Ingenting har skickats till kandidaten.",
+  "rec.reopen.notInstalled":
+    "Återöppning kräver databasuppdateringen 20270311100000, som inte är installerad i den här miljön ännu.",
+  "rec.composition.heading": "Intervjuupplägg",
+  "rec.composition.lede":
+    "Rekryteringens gemensamma upplägg för jämförbara intervjuer: kärnfrågorna ur den styrda guiden ingår alltid, godkända följdfrågor väljs. Upplägget versionsbinds per rekrytering; ett påbörjat ärende behåller sin version.",
+  "rec.composition.version": "Version {v}, fastställd {date}",
+  "rec.composition.none":
+    "Inget upplägg fastställt ännu. Kärnfrågorna gäller ändå i varje intervju.",
+  "rec.composition.boundCases":
+    "{n} intervjuärenden är bundna till en äldre version och behåller den.",
+  "rec.composition.group.intro": "Inledning, bakgrund och motivation",
+  "rec.composition.group.competence": "Rollkompetens och erfarenhet",
+  "rec.composition.group.scenarios": "Scenarier",
+  "rec.composition.group.probes": "Fördjupning (godkända följdfrågor)",
+  "rec.composition.group.beskt": "BESKT för rekrytering",
+  "rec.composition.group.clarifications": "Kandidatens klarlägganden",
+  "rec.composition.group.closing": "Kandidatens frågor och avslut",
+  "rec.composition.group.introHint":
+    "Ett strukturellt moment utan styrda frågor i paketversionen. Nya SV/EN-texter kräver mänskligt innehållsgodkännande innan de kan väljas.",
+  "rec.composition.group.besktHint":
+    "Ett eget metodläge med egen godkänd version. Väljs inte här; endast rekryteringsläget får användas i intervjuguiden.",
+  "rec.composition.group.clarificationsHint":
+    "Per kandidat: granskarens neutrala klarläggandefrågor förs över från kravgranskningen till ärendet och markeras som tillägg.",
+  "rec.composition.group.closingHint":
+    "Ett strukturellt moment utan styrda frågor i paketversionen.",
+  "rec.composition.core": "Kärnfråga – ingår alltid",
+  "rec.composition.probe": "Godkänd följdfråga",
+  "rec.composition.type.behavioural": "Beteendefråga",
+  "rec.composition.type.situational": "Scenariofråga",
+  "rec.composition.time": "{min}–{max} min",
+  "rec.composition.totalTime": "Beräknad tid: {min}–{max} min",
+  "rec.composition.covered": "Täckta kompetensområden: {covered} av {total}",
+  "rec.composition.missing": "Saknas: {codes}",
+  "rec.composition.order": "Ordning",
+  "rec.composition.save": "Fastställ upplägg",
+  "rec.composition.saveNew": "Fastställ ny version",
+  "rec.composition.reason": "Orsak till ändringen",
+  "rec.composition.reasonHint":
+    "Krävs från version 2. Ärenden som redan förberetts behåller sin version.",
+  "rec.composition.saved": "Upplägget är fastställt som version {v}.",
+  "rec.composition.draftResumed": "Osparade val återupptogs från den här webbläsaren.",
+  "rec.composition.readOnly": "Du kan läsa upplägget men inte ändra det.",
+  "rec.composition.notInstalled":
+    "Intervjuupplägg kräver databasuppdateringen 20270312100000, som inte är installerad i den här miljön ännu. Kärnfrågorna gäller oförändrat.",
+  "rec.composition.case.heading": "Rekryteringens upplägg",
+  "rec.composition.case.pinned": "Det här ärendet följer upplägg version {v}.",
+  "rec.composition.case.newer": "Rekryteringen har en nyare version ({v}); ärendet behåller sin.",
+  "rec.composition.case.none": "Ärendet skapades utan fastställt upplägg; kärnfrågorna gäller.",
+  "rec.composition.case.open": "Öppna rekryteringens upplägg",
+  "rec.composition.noAi":
+    "Inga frågor genereras. Allt innehåll kommer oförändrat ur paketversionen.",
   "rec.decision.reopenNote":
     "Återöppning av ett beslut är en separat behörig åtgärd med angiven orsak och ingår inte i den här versionen. Återställning från arkiv återöppnar inte beslutet.",
 } as const;
@@ -1795,6 +1896,108 @@ export const recruitmentEn: { [K in keyof typeof recruitmentSv]: string } = {
     "The interview guide's role requirements (C1–C6), saved in the case as citable material when it was created. The definitions are shown once, in the Role requirements panel.",
   "rec.ri.savedSources.guideCopyLink": "Go to Role requirements",
   "rec.ri.savedSources.guideCopyShow": "Show the saved wording",
+  // ── Lifecycle v0.3: supplement, reopen, interview composition ──
+  "rec.error.supplementInvalid":
+    "The supplement could not be requested: choose at least one mandatory requirement of the current profile version and write a text.",
+  "rec.error.supplementOpen":
+    "A supplement request is already open for this application. Resolve it first.",
+  "rec.error.supplementResolved": "The supplement request is already resolved.",
+  "rec.error.reopenReason": "State a reason (at least 5 characters) to reopen the decision.",
+  "rec.error.reopenNotAllowed":
+    "Only the decision Not proceeding can be reopened. Hired has an employment record and withdrawn is the candidate's own decision.",
+  "rec.error.reopenArchived":
+    "The application is archived. Restore it first; reopening does not bypass the archive.",
+  "rec.error.erasurePending":
+    "An erasure is in progress for the recruitment. Nothing can change until it has finished.",
+  "rec.error.compositionInvalid":
+    "The interview setup could not be saved: every item must be a question or an approved follow-up from the pack version.",
+  "rec.error.compositionCore":
+    "Every core question of the pack version must be included. The setup may not be a subset of the core.",
+  "rec.error.compositionDuplicate": "The same question or the same position occurs twice.",
+  "rec.error.compositionReason": "State the reason for changing the shared setup.",
+  "rec.error.compositionPackFixed":
+    "The recruitment's setup is bound to one pack version. Do not switch packs mid-recruitment.",
+  "rec.error.schemaNotInstalled":
+    "This needs a database update that is not installed in this environment yet.",
+  "rec.supplement.heading": "Supplement",
+  "rec.supplement.awaiting": "Awaiting a supplement from the candidate",
+  "rec.supplement.awaitingHint":
+    "Requested {date}. A draft is under Communication; nothing is sent until a person sends it. When the answer arrives, review the requirement and mark the request as answered.",
+  "rec.supplement.none": "No open supplement request.",
+  "rec.supplement.request": "Request a supplement",
+  "rec.supplement.requested":
+    "Supplement request saved as a draft. Open Communication to review and send it.",
+  "rec.supplement.markAnswered": "Mark as answered",
+  "rec.supplement.withdraw": "Withdraw the request",
+  "rec.supplement.resolveNote": "Note (optional)",
+  "rec.supplement.history": "Earlier requests",
+  "rec.supplement.outcome.answered": "Answered",
+  "rec.supplement.outcome.withdrawn": "Withdrawn",
+  "rec.supplement.message.draft": "draft – not sent",
+  "rec.supplement.message.sent": "placed in the candidate's inbox",
+  "rec.supplement.notInstalled":
+    "A supplement request as its own record needs database update 20270311100000. Until it is installed, an ordinary message draft with the reviewer's questions opens instead.",
+  "rec.reopen.action": "Reopen the decision",
+  "rec.reopen.title": "Reopen the decision Not proceeding?",
+  "rec.reopen.body":
+    "The application returns to In review and appears in the active list again. The reason is kept in the history. Nothing is sent to the candidate.",
+  "rec.reopen.reason": "Reason",
+  "rec.reopen.reasonPlaceholder": "Why is the decision reopened?",
+  "rec.reopen.confirm": "Reopen",
+  "rec.reopen.done":
+    "The decision is reopened. The application is in review again and listed under Active. Nothing has been sent to the candidate.",
+  "rec.reopen.notInstalled":
+    "Reopening needs database update 20270311100000, which is not installed in this environment yet.",
+  "rec.composition.heading": "Interview setup",
+  "rec.composition.lede":
+    "The recruitment's shared setup for comparable interviews: the governed guide's core questions are always included, approved follow-ups are chosen. The setup is version-bound per recruitment; a case already prepared keeps its version.",
+  "rec.composition.version": "Version {v}, confirmed {date}",
+  "rec.composition.none":
+    "No setup confirmed yet. The core questions apply in every interview regardless.",
+  "rec.composition.boundCases": "{n} interview cases are bound to an older version and keep it.",
+  "rec.composition.group.intro": "Introduction, background and motivation",
+  "rec.composition.group.competence": "Role competence and experience",
+  "rec.composition.group.scenarios": "Scenarios",
+  "rec.composition.group.probes": "Deepening (approved follow-ups)",
+  "rec.composition.group.beskt": "BESKT for recruitment",
+  "rec.composition.group.clarifications": "The candidate's clarifications",
+  "rec.composition.group.closing": "The candidate's questions and closing",
+  "rec.composition.group.introHint":
+    "A structural step with no governed questions in the pack version. New SV/EN texts need human content approval before they can be chosen.",
+  "rec.composition.group.besktHint":
+    "A separate method mode with its own approved version. Not chosen here; only the recruitment mode may be used in the interview guide.",
+  "rec.composition.group.clarificationsHint":
+    "Per candidate: the reviewer's neutral clarification questions are carried from the requirement review into the case and marked as additions.",
+  "rec.composition.group.closingHint":
+    "A structural step with no governed questions in the pack version.",
+  "rec.composition.core": "Core question – always included",
+  "rec.composition.probe": "Approved follow-up",
+  "rec.composition.type.behavioural": "Behavioural question",
+  "rec.composition.type.situational": "Situational question",
+  "rec.composition.time": "{min}–{max} min",
+  "rec.composition.totalTime": "Estimated time: {min}–{max} min",
+  "rec.composition.covered": "Competency areas covered: {covered} of {total}",
+  "rec.composition.missing": "Missing: {codes}",
+  "rec.composition.order": "Order",
+  "rec.composition.save": "Confirm the setup",
+  "rec.composition.saveNew": "Confirm a new version",
+  "rec.composition.reason": "Reason for the change",
+  "rec.composition.reasonHint":
+    "Required from version 2. Cases already prepared keep their version.",
+  "rec.composition.saved": "The setup is confirmed as version {v}.",
+  "rec.composition.draftResumed": "Unsaved choices were resumed from this browser.",
+  "rec.composition.readOnly": "You can read the setup but not change it.",
+  "rec.composition.notInstalled":
+    "Interview setups need database update 20270312100000, which is not installed in this environment yet. The core questions apply unchanged.",
+  "rec.composition.case.heading": "The recruitment's setup",
+  "rec.composition.case.pinned": "This case follows setup version {v}.",
+  "rec.composition.case.newer":
+    "The recruitment has a newer version ({v}); the case keeps its own.",
+  "rec.composition.case.none":
+    "The case was created without a confirmed setup; the core questions apply.",
+  "rec.composition.case.open": "Open the recruitment's setup",
+  "rec.composition.noAi":
+    "No questions are generated. Everything comes unchanged from the pack version.",
   "rec.decision.reopenNote":
     "Reopening a decision is a separate authorised action with a stated reason and is not part of this version. Restoring from the archive does not reopen the decision.",
 };

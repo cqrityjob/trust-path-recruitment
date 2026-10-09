@@ -1347,6 +1347,11 @@ jobs:
       - name: Application workflow projections
         run: bun test scripts/application-workflow.test.ts
 
+      # The interview composition's pure half: the core is never a subset,
+      # probes follow their question, time and coverage are the pack's numbers.
+      - name: Interview composition projections
+        run: bun test scripts/interview-composition.test.ts
+
       # E3: the context an interview inherits, and what the CANDIDATE is told.
       #
       # The bridge already read the application, the advert and the assessment.

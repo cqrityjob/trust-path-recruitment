@@ -88,6 +88,7 @@ import {
 import type { ApplicationStatus } from "@/lib/job-intelligence/applications.functions";
 import { z } from "zod";
 import { RequirementProfilePanel } from "@/components/recruitment/RequirementProfilePanel";
+import { InterviewCompositionPanel } from "@/components/recruitment/InterviewCompositionPanel";
 import { getRequirementProfile } from "@/lib/recruitment/requirement-intelligence.functions";
 import { RecruiterCounts } from "@/components/recruitment/RecruiterStatus";
 import { CandidateTable } from "@/components/recruitment/CandidateTable";
@@ -743,6 +744,15 @@ function JobHub({
             />
           )}
           <RequirementProfilePanel employerId={employerId} jobId={jobId} />
+          {/* The recruitment's interview setup, after the requirements it
+              interviews for: version-bound, every core question included,
+              approved follow-ups chosen. Absent until its slot is installed
+              (the panel then says so in one sentence). */}
+          <InterviewCompositionPanel
+            employerId={employerId}
+            employerSlug={employerSlug}
+            jobId={jobId}
+          />
           {pick(job.requirements_sv, job.requirements_en) && (
             <div className="mt-5">
               <h3 className="text-sm font-semibold text-foreground">

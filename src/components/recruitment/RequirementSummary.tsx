@@ -32,8 +32,13 @@ import { RequirementStatusBadge, ReviewStatusBadge } from "./RecruiterStatus";
 export type RequirementSummaryActions = {
   /** Scroll to the review panel, where confirmation is recorded. */
   confirm: () => void;
-  /** Open a message draft carrying the reviewer's neutral questions. */
-  requestSupplement: (body: string) => void;
+  /** Ask for a supplement: the reviewer's neutral questions as the body, the
+   *  profile version and the unclear mandatory requirements they concern. */
+  requestSupplement: (input: {
+    body: string;
+    profileId: string | null;
+    requirementIds: string[];
+  }) => void;
   prepareInterview: () => void;
   /** The next stage, when the application has one, and the decision. */
   proceed: (() => void) | null;
@@ -262,7 +267,13 @@ export function RequirementSummary({
             <button
               type="button"
               data-testid="summary-action-supplement"
-              onClick={() => actions.requestSupplement(supplementBody)}
+              onClick={() =>
+                actions.requestSupplement({
+                  body: supplementBody,
+                  profileId: review.profile.profileId,
+                  requirementIds: summary.unclear,
+                })
+              }
               disabled={supplementBody.length === 0}
               title={
                 supplementBody.length === 0
