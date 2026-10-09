@@ -473,23 +473,32 @@ describe("real CI execution and publication cannot silently narrow", () => {
       "20270309090000_upload.sql",
       "20270310090000_lifecycle.sql",
       "20270310100000_workspace.sql",
+      "20270311100000_supplement.sql",
+      "20270312100000_composition.sql",
     );
-    expect(requireCompleteHistory(files)).toHaveLength(389);
+    expect(requireCompleteHistory(files)).toHaveLength(391);
     expect(() => requireCompleteHistory(files.slice(0, -2))).toThrow(
       "COMPLETE_CANONICAL_HISTORY_REQUIRED",
     );
     for (const version of ["20270308090000_", "20270309090000_"]) {
       const omitted = files.filter((name) => !name.startsWith(version));
       expect(() => requireCompleteHistory(omitted)).toThrow("COMPLETE_CANONICAL_HISTORY_REQUIRED");
-      expect(() => requireCompleteHistory([...omitted, "20270311100000_other.sql"])).toThrow(
+      expect(() => requireCompleteHistory([...omitted, "20270313100000_other.sql"])).toThrow(
         "REQUIREMENTS_UPLOAD_FORWARD_REQUIRED",
       );
     }
     for (const version of ["20270310090000_", "20270310100000_"]) {
       const omitted = files.filter((name) => !name.startsWith(version));
       expect(() => requireCompleteHistory(omitted)).toThrow("COMPLETE_CANONICAL_HISTORY_REQUIRED");
-      expect(() => requireCompleteHistory([...omitted, "20270311100000_other.sql"])).toThrow(
+      expect(() => requireCompleteHistory([...omitted, "20270313100000_other.sql"])).toThrow(
         "METHOD_WORKSPACE_FORWARD_REQUIRED",
+      );
+    }
+    for (const version of ["20270311100000_", "20270312100000_"]) {
+      const omitted = files.filter((name) => !name.startsWith(version));
+      expect(() => requireCompleteHistory(omitted)).toThrow("COMPLETE_CANONICAL_HISTORY_REQUIRED");
+      expect(() => requireCompleteHistory([...omitted, "20270313100000_other.sql"])).toThrow(
+        "LIFECYCLE_V03_FORWARD_REQUIRED",
       );
     }
     expect(() => requireCompleteHistory(files.slice(0, -1))).toThrow();

@@ -14,7 +14,7 @@ export const EXCLUDED =
 export function requireCompleteHistory(names) {
   const files = names.filter((name) => name.endsWith(".sql")).sort();
   if (
-    files.length !== 389 ||
+    files.length !== 391 ||
     files.some((name) => !/^\d{14}_.+\.sql$/.test(name)) ||
     new Set(files.map((name) => name.slice(0, 14))).size !== files.length
   )
@@ -34,6 +34,11 @@ export function requireCompleteHistory(names) {
     !files.some((name) => name.startsWith("20270310100000_"))
   )
     throw Error("REAL_CI_METHOD_WORKSPACE_FORWARD_REQUIRED");
+  if (
+    !files.some((name) => name.startsWith("20270311100000_")) ||
+    !files.some((name) => name.startsWith("20270312100000_"))
+  )
+    throw Error("REAL_CI_LIFECYCLE_V03_FORWARD_REQUIRED");
   return files;
 }
 
