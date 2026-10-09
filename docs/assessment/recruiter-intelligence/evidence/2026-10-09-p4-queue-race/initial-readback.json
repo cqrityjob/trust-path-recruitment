@@ -1,0 +1,27 @@
+{
+  "sourceCommit": "452a3f090d8f8ebb32f1cbfced5d492a321f4aa5",
+  "sourceFile": "src/lib/recruitment/ai/synthetic-sandbox.server.ts",
+  "sourceSha256": "fbee949100a241b5efd3a20999b3462565088f0f57f233a279be8f49e90797af",
+  "scope": "new targeted in-memory probes; no file writes during probe, service, provider, database or runtime handler",
+  "firstQueueProbe": {
+    "configuredMaxConcurrent": 1,
+    "maximumActive": 2,
+    "overlap": {
+      "reserved": 20,
+      "spent": 1,
+      "active": 2,
+      "waiting": 0
+    },
+    "resultStatuses": ["proposal", "proposal", "proposal"],
+    "pass": false
+  },
+  "firstRetryAbortProbe": {
+    "retryAborted": true,
+    "owner": "proposal",
+    "retry": "proposal",
+    "fixtureCalls": 1,
+    "pass": false
+  },
+  "earlier68Tests": "preserved prior PASS; did not cover these interleavings",
+  "runtimeFeatures": "four unconditional-disabled authenticated handlers unchanged"
+}

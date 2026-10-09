@@ -210,6 +210,9 @@
     "scripts/og-worker-evidence.ts",
     "scripts/og-worker-shots.ts",
     "scripts/negative-controls/og-public-test-controls.ts",
+    // P4 offline evaluator and compile-only negative contracts, no live mode.
+    "scripts/recruiter-ai-synthetic-evaluation.ts",
+    "scripts/recruiter-ai-contract.types.ts",
     "src/**/*.ts",
     "src/**/*.tsx"
   ],

@@ -1,0 +1,190 @@
+{
+  "kind": "local_disabled_ai_harness_and_original_portal_provenance",
+  "recordedAt": "2026-10-08T23:03:25.181390+00:00",
+  "scope": "Offline guards and types only. No services, new photography, native run, hosted write, activation, push or PR.",
+  "aiFrozenSha": "ac1d5fa06fa46a2552bad0fa7e81817d7523fe98",
+  "sourceHeadBeforeReceipt": "da0bf6dbfb4fffcb3e15227f00c7503060aaf0bc",
+  "cherryPickedSourceSha": "85a68b52fa5abb2e830021ba8aa5318f9e168921",
+  "localCherryPickSha": "eafd228955367c6c1e54801a92fac352dc22bb3a",
+  "originalPortalPairCommit": "180600cd7b4c6237be965914b87e3c9bcb66e7bd",
+  "structuralNegativeAnchorCommit": "da0bf6dbfb4fffcb3e15227f00c7503060aaf0bc",
+  "nativePinsUnchanged": {
+    "app": "40e5775de5195050571421827434ec2872a61506",
+    "schema": "1e5988c6f9c7121a0fefd22c0db06f6b573f0ae9",
+    "migrationFilesInThisBranch": 387,
+    "new389SchemaChangesImported": false
+  },
+  "portal": {
+    "beforeSha": "55db1e3b83ace033450899a93ca0961edde05217",
+    "afterSha": "b7a077b78bf4d64a6ab6aa08d470c6be951aaaf8",
+    "originalReceipt": "docs/assessment/recruiter-intelligence/evidence/2026-10-09-schema-portal-local.json",
+    "originalReceiptSha256": "8c61d8caf46daff9e3326fe22f042d2636141f7b9afe38fd97c29be71e5f1720",
+    "beforeImages": 28,
+    "afterImages": 28,
+    "allOriginalHashesMatched": true,
+    "watchedUiChangesBetweenAfterAndSourceHead": 0,
+    "watchedPattern": "^src/components/(employer|recruitment|academy)/|^src/routes/_authenticated\\.employer\\.|^src/i18n/|^e2e/employer-portal-ux-evidence\\.spec\\.ts$|^e2e/support/(employer-portal-fixture|public-entry-harness)\\.ts$",
+    "localPairGuard": {
+      "base": "55db1e3b83ace033450899a93ca0961edde05217",
+      "head": "b7a077b78bf4d64a6ab6aa08d470c6be951aaaf8",
+      "exitCode": 0
+    },
+    "currentHeadComparison": "Separate actual git diff proves zero watched paths. The existing guard requires GitHub repo/token for a different photographed SHA; no current-head token-based guard PASS is claimed.",
+    "scope": "7 pages × SV/EN × desktop1440/Chromium-emulated375 with mobile/touch/DPR3; mocked server functions, no physical phone or real Auth/Storage/API/publication/AI effect."
+  },
+  "checks": {
+    "nativeRootGuards": {
+      "passed": 79,
+      "failed": 0,
+      "expectCalls": 233,
+      "includesSeparateDependencyTreesAndMissingOldGitObject": true
+    },
+    "aiContract": {
+      "passed": 73,
+      "failed": 0,
+      "expectCalls": 176,
+      "previous68Preserved": true
+    },
+    "syntheticEvaluation": {
+      "cases": 9,
+      "mismatches": 0,
+      "sideEffects": {
+        "fixtureCalls": 1,
+        "modelRequests": 0,
+        "persistentWrites": 0,
+        "statusChanges": 0,
+        "messages": 0,
+        "finalisedReports": 0
+      },
+      "budgetObservation": {
+        "reserved": 0,
+        "spent": 4,
+        "active": 0,
+        "waiting": 0
+      }
+    },
+    "legacyAiGate": 35,
+    "legacyAiTexts": 40,
+    "portalFlow": "PASS",
+    "appTypecheckExit": 0,
+    "scriptsTypecheckExit": 0,
+    "configuredNativeWorkflowTypechecksExit": 0,
+    "compileOnlyNegativeTypeContracts": 9,
+    "negativeControls": {
+      "aiGate": 11,
+      "aiTexts": 12,
+      "portalFlow": 8,
+      "portalEvidence": 3,
+      "allDetected": true,
+      "allSourceRestoredByteForByte": true
+    },
+    "scopedLintExit": 0,
+    "scopedFormatExit": 0
+  },
+  "aiSourceSha256": {
+    "src/lib/recruitment/ai/contract.ts": "d4638f0d9ad19ff59212462f8b26580922c4d35c55430c7e049515ae035feb66",
+    "src/lib/recruitment/ai/recruiter-ai.functions.ts": "922a4cb03a6c7689df88ce5df76564a94d8a9e4261aa95b27946d2ce8466645b",
+    "src/lib/recruitment/ai/synthetic-sandbox.server.ts": "5ed617a76cbb2eabede232f95d50bce857f86a285b316b90b4c9075e2c3e10f3",
+    "scripts/recruiter-ai-contract.test.ts": "4b0bdb764244a8fb27207b4329e8653cdccf15fc707aabb10c78b62c79fd3fef",
+    "scripts/recruiter-ai-contract.types.ts": "effb98dd7e3defa8145ba367a57d90274e719c85ac5e954fa9cc1458a7b987ea",
+    "scripts/recruiter-ai-synthetic-evaluation.ts": "c917050889a6a3f0053e79a841186d99042f8eaf0fe31d7bec0cb75c0b56afd8",
+    "scripts/fixtures/recruiter-ai-synthetic.ts": "9d28393bd44e074abe80ae67b89d3f99f1f862226a0c7aafa5fcc419d3932d2b"
+  },
+  "logs": {
+    "native-guards": {
+      "file": "p4-provenance-native-guards.log",
+      "sha256": "5e8fdc3f6b12f8bcf825625f5231640c15cf0575195ed9ad9d6f1a49cf4627ec"
+    },
+    "ai-contract": {
+      "file": "p4-provenance-ai-contract.log",
+      "sha256": "7cecd1bf0526579c0622c6d214bc085663d6db996a835b33cbd6bd42882f2508"
+    },
+    "ai-evaluation": {
+      "file": "p4-provenance-ai-evaluation.log",
+      "sha256": "75e9d655111e4a21c8f58de02b1c83465bf1be5137fca132a8f18cde120f35db"
+    },
+    "pair-source": {
+      "file": "p4-provenance-pair-source.log",
+      "sha256": "5ce622def6369ecf3d6f60aa875647f07dd1d6ed4d51f8415bedf3407384580e"
+    },
+    "app-ts": {
+      "file": "p4-provenance-app-ts.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "scripts-ts-final": {
+      "file": "p4-provenance-scripts-ts-final.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "native-ts": {
+      "file": "p4-provenance-native-ts.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "ai-gate": {
+      "file": "p4-provenance-ai-gate.log",
+      "sha256": "3b680c662378203d555c571808a0735d3f68803f38696b3c01251fe6db51b3e9"
+    },
+    "ai-texts": {
+      "file": "p4-provenance-ai-texts.log",
+      "sha256": "7e55df2fb71230caaf6290cac5c06ed8f41b3bd3ae4dc50a273c649d4f073c0b"
+    },
+    "portal-flow": {
+      "file": "p4-provenance-portal-flow.log",
+      "sha256": "cfa9e0b6e2256e7a24665d02243ff012f1a31ce4fffe34a8ea9256d18d82b296"
+    },
+    "ai-gate-negative": {
+      "file": "p4-provenance-ai-gate-negative.log",
+      "sha256": "974058ff8b738f80b16a54b5eb7485704c96aee5fe102f7f5ff78cc3b323652c"
+    },
+    "ai-texts-negative": {
+      "file": "p4-provenance-ai-texts-negative.log",
+      "sha256": "4346ba4e05068cfefc3ae2bd26a571cdffe95ecb615ba81c9c35cd32fea11525"
+    },
+    "portal-flow-negative": {
+      "file": "p4-provenance-portal-flow-negative.log",
+      "sha256": "c4f0c4ab5b516f7cba729b58814c29b96506f7b55959ebc40df41a08d7b48f55"
+    },
+    "portal-evidence-negative": {
+      "file": "p4-provenance-portal-evidence-negative.log",
+      "sha256": "26a72c279822c35304f9c14d9aa4749a115a2cc29dfdfbd43848ee40253a212d"
+    },
+    "scoped-lint": {
+      "file": "p4-provenance-scoped-lint.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "scoped-format": {
+      "file": "p4-provenance-scoped-format.log",
+      "sha256": "17aa973d3f004560237d9a95171210b0671deff23d61628eecf7322ff5938f20"
+    }
+  },
+  "firstObservations": [
+    {
+      "check": "nativeRootGuards first invocation",
+      "result": "78 pass/1 fail because PATH lacked bun for the OP09 harmless subprocess; no code changed before the same79 passed with Bun bin in PATH.",
+      "log": "p4-provenance-native-guards-first-path-missing.log",
+      "sha256": "7953ecf73dcfb6f82fdf21974fb9aeca833e3e5bc80f3580aa63ad05645f2f14"
+    },
+    {
+      "check": "portal evidence negative old anchor",
+      "result": "2 detected/1 anchor refusal: fresh original capturedFrom used127.0.0.1:35931 rather than oldlocalhost:3100. Same EPE-ID/parse diagnostic now uses a unique shots-structure target; all3 detect and restore.",
+      "log": "p4-provenance-portal-evidence-negative-old-anchor.log",
+      "sha256": "75ae218ecd0df116aceae1fdf289863549b59971d14cff0b1aa79bb1456c4612"
+    },
+    {
+      "check": "extra nonconfigured native type command",
+      "result": "Exit2 after adding Bun runner test to a standalone Node-only typecheck. Existing bun:test/Bun and intentional negative Devices cases are outside that workflow check. Full app/scripts and the actual configured native workflow checks are exit0; no type shim/check weakening was added.",
+      "log": "p4-provenance-native-ts-extra-nonconfigured.log",
+      "sha256": "9aa5e00fd5773a3a0092219c02367a60f3a5427b25cd1fea870fa7bda0c21da1"
+    },
+    {
+      "check": "extra pair guard against180600c without GitHub credentials",
+      "exitCode": 1,
+      "result": "Refused because original after-b7 differs from target180600c and existing guard requires GITHUB_REPOSITORY/GH_TOKEN to compare. No token acquired and no guard changed. Required exact55db/b7 pair check passes; separate actual local Git comparison found0 watched changes."
+    }
+  ],
+  "limitations": [
+    "No fresh real Auth/Storage/native/browser/published-runtime test in this task.",
+    "No AI provider, database, status, message, report or retention adapter.",
+    "Sandbox accounting/cache/idempotence remains memory-only and not clustered/durable.",
+    "The original separate five-failure old452a negative proof remains unchanged; it deliberately filtered the other68 tests."
+  ]
+}

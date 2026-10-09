@@ -1,0 +1,130 @@
+{
+  "contractVersion": "recruiter-ai-v0.3-draft2",
+  "evaluationKind": "offline_contract_and_manual_facit_no_model",
+  "provider": "none",
+  "syntheticOnly": true,
+  "generatedAt": "2026-10-08T23:12:40.089Z",
+  "cases": [
+    {
+      "fixtureId": "valid-source_summary",
+      "task": "source_summary",
+      "inputHash": "677a0edb4c987e34d6f9e055b2e73672b5e61067193075df36b7207d06b87464",
+      "outputHash": "357c5acb296800feaaa1bf0c11af8c75cb0a9532972c911759f047651096b94d",
+      "expected": "structurally_valid",
+      "actual": "structurally_valid",
+      "match": true,
+      "semanticSupport": "requires_human_review",
+      "humanFacit": "review_original_before_use"
+    },
+    {
+      "fixtureId": "valid-criterion_linking",
+      "task": "criterion_linking",
+      "inputHash": "677a0edb4c987e34d6f9e055b2e73672b5e61067193075df36b7207d06b87464",
+      "outputHash": "4279d1a70361b32eb862f5d7b6ea07b840fc134d07c1e6f0fd222f5b4edf6ff2",
+      "expected": "structurally_valid",
+      "actual": "structurally_valid",
+      "match": true,
+      "semanticSupport": "requires_human_review",
+      "humanFacit": "review_original_before_use"
+    },
+    {
+      "fixtureId": "valid-neutral_clarifications",
+      "task": "neutral_clarifications",
+      "inputHash": "677a0edb4c987e34d6f9e055b2e73672b5e61067193075df36b7207d06b87464",
+      "outputHash": "b8ec22def2a10e21794a1a33d26fa60598366768cd531576dd20a955c1dc737c",
+      "expected": "structurally_valid",
+      "actual": "structurally_valid",
+      "match": true,
+      "semanticSupport": "requires_human_review",
+      "humanFacit": "review_original_before_use"
+    },
+    {
+      "fixtureId": "valid-reviewed_report_draft",
+      "task": "reviewed_report_draft",
+      "inputHash": "677a0edb4c987e34d6f9e055b2e73672b5e61067193075df36b7207d06b87464",
+      "outputHash": "de1b930bc1183c4300b92534cfb016e006a01ec86f31b0f18512fd43aef205af",
+      "expected": "structurally_valid",
+      "actual": "structurally_valid",
+      "match": true,
+      "semanticSupport": "requires_human_review",
+      "humanFacit": "review_original_before_use"
+    },
+    {
+      "fixtureId": "fabricated-passage",
+      "task": "source_summary",
+      "inputHash": "677a0edb4c987e34d6f9e055b2e73672b5e61067193075df36b7207d06b87464",
+      "outputHash": "3558d5f7becbaa595f1509d5e6e33641e9b04a3735d207f0b909821360e0237b",
+      "expected": "citation_invalid",
+      "actual": "citation_invalid",
+      "match": true,
+      "semanticSupport": "not_accepted",
+      "humanFacit": "reject"
+    },
+    {
+      "fixtureId": "injection-source",
+      "task": "source_summary",
+      "inputHash": "6241d50e345b05cdb88a3c1b6d085b6b22263128eb0c07af4ede1399a6c10672",
+      "outputHash": "d51d84278c821f430e43ead12862a8e9afdab1b4892f9f0a81d3973202423eef",
+      "expected": "input_quarantined",
+      "actual": "input_quarantined",
+      "match": true,
+      "semanticSupport": "not_accepted",
+      "humanFacit": "read_original_separately"
+    },
+    {
+      "fixtureId": "leading-question",
+      "task": "neutral_clarifications",
+      "inputHash": "677a0edb4c987e34d6f9e055b2e73672b5e61067193075df36b7207d06b87464",
+      "outputHash": "7137daa850cf193e3a180696588e567f1dec4999e31f0c864b5a4f86d7d3fd64",
+      "expected": "policy_rejected",
+      "actual": "policy_rejected",
+      "match": true,
+      "semanticSupport": "not_accepted",
+      "humanFacit": "reject_and_rephrase_neutrally"
+    },
+    {
+      "fixtureId": "unsupported-ten-year-paraphrase",
+      "task": "source_summary",
+      "inputHash": "677a0edb4c987e34d6f9e055b2e73672b5e61067193075df36b7207d06b87464",
+      "outputHash": "50f672e763bac8eb6a537af0612c8ff9a337f50c70cb066c361f471686c9794a",
+      "expected": "structurally_valid",
+      "actual": "structurally_valid",
+      "match": true,
+      "semanticSupport": "requires_human_review",
+      "humanFacit": "reject_semantic_support"
+    },
+    {
+      "fixtureId": "ocr-year-2028-vs-2038",
+      "task": "source_summary",
+      "inputHash": "bdd88c8418eb6554eb083ab6559c8869e236bdcb0a9dfb3e50dde0fe08f1737d",
+      "outputHash": "ae193be2b6f09ab6d89d6fb43e6fe41a312a393578d23fc2e37cf9ec36554015",
+      "expected": "structurally_valid",
+      "actual": "structurally_valid",
+      "match": true,
+      "semanticSupport": "requires_human_review",
+      "humanFacit": "reject_and_verify_original"
+    }
+  ],
+  "mismatches": [],
+  "sideEffects": {
+    "fixtureCalls": 1,
+    "modelRequests": 0,
+    "persistentWrites": 0,
+    "statusChanges": 0,
+    "messages": 0,
+    "finalisedReports": 0
+  },
+  "budgetObservation": {
+    "reserved": 0,
+    "spent": 4,
+    "active": 0,
+    "waiting": 0
+  },
+  "limits": [
+    "No provider/model quality or semantic truth validation",
+    "Exact citation is not semantic support",
+    "Manual OCR/original facit can reject structurally valid output",
+    "Memory-only synthetic accounting is not durable or clustered production capacity",
+    "No activation/Auth/API/browser/hosted claim"
+  ]
+}
