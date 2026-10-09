@@ -3,7 +3,7 @@ import path from "node:path";
 import crypto from "node:crypto";
 
 export const APP_SHA = "55db1e3b83ace033450899a93ca0961edde05217";
-export const SCHEMA_SHA = "8dfec6c47e42074d808c30939cebf0c63defce55";
+export const SCHEMA_SHA = "05520f2995f24ba697be41ecf8364b71a6ef1491";
 export const PROJECT = "cqj-ri-native-p1-100";
 export const API = "http://127.0.0.1:55810";
 export const APP = "http://127.0.0.1:35810";
@@ -132,7 +132,7 @@ export function validateStatus(status) {
 export function history(names) {
   const files = names.filter((name) => name.endsWith(".sql")).sort();
   if (
-    files.length !== 389 ||
+    files.length !== 391 ||
     files.some((name) => !/^\d{14}_.+\.sql$/.test(name)) ||
     new Set(files.map((name) => name.slice(0, 14))).size !== files.length ||
     [
@@ -142,6 +142,8 @@ export function history(names) {
       "20270309090000_",
       "20270310090000_",
       "20270310100000_",
+      "20270311100000_",
+      "20270312100000_",
     ].some((prefix) => !files.some((f) => f.startsWith(prefix)))
   )
     throw Error("P1_NATIVE_COMPLETE_HISTORY_REQUIRED");

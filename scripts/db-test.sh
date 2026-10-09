@@ -266,6 +266,29 @@ if [ "$RI_P1_RC" -ne 0 ] || [ "$RI_P1_PASSED" -lt 95 ]; then
 else
   echo "    ok  ${RI_P1_PASSED} actual P1 counts, sources, CAS, access and handoff assertions"
 fi
+# Slutuppdrag 2026-10-09 (slots 111 and 121): the supplement request, the
+# reopen act and the interview composition, against the full current schema.
+echo "==> Running recruitment lifecycle v0.3 (supplement, reopen, composition)"
+set +e
+RL_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/recruitment_lifecycle_v03_test.sql 2>&1)"
+RL_RC=$?
+set -e
+RL_PASSED="$(echo "$RL_OUT" | grep -c "NOTICE:  ok " || true)"
+if [ "$RL_RC" -ne 0 ] || [ "$RL_PASSED" -lt 40 ]; then
+  echo "$RL_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "Recruitment lifecycle v0.3"
+else
+  echo "    ok  ${RL_PASSED} supplement, reopen and composition assertions"
+fi
+# Stand down the two EMPTY additive slots before every older consumer: the
+# supplement table references rec_requirement_profiles and the composition
+# helper lives in the recruiter_intelligence schema, so the 080 rollback must
+# find them gone. Both rollbacks refuse recorded data; the suite leaves none.
+psql_q -d "$TEST_DB" -f supabase/rollback/20270312100000_interview_question_composition_rollback.sql >/dev/null
+psql_q -d "$TEST_DB" -f supabase/rollback/20270311100000_recruitment_supplement_and_reopen_rollback.sql >/dev/null
+RL_STOOD_DOWN="$(psql_q -d "$TEST_DB" -Atc "SELECT (to_regclass('public.rec_interview_compositions') IS NULL AND to_regclass('public.rec_requirement_supplement_requests') IS NULL AND to_regprocedure('public.rec_reopen_application(uuid,text,text,uuid)') IS NULL AND NOT EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='scp_interview_cases' AND column_name='composition_id'))::text")"
+[ "$RL_STOOD_DOWN" = "true" ] || { echo "FAIL: lifecycle v0.3 rollbacks left a consumer behind." >&2; exit 1; }
+echo "    ok  lifecycle v0.3 slots stood down before historical consumers"
 # Current workspace extension must be checked while080 is still present. The
 # focused runner requires36 SQL checks, real two-session CAS/audit races and
 # nonempty refusal + empty DOWN/reapply without changing old P1 definitions.
