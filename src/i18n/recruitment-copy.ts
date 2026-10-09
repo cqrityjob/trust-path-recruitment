@@ -1974,7 +1974,7 @@ export const recruitmentEn: { [K in keyof typeof recruitmentSv]: string } = {
   "rec.composition.probe": "Approved follow-up",
   "rec.composition.type.behavioural": "Behavioural question",
   "rec.composition.type.situational": "Situational question",
-  "rec.composition.time": "{min}–{max} min",
+  "rec.composition.time": "{min}–{max} minutes",
   "rec.composition.totalTime": "Estimated time: {min}–{max} min",
   "rec.composition.covered": "Competency areas covered: {covered} of {total}",
   "rec.composition.missing": "Missing: {codes}",

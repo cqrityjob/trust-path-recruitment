@@ -162,10 +162,17 @@ const casePath = (jobId: string, search = "") => `/employer/${SLUG}/jobs/${jobId
 /** The historical statistics are folded by default (the queue and the list
  *  are the work); a number inside is clicked or read after opening the fold. */
 /** The less frequent filters are behind a fold; a test that uses one opens it. */
+/** The less frequent filters sit behind a fold. Opened by its summary, and
+ *  proven open by a select inside it being visible: a click that lands before
+ *  the page is interactive is simply made again. */
 async function openMoreFilters(page: Page) {
   const fold = page.locator("[data-testid='more-filters']");
-  if ((await fold.count()) > 0 && !(await fold.evaluate((d) => (d as HTMLDetailsElement).open)))
-    await fold.locator(":scope > summary").click();
+  await expect(fold).toBeVisible();
+  await expect(async () => {
+    if (!(await fold.evaluate((d) => (d as HTMLDetailsElement).open)))
+      await fold.locator(":scope > summary").click();
+    await expect(fold.locator("select").first()).toBeVisible({ timeout: 2_000 });
+  }).toPass({ timeout: 30_000 });
 }
 
 async function openStatistics(page: Page) {
@@ -465,7 +472,9 @@ test.describe("recruitment case", () => {
     });
     const queued = Number(await queue.locator("[data-testid='review-queue-count']").innerText());
     expect(queued).toBeLessThanOrEqual(await n("count-remaining"));
-    await expect(counts.getByText("Historisk täckning", { exact: false })).toBeVisible();
+    // Opened above: the fold's summary and the heading inside both say
+    // "Historisk täckning"; the heading is the record.
+    await expect(counts.getByRole("heading", { name: /Historisk täckning/ })).toBeVisible();
     // The queue's button opens the short address the strip also links to, and
     // the strip then marks the review station.
     await queue.locator("[data-testid='review-queue-open']").click();

@@ -250,40 +250,47 @@ export function RequirementSummary({
         </details>
       )}
 
-      {actions && !profileMissing && (
+      {/* The decision does not wait for a requirement profile: an application
+          can be closed, or taken to the interview, with the profile still
+          missing. Confirming the review and asking for a supplement can not. */}
+      {actions && (
         <div className="mt-3" data-testid="requirement-summary-actions">
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             {t("rec.summary.actions")}
           </p>
           <div className="mt-1.5 flex flex-wrap gap-2">
-            <button
-              type="button"
-              data-testid="summary-action-confirm"
-              onClick={actions.confirm}
-              className={btn}
-            >
-              {t("rec.summary.action.confirm")}
-            </button>
-            <button
-              type="button"
-              data-testid="summary-action-supplement"
-              onClick={() =>
-                actions.requestSupplement({
-                  body: supplementBody,
-                  profileId: review.profile.profileId,
-                  requirementIds: summary.unclear,
-                })
-              }
-              disabled={supplementBody.length === 0}
-              title={
-                supplementBody.length === 0
-                  ? t("rec.summary.action.supplementNone")
-                  : t("rec.summary.action.supplementHint")
-              }
-              className={btn}
-            >
-              {t("rec.summary.action.supplement")}
-            </button>
+            {!profileMissing && (
+              <>
+                <button
+                  type="button"
+                  data-testid="summary-action-confirm"
+                  onClick={actions.confirm}
+                  className={btn}
+                >
+                  {t("rec.summary.action.confirm")}
+                </button>
+                <button
+                  type="button"
+                  data-testid="summary-action-supplement"
+                  onClick={() =>
+                    actions.requestSupplement({
+                      body: supplementBody,
+                      profileId: review.profile.profileId,
+                      requirementIds: summary.unclear,
+                    })
+                  }
+                  disabled={supplementBody.length === 0}
+                  title={
+                    supplementBody.length === 0
+                      ? t("rec.summary.action.supplementNone")
+                      : t("rec.summary.action.supplementHint")
+                  }
+                  className={btn}
+                >
+                  {t("rec.summary.action.supplement")}
+                </button>
+              </>
+            )}
             <button
               type="button"
               data-testid="summary-action-prepare"
@@ -313,9 +320,11 @@ export function RequirementSummary({
               </button>
             )}
           </div>
-          <p className="mt-1.5 text-xs text-muted-foreground">
-            {t("rec.summary.action.supplementHint")}
-          </p>
+          {!profileMissing && (
+            <p className="mt-1.5 text-xs text-muted-foreground">
+              {t("rec.summary.action.supplementHint")}
+            </p>
+          )}
         </div>
       )}
     </section>

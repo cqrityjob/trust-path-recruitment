@@ -56,7 +56,7 @@ import { RequirementSummary } from "@/components/recruitment/RequirementSummary"
 import { SupplementPanel } from "@/components/recruitment/SupplementPanel";
 import { supplementQueryKey } from "@/lib/recruitment/interview-composition";
 import { ReopenDecision } from "@/components/recruitment/ReopenDecision";
-import { requestSupplement } from "@/lib/recruitment/lifecycle-v03.functions";
+import { getSupplementState, requestSupplement } from "@/lib/recruitment/lifecycle-v03.functions";
 import { candidateNoticeStateOf } from "@/lib/recruitment/application-workflow";
 import { openApplicationOriginalCv } from "@/lib/recruitment/requirement-review-draft";
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
@@ -433,6 +433,16 @@ function Candidate360({
       50,
     );
   const supplementFn = useServerFn(requestSupplement);
+  // The same read the supplement panel shows, under the same key: when the
+  // slot is not installed the header's "Begär komplettering" opens the plain
+  // message draft directly, instead of asking the server to refuse first.
+  const supplementStateFn = useServerFn(getSupplementState);
+  const supplementState = useQuery({
+    queryKey: supplementQueryKey(employerId, applicationId),
+    queryFn: () => supplementStateFn({ data: { employerId, applicationId } }),
+    enabled: Boolean(rw && query.data?.jobId),
+  });
+  const supplementInstalled = supplementState.data?.installed !== false;
   const supplementOperation = useRef<string>(crypto.randomUUID());
   const [supplementNotice, setSupplementNotice] = useState<string | null>(null);
   const supplement = useMutation({
@@ -900,7 +910,7 @@ function Candidate360({
                     confirm: () => scrollTo("requirement-review"),
                     requestSupplement: ({ body, profileId, requirementIds }) => {
                       setSupplementNotice(null);
-                      if (!profileId || requirementIds.length === 0) {
+                      if (!supplementInstalled || !profileId || requirementIds.length === 0) {
                         setComposeRequest({
                           kind: "information",
                           bookingId: null,

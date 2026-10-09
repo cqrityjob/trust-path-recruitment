@@ -641,6 +641,11 @@ test("archive-only recruitment still exposes all received applications and its a
         await expect(target.getByTestId("active-population-reset")).toHaveCount(0);
         expect(await ids(target)).toEqual(ordered.slice((p - 1) * 25, p * 25));
       }
+      // The stage select sits behind the "more filters" fold since the list
+      // views (Aktiva / Avgjorda / Avslutade / Alla) took its place up front.
+      const fold = target.getByTestId("more-filters");
+      if (!(await fold.evaluate((d) => (d as HTMLDetailsElement).open)))
+        await fold.locator(":scope > summary").click();
       await target.getByTestId("stage-filter").selectOption("archived");
       await expect(visibleRows(target)).toHaveCount(25);
       await expect(target.getByTestId("filtered-review-counts")).toContainText(
