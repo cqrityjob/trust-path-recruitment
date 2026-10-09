@@ -97,27 +97,10 @@ function ApplicationsList(props: {
       />
       <p className="mt-2 text-sm text-muted-foreground">
         {lang === "sv"
-          ? "Kravstatus, rekryteringssteg, teknisk analys och mänsklig granskning visas separat. Grupper och antal beräknas över hela urvalet före sidindelning."
-          : "Requirement status, recruitment stage, technical analysis and human review are separate. Groups and counts cover the complete selection before pagination."}
+          ? "Aktiva ansökningar är arbetslistan: vad gör jag nu? Kravstatus, rekryteringssteg och mänsklig granskning visas separat, och antalen beräknas över hela urvalet före sidindelning."
+          : "Active applications are the working list: what do I do now? Requirement status, recruitment stage and human review are separate, and counts cover the complete selection before pagination."}
       </p>
-      <label className="my-4 block text-sm">
-        {lang === "sv" ? "Rekrytering" : "Recruitment"}
-        <select
-          data-testid="recruitment-filter"
-          value={view.job ?? ""}
-          onChange={(e) =>
-            changeView({ ...view, job: e.target.value || undefined, page: undefined })
-          }
-          className="ml-2 max-w-full rounded border border-border bg-background p-2"
-        >
-          <option value="">{lang === "sv" ? "Alla rekryteringar" : "All recruitments"}</option>
-          {overview.data?.recruitments.map((r) => (
-            <option key={r.jobId} value={r.jobId}>
-              {(lang === "sv" ? r.titleSv || r.titleEn : r.titleEn || r.titleSv) ?? r.jobId}
-            </option>
-          ))}
-        </select>
-      </label>
+      <p className="mb-3 mt-1 text-xs text-muted-foreground">{t("rec.filters.simpleHint")}</p>
       {view.status && (
         <p className="mb-3 text-sm">
           {lang === "sv" ? "Valt rekryteringsstatusfilter" : "Selected recruitment status filter"}:{" "}
@@ -147,6 +130,10 @@ function ApplicationsList(props: {
         canManage={props.role === "owner" || props.role === "admin"}
         canAssignTests={props.role === "owner" || props.role === "admin"}
         openAssessmentIds={assessments.ids}
+        recruitments={(overview.data?.recruitments ?? []).map((r) => ({
+          jobId: r.jobId,
+          title: (lang === "sv" ? r.titleSv || r.titleEn : r.titleEn || r.titleSv) ?? r.jobId,
+        }))}
         labelKey="applications"
         onChanged={() => {
           void qc.invalidateQueries({ queryKey: ["employer", props.employerId] });

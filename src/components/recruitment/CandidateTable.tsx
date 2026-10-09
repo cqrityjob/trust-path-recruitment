@@ -73,13 +73,18 @@ import {
 } from "@/lib/recruitment/recruitment.functions";
 import { formatDay, formatInZone } from "@/lib/recruitment/format";
 import { recruitmentErrorKey } from "@/components/recruitment/errors";
-import {
-  AnalysisStatusBadge,
-  RecruiterCounts,
-  RequirementStatusBadge,
-  ReviewStatusBadge,
-} from "./RecruiterStatus";
+import { RecruiterCounts, RequirementStatusBadge, ReviewStatusBadge } from "./RecruiterStatus";
 import { requirementLabels, reviewLabels } from "@/lib/recruitment/requirement-presentation";
+import {
+  ACTIVE_SUBSTEPS,
+  PRIMARY_VIEWS,
+  activeSubstepOf,
+  advancedFilterCount,
+  nextStepOf,
+  primaryViewOf,
+  viewForPrimary,
+  viewForSubstep,
+} from "@/lib/recruitment/application-workflow";
 
 type Props = {
   employerId: string;
@@ -105,6 +110,9 @@ type Props = {
   openAssessmentIds?: ReadonlySet<string> | null;
   onChanged: () => void;
   labelKey: "recruitment" | "applications";
+  /** The organisation-wide list offers a recruitment filter next to the
+   *  responsible person; a recruitment's own list has none. */
+  recruitments?: { jobId: string; title: string }[];
 };
 
 type BatchStage = "reviewing" | "interview" | "rejected";
@@ -146,6 +154,10 @@ export function CandidateTable(props: Props) {
   const [sendTestFor, setSendTestFor] = useState<CandidateRow | null>(null);
   const [assigning, setAssigning] = useState(false);
   const [search, setSearch] = useState(view.q ?? "");
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const primaryView = primaryViewOf(view.stage);
+  const substep = activeSubstepOf(view);
+  const advancedCount = advancedFilterCount(view);
 
   // Debounced into the URL, so typing does not push a history entry per key.
   useEffect(() => setSearch(view.q ?? ""), [view.q]);
@@ -363,6 +375,17 @@ export function CandidateTable(props: Props) {
   };
   const hasReceivedApplications =
     (page?.intelligenceCounts?.received ?? page?.counts.total ?? 0) > 0;
+  // The tabs and the sub-steps show the same unfiltered numbers the stage
+  // select does, from the same page read, under the same rule: none while
+  // an organisation-wide read is narrowed to one recruitment.
+  const viewCount = (v: (typeof PRIMARY_VIEWS)[number]) =>
+    v === "archived"
+      ? page?.intelligenceCounts && !(jobId === null && view.job)
+        ? ` (${page.intelligenceCounts.archived})`
+        : ""
+      : stageCount(v);
+  const substepCount = (step: (typeof ACTIVE_SUBSTEPS)[number]) =>
+    step === "all" ? stageCount("open") : step === "clarify" ? "" : stageCount(step);
 
   const selectCls =
     "h-9 max-w-[16rem] rounded-md border border-border bg-background px-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
@@ -371,23 +394,80 @@ export function CandidateTable(props: Props) {
 
   return (
     <div data-testid="candidate-table">
-      {page?.intelligenceCounts && (
-        <RecruiterCounts
-          counts={page.intelligenceCounts}
-          scopeLabel={
-            jobId === null
-              ? lang === "sv"
-                ? "Organisationens samtliga mottagna ansökningar"
-                : "All applications received by the organisation"
-              : lang === "sv"
-                ? "Rekryteringens samtliga mottagna ansökningar"
-                : "All applications received for this recruitment"
-          }
-          onView={onViewChange}
-        />
+      {/* ── Views: the working list first ─────────────────────────────
+          Aktiva is the default and the only list that is work; Avslutade and
+          Arkiv are where a decided application can be found again. The tabs
+          are the server's own stage filters under a recruiter's names. */}
+      <nav
+        aria-label={t("rec.view.aria")}
+        data-testid="list-views"
+        className="flex flex-wrap gap-1"
+      >
+        {PRIMARY_VIEWS.map((v) => {
+          const active = primaryView === v;
+          return (
+            <button
+              key={v}
+              type="button"
+              data-testid={`view-${v}`}
+              aria-current={active ? "page" : undefined}
+              title={t(`rec.view.hint.${v}` as TranslationKey)}
+              onClick={() => {
+                if (!active) onViewChange(viewForPrimary(view, v));
+              }}
+              className={`inline-flex min-h-10 items-center rounded-md border px-3 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+                active
+                  ? "border-accent bg-accent/10 text-foreground"
+                  : "border-border bg-background text-muted-foreground hover:bg-muted/50"
+              }`}
+            >
+              {t(`rec.view.${v}` as TranslationKey)}
+              {viewCount(v)}
+            </button>
+          );
+        })}
+      </nav>
+      <p className="mt-1 text-xs text-muted-foreground">
+        {t(`rec.view.hint.${primaryView}` as TranslationKey)}
+      </p>
+      {primaryView === "open" && (
+        <div
+          role="group"
+          aria-label={t("rec.substep.aria")}
+          data-testid="list-substeps"
+          className="mt-2 flex flex-wrap gap-1"
+        >
+          {ACTIVE_SUBSTEPS.map((step) => {
+            const active = substep === step;
+            return (
+              <button
+                key={step}
+                type="button"
+                data-testid={`substep-${step}`}
+                aria-pressed={active}
+                title={step === "clarify" ? t("rec.substep.clarifyHint") : undefined}
+                onClick={() => {
+                  if (!active) onViewChange(viewForSubstep(view, step));
+                }}
+                className={`inline-flex min-h-9 items-center rounded-full border px-3 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                  active
+                    ? "border-foreground/60 bg-foreground/5 text-foreground"
+                    : "border-border text-muted-foreground hover:bg-muted/50"
+                }`}
+              >
+                {t(`rec.substep.${step}` as TranslationKey)}
+                {substepCount(step)}
+              </button>
+            );
+          })}
+        </div>
       )}
-      {/* ── Filters ─────────────────────────────────────────────────── */}
-      <section aria-label={t("rec.filters.aria")} className="flex flex-wrap items-end gap-2">
+      {/* ── Filters: the everyday ones in the open, the rest behind a fold ── */}
+      <section
+        aria-label={t("rec.filters.aria")}
+        className="mt-3 flex flex-wrap items-end gap-2"
+        data-testid="simple-filters"
+      >
         <label className="relative min-w-[11rem] flex-1 sm:max-w-xs">
           <span className="sr-only">{t("rec.table.search")}</span>
           <Search
@@ -402,100 +482,30 @@ export function CandidateTable(props: Props) {
             className="h-9 w-full rounded-md border border-border bg-background pl-8 pr-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           />
         </label>
-        <label className="flex flex-col gap-0.5 text-xs text-muted-foreground">
-          {t("rec.table.stage")}
-          <select
-            data-testid="stage-filter"
-            className={selectCls}
-            value={view.stage ?? "open"}
-            onChange={(e) =>
-              onViewChange(firstPage({ ...view, stage: e.target.value as CandidateView["stage"] }))
-            }
-          >
-            {STAGE_FILTERS.map((s) => (
-              <option key={s} value={s}>
-                {s === "received"
-                  ? lang === "sv"
-                    ? "Alla mottagna inklusive arkiv"
-                    : "All received including archives"
-                  : t(`rec.filter.stage.${s}` as TranslationKey)}
-                {stageCount(s)}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="flex flex-col gap-0.5 text-xs text-muted-foreground">
-          {lang === "sv" ? "Kravstatus" : "Requirement status"}
-          <select
-            data-testid="requirement-filter"
-            className={selectCls}
-            value={view.requirement ?? ""}
-            onChange={(e) =>
-              onViewChange(
-                firstPage({
-                  ...view,
-                  requirement: (e.target.value as CandidateView["requirement"]) || undefined,
-                }),
-              )
-            }
-          >
-            <option value="">
-              {lang === "sv" ? "Alla kravstatusar" : "All requirement statuses"}
-            </option>
-            {(["green", "yellow", "gray", "not_established"] as const).map((status) => (
-              <option key={status} value={status}>
-                {requirementLabels[lang][status]}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="flex flex-col gap-0.5 text-xs text-muted-foreground">
-          {lang === "sv" ? "Mänsklig granskning" : "Human review"}
-          <select
-            data-testid="review-filter"
-            className={selectCls}
-            value={view.review ?? ""}
-            onChange={(e) =>
-              onViewChange(
-                firstPage({
-                  ...view,
-                  review: (e.target.value as CandidateView["review"]) || undefined,
-                }),
-              )
-            }
-          >
-            <option value="">{lang === "sv" ? "Alla granskningar" : "All reviews"}</option>
-            {(["remaining", "reviewed", "pending", "stale"] as const).map((status) => (
-              <option key={status} value={status}>
-                {reviewLabels[lang][status]}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="flex flex-col gap-0.5 text-xs text-muted-foreground">
-          {lang === "sv" ? "Teknisk analys" : "Technical analysis"}
-          <select
-            data-testid="analysis-filter"
-            className={selectCls}
-            value={view.analysis ?? ""}
-            onChange={(e) =>
-              onViewChange(
-                firstPage({
-                  ...view,
-                  analysis: e.target.value === "not_used" ? "not_used" : undefined,
-                }),
-              )
-            }
-          >
-            <option value="">
-              {lang === "sv" ? "Alla analysstatusar" : "All analysis statuses"}
-            </option>
-            <option value="not_used">{lang === "sv" ? "Används inte" : "Not used"}</option>
-          </select>
-        </label>
+        {jobId === null && props.recruitments && (
+          <label className="flex flex-col gap-0.5 text-xs text-muted-foreground">
+            {lang === "sv" ? "Rekrytering" : "Recruitment"}
+            <select
+              data-testid="recruitment-filter"
+              className={selectCls}
+              value={view.job ?? ""}
+              onChange={(e) =>
+                onViewChange(firstPage({ ...view, job: e.target.value || undefined }))
+              }
+            >
+              <option value="">{lang === "sv" ? "Alla rekryteringar" : "All recruitments"}</option>
+              {props.recruitments.map((r) => (
+                <option key={r.jobId} value={r.jobId}>
+                  {r.title}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         <label className="flex flex-col gap-0.5 text-xs text-muted-foreground">
           {t("rec.table.responsible")}
           <select
+            data-testid="owner-filter"
             className={selectCls}
             value={view.owner ?? ""}
             onChange={(e) =>
@@ -511,72 +521,6 @@ export function CandidateTable(props: Props) {
             ))}
           </select>
         </label>
-        {questions.slice(0, 4).map((q) => {
-          const current = answerFilters.find((f) => f.questionId === q.id);
-          return (
-            <label key={q.id} className="flex flex-col gap-0.5 text-xs text-muted-foreground">
-              <span className="max-w-[16rem] truncate" title={questionLabel(q)}>
-                {questionLabel(q)}
-              </span>
-              <select
-                className={selectCls}
-                value={current ? (current.value ? "y" : "n") : ""}
-                onChange={(e) => setAnswer(q.id, e.target.value as "" | "y" | "n")}
-              >
-                <option value="">{t("rec.filter.answer.any")}</option>
-                <option value="y">{t("rec.filter.answer.yes")}</option>
-                <option value="n">{t("rec.filter.answer.no")}</option>
-              </select>
-            </label>
-          );
-        })}
-        <label className="flex flex-col gap-0.5 text-xs text-muted-foreground">
-          {t("rec.table.sort")}
-          <span className="flex gap-1">
-            <select
-              className={selectCls}
-              value={view.sort ?? "requirements"}
-              onChange={(e) =>
-                onViewChange(
-                  firstPage({
-                    ...view,
-                    sort: e.target.value as CandidateView["sort"],
-                    dir: undefined,
-                  }),
-                )
-              }
-            >
-              {CANDIDATE_SORTS.map((s) => (
-                <option key={s} value={s}>
-                  {s === "requirements"
-                    ? lang === "sv"
-                      ? "Kravgrupp, sedan ansökningsdatum"
-                      : "Requirement group, then application date"
-                    : t(`rec.sort.${s}` as TranslationKey)}
-                </option>
-              ))}
-            </select>
-            <button
-              type="button"
-              onClick={() =>
-                onViewChange(
-                  firstPage({
-                    ...view,
-                    dir:
-                      (view.dir ?? ((view.sort ?? "applied") === "applied" ? "desc" : "asc")) ===
-                      "asc"
-                        ? "desc"
-                        : "asc",
-                  }),
-                )
-              }
-              className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              aria-label={t("rec.table.toggleDirection")}
-            >
-              <ArrowDownUp className="h-4 w-4" aria-hidden="true" />
-            </button>
-          </span>
-        </label>
         {activeFilters > 0 && (
           <button
             type="button"
@@ -588,6 +532,183 @@ export function CandidateTable(props: Props) {
           </button>
         )}
       </section>
+      {/* The less frequent filters. Open whenever one of them is in the URL,
+          so a filtered link never hides the filter that narrowed it. */}
+      <details
+        data-testid="more-filters"
+        open={advancedOpen || advancedCount > 0}
+        onToggle={(e) => setAdvancedOpen((e.currentTarget as HTMLDetailsElement).open)}
+        className="mt-2 rounded-md border border-border bg-muted/10 px-3 py-1 text-sm"
+      >
+        <summary className="min-h-10 cursor-pointer list-item py-2 text-sm font-medium text-foreground">
+          {t("rec.filters.more")}
+          {advancedCount > 0 && (
+            <span className="ml-2 text-xs font-normal text-muted-foreground">
+              ({t("rec.filters.moreActive").replace("{n}", String(advancedCount))})
+            </span>
+          )}
+        </summary>
+        <div className="flex flex-wrap items-end gap-2 pb-3">
+          <label className="flex flex-col gap-0.5 text-xs text-muted-foreground">
+            {t("rec.table.stage")}
+            <select
+              data-testid="stage-filter"
+              className={selectCls}
+              value={view.stage ?? "open"}
+              onChange={(e) =>
+                onViewChange(
+                  firstPage({ ...view, stage: e.target.value as CandidateView["stage"] }),
+                )
+              }
+            >
+              {STAGE_FILTERS.map((s) => (
+                <option key={s} value={s}>
+                  {s === "received"
+                    ? t("rec.view.received")
+                    : t(`rec.filter.stage.${s}` as TranslationKey)}
+                  {stageCount(s)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex flex-col gap-0.5 text-xs text-muted-foreground">
+            {t("rec.col.requirements")}
+            <select
+              data-testid="requirement-filter"
+              className={selectCls}
+              value={view.requirement ?? ""}
+              onChange={(e) =>
+                onViewChange(
+                  firstPage({
+                    ...view,
+                    requirement: (e.target.value as CandidateView["requirement"]) || undefined,
+                  }),
+                )
+              }
+            >
+              <option value="">
+                {lang === "sv" ? "Alla kravstatusar" : "All requirement statuses"}
+              </option>
+              {(["green", "yellow", "gray", "not_established"] as const).map((status) => (
+                <option key={status} value={status}>
+                  {requirementLabels[lang][status]}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex flex-col gap-0.5 text-xs text-muted-foreground">
+            {t("rec.col.review")}
+            <select
+              data-testid="review-filter"
+              className={selectCls}
+              value={view.review ?? ""}
+              onChange={(e) =>
+                onViewChange(
+                  firstPage({
+                    ...view,
+                    review: (e.target.value as CandidateView["review"]) || undefined,
+                  }),
+                )
+              }
+            >
+              <option value="">{lang === "sv" ? "Alla granskningar" : "All reviews"}</option>
+              {(["remaining", "reviewed", "pending", "stale"] as const).map((status) => (
+                <option key={status} value={status}>
+                  {reviewLabels[lang][status]}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex flex-col gap-0.5 text-xs text-muted-foreground">
+            {lang === "sv" ? "Teknisk analys" : "Technical analysis"}
+            <select
+              data-testid="analysis-filter"
+              className={selectCls}
+              value={view.analysis ?? ""}
+              onChange={(e) =>
+                onViewChange(
+                  firstPage({
+                    ...view,
+                    analysis: e.target.value === "not_used" ? "not_used" : undefined,
+                  }),
+                )
+              }
+            >
+              <option value="">
+                {lang === "sv" ? "Alla analysstatusar" : "All analysis statuses"}
+              </option>
+              <option value="not_used">{lang === "sv" ? "Används inte" : "Not used"}</option>
+            </select>
+          </label>
+          {questions.slice(0, 4).map((q) => {
+            const current = answerFilters.find((f) => f.questionId === q.id);
+            return (
+              <label key={q.id} className="flex flex-col gap-0.5 text-xs text-muted-foreground">
+                <span className="max-w-[16rem] truncate" title={questionLabel(q)}>
+                  {questionLabel(q)}
+                </span>
+                <select
+                  className={selectCls}
+                  value={current ? (current.value ? "y" : "n") : ""}
+                  onChange={(e) => setAnswer(q.id, e.target.value as "" | "y" | "n")}
+                >
+                  <option value="">{t("rec.filter.answer.any")}</option>
+                  <option value="y">{t("rec.filter.answer.yes")}</option>
+                  <option value="n">{t("rec.filter.answer.no")}</option>
+                </select>
+              </label>
+            );
+          })}
+          <label className="flex flex-col gap-0.5 text-xs text-muted-foreground">
+            {t("rec.table.sort")}
+            <span className="flex gap-1">
+              <select
+                className={selectCls}
+                value={view.sort ?? "requirements"}
+                onChange={(e) =>
+                  onViewChange(
+                    firstPage({
+                      ...view,
+                      sort: e.target.value as CandidateView["sort"],
+                      dir: undefined,
+                    }),
+                  )
+                }
+              >
+                {CANDIDATE_SORTS.map((s) => (
+                  <option key={s} value={s}>
+                    {s === "requirements"
+                      ? lang === "sv"
+                        ? "Kravgrupp, sedan ansökningsdatum"
+                        : "Requirement group, then application date"
+                      : t(`rec.sort.${s}` as TranslationKey)}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={() =>
+                  onViewChange(
+                    firstPage({
+                      ...view,
+                      dir:
+                        (view.dir ?? ((view.sort ?? "applied") === "applied" ? "desc" : "asc")) ===
+                        "asc"
+                          ? "desc"
+                          : "asc",
+                    }),
+                  )
+                }
+                className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                aria-label={t("rec.table.toggleDirection")}
+              >
+                <ArrowDownUp className="h-4 w-4" aria-hidden="true" />
+              </button>
+            </span>
+          </label>
+        </div>
+        <p className="pb-2 text-xs text-muted-foreground">{t("rec.table.analysisNote")}</p>
+      </details>
 
       {/* ── Action bar: always present ───────────────────────────────── */}
       <div
@@ -807,10 +928,8 @@ export function CandidateTable(props: Props) {
                   <th className="w-10 px-2 py-1.5 tabular-nums">#</th>
                   <th className="px-2 py-1.5">{t("rec.col.candidate")}</th>
                   <th className="px-2 py-1.5">{t("rec.col.stage")}</th>
-                  <th className="px-2 py-1.5">{lang === "sv" ? "Kravstatus" : "Requirements"}</th>
-                  <th className="px-2 py-1.5">
-                    {lang === "sv" ? "Granskning / analys" : "Review / analysis"}
-                  </th>
+                  <th className="px-2 py-1.5">{t("rec.col.requirements")}</th>
+                  <th className="px-2 py-1.5">{t("rec.col.review")}</th>
                   <th className="px-2 py-1.5">{t("rec.col.applied")}</th>
                   <th className="px-2 py-1.5">{t("rec.col.responsible")}</th>
                   {questions.slice(0, 3).map((q) => (
@@ -822,7 +941,7 @@ export function CandidateTable(props: Props) {
                   ))}
                   <th className="px-2 py-1.5">{t("rec.col.attachments")}</th>
                   <th className="px-2 py-1.5">{t("rec.col.test")}</th>
-                  <th className="px-2 py-1.5">{t("rec.col.next")}</th>
+                  <th className="px-2 py-1.5">{t("rec.col.nextStep")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -887,9 +1006,6 @@ export function CandidateTable(props: Props) {
                     </td>
                     <td className="px-2 py-1.5 align-middle">
                       <ReviewStatusBadge status={r.reviewState ?? "pending"} />
-                      <div className="mt-1">
-                        <AnalysisStatusBadge />
-                      </div>
                     </td>
                     <td className="px-2 py-1.5 align-middle tabular-nums text-muted-foreground">
                       {formatDay(r.appliedAt, lang)}
@@ -926,6 +1042,7 @@ export function CandidateTable(props: Props) {
                       )}
                     </td>
                     <td className="px-2 py-1.5 align-middle">
+                      <NextStep row={r} archived={primaryView === "archived"} />
                       <NextActivity row={r} lang={lang} />
                       {r.nextAction && <p className="mt-1 text-xs">{r.nextAction}</p>}
                     </td>
@@ -975,7 +1092,6 @@ export function CandidateTable(props: Props) {
                       <StageBadge status={r.status} />
                       <RequirementStatusBadge status={r.requirementStatus ?? "not_established"} />
                       <ReviewStatusBadge status={r.reviewState ?? "pending"} />
-                      <AnalysisStatusBadge />
                       <span className="text-xs text-muted-foreground">
                         {formatDay(r.appliedAt, lang)}
                       </span>
@@ -992,6 +1108,7 @@ export function CandidateTable(props: Props) {
                       )}
                     </div>
                     <div className="mt-1">
+                      <NextStep row={r} archived={primaryView === "archived"} />
                       <NextActivity row={r} lang={lang} />
                       {r.nextAction && <p className="mt-1 text-xs">{r.nextAction}</p>}
                     </div>
@@ -1073,6 +1190,27 @@ export function CandidateTable(props: Props) {
             )}
           </nav>
         </>
+      )}
+
+      {/* ── Statistics: secondary, after the work ──────────────────────
+          The historical coverage of every received application, archived and
+          decided included. Collapsed: it explains the numbers, it is not the
+          list. Every number still opens exactly the rows it counted. */}
+      {page?.intelligenceCounts && (
+        <RecruiterCounts
+          counts={page.intelligenceCounts}
+          collapsible
+          scopeLabel={
+            jobId === null
+              ? lang === "sv"
+                ? "Organisationens samtliga mottagna ansökningar"
+                : "All applications received by the organisation"
+              : lang === "sv"
+                ? "Rekryteringens samtliga mottagna ansökningar"
+                : "All applications received for this recruitment"
+          }
+          onView={onViewChange}
+        />
       )}
 
       {confirmReject && (
@@ -1228,6 +1366,29 @@ function NextActivity({ row, lang }: { row: CandidateRow; lang: "sv" | "en" }) {
       </span>
       {row.nextActivityStatus && <BookingBadge status={row.nextActivityStatus} />}
       <span className="sr-only">{t("rec.col.next")}</span>
+    </span>
+  );
+}
+
+/** The suggested next working step, as text with the same vocabulary the
+ *  application page uses. Derived from the row the server returned; it
+ *  never ranks and never writes. */
+function NextStep({ row, archived }: { row: CandidateRow; archived: boolean }) {
+  const { t } = useT();
+  const kind = nextStepOf({
+    status: row.status,
+    requirementStatus: row.requirementStatus,
+    reviewState: row.reviewState,
+    archived,
+  });
+  return (
+    <span
+      data-testid="next-step"
+      data-kind={kind}
+      className="mb-1 block text-xs font-medium text-foreground"
+      title={t("rec.next.hint")}
+    >
+      {t(`rec.next.${kind}` as TranslationKey)}
     </span>
   );
 }

@@ -61,7 +61,19 @@ async function ids(page: Page) {
     rows.map((row) => row.getAttribute("data-application-id")),
   );
 }
+
+/** The historical statistics are folded by default (the queue and the list
+ *  are the work); a number inside is clicked or read after opening the fold. */
+async function openStatistics(page: Page) {
+  const fold = page.locator("[data-testid='counts-history']");
+  if (
+    (await fold.count()) > 0 &&
+    !(await fold.first().evaluate((d) => (d as HTMLDetailsElement).open))
+  )
+    await fold.first().locator("summary").click();
+}
 async function counters(page: Page, reviewed = 27) {
+  await openStatistics(page);
   const counts = page.getByTestId("recruiter-counts");
   for (const [field, count] of Object.entries({
     received: 100,
@@ -164,6 +176,7 @@ test("100 oracle: global status/counts/order, source-aware manual review, preser
           .locator("option")
           .allTextContents();
         expect(stageLabels.every((label) => !/\(\d+\)/.test(label))).toBe(true);
+        await openStatistics(page);
         await page.getByTestId("count-received").click();
         await expect(visibleRows(page)).toHaveCount(25);
         expect(new URL(page.url()).searchParams.has("job")).toBe(false);
@@ -173,6 +186,7 @@ test("100 oracle: global status/counts/order, source-aware manual review, preser
         // A dashboard count opens precisely its population through the same RPC.
         await page.goto(`/employer/${SLUG}`);
         await expect(page.getByTestId("recruiter-counts")).toBeVisible();
+        await openStatistics(page);
         await page.getByTestId("count-remaining").click();
         await expect(page.getByTestId("filtered-review-counts")).toContainText(
           lang === "sv" ? "73 ansökningar" : "73 applications",
@@ -615,6 +629,7 @@ test("archive-only recruitment still exposes all received applications and its a
       await target.getByTestId("candidate-empty").getByRole("button").click();
       await expect(visibleRows(target)).toHaveCount(25);
       expect(new URL(target.url()).searchParams.get("stage")).toBe("received");
+      await openStatistics(target);
       await expect(target.getByTestId("count-received").locator("strong")).toHaveText("100");
       await target.getByTestId("count-received").click();
       for (let p = 1; p <= 4; p++) {

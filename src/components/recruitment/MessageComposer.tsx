@@ -76,6 +76,7 @@ export function MessageComposer({
   draft,
   initialKind,
   initialBookingId,
+  initialBody,
   onChanged,
   onClose,
 }: {
@@ -88,6 +89,9 @@ export function MessageComposer({
   draft?: MessageRow | null;
   initialKind?: MessageKind;
   initialBookingId?: string | null;
+  /** A body to start the draft from, in place of the template's: text a
+   *  person already wrote (a reviewer's neutral questions). Still a draft. */
+  initialBody?: string;
   onChanged: () => void;
   onClose?: () => void;
 }) {
@@ -117,7 +121,9 @@ export function MessageComposer({
         booking: booking,
       });
   const [subject, setSubject] = useState(initial.subject);
-  const [body, setBody] = useState(initial.body);
+  const [body, setBody] = useState(
+    !draft && initialBody ? `${initial.body}\n\n${initialBody}` : initial.body,
+  );
   const [draftId, setDraftId] = useState<string | null>(draft?.id ?? null);
   const [dirty, setDirty] = useState(!draft);
   const [busy, setBusy] = useState<null | "save" | "send" | "ai" | "discard">(null);

@@ -158,6 +158,18 @@ const casePath = (jobId: string, search = "") => `/employer/${SLUG}/jobs/${jobId
  *  discovers dependencies on the first visit of a route and forces a full
  *  reload, which surfaces as net::ERR_ABORTED. One retry, then the real
  *  failure if there is one. */
+
+/** The historical statistics are folded by default (the queue and the list
+ *  are the work); a number inside is clicked or read after opening the fold. */
+async function openStatistics(page: Page) {
+  const fold = page.locator("[data-testid='counts-history']");
+  if (
+    (await fold.count()) > 0 &&
+    !(await fold.first().evaluate((d) => (d as HTMLDetailsElement).open))
+  )
+    await fold.first().locator("summary").click();
+}
+
 async function open(page: Page, path: string) {
   try {
     await page.goto(path);
@@ -411,6 +423,7 @@ test.describe("recruitment case", () => {
       page.getByText("Arkiverade ansökningar räknas inte", { exact: false }).first(),
     ).toBeVisible();
     const counts = page.locator("[data-testid='recruiter-counts']");
+    await openStatistics(page);
     await expect(counts.getByRole("heading", { level: 2 })).toHaveText(
       "Kravgranskning av mottagna ansökningar",
     );
@@ -535,6 +548,136 @@ test.describe("recruitment case", () => {
     await expect(dialog).toContainText("Planerad – inte skickad");
     await dialog.getByRole("button", { name: "Stäng" }).click();
     await expect(page.locator("table tbody tr").nth(5)).toContainText("Planerad – inte skickad");
+  });
+
+  test("'Ej aktuell' leaves the active list and the review queue at once, is found under Avslutade, survives a reload and a second tab, and sends nothing", async ({
+    page,
+    context,
+  }) => {
+    test.setTimeout(180_000);
+    await signIn(page, "anna.agare@nordvakt.test");
+    const list = `/employer/${SLUG}/applications?job=${JOB}`;
+    await open(page, list);
+    await expect(page.locator("[data-testid='candidate-table']")).toBeVisible({ timeout: 90_000 });
+    // The working list: Aktiva is the default view, with its count.
+    const views = page.locator("[data-testid='list-views']");
+    await expect(views.locator("[data-testid='view-open']")).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    const countOf = async (view: string) =>
+      Number(
+        /\((\d+)\)/.exec(
+          (await views.locator(`[data-testid='view-${view}']`).innerText()) ?? "",
+        )?.[1],
+      );
+    const openBefore = await countOf("open");
+    const decidedBefore = await countOf("decided");
+    expect(openBefore).toBeGreaterThan(1);
+    // The review queue, as the overview's button opens it.
+    await open(page, `${list}&review=remaining`);
+    await expect(pager(page)).toContainText(/Visar 1–/);
+    const queueBefore = Number(/av (\d+)/.exec((await pager(page).innerText()) ?? "")?.[1]);
+    // Pick a NEW candidate from the active list and open the application.
+    await open(page, `${list}&stage=new`);
+    const row = page.locator("table tbody tr").first();
+    const name = (await row.locator("td:nth-child(3) a").innerText()).trim();
+    const applicationId = (await row.getAttribute("data-application-id"))!;
+    await row.locator("td:nth-child(3) a").click();
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(name, { timeout: 60_000 });
+    const summary = page.locator("[data-testid='requirement-summary']");
+    await expect(summary).toBeVisible();
+    // The decision: "Ej aktuell", confirmed, saved, and SAID -- where the
+    // application went and that nothing was sent.
+    await summary.locator("[data-testid='summary-action-reject']").click();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toContainText(name);
+    await dialog.getByRole("button", { name: "Markera som ej aktuell" }).click();
+    const saved = page.locator("[data-testid='decision-saved']");
+    await expect(saved).toHaveAttribute("data-decision", "rejected");
+    await expect(saved).toContainText("lämnat den aktiva listan och granskningskön");
+    await expect(saved).toContainText("Ingenting har skickats till kandidaten");
+    await expect(saved.locator("[data-testid='decision-next-candidate']")).toBeVisible();
+    // The candidate's notice is a separate fact: internal, nothing written.
+    await expect(page.locator("[data-testid='candidate-notice-state']")).toHaveAttribute(
+      "data-state",
+      "internal",
+    );
+    // The closed view: no decision buttons, the record stays, reopening is a
+    // separate act, nothing is deleted automatically.
+    await expect(page.locator("[data-testid='decision-closed-view']")).toContainText(
+      "inget raderas automatiskt",
+    );
+    await expect(summary.locator("[data-testid='requirement-summary-actions']")).toHaveCount(0);
+    expect(
+      sql(`SELECT status FROM public.job_applications WHERE id = '${applicationId}'`) ?? "rejected",
+    ).toBe("rejected");
+    expect(
+      sql(
+        `SELECT count(*) FROM public.recruitment_messages WHERE application_id = '${applicationId}' AND status <> 'draft'`,
+      ) ?? "0",
+    ).toBe("0");
+    // Immediately: gone from Aktiva and from the queue, found under Avslutade,
+    // with the counts moved by exactly one. Server selection and totals, not a
+    // cached page: a fresh navigation each time.
+    await open(page, list);
+    await expect(views.locator("[data-testid='view-open']")).toContainText(`(${openBefore - 1})`);
+    await expect(views.locator("[data-testid='view-decided']")).toContainText(
+      `(${decidedBefore + 1})`,
+    );
+    await expect(page.locator(`tr[data-application-id='${applicationId}']`)).toHaveCount(0);
+    await open(page, `${list}&review=remaining`);
+    await expect(pager(page)).toContainText(`av ${queueBefore - 1}`);
+    await expect(page.locator(`tr[data-application-id='${applicationId}']`)).toHaveCount(0);
+    await open(page, `${list}&stage=decided`);
+    await expect(page.locator(`tr[data-application-id='${applicationId}']`)).toHaveCount(1);
+    await expect(page.locator(`tr[data-application-id='${applicationId}']`)).toContainText(
+      "Ej aktuell",
+    );
+    // The search finds it in Avslutade and not in Aktiva.
+    await open(page, `${list}&stage=decided&q=${encodeURIComponent(name.split(" ")[0]!)}`);
+    await expect(page.locator(`tr[data-application-id='${applicationId}']`)).toHaveCount(1);
+    await open(page, `${list}&q=${encodeURIComponent(name.split(" ")[0]!)}`);
+    await expect(page.locator(`tr[data-application-id='${applicationId}']`)).toHaveCount(0);
+    // After a reload, and in a second tab of the same session: the same.
+    await page.reload();
+    await expect(page.locator("[data-testid='candidate-table']")).toBeVisible();
+    await expect(page.locator(`tr[data-application-id='${applicationId}']`)).toHaveCount(0);
+    const tab = await context.newPage();
+    await tab.goto(`${list}&stage=decided`);
+    await expect(tab.locator(`tr[data-application-id='${applicationId}']`)).toHaveCount(1, {
+      timeout: 60_000,
+    });
+    await tab.goto(list);
+    await expect(tab.locator("[data-testid='candidate-table']")).toBeVisible();
+    await expect(tab.locator(`tr[data-application-id='${applicationId}']`)).toHaveCount(0);
+    await tab.close();
+    // The row under Avslutade says what to do next: tell the candidate /
+    // archive -- and archiving is the separate act that moves it to Arkiv,
+    // restoring brings it back to Avslutade without reopening the decision.
+    await open(page, `/employer/${SLUG}/applications/${applicationId}`);
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(name, { timeout: 60_000 });
+    const lifecycle = page.getByRole("region", { name: "Arkivering och gallring" });
+    await lifecycle.locator("summary").click();
+    await lifecycle.getByRole("button", { name: "Arkivera" }).click();
+    await expect(lifecycle.locator("[data-testid='archived-state']")).toBeVisible();
+    await open(page, `${list}&stage=decided`);
+    await expect(page.locator(`tr[data-application-id='${applicationId}']`)).toHaveCount(0);
+    await open(page, `${list}&stage=archived`);
+    await expect(page.locator(`tr[data-application-id='${applicationId}']`)).toHaveCount(1);
+    expect(
+      sql(`SELECT status FROM public.job_applications WHERE id = '${applicationId}'`) ?? "rejected",
+    ).toBe("rejected");
+    await open(page, `/employer/${SLUG}/applications/${applicationId}`);
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(name, { timeout: 60_000 });
+    await lifecycle.locator("summary").click();
+    await lifecycle.getByRole("button", { name: "Återställ arkivering" }).click();
+    await expect(lifecycle.locator("[data-testid='archived-state']")).toHaveCount(0);
+    await open(page, `${list}&stage=decided`);
+    await expect(page.locator(`tr[data-application-id='${applicationId}']`)).toHaveCount(1);
+    await expect(page.locator(`tr[data-application-id='${applicationId}']`)).toContainText(
+      "Ej aktuell",
+    );
   });
 
   test("25 candidates, 45 minutes from 10:00: the series does not fit the day, and nothing is saved", async ({

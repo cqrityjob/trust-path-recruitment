@@ -1078,14 +1078,19 @@ function Page() {
               </RailPanel>
 
               {/* ---- What the role asks for, written before this candidate ---- */}
+              {/* Short headings only. The full definitions are written ONCE on
+                  this page -- behind the fold below -- and the saved case copy
+                  under "Sparat underlag" links here instead of repeating them,
+                  so C1–C6 is never printed twice. The frozen snapshot is still
+                  what is shown: nothing is read live. */}
               <RailPanel id="s-reqs" title={t("iiu.pp.reqs.title")} note={t("iiu.pp.reqs.body")}>
                 {d.competencies.length === 0 ? (
                   <Nothing>{t("iiu.empty")}</Nothing>
                 ) : (
-                  <ul className="space-y-3">
-                    {d.competencies.map((c) => (
-                      <li key={c.id}>
-                        <p className="flex gap-2 text-sm">
+                  <>
+                    <ul className="space-y-1.5" data-testid="ii-requirement-headings">
+                      {d.competencies.map((c) => (
+                        <li key={c.id} className="flex gap-2 text-sm">
                           <span
                             aria-hidden="true"
                             className="mt-px font-mono text-xs font-semibold text-muted-foreground"
@@ -1095,15 +1100,32 @@ function Page() {
                           <span className="font-medium leading-snug text-foreground">
                             {reqName(c)}
                           </span>
-                        </p>
-                        {reqDefinition(c) && (
-                          <p className="mt-0.5 pl-6 text-xs leading-relaxed text-muted-foreground">
-                            {reqDefinition(c)}
-                          </p>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
+                        </li>
+                      ))}
+                    </ul>
+                    {d.competencies.some((c) => reqDefinition(c)) && (
+                      <details className="mt-3" data-testid="ii-requirement-definitions">
+                        <summary className="inline-flex min-h-[44px] cursor-pointer items-center text-xs font-medium text-accent underline-offset-2 hover:underline">
+                          {t("rec.ri.reqs.showDefinitions")}
+                        </summary>
+                        <ul className="mt-2 space-y-3">
+                          {d.competencies.map((c) => (
+                            <li key={c.id}>
+                              <p className="text-xs font-semibold text-foreground">
+                                <span className="font-mono text-muted-foreground">{c.code}</span>{" "}
+                                {reqName(c)}
+                              </p>
+                              {reqDefinition(c) && (
+                                <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+                                  {reqDefinition(c)}
+                                </p>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                      </details>
+                    )}
+                  </>
                 )}
               </RailPanel>
 

@@ -1,3 +1,4 @@
+import { useState, type ReactNode } from "react";
 import { CheckCircle2, CircleDashed, HelpCircle, XCircle, type LucideIcon } from "lucide-react";
 import { useT } from "@/i18n/context";
 import type { CandidateView } from "@/lib/recruitment/definitions";
@@ -90,6 +91,7 @@ export function RecruiterCounts({
   title,
   intro,
   queue,
+  collapsible,
 }: {
   counts: IntelligenceCounts;
   onView: (view: CandidateView) => void;
@@ -104,9 +106,15 @@ export function RecruiterCounts({
    *  null while loading and "failed" when the read failed; the view is what
    *  its button opens. Lists that already are a queue pass none. */
   queue?: { count: number | null | "failed"; view: CandidateView; retry: () => void };
+  /** Fold the historical coverage behind a "Statistics" summary. The queue,
+   *  when there is one, stays in the open: it is the work; the history is
+   *  the explanation. Collapsed by default -- a number inside still opens
+   *  exactly the rows it counted. */
+  collapsible?: boolean;
 }) {
   const { lang, t } = useT();
   const sv = lang === "sv";
+  const [historyOpen, setHistoryOpen] = useState(false);
   const cards: { label: string; count: number; view: CandidateView }[] = [
     { label: sv ? "Mottagna" : "Received", count: counts.received, view: { stage: "received" } },
     {
@@ -163,64 +171,106 @@ export function RecruiterCounts({
           </button>
         </div>
       )}
-      {queue && (
-        <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          {t("rec.counts.history.heading")}
-        </h3>
-      )}
-      {scopeLabel && <p className="mb-2 text-xs font-semibold">{scopeLabel}</p>}
-      <div className="grid grid-cols-3 gap-2">
-        {cards.map((card) => (
-          <button
-            type="button"
-            data-testid={`count-${card.view.review ?? "received"}`}
-            key={card.label}
-            onClick={() => onView(card.view)}
-            className="min-h-11 rounded border border-border p-2 text-left hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <span className="block text-xs text-muted-foreground">{card.label}</span>
-            <strong className="text-xl tabular-nums">{card.count}</strong>
-          </button>
-        ))}
-      </div>
-      <p className="mt-2 text-xs text-muted-foreground">
-        {sv
-          ? "Mottagna omfattar även arkiverade ansökningar. Test- och intervjuindikatorer kan överlappa och summeras inte som unika ansökningar."
-          : "Received includes archived applications. Test and interview indicators may overlap and are not added as unique applications."}
-      </p>
-      <div className="mt-3 flex flex-wrap gap-2">
-        {(["green", "yellow", "gray", "not_established"] as const).map((status) => {
-          const Icon = STATUS_ICON[status];
-          return (
+      <HistoryFold
+        collapsible={Boolean(collapsible)}
+        open={historyOpen}
+        onToggle={setHistoryOpen}
+        summary={t("rec.table.statistics")}
+        hint={t("rec.table.statisticsHint")}
+      >
+        {queue && (
+          <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            {t("rec.counts.history.heading")}
+          </h3>
+        )}
+        {scopeLabel && <p className="mb-2 text-xs font-semibold">{scopeLabel}</p>}
+        <div className="grid grid-cols-3 gap-2">
+          {cards.map((card) => (
             <button
               type="button"
-              data-testid={`count-${status}`}
-              key={status}
-              onClick={() => onView({ stage: "received", requirement: status })}
-              className={`inline-flex min-h-11 items-center gap-1.5 rounded border px-2 text-xs hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${tones[status]}`}
+              data-testid={`count-${card.view.review ?? "received"}`}
+              key={card.label}
+              onClick={() => onView(card.view)}
+              className="min-h-11 rounded border border-border p-2 text-left hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-              <span>
-                {requirementLabels[lang][status]}:{" "}
-                <strong className="tabular-nums">
-                  {status === "not_established" ? counts.notEstablished : counts[status]}
-                </strong>
-              </span>
+              <span className="block text-xs text-muted-foreground">{card.label}</span>
+              <strong className="text-xl tabular-nums">{card.count}</strong>
             </button>
-          );
-        })}
-      </div>
-      <p data-testid="filtered-review-counts" className="mt-2 text-xs text-muted-foreground">
-        {sv
-          ? `Vald lista: ${counts.filtered} ansökningar · ${counts.filteredReviewed} granskade · ${counts.filteredRemaining} återstående.`
-          : `Selected list: ${counts.filtered} applications · ${counts.filteredReviewed} reviewed · ${counts.filteredRemaining} remaining.`}
-      </p>
-      <p className="mt-1 text-xs text-muted-foreground">
-        {sv
-          ? `Arkiverade: ${counts.archived}. Återkallade: ${counts.withdrawn}. Med beslut: ${counts.decided}. Kravstatus ändrar inte rekryteringssteg eller beslut.`
-          : `Archived: ${counts.archived}. Withdrawn: ${counts.withdrawn}. With a decision: ${counts.decided}. Requirement status does not change recruitment stage or decision.`}
-      </p>
-      <CountsExplanation />
+          ))}
+        </div>
+        <p className="mt-2 text-xs text-muted-foreground">
+          {sv
+            ? "Mottagna omfattar även arkiverade ansökningar. Test- och intervjuindikatorer kan överlappa och summeras inte som unika ansökningar."
+            : "Received includes archived applications. Test and interview indicators may overlap and are not added as unique applications."}
+        </p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {(["green", "yellow", "gray", "not_established"] as const).map((status) => {
+            const Icon = STATUS_ICON[status];
+            return (
+              <button
+                type="button"
+                data-testid={`count-${status}`}
+                key={status}
+                onClick={() => onView({ stage: "received", requirement: status })}
+                className={`inline-flex min-h-11 items-center gap-1.5 rounded border px-2 text-xs hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${tones[status]}`}
+              >
+                <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                <span>
+                  {requirementLabels[lang][status]}:{" "}
+                  <strong className="tabular-nums">
+                    {status === "not_established" ? counts.notEstablished : counts[status]}
+                  </strong>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        <p data-testid="filtered-review-counts" className="mt-2 text-xs text-muted-foreground">
+          {sv
+            ? `Vald lista: ${counts.filtered} ansökningar · ${counts.filteredReviewed} granskade · ${counts.filteredRemaining} återstående.`
+            : `Selected list: ${counts.filtered} applications · ${counts.filteredReviewed} reviewed · ${counts.filteredRemaining} remaining.`}
+        </p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          {sv
+            ? `Arkiverade: ${counts.archived}. Återkallade: ${counts.withdrawn}. Med beslut: ${counts.decided}. Kravstatus ändrar inte rekryteringssteg eller beslut.`
+            : `Archived: ${counts.archived}. Withdrawn: ${counts.withdrawn}. With a decision: ${counts.decided}. Requirement status does not change recruitment stage or decision.`}
+        </p>
+        <CountsExplanation />
+      </HistoryFold>
     </section>
+  );
+}
+
+function HistoryFold({
+  collapsible,
+  open,
+  onToggle,
+  summary,
+  hint,
+  children,
+}: {
+  collapsible: boolean;
+  open: boolean;
+  onToggle: (open: boolean) => void;
+  summary: string;
+  hint: string;
+  children: ReactNode;
+}) {
+  if (!collapsible) return <>{children}</>;
+  return (
+    <details
+      data-testid="counts-history"
+      open={open}
+      onToggle={(e) => onToggle((e.currentTarget as HTMLDetailsElement).open)}
+      className="mt-1"
+    >
+      <summary className="min-h-11 cursor-pointer list-item py-2 text-sm font-medium text-foreground underline-offset-4 hover:underline">
+        {summary}
+        <span className="ml-2 block text-xs font-normal text-muted-foreground sm:inline">
+          {hint}
+        </span>
+      </summary>
+      <div className="mt-2">{children}</div>
+    </details>
   );
 }

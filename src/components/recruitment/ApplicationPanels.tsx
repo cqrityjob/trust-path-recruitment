@@ -650,7 +650,14 @@ export function CommunicationPanel({
   candidateName: string | null;
   employerName: string;
   jobTitle: string;
-  composeRequest: { kind: MessageKind; bookingId: string | null; nonce: number } | null;
+  composeRequest: {
+    kind: MessageKind;
+    bookingId: string | null;
+    nonce: number;
+    /** A body to start from instead of the template: the reviewer's own
+     *  neutral clarification questions, for a supplement request. */
+    body?: string;
+  } | null;
   onComposeHandled: () => void;
   onChanged: () => void;
 }) {
@@ -661,6 +668,7 @@ export function CommunicationPanel({
     kind: MessageKind;
     bookingId: string | null;
     draftId: string | null;
+    body?: string;
   } | null>(null);
   const [retryNotice, setRetryNotice] = useState<string | null>(null);
   const [retrying, setRetrying] = useState<string | null>(null);
@@ -669,7 +677,12 @@ export function CommunicationPanel({
   // "tell the candidate" after a decision -- opens the composer here.
   useEffect(() => {
     if (!composeRequest) return;
-    setComposing({ kind: composeRequest.kind, bookingId: composeRequest.bookingId, draftId: null });
+    setComposing({
+      kind: composeRequest.kind,
+      bookingId: composeRequest.bookingId,
+      draftId: null,
+      body: composeRequest.body,
+    });
     onComposeHandled();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [composeRequest?.nonce]);
@@ -730,6 +743,7 @@ export function CommunicationPanel({
           draft={draft}
           initialKind={composing.kind}
           initialBookingId={composing.bookingId}
+          initialBody={composing.body}
           onChanged={onChanged}
           onClose={() => setComposing(null)}
         />

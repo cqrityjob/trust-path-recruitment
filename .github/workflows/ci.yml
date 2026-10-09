@@ -1341,6 +1341,12 @@ jobs:
       - name: Employer portal evidence fixture invariants
         run: bun test scripts/employer-portal-fixture.test.ts
 
+      # The application's views, sub-steps, next working step and candidate
+      # notice state are pure functions over the server's facts; every branch
+      # is exhausted here so the list and the application page cannot differ.
+      - name: Application workflow projections
+        run: bun test scripts/application-workflow.test.ts
+
       # E3: the context an interview inherits, and what the CANDIDATE is told.
       #
       # The bridge already read the application, the advert and the assessment.

@@ -470,8 +470,192 @@ const pipelineRow = (n: number, lifecycleState: string, reviewsOpen: number) => 
   identityResolvable: false,
 });
 
+// ── One application, opened ───────────────────────────────────────────────
+//
+// Two of the Uppsala applications are opened as pages: Ali's, which is new
+// and whose mandatory requirement still needs clarifying (the header must
+// show 0 of 1 confirmed and NO preliminary tick, because the answer was
+// left blank), and Erik's, which was closed as "ej aktuell", told, and
+// archived (the closed view, the notice state, no actions).
+
+export const APP_REVIEW = APP(1);
+export const APP_CLOSED = APP(5);
+const BINDING = "0123456789abcdef0123456789abcdef";
+
+const applicationCandidate = (args: Record<string, unknown>) => {
+  const c = UPPSALA_APPLICATIONS.find((x) => x.applicationId === args.applicationId);
+  if (!c) return null;
+  return {
+    applicationId: c.applicationId,
+    jobId: c.jobId,
+    jobSlug: "vaktare-uppsala",
+    jobTitleSv: c.jobTitleSv,
+    jobTitleEn: c.jobTitleEn,
+    applicationStatus: c.status,
+    appliedAt: c.appliedAt,
+    updatedAt: c.updatedAt,
+    coverNote: "Jag har arbetat med bevakning i fem år och söker en tjänst nära hemmet.",
+    phone: null,
+    hasCv: c.hasCv,
+    displayName: c.name,
+    timeline: [],
+  };
+};
+
+const team = [{ userId: USER, name: "Rita Rekryterare", role: "owner", isSelf: true }];
+
+const applicationWorkspace = (args: Record<string, unknown>) => {
+  const c = UPPSALA_APPLICATIONS.find((x) => x.applicationId === args.applicationId);
+  if (!c) return null;
+  const closed = c.applicationId === APP_CLOSED;
+  return {
+    applicationId: c.applicationId,
+    jobId: c.jobId,
+    status: c.status,
+    appliedAt: c.appliedAt,
+    answers: [
+      {
+        questionId: Q_TRAINING,
+        promptSv: "Har du godkänd väktarutbildning?",
+        promptEn: "Do you hold approved security guard training?",
+        answerKind: "yes_no",
+        answerText: null,
+        // Ali left the yes/no blank: nothing for the server to derive a
+        // preliminary state from. Erik answered yes.
+        answerBool: closed ? true : null,
+        requirementKind: "mandatory",
+        requirementLabelSv: "Godkänd väktarutbildning",
+        requirementLabelEn: "Approved security guard training",
+      },
+      {
+        questionId: Q_MOTIVATION,
+        promptSv: "Varför söker du tjänsten?",
+        promptEn: "Why are you applying?",
+        answerKind: "text",
+        answerText: "Jag vill arbeta nära hemmet och utvecklas inom bevakning.",
+        answerBool: null,
+        requirementKind: null,
+        requirementLabelSv: null,
+        requirementLabelEn: null,
+      },
+    ],
+    meta: { responsibleUserId: c.responsibleUserId, firstViewedAt: c.firstViewedAt, version: 1 },
+    comments: [],
+    // The closed application was TOLD: one rejection, delivered in the inbox
+    // with the e-mail accepted. The decision itself sent nothing.
+    messages: closed
+      ? [
+          {
+            id: "00000000-0000-4000-8000-0000000000m1",
+            kind: "rejection",
+            subject: "Besked om din ansökan",
+            body: "Tack för din ansökan. Vi har gått vidare med andra kandidater.",
+            language: "sv",
+            status: "sent",
+            emailStatus: "sent",
+            emailError: null,
+            emailAttempts: 1,
+            emailProviderId: "msg_1",
+            emailWindowOpen: false,
+            bookingId: null,
+            createdAt: AT,
+            sentAt: AT,
+            authorName: "Rita Rekryterare",
+          },
+        ]
+      : [],
+    bookings: [],
+    events: closed
+      ? [
+          {
+            id: "00000000-0000-4000-8000-0000000000s1",
+            actorRole: "employer",
+            actorName: "Rita Rekryterare",
+            previousStatus: "reviewing",
+            newStatus: "rejected",
+            note: null,
+            createdAt: AT,
+          },
+        ]
+      : [],
+    recruitmentResponsibleUserId: USER,
+    completionState: "open",
+    team,
+    role: "owner",
+    canManage: true,
+  };
+};
+
+/** The review the server would return: the profile's rules as criteria, the
+ *  candidate's own yes/no answer as the only source, and -- for the closed
+ *  application -- a decision a person recorded. */
+const requirementReview = (args: Record<string, unknown>) => {
+  const c = UPPSALA_APPLICATIONS.find((x) => x.applicationId === args.applicationId);
+  if (!c) return null;
+  const closed = c.applicationId === APP_CLOSED;
+  const answer = {
+    kind: "application_answer",
+    reference: Q_TRAINING,
+    version: "v1",
+    label: "Har du godkänd väktarutbildning?",
+    answerBool: closed ? true : null,
+    answerText: null,
+  };
+  return {
+    applicationId: c.applicationId,
+    jobId: c.jobId,
+    employerId: EMPLOYER_ID,
+    profile: requirementProfile,
+    revision: c.reviewRevision,
+    assignmentVersion: null,
+    bindingToken: BINDING,
+    canManage: true,
+    requirementStatus: c.requirementStatus,
+    reviewState: c.reviewState,
+    analysisState: "not_used",
+    criteria: requirementProfile.rules.map((rule) => ({
+      ...rule,
+      state: closed && rule.kind === "mandatory" ? "met" : "clarify",
+      source: closed && rule.kind === "mandatory" ? answer : null,
+      sourceCurrent: true,
+      validUntil: closed && rule.kind === "mandatory" ? "2027-06-30" : null,
+      note:
+        closed && rule.kind === "mandatory"
+          ? "Utbildningsbevis kontrollerat mot utfärdaren."
+          : null,
+      neutralQuestion:
+        !closed && rule.kind === "mandatory"
+          ? "Vilket år fick du ditt utbildningsbevis, och av vilken utbildare?"
+          : null,
+      reviewedBy: closed && rule.kind === "mandatory" ? USER : null,
+      reviewedAt: closed && rule.kind === "mandatory" ? AT : null,
+    })),
+    availableSources: [answer],
+    nextAction: c.nextAction,
+    responsibleUserId: c.responsibleUserId,
+    reviewedBy: closed ? USER : null,
+    reviewedAt: closed ? AT : null,
+  };
+};
+
 /** The whole stubbed backend for a signed-in owner. */
 export const table: Record<string, unknown | ((args: Record<string, unknown>) => unknown)> = {
+  // ── The application page ──
+  getApplicationCandidate: applicationCandidate,
+  getApplicationWorkspace: applicationWorkspace,
+  getRequirementReview: requirementReview,
+  markApplicationViewed: null,
+  // Opened without a list: no previous/next.
+  getCandidateNeighbours: { position: 0, total: 0, previousId: null, nextId: null },
+  listInterviewCasesForApplication: { cases: [] },
+  listApplicationAssessments: [],
+  getMyReviewCapability: { isReviewer: false, useCases: [], canManageReviewers: true },
+  getHiredEmployeeForApplication: { employeeId: null },
+  readApplicationDisclosure: { status: "unavailable" },
+  listEmployerBesktPreparations: [],
+  listAssignableBesktMethods: [],
+  getMyBesktStanding: { userId: USER, isSecurityOfficer: false, employerRole: "owner" },
+  listContentLibrary: [],
   countMyAcademyWork: 0,
   countMyReviewQueue: 0,
   ensureMyEmployerCompanyFromSignup: null,
