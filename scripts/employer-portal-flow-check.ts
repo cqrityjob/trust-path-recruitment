@@ -777,8 +777,9 @@ const UI = "src/components/employer/interview/InterviewUi.tsx";
     "interview-composition: the seven groups in the brief's order; only the three with governed content are selectable.",
   );
   expect(
-    /kind: "core_question",\s*itemId: q\.id,/.test(lib) &&
-      !/checked=\{chosen\.has\(q\.id\)\}/.test(comp),
+    /\.sort\(\(a, b\) => a\.displayOrder - b\.displayOrder\)\) \{\s*out\.push\(\{\s*group: q\.questionType === "situational" \? "scenarios" : "competence",\s*kind: "core_question",\s*itemId: q\.id,/.test(
+      lib,
+    ) && !/checked=\{chosen\.has\(q\.id\)\}/.test(comp),
     "The core questions are always in the selection and never offered as a checkbox; only approved probes are chosen.",
   );
   expect(
