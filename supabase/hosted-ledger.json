@@ -13,8 +13,8 @@
   ],
   "source": "Supabase connector read-only SQL, explicit project wrygicdfxwjnrugduxnt",
   "projectRef": "wrygicdfxwjnrugduxnt",
-  "readAt": "2026-10-08T13:37:19.169282+00:00",
-  "readBy": "Read-only verification after #457 exact1e598 normal merge7f899 and official integration installed0909. Ledger387/prior386 unchanged; all10 full function body/args/default/owner/config/ACL,14columns/11constraint predicates/3policies/3indexes/3triggers match authoritative source. Journal0;20snapshots14locksACK0reports0/statuses unchanged; all16P1 function contracts preserved. Full independent capture/review: docs/release/2026-10-08-op09-hosted-verification.json. No production fixtures or workers.",
+  "readAt": "2026-10-09T10:53:21.518762+00:00",
+  "readBy": "Read-only verification 2026-10-09 after #464 (merge dfe08858) and #467 (merge 44bc3f48) were installed by the official integration. Ledger 391 rows ending 20270312100000; the prior 389 rows unchanged (version+name md5 195fd45d). New tables RLS on, empty, no client-role grant; eleven new functions with identity arguments, body hashes and ACLs recorded; composition_id column, three triggers and the supplement_request message kind present. Full capture: docs/release/2026-10-09-lifecycle-v03-hosted-verification.json. No production fixtures or workers.",
   "versions": [
     {
       "version": "20260716153446",
@@ -1563,6 +1563,22 @@
     {
       "version": "20270309090000",
       "name": "sp_evidence_upload_recovery"
+    },
+    {
+      "version": "20270310090000",
+      "name": "interview_method_lifecycle_revocation"
+    },
+    {
+      "version": "20270310100000",
+      "name": "recruiter_profile_change_review"
+    },
+    {
+      "version": "20270311100000",
+      "name": "recruitment_supplement_and_reopen"
+    },
+    {
+      "version": "20270312100000",
+      "name": "interview_question_composition"
     }
   ]
 }
