@@ -36,6 +36,17 @@ type RecruitmentIntelligenceKeys =
   | "rec_ri_transfer_requirements"
   | "rec_ri_candidate_view"
   | "rec_ri_overview_counts";
+// Lifecycle v0.3 (slots 20270311100000 / 20270312100000): handwritten beside
+// the P1 overlay until the schema is installed and the generator has seen it.
+type LifecycleV03Keys =
+  | "rec_ri_request_supplement"
+  | "rec_ri_resolve_supplement"
+  | "rec_ri_supplement_state"
+  | "rec_reopen_application"
+  | "rec_ri_composition_catalog"
+  | "rec_ri_get_composition"
+  | "rec_ri_save_composition"
+  | "rec_ri_case_composition";
 type FoundationColumns =
   | "origin"
   | "neutral_question"
@@ -84,6 +95,7 @@ export type ContractAssertions = [
         | FoundationKeys
         | EvidenceUploadKeys
         | RecruitmentIntelligenceKeys
+        | LifecycleV03Keys
       >,
       Omit<
         Generated["public"]["Functions"],
@@ -92,6 +104,7 @@ export type ContractAssertions = [
         | FoundationKeys
         | EvidenceUploadKeys
         | RecruitmentIntelligenceKeys
+        | LifecycleV03Keys
       >
     >
   >,
@@ -273,6 +286,29 @@ client.rpc("sp_list_my_evidence_upload_attempts", { _claim_id: null, _period_id:
 client.rpc("sp_list_my_evidence_upload_attempts", { _claim_id: null });
 // @ts-expect-error Own cleanup always requires an opaque UUID, never NULL.
 client.rpc("sp_authorize_evidence_upload_cleanup", { _attempt_id: null });
+export type LifecycleV03Assertions = [
+  Assert<Equal<Functions["rec_ri_resolve_supplement"]["Args"]["_note"], string | null>>,
+  Assert<Equal<Functions["rec_ri_save_composition"]["Args"]["_reason"], string | null>>,
+  Assert<Equal<Functions["rec_ri_save_composition"]["Args"]["_expected_version"], number>>,
+  Assert<Equal<Functions["rec_ri_request_supplement"]["Args"]["_requirement_ids"], string[]>>,
+  Assert<Equal<Functions["rec_reopen_application"]["Args"]["_reason"], string>>,
+  Assert<Equal<keyof Functions["rec_ri_case_composition"]["Args"], "_case_id">>,
+];
+client.rpc("rec_ri_resolve_supplement", {
+  _request_id: "synthetic",
+  _outcome: "answered",
+  _note: null,
+});
+// @ts-expect-error The note is a required nullable argument; it has no SQL default.
+client.rpc("rec_ri_resolve_supplement", { _request_id: "synthetic", _outcome: "answered" });
+const reopenWithoutReason = {
+  _application_id: "synthetic",
+  _expected_status: "rejected",
+  _reason: null,
+  _operation_id: "synthetic",
+};
+// @ts-expect-error A reopen needs its reason; NULL is not a reason.
+client.rpc("rec_reopen_application", reopenWithoutReason);
 export type RecruitmentIntelligenceAssertions = [
   Assert<
     Equal<Functions["rec_ri_save_review"]["Args"]["_expected_assignment_version"], number | null>

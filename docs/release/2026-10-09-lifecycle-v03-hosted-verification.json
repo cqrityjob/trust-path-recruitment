@@ -1,0 +1,141 @@
+{
+  "formatVersion": 1,
+  "projectRef": "wrygicdfxwjnrugduxnt",
+  "installation": "official_supabase_github_integration",
+  "readOnly": true,
+  "observedBy": "Claude session under the owner's release decision 2026-10-09 (merge of #464, #467 and #466 delegated)",
+  "merges": [
+    {
+      "pr": 464,
+      "head": "8de03944bc4deda8b575273ba28cd0ce330fe717",
+      "mergeSha": "dfe0885847d732d424cac9dcc4cf86732765b815",
+      "slots": ["20270310090000", "20270310100000"]
+    },
+    {
+      "pr": 467,
+      "head": "4978f3d8c2f1f5627e26a7a9fab55e7793165e3b",
+      "mergeSha": "44bc3f487250e34c4c9f7f9e1b6e7a2c4f01d46d",
+      "slots": ["20270311100000", "20270312100000"]
+    }
+  ],
+  "migrationSha256": {
+    "20270310090000_interview_method_lifecycle_revocation.sql": "ec0167c55fb3780589263247e8513db75f1c7fc78626b8212ebcd3a97e96c89b",
+    "20270310100000_recruiter_profile_change_review.sql": "62ca2f9219de746e802480c9c9eab064853cc436dcb112f38d4ca1362956aa81",
+    "20270311100000_recruitment_supplement_and_reopen.sql": "a337942be994c83f190197ac366dc064e8dca4d2c403c806c16cc11355423f05",
+    "20270312100000_interview_question_composition.sql": "5c888dd7e475b14b103c693a6a1b552026efcd54b6a01cfc3b7330bf1a9b7ab5"
+  },
+  "ledger": {
+    "beforeAny": { "count": 387, "latest": "20270309090000" },
+    "after464": {
+      "count": 389,
+      "latest": "20270310100000",
+      "versionNameNewlineMd5": "195fd45d75d40e5ab52bf6110ccefad5"
+    },
+    "after467": {
+      "count": 391,
+      "latest": "20270312100000",
+      "versionNameNewlineMd5": "8a2b78d8773722d3fbad432d4fa046d4",
+      "observedAt": "2026-10-09T10:53:21.518762+00:00"
+    },
+    "prior389UnchangedAfter467": {
+      "count": 389,
+      "versionNameNewlineMd5": "195fd45d75d40e5ab52bf6110ccefad5"
+    }
+  },
+  "slot20270310100000": {
+    "functions": [
+      "public.rec_ri_profile_change_impact(_job_id uuid, _expected_version integer)",
+      "public.rec_ri_confirm_reviewed_profile(_job_id uuid, _expected_version integer, _operation_id uuid, _start_date date, _rules jsonb, _change_reason text)",
+      "public.rec_ri_profile_change_history(_job_id uuid)",
+      "public.rec_ri_compare_applications(_job_id uuid, _profile_id uuid, _application_ids uuid[])",
+      "public.rec_ri_next_unreviewed(_employer_id uuid, _job_id uuid)",
+      "public.rec_ri_page_evidence(_job_id uuid, _profile_id uuid, _application_ids uuid[], _requirement_ids uuid[])"
+    ],
+    "tables": ["recruiter_intelligence.profile_change_reviews"]
+  },
+  "slot20270311100000": {
+    "table": {
+      "name": "public.rec_requirement_supplement_requests",
+      "rls": true,
+      "rows": 0,
+      "acl": "{postgres=arwdDxtm/postgres,service_role=Dxtm/postgres}",
+      "policies": 0
+    },
+    "trigger": "rec_requirement_supplement_requests_guard -> rec_supplement_request_guard()",
+    "kindCheck": "recruitment_messages.recruitment_messages_kind_check includes supplement_request",
+    "functions": {
+      "public.rec_supplement_request_guard()": {
+        "securityDefiner": false,
+        "acl": "{postgres=X/postgres}",
+        "bodyMd5": "6f7cab90eb68632ca4328ae449512eff"
+      },
+      "public.rec_ri_request_supplement(_application_id uuid, _profile_id uuid, _requirement_ids uuid[], _subject text, _body text, _language text, _operation_id uuid)": {
+        "securityDefiner": true,
+        "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+        "bodyMd5": "81572b21f8318277f080abb58e49f3c0"
+      },
+      "public.rec_ri_resolve_supplement(_request_id uuid, _outcome text, _note text)": {
+        "securityDefiner": true,
+        "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+        "bodyMd5": "91c0eff57d524c85d50899e62e8f8af4"
+      },
+      "public.rec_ri_supplement_state(_application_id uuid)": {
+        "securityDefiner": true,
+        "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+        "bodyMd5": "7ffa27f0792c1681d1bfc33a00c918ef"
+      },
+      "public.rec_reopen_application(_application_id uuid, _expected_status text, _reason text, _operation_id uuid)": {
+        "securityDefiner": true,
+        "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+        "bodyMd5": "1de41c9120e27a8477c5b343a2462e43"
+      }
+    }
+  },
+  "slot20270312100000": {
+    "table": {
+      "name": "public.rec_interview_compositions",
+      "rls": true,
+      "rows": 0,
+      "acl": "{postgres=arwdDxtm/postgres,service_role=Dxtm/postgres}",
+      "policies": 0
+    },
+    "column": "public.scp_interview_cases.composition_id uuid nullable",
+    "triggers": [
+      "rec_interview_compositions_immutable -> rec_interview_composition_guard()",
+      "scp_interview_cases_pin_composition -> rec_interview_case_pin_composition()"
+    ],
+    "functions": {
+      "public.rec_interview_composition_guard()": {
+        "securityDefiner": false,
+        "acl": "{postgres=X/postgres}",
+        "bodyMd5": "d05afb24e9b27af16fd3db206eb8a171"
+      },
+      "public.rec_interview_case_pin_composition()": {
+        "securityDefiner": true,
+        "acl": "{postgres=X/postgres}",
+        "bodyMd5": "7e0ddfe6c4a141a93035494ebfd86218"
+      },
+      "public.rec_ri_composition_catalog(_employer_id uuid, _pack_version_id uuid)": {
+        "securityDefiner": true,
+        "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+        "bodyMd5": "03108ed350fcdcfc66d8e70e7483efc4"
+      },
+      "public.rec_ri_get_composition(_job_id uuid)": {
+        "securityDefiner": true,
+        "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+        "bodyMd5": "61a334fff13023a202cb8b52628e400e"
+      },
+      "public.rec_ri_save_composition(_job_id uuid, _expected_version integer, _operation_id uuid, _pack_version_id uuid, _selection jsonb, _reason text)": {
+        "securityDefiner": true,
+        "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+        "bodyMd5": "edaae9101056e2a9f2e7831fc9087506"
+      },
+      "public.rec_ri_case_composition(_case_id uuid)": {
+        "securityDefiner": true,
+        "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+        "bodyMd5": "f547586ba5c117b70ad32fe929ebaab7"
+      }
+    }
+  },
+  "notActivated": ["AI", "retention worker/cron", "candidate mailings", "publishing"]
+}

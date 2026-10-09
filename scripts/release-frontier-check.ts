@@ -446,16 +446,12 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // RI v0.3 P0 was installed by the official integration after #447. Read-only
 // ledger, body and privilege parity are recorded in the 2026-10-08 hosted proof.
 // Conflict transport071, requirements080 and upload recovery0909 are verified installed.
-// Four forward slots remain pending until authorised installation and exact
-// hosted catalog/ledger verification; no earlier identity changes. Install in
-// numeric order: #464's pair, then the two slutuppdrag 2026-10-09 slots
-// (supplement111, composition121) stacked after them.
-const expectedPending: string[] = [
-  "20270310090000_interview_method_lifecycle_revocation.sql",
-  "20270310100000_recruiter_profile_change_review.sql",
-  "20270311100000_recruitment_supplement_and_reopen.sql",
-  "20270312100000_interview_question_composition.sql",
-];
+// 2026-10-09: #464 (20270310090000, 20270310100000) and #467 (20270311100000,
+// 20270312100000) were merged under the owner's release decision and installed
+// by the official integration; the read-only hosted verification is recorded in
+// docs/release/2026-10-09-lifecycle-v03-hosted-verification.json. The hosted
+// ledger holds 391 identities ending 20270312100000; nothing is pending.
+const expectedPending: string[] = [];
 
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",

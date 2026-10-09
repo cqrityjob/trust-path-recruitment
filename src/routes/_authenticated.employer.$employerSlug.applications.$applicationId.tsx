@@ -52,6 +52,12 @@ import { SendTestDialog } from "@/components/recruitment/SendTestDialog";
 
 import { PrepareInterviewButton } from "@/components/library/PrepareInterviewButton";
 import { RequirementReviewPanel } from "@/components/recruitment/RequirementReviewPanel";
+import { RequirementSummary } from "@/components/recruitment/RequirementSummary";
+import { SupplementPanel } from "@/components/recruitment/SupplementPanel";
+import { supplementQueryKey } from "@/lib/recruitment/interview-composition";
+import { ReopenDecision } from "@/components/recruitment/ReopenDecision";
+import { getSupplementState, requestSupplement } from "@/lib/recruitment/lifecycle-v03.functions";
+import { candidateNoticeStateOf } from "@/lib/recruitment/application-workflow";
 import { openApplicationOriginalCv } from "@/lib/recruitment/requirement-review-draft";
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -209,6 +215,14 @@ function Candidate360({
     kind: MessageKind;
     bookingId: string | null;
     nonce: number;
+    body?: string;
+  } | null>(null);
+  // What the last decision did, said once and in full: which decision was
+  // saved, where the application now is, and -- captured BEFORE the list
+  // forgets it -- which candidate came next in the list it was opened from.
+  const [decisionNotice, setDecisionNotice] = useState<{
+    status: EmployerSettableStatus;
+    nextId: string | null;
   } | null>(null);
 
   const candidateKey = ["employer", employerId, "application", applicationId, "candidate"];
@@ -409,6 +423,69 @@ function Candidate360({
   });
   const hiredEmployeeId = hiredNow ?? hiredEmployeeQuery.data?.employeeId ?? null;
 
+  // "Begär komplettering" as its own record (slot 20270311100000): a draft
+  // message of its own kind plus the request row, idempotent by operation id.
+  // Where the slot is not installed, the act falls back to what exists today:
+  // a plain message draft carrying the reviewer's own neutral questions.
+  const scrollTo = (id: string) =>
+    window.setTimeout(
+      () => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" }),
+      50,
+    );
+  const supplementFn = useServerFn(requestSupplement);
+  // The same read the supplement panel shows, under the same key: when the
+  // slot is not installed the header's "Begär komplettering" opens the plain
+  // message draft directly, instead of asking the server to refuse first.
+  const supplementStateFn = useServerFn(getSupplementState);
+  const supplementState = useQuery({
+    queryKey: supplementQueryKey(employerId, applicationId),
+    queryFn: () => supplementStateFn({ data: { employerId, applicationId } }),
+    enabled: Boolean(rw && query.data?.jobId),
+  });
+  const supplementInstalled = supplementState.data?.installed !== false;
+  const supplementOperation = useRef<string>(crypto.randomUUID());
+  const [supplementNotice, setSupplementNotice] = useState<string | null>(null);
+  const supplement = useMutation({
+    mutationFn: (input: { body: string; profileId: string; requirementIds: string[] }) =>
+      supplementFn({
+        data: {
+          employerId,
+          applicationId,
+          profileId: input.profileId,
+          requirementIds: input.requirementIds,
+          subject:
+            lang === "sv" ? "Komplettering av din ansökan" : "Supplement to your application",
+          body: input.body,
+          language: lang,
+          operationId: supplementOperation.current,
+        },
+      }),
+    onSuccess: () => {
+      supplementOperation.current = crypto.randomUUID();
+      setSupplementNotice(t("rec.supplement.requested"));
+      void qc.invalidateQueries({ queryKey: supplementQueryKey(employerId, applicationId) });
+      refreshRecruitment();
+      scrollTo("candidate-communication");
+    },
+    onError: (e: unknown, input) => {
+      const code = (e as Error).message;
+      if (code === "SCHEMA_NOT_INSTALLED") {
+        setComposeRequest({
+          kind: "information",
+          bookingId: null,
+          nonce: Date.now(),
+          body: input.body,
+        });
+        scrollTo("candidate-communication");
+        return;
+      }
+      setSupplementNotice(t(recruitmentErrorKey(code)));
+    },
+  });
+  // A ref, so the mutation reads the list position the page SHOWS at the
+  // moment of the click, not the one the closure was built with.
+  const nextIdRef = useRef<string | null>(null);
+  const nextIdAtMutation = () => nextIdRef.current;
   const setStatus = useMutation({
     // From the stage this page SHOWED: if a colleague moved the candidate in
     // the meantime the move is refused and the page reloads, rather than
@@ -425,9 +502,16 @@ function Candidate360({
             | undefined,
         },
       }),
-    onSuccess: (r) => {
+    onMutate: (newStatus) => {
+      // The neighbour in the OPEN list, read now: once a rejection lands the
+      // candidate is no longer in that list and the server has no "next" for
+      // them. Stored on the notice so the recruiter can still move on.
+      return { newStatus, nextId: nextIdAtMutation() };
+    },
+    onSuccess: (r, _newStatus, ctx) => {
       setActionError(null);
       setHiredNow(r.employeeId ?? null);
+      setDecisionNotice({ status: ctx.newStatus, nextId: ctx.nextId });
       refreshRecruitment();
       qc.invalidateQueries({ queryKey: candidateKey });
       // The list this page was opened from shows the same status.
@@ -441,10 +525,13 @@ function Candidate360({
     },
     onError: (e: unknown) => {
       const code = (e as { message?: string })?.message ?? "";
+      setDecisionNotice(null);
       setActionError(
-        code === "STATUS_UPDATE_FAILED" || code === ""
-          ? t("employer.applications.error.statusUpdate")
-          : t(recruitmentErrorKey(code)),
+        `${t("rec.decision.saveFailed")} ${
+          code === "STATUS_UPDATE_FAILED" || code === ""
+            ? t("employer.applications.error.statusUpdate")
+            : t(recruitmentErrorKey(code))
+        }`,
       );
       qc.invalidateQueries({ queryKey: candidateKey });
       refreshRecruitment();
@@ -521,6 +608,7 @@ function Candidate360({
   const position = listNav ? listNav.position - 1 : -1;
   const previousId = position >= 0 ? (listNav?.previousId ?? null) : null;
   const nextId = position >= 0 ? (listNav?.nextId ?? null) : null;
+  nextIdRef.current = nextId;
   const listTotal = listNav?.total ?? 0;
   const stepCls =
     "inline-flex min-h-9 items-center gap-1 rounded-md border border-border px-2.5 text-sm hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
@@ -805,6 +893,69 @@ function Candidate360({
               </dd>
             </div>
           </dl>
+        )}
+        {/* The requirement review, summarised where the recruiter looks
+            first. Actions only while the application is open and the
+            recruitment is; a closed case keeps the record. */}
+        {rw && c.jobId && (
+          <RequirementSummary
+            employerId={employerId}
+            employerSlug={employerSlug}
+            applicationId={applicationId}
+            jobId={c.jobId}
+            team={rw.team}
+            actions={
+              !completed && status !== null && isUnresolved(status)
+                ? {
+                    confirm: () => scrollTo("requirement-review"),
+                    requestSupplement: ({ body, profileId, requirementIds }) => {
+                      setSupplementNotice(null);
+                      if (!supplementInstalled || !profileId || requirementIds.length === 0) {
+                        setComposeRequest({
+                          kind: "information",
+                          bookingId: null,
+                          nonce: Date.now(),
+                          body,
+                        });
+                        scrollTo("candidate-communication");
+                        return;
+                      }
+                      supplement.mutate({ body, profileId, requirementIds });
+                    },
+                    prepareInterview: () => scrollTo("candidate-structured-interview"),
+                    proceed:
+                      decisionNext.find((n) => n !== "hired" && n !== "rejected") !== undefined
+                        ? () =>
+                            setStatus.mutate(
+                              decisionNext.find((n) => n !== "hired" && n !== "rejected")!,
+                            )
+                        : null,
+                    proceedLabel: (() => {
+                      const n = decisionNext.find((x) => x !== "hired" && x !== "rejected");
+                      return n ? t(APPLICATION_ACTION_LABEL_KEY[n]) : null;
+                    })(),
+                    reject: canDecide ? () => setPendingDecision("rejected") : null,
+                  }
+                : null
+            }
+          />
+        )}
+        {supplementNotice && (
+          <p
+            role="status"
+            data-testid="supplement-notice"
+            className="mt-3 rounded-md border border-border bg-muted/40 px-3 py-2 text-sm"
+          >
+            {supplementNotice}
+          </p>
+        )}
+        {rw && c.jobId && (
+          <SupplementPanel
+            employerId={employerId}
+            applicationId={applicationId}
+            canManage={canDecide}
+            open={!completed && status !== null && isUnresolved(status)}
+          />
         )}
         {workspaceQuery.isError && (
           <p
@@ -1346,10 +1497,89 @@ function Candidate360({
             </div>
           ))}
 
-        {nextStatuses.length === 0 ? (
-          <p className="mt-4 text-sm text-muted-foreground">
-            {t("employer.candidate.decision.closed")}
+        {/* What the LAST decision on this page did. Said in full, once: the
+            decision is saved, the application has moved view, nothing was
+            sent. The notice stands until the page is left. */}
+        {decisionNotice && (
+          <div
+            role="status"
+            data-testid="decision-saved"
+            data-decision={decisionNotice.status}
+            className="mt-4 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm"
+          >
+            <p>
+              {t(
+                decisionNotice.status === "rejected"
+                  ? "rec.decision.saved.rejected"
+                  : decisionNotice.status === "hired"
+                    ? "rec.decision.saved.hired"
+                    : "rec.decision.saved.stage",
+              )}
+            </p>
+            {(decisionNotice.status === "rejected" || decisionNotice.status === "hired") && (
+              <p className="mt-2 flex flex-wrap gap-3 text-xs font-medium">
+                {decisionNotice.nextId && (
+                  <Link
+                    to="/employer/$employerSlug/applications/$applicationId"
+                    params={{ employerSlug, applicationId: decisionNotice.nextId }}
+                    search={{ list: listKey }}
+                    data-testid="decision-next-candidate"
+                    className="text-accent hover:underline"
+                  >
+                    {t("rec.decision.nextCandidate")}
+                    {" →"}
+                  </Link>
+                )}
+                <Link
+                  to="/employer/$employerSlug/applications"
+                  params={{ employerSlug }}
+                  data-testid="decision-back-to-active"
+                  className="text-accent hover:underline"
+                >
+                  {t("rec.decision.backToActive")}
+                </Link>
+              </p>
+            )}
+          </div>
+        )}
+        {/* Where the candidate's NOTICE stands, read from the messages on the
+            application -- a separate fact from the decision, and never
+            "sent" when the e-mail failed. */}
+        {rw && (c.applicationStatus === "rejected" || c.applicationStatus === "hired") && (
+          <p
+            className="mt-3 text-sm"
+            data-testid="candidate-notice-state"
+            data-state={candidateNoticeStateOf(c.applicationStatus, rw.messages)}
+          >
+            <span className="font-medium">{t("rec.decision.notice.label")}: </span>
+            {t(
+              `rec.decision.notice.${candidateNoticeStateOf(c.applicationStatus, rw.messages)}` as TranslationKey,
+            )}
           </p>
+        )}
+        {nextStatuses.length === 0 ? (
+          <div className="mt-4 text-sm text-muted-foreground" data-testid="decision-closed-view">
+            <p>{t("employer.candidate.decision.closed")}</p>
+            {(c.applicationStatus === "rejected" ||
+              c.applicationStatus === "hired" ||
+              c.applicationStatus === "withdrawn") && (
+              <p className="mt-1">
+                {t(`rec.decision.closedView.${c.applicationStatus}` as TranslationKey)}
+              </p>
+            )}
+            <p className="mt-1">{t("rec.decision.reopenNote")}</p>
+            {c.applicationStatus === "rejected" && canDecide && !completed && (
+              <ReopenDecision
+                employerId={employerId}
+                applicationId={applicationId}
+                onReopened={() => {
+                  setDecisionNotice(null);
+                  qc.invalidateQueries({ queryKey: candidateKey });
+                  refreshRecruitment();
+                }}
+              />
+            )}
+          </div>
         ) : (
           <div className="mt-4 flex flex-wrap gap-2">
             {decisionNext.map((next) => (

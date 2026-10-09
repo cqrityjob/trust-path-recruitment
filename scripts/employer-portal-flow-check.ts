@@ -490,6 +490,331 @@ const UI = "src/components/employer/interview/InterviewUi.tsx";
   }
 }
 
+/* 12 · The application list is a working list: views, sub-steps, a fold for the rest. */
+{
+  const ct = code("src/components/recruitment/CandidateTable.tsx");
+  const wf = code("src/lib/recruitment/application-workflow.ts");
+  for (const v of ["open", "decided", "archived", "all"]) {
+    expect(
+      Boolean(sv[`rec.view.${v}`]) &&
+        Boolean(en[`rec.view.${v}`]) &&
+        Boolean(sv[`rec.view.hint.${v}`]) &&
+        Boolean(en[`rec.view.hint.${v}`]),
+      `rec.view.${v} / rec.view.hint.${v} is missing in sv or en.`,
+    );
+  }
+  expect(
+    /export const PRIMARY_VIEWS = \["open", "decided", "archived", "all"\] as const;/.test(wf),
+    "application-workflow: the primary views are Aktiva, Avslutade, Arkiv and the secondary Alla, in that order.",
+  );
+  expect(
+    /case "decided":\s*return "decided";[\s\S]*case "archived":\s*return "archived";[\s\S]*case "all":\s*case "received":\s*return "all";[\s\S]*default:\s*return "open";/.test(
+      wf,
+    ),
+    "application-workflow: every stage filter maps to one primary view; the active sub-stages are the open view.",
+  );
+  expect(
+    /if \(stage === "open" && view\.requirement === "gray"\) return "clarify";/.test(wf),
+    "application-workflow: 'Behöver klarläggande' is the server's open+gray list, a view and never a new status.",
+  );
+  expect(
+    /data-testid="list-views"/.test(ct) &&
+      /data-testid=\{`view-\$\{v\}`\}/.test(ct) &&
+      /aria-current=\{active \? "page" : undefined\}/.test(ct) &&
+      /data-testid="list-substeps"/.test(ct) &&
+      /data-testid="more-filters"/.test(ct) &&
+      /data-testid="owner-filter"/.test(ct),
+    "CandidateTable: view tabs (aria-current), active sub-steps, the responsible filter in the open and a 'Fler filter' fold.",
+  );
+  const moreFold = ct.indexOf('data-testid="more-filters"');
+  for (const id of ["requirement-filter", "review-filter", "analysis-filter", "stage-filter"]) {
+    expect(
+      ct.indexOf(`data-testid="${id}"`) > moreFold,
+      `CandidateTable: ${id} belongs behind 'Fler filter'; the everyday filters are responsible and recruitment.`,
+    );
+  }
+  expect(
+    /open=\{advancedOpen \|\| advancedCount > 0\}/.test(ct),
+    "CandidateTable: the fold opens by itself whenever one of its filters is in the URL, so a filtered link never hides the filter that narrowed it.",
+  );
+  expect(
+    !/<AnalysisStatusBadge \/>/.test(ct) && /rec\.table\.analysisNote/.test(ct),
+    "CandidateTable: 'technical analysis: not used' is said once, not once per row.",
+  );
+  expect(
+    /data-testid="next-step"/.test(ct) &&
+      /nextStepOf\(\{/.test(ct) &&
+      /rec\.col\.nextStep/.test(ct),
+    "CandidateTable: every row carries the suggested next step, from the shared projection.",
+  );
+  expect(
+    /collapsible\s*scopeLabel=/.test(ct) &&
+      ct.indexOf("<RecruiterCounts") > ct.indexOf("{/* ── Pagination"),
+    "CandidateTable: the historical statistics are folded and come after the list, not before it.",
+  );
+  const st = code(STATUS);
+  expect(
+    /data-testid="counts-history"/.test(st) &&
+      /if \(!collapsible\) return <>\{children\}<\/>;/.test(st) &&
+      st.indexOf('data-testid="review-queue"') < st.indexOf("<HistoryFold"),
+    "RecruiterStatus: the queue stays in the open; only the historical coverage folds.",
+  );
+  expect(
+    /collapsible\s*title=\{t\("rec\.overview\.counts\.title"\)\}/.test(
+      code("src/components/recruitment/RecruiterOverviewCounts.tsx"),
+    ),
+    "RecruiterOverviewCounts: the overview folds the historical statistics.",
+  );
+  const ov = code(OVERVIEW);
+  expect(
+    ov.indexOf('aria-labelledby="employer-actions"') <
+      ov.indexOf('aria-labelledby="active-recruitments"') &&
+      ov.indexOf('aria-labelledby="active-recruitments"') < ov.indexOf("<RecruiterOverviewCounts"),
+    "Overview: 'Att göra idag' comes before the recruitments table, and the statistics come last.",
+  );
+  for (const k of [
+    "review",
+    "clarify",
+    "profile",
+    "decideNotMet",
+    "prepareInterview",
+    "interview",
+    "reconfirm",
+    "tellCandidate",
+    "archive",
+    "none",
+  ]) {
+    expect(
+      Boolean(sv[`rec.next.${k}`]) && Boolean(en[`rec.next.${k}`]),
+      `rec.next.${k} is missing in sv or en.`,
+    );
+  }
+}
+
+/* 13 · The requirement review is summarised in the application header. */
+{
+  const cand = code(CANDIDATE);
+  const sum = code("src/components/recruitment/RequirementSummary.tsx");
+  const wf = code("src/lib/recruitment/application-workflow.ts");
+  expect(
+    /<RequirementSummary/.test(cand) &&
+      cand.indexOf("<RequirementSummary") < cand.indexOf("<ProcessContinuityStrip"),
+    "Application page: the requirement summary sits in the header, before the process strip.",
+  );
+  expect(
+    /queryKey: \["employer", employerId, "requirement-review", applicationId\]/.test(sum),
+    "RequirementSummary: reads the review under the SAME query key as the review panel, so header and panel cannot disagree.",
+  );
+  expect(
+    /const human = \(c: SummaryCriterion\) => c\.reviewedAt !== null \|\| c\.reviewedBy !== null;/.test(
+      wf,
+    ) &&
+      /c\.state === "met" && human\(c\) && c\.sourceCurrent/.test(wf) &&
+      /c\.state === "met" && !human\(c\)/.test(wf) &&
+      /allConfirmed: mandatory\.length > 0 && confirmedMet\.length === mandatory\.length/.test(wf),
+    "application-workflow: 'confirmed' means a PERSON recorded met on a current source; preliminary basis is counted apart; merits never complete the count.",
+  );
+  for (const id of [
+    'data-testid="requirement-summary"',
+    'data-testid="requirement-summary-count"',
+    'data-testid="requirement-summary-preliminary"',
+    'data-testid="requirement-summary-details"',
+    'data-testid="requirement-summary-criterion"',
+    'data-testid="summary-action-confirm"',
+    'data-testid="summary-action-supplement"',
+    'data-testid="summary-action-prepare"',
+    'data-testid="summary-action-reject"',
+  ]) {
+    expect(sum.includes(id), `RequirementSummary: "${id}" must stay.`);
+  }
+  expect(
+    /<RequirementStatusBadge status=\{review\.requirementStatus\} \/>/.test(sum),
+    "RequirementSummary: the colour is the server's requirementStatus (text + symbol), never a client classification.",
+  );
+  expect(
+    /disabled=\{supplementBody\.length === 0\}/.test(sum) &&
+      /\.filter\(\(c\) => c\.kind === "mandatory" && c\.state === "clarify" && c\.neutralQuestion\?\.trim\(\)\)/.test(
+        wf,
+      ),
+    "A supplement request carries only the reviewer's own neutral questions; with none written there is nothing to send.",
+  );
+  expect(
+    /aldrig ett skallkrav/.test(sv["rec.summary.greenRule"] ?? "") &&
+      /bara när alla skallkrav är bekräftade av en person/.test(
+        sv["rec.summary.greenRule"] ?? "",
+      ) &&
+      /inte en genomförd granskning/.test(sv["rec.summary.preliminaryNote"] ?? "") &&
+      /ingen AI/.test(sv["rec.summary.preliminaryNote"] ?? ""),
+    "rec.summary.greenRule / preliminaryNote must state: green only when a person confirmed every mandatory requirement, merits never compensate, preliminary basis is no review, no AI.",
+  );
+}
+
+/* 14 · 'Ej aktuell' is saved, said, and the candidate's notice is a separate fact. */
+{
+  const cand = code(CANDIDATE);
+  const wf = code("src/lib/recruitment/application-workflow.ts");
+  expect(
+    /data-testid="decision-saved"/.test(cand) &&
+      /rec\.decision\.saved\.rejected/.test(cand) &&
+      /data-testid="decision-next-candidate"/.test(cand) &&
+      /data-testid="decision-back-to-active"/.test(cand),
+    "Application page: a saved decision is announced once, with the way to the next candidate and back to the active list.",
+  );
+  expect(
+    /onMutate: \(newStatus\) => \{[\s\S]*nextId: nextIdAtMutation\(\)/.test(cand) &&
+      /nextIdRef\.current = nextId;/.test(cand),
+    "Application page: the next candidate is captured BEFORE the decision lands, because a rejected candidate is no longer in the open list.",
+  );
+  expect(
+    /data-testid="candidate-notice-state"/.test(cand) &&
+      /candidateNoticeStateOf\(c\.applicationStatus, rw\.messages\)/.test(cand),
+    "Application page: the candidate's notice state is read from the messages, apart from the decision.",
+  );
+  expect(
+    /case "failed":\s*case "unknown":\s*return "failed";/.test(wf) &&
+      /if \(m\.status === "draft"\) return "prepared";/.test(wf),
+    "application-workflow: a failed or unknown e-mail is 'failed', a draft is 'prepared' -- never delivered.",
+  );
+  for (const k of ["internal", "prepared", "queued", "delivered", "failed"]) {
+    expect(
+      Boolean(sv[`rec.decision.notice.${k}`]) &&
+        Boolean(en[`rec.decision.notice.${k}`]) &&
+        !/\bSkickat\b/.test(sv[`rec.decision.notice.${k}`] ?? ""),
+      `rec.decision.notice.${k} is missing, or says "Skickat".`,
+    );
+  }
+  expect(
+    /Ingenting har skickats till kandidaten/.test(sv["rec.decision.saved.rejected"] ?? "") &&
+      /lämnat den aktiva listan och granskningskön/.test(sv["rec.decision.saved.rejected"] ?? "") &&
+      /under Avslutade/.test(sv["rec.decision.saved.rejected"] ?? ""),
+    "rec.decision.saved.rejected must say where the application went and that nothing was sent.",
+  );
+  expect(
+    /data-testid="decision-closed-view"/.test(cand) &&
+      /rec\.decision\.reopenNote/.test(cand) &&
+      /inget raderas automatiskt/.test(sv["rec.decision.closedView.rejected"] ?? "") &&
+      /separat behörig åtgärd med angiven orsak/.test(sv["rec.decision.reopenNote"] ?? ""),
+    "Application page: the closed view says nothing is deleted automatically and that reopening is a separate authorised act with a reason.",
+  );
+  expect(
+    /setDecisionNotice\(null\);\s*setActionError\(\s*`\$\{t\("rec\.decision\.saveFailed"\)\}/.test(
+      cand,
+    ),
+    "Application page: a failed save clears any success notice and says nothing changed.",
+  );
+}
+
+/* 15 · The interview guide's C1–C6 is written once on the preparation screen. */
+{
+  const prep = code(`${R}interview-intelligence.$caseId.prepare.tsx`);
+  const saved = code("src/components/employer/interview/SavedCaseSources.tsx");
+  const seed = code("src/lib/interview-intelligence/seeded-guide-source.ts");
+  expect(
+    /data-testid="ii-requirement-headings"/.test(prep) &&
+      /data-testid="ii-requirement-definitions"/.test(prep),
+    "Prepare: the role-requirements panel shows short headings with the definitions behind a fold.",
+  );
+  expect(
+    /isSeededGuideRequirementsSource\(source\)/.test(saved) &&
+      /href="#s-reqs"/.test(saved) &&
+      /data-testid="ii-seeded-guide-source"/.test(saved),
+    "SavedCaseSources: the seeded guide copy is named and linked to the role-requirements panel, not printed again.",
+  );
+  expect(
+    /source\.kind === "employer_requirements" &&\s*source\.label === SEEDED_GUIDE_SOURCE_LABEL &&\s*\(source\.origin \?\? "employer_supplied"\) === "employer_supplied"/.test(
+      seed,
+    ) && /"Rollens krav \(ur intervjuguiden\)"/.test(seed),
+    "seeded-guide-source: kind, label and origin all have to match the seeding; an employer's own requirements text is never folded away.",
+  );
+  expect(
+    !/scp_iv_add_source[\s\S]*Rollens krav \(ur intervjuguiden\)/.test(saved) &&
+      /seedCaseSources/.test(code("src/lib/interview-intelligence/runtime.functions.ts")),
+    "The seeding itself stays: the source is citable case material; only its display is folded.",
+  );
+}
+
+/* 16 · Lifecycle v0.3 on the client: tolerant of an uninstalled schema, never a hidden fallback. */
+{
+  const fn = code("src/lib/recruitment/lifecycle-v03.functions.ts");
+  const cand = code(CANDIDATE);
+  const sup = code("src/components/recruitment/SupplementPanel.tsx");
+  const reopen = code("src/components/recruitment/ReopenDecision.tsx");
+  const comp = code("src/components/recruitment/InterviewCompositionPanel.tsx");
+  const lib = code("src/lib/recruitment/interview-composition.ts");
+  expect(
+    /error\.code === "PGRST202"/.test(fn) &&
+      /if \(isSchemaMissing\(error\)\) return new Error\("SCHEMA_NOT_INSTALLED"\);/.test(fn) &&
+      (fn.match(/if \(isSchemaMissing\(result\.error\)\) return \{ installed: false \};/g) ?? [])
+        .length >= 4,
+    "lifecycle-v03.functions: a missing RPC is 'not installed' on every read and SCHEMA_NOT_INSTALLED on every write, never a generic failure.",
+  );
+  expect(
+    /if \(code === "SCHEMA_NOT_INSTALLED"\) \{\s*setComposeRequest\(\{\s*kind: "information"/.test(
+      cand,
+    ) && /supplement\.mutate\(\{ body, profileId, requirementIds \}\)/.test(cand),
+    "Application page: 'Begär komplettering' uses the supplement record when installed and falls back to the plain message draft when not -- the same words either way.",
+  );
+  expect(
+    /data-testid="supplement-not-installed"/.test(sup) &&
+      /data-testid="supplement-awaiting"/.test(sup) &&
+      /data-testid="supplement-answered"/.test(sup) &&
+      /data-testid="supplement-withdraw"/.test(sup),
+    "SupplementPanel: says when the slot is not installed, shows the open request, and lets a person resolve it.",
+  );
+  expect(
+    /c\.applicationStatus === "rejected" && canDecide && !completed && \(\s*<ReopenDecision/.test(
+      cand,
+    ) &&
+      /expectedStatus: "rejected"/.test(reopen) &&
+      /reason\.trim\(\)\.length < 5/.test(reopen) &&
+      /code === "SCHEMA_NOT_INSTALLED"\s*\? t\("rec\.reopen\.notInstalled"\)/.test(reopen),
+    "ReopenDecision: only on a rejected application a manager may act on, with the page's status as expected status, a reason of at least five characters, and the honest sentence when the slot is missing.",
+  );
+  expect(
+    /export const COMPOSITION_GROUPS = \[\s*"intro",\s*"competence",\s*"scenarios",\s*"probes",\s*"beskt",\s*"clarifications",\s*"closing",\s*\] as const;/.test(
+      lib,
+    ) && /new Set\(\[\s*"competence",\s*"scenarios",\s*"probes",\s*\]\)/.test(lib),
+    "interview-composition: the seven groups in the brief's order; only the three with governed content are selectable.",
+  );
+  expect(
+    /\.sort\(\(a, b\) => a\.displayOrder - b\.displayOrder\)\) \{\s*out\.push\(\{\s*group: q\.questionType === "situational" \? "scenarios" : "competence",\s*kind: "core_question",\s*itemId: q\.id,/.test(
+      lib,
+    ) && !/checked=\{chosen\.has\(q\.id\)\}/.test(comp),
+    "The core questions are always in the selection and never offered as a checkbox; only approved probes are chosen.",
+  );
+  expect(
+    /data-testid="composition-not-installed"/.test(comp) &&
+      /rec\.composition\.noAi/.test(comp) &&
+      /data-testid="composition-coverage"/.test(comp) &&
+      /data-testid="composition-reason"/.test(comp) &&
+      /window\.sessionStorage\.setItem\(\s*draftKey/.test(comp),
+    "InterviewCompositionPanel: not-installed sentence, no-AI sentence, order/time/coverage, a reason field for a new version, and a resumable draft.",
+  );
+  expect(
+    /<InterviewCompositionPanel\s+employerId=\{employerId\}\s+employerSlug=\{employerSlug\}\s+jobId=\{jobId\}\s*\/>/.test(
+      code(HUB),
+    ) &&
+      /<CaseCompositionRail caseId=\{caseId\} jobId=\{d\.jobId\} employerSlug=\{employerSlug\} \/>/.test(
+        code(`${R}interview-intelligence.$caseId.prepare.tsx`),
+      ),
+    "The setup is edited on the recruitment and read, pinned, on the case.",
+  );
+  for (const k of [
+    "rec.supplement.notInstalled",
+    "rec.reopen.notInstalled",
+    "rec.composition.notInstalled",
+    "rec.composition.noAi",
+    "rec.composition.group.besktHint",
+    "rec.error.schemaNotInstalled",
+  ]) {
+    expect(Boolean(sv[k]) && Boolean(en[k]), `${k} is missing in sv or en.`);
+  }
+  expect(
+    /endast rekryteringsläget får användas/i.test(sv["rec.composition.group.besktHint"] ?? ""),
+    "rec.composition.group.besktHint must say only the recruitment mode may be used in the interview guide.",
+  );
+}
+
 if (errors.length > 0) {
   for (const e of errors) console.error("[employer-portal-flow:check][error]", e);
   console.error(`\n${errors.length} problem(s).`);

@@ -36,6 +36,8 @@ const AREAS = [
   "interviews",
   "reports",
   "requirements",
+  "application",
+  "closed",
 ] as const;
 const LANGS = ["sv", "en"] as const;
 const WIDTHS = [1440, 375] as const;

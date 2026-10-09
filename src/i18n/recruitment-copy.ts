@@ -16,7 +16,8 @@ export const recruitmentSv = {
   "rec.lifecycle.title": "Arkivering och gallring",
   "rec.lifecycle.archive": "Arkivera",
   "rec.lifecycle.restore": "Återställ arkivering",
-  "rec.lifecycle.restored": "Arkiveringen har ändrats. Rekryteringens avslut och gallringsdatum är oförändrade.",
+  "rec.lifecycle.restored":
+    "Arkiveringen har ändrats. Rekryteringens avslut och gallringsdatum är oförändrade.",
   "rec.lifecycle.archivedNotice":
     "Ansökan är arkiverad. Gallringsdatum är oförändrat. Den lämnar de aktiva listorna och visas under Arkiverade och Alla mottagna.",
   "rec.lifecycle.restoredNotice":
@@ -33,27 +34,37 @@ export const recruitmentSv = {
   "rec.lifecycle.confirm": "Radera materialet permanent?",
   "rec.lifecycle.cancel": "Avbryt",
   "rec.lifecycle.scope": "Ansökningar som berörs",
-  "rec.lifecycle.material": "Ansökan och CV-kopia, bilagor, svar, anteckningar, meddelanden, intervjuer, testtilldelningar och ansökningsbundna rapporter raderas i den omfattning som visas nedan.",
-  "rec.lifecycle.kept": "Kandidatens konto, Security Passport, egna tester och material som används i andra ansökningar eller organisationer behålls.",
+  "rec.lifecycle.material":
+    "Ansökan och CV-kopia, bilagor, svar, anteckningar, meddelanden, intervjuer, testtilldelningar och ansökningsbundna rapporter raderas i den omfattning som visas nedan.",
+  "rec.lifecycle.kept":
+    "Kandidatens konto, Security Passport, egna tester och material som används i andra ansökningar eller organisationer behålls.",
   "rec.lifecycle.files": "CV-filer",
   "rec.lifecycle.shared": "Delade filer som behålls",
   "rec.lifecycle.rows": "Materialposter",
   "rec.lifecycle.purgeAt": "Beräknat gallringsdatum",
-  "rec.lifecycle.active": "Tiden börjar när rekryteringen verkligen avslutas. Aktiva ärenden gallras inte.",
-  "rec.lifecycle.missing": "Avslutsdatum saknas. Slutför eller klarlägg rekryteringens avslut innan gallring kan beräknas. Inget datum gissas.",
-  "rec.lifecycle.clock": "Arkivering, sidvisningar och anteckningar ändrar inte avslutsdatumet. Återställning återöppnar inte rekryteringen.",
+  "rec.lifecycle.active":
+    "Tiden börjar när rekryteringen verkligen avslutas. Aktiva ärenden gallras inte.",
+  "rec.lifecycle.missing":
+    "Avslutsdatum saknas. Slutför eller klarlägg rekryteringens avslut innan gallring kan beräknas. Inget datum gissas.",
+  "rec.lifecycle.clock":
+    "Arkivering, sidvisningar och anteckningar ändrar inte avslutsdatumet. Återställning återöppnar inte rekryteringen.",
   "rec.lifecycle.period": "Organisationens lagringstid efter avslutad rekrytering",
   "rec.lifecycle.six": "6 månader",
   "rec.lifecycle.standard": "24 månader (standard)",
-  "rec.lifecycle.periodEffect": "Valet gäller organisationens avslutade rekryteringar. En kortare tid kan göra äldre material förfallet vid nästa serverkörning.",
+  "rec.lifecycle.periodEffect":
+    "Valet gäller organisationens avslutade rekryteringar. En kortare tid kan göra äldre material förfallet vid nästa serverkörning.",
   "rec.lifecycle.periodConfirm": "Ändra organisationens lagringstid?",
   "rec.lifecycle.save": "Spara lagringstid",
-  "rec.lifecycle.pending": "Radering pågår. Gallringen är inte klar förrän databasmaterial och berörda filer har raderats.",
-  "rec.lifecycle.failed": "Raderingen behöver hanteras. Kvarvarande material eller filfel redovisas och försöks igen på servern.",
+  "rec.lifecycle.pending":
+    "Radering pågår. Gallringen är inte klar förrän databasmaterial och berörda filer har raderats.",
+  "rec.lifecycle.failed":
+    "Raderingen behöver hanteras. Kvarvarande material eller filfel redovisas och försöks igen på servern.",
   "rec.lifecycle.done": "Gallringen är slutförd.",
   "rec.lifecycle.retry": "Försök igen",
-  "rec.lifecycle.error": "Åtgärden kunde inte genomföras. Uppdatera sidan och kontrollera behörighet, avslutsstatus och delat material.",
-  "rec.lifecycle.loadingError": "Gallringsuppgifter kan inte hämtas. Kontakta administratören om det kvarstår.",
+  "rec.lifecycle.error":
+    "Åtgärden kunde inte genomföras. Uppdatera sidan och kontrollera behörighet, avslutsstatus och delat material.",
+  "rec.lifecycle.loadingError":
+    "Gallringsuppgifter kan inte hämtas. Kontakta administratören om det kvarstår.",
   "rec.list.phase.archived": "Arkiverade",
   "rec.filter.stage.archived": "Arkiverade",
   "rec.lifecycle.records.applications": "Ansökningar",
@@ -766,6 +777,225 @@ export const recruitmentSv = {
   "rec.pipeline.overlapNote":
     "Test- och intervjuindikatorerna överlappar stegen: en kandidat kan räknas på flera ställen.",
   "rec.batch.restrictedTeamLink": "Se team och ansvarig",
+  // ── Views, sub-steps and the next working step (lifecycle pass 2026-10-09) ──
+  "rec.view.aria": "Vy",
+  "rec.view.open": "Aktiva",
+  "rec.view.decided": "Avslutade",
+  "rec.view.archived": "Arkiv",
+  "rec.view.all": "Alla",
+  "rec.view.received": "Alla mottagna inklusive arkiv",
+  "rec.view.hint.open": "Ansökningar utan beslut som inte är arkiverade. Det här är arbetslistan.",
+  "rec.view.hint.decided":
+    "Ansökningar med beslut: ej aktuell, anställd eller återtagen. Ingenting raderas automatiskt.",
+  "rec.view.hint.archived":
+    "Arkiverade ansökningar. Arkivering är en separat åtgärd efter beslut och skickar inget till kandidaten.",
+  "rec.view.hint.all": "Alla ansökningar som inte är arkiverade, oavsett steg och beslut.",
+  "rec.substep.aria": "Steg i aktiva",
+  "rec.substep.all": "Alla aktiva",
+  "rec.substep.new": "Nya",
+  "rec.substep.review": "Under granskning",
+  "rec.substep.clarify": "Behöver klarläggande",
+  "rec.substep.interview": "Intervju",
+  "rec.substep.clarifyHint":
+    "Aktiva ansökningar där ett skallkrav behöver klarläggas enligt kravstatusen. En vy över befintlig status, inte ett nytt ansökningsläge.",
+  "rec.filters.more": "Fler filter",
+  "rec.filters.moreActive": "{n} aktiva",
+  "rec.filters.simpleHint":
+    "Ansvarig och rekrytering är de vanliga filtren. Kravstatus, granskning, urvalssvar och sortering finns under Fler filter.",
+  "rec.col.requirements": "Kravstatus",
+  "rec.col.review": "Mänsklig granskning",
+  "rec.col.nextStep": "Nästa steg",
+  "rec.next.heading": "Nästa steg",
+  "rec.next.hint":
+    "Ett förslag på nästa arbetsmoment utifrån steg, kravstatus och mänsklig granskning. Det rangordnar inte kandidater och ändrar ingenting.",
+  "rec.next.review": "Granska mot kraven",
+  "rec.next.clarify": "Klarlägg skallkrav",
+  "rec.next.profile": "Fastställ skallkraven i rekryteringen",
+  "rec.next.decideNotMet": "Ta ställning: skallkrav inte uppfyllt",
+  "rec.next.prepareInterview": "Förbered intervju",
+  "rec.next.interview": "Genomför intervju och besluta",
+  "rec.next.reconfirm": "Bekräfta granskningen igen",
+  "rec.next.tellCandidate": "Skriv beskedet till kandidaten",
+  "rec.next.archive": "Arkivera när beskedet är lämnat",
+  "rec.next.none": "Inget väntar",
+  "rec.table.analysisNote":
+    "Teknisk analys används inte för någon ansökan. Kravstatus och mänsklig granskning är separata.",
+  "rec.table.statistics": "Statistik: historisk täckning av alla mottagna ansökningar",
+  "rec.table.statisticsHint":
+    "Antalen omfattar arkiverade och avgjorda ansökningar. Arbetslistan ovan visar bara det som kan göras nu.",
+  "rec.decision.saved.rejected":
+    "Beslutet Ej aktuell är sparat. Ansökan har lämnat den aktiva listan och granskningskön och finns nu under Avslutade. Ingenting har skickats till kandidaten.",
+  "rec.decision.saved.hired":
+    "Beslutet Anställd är sparat. Ansökan finns nu under Avslutade. Ingenting har skickats till kandidaten.",
+  "rec.decision.saved.stage": "Steget är sparat. Ingenting har skickats till kandidaten.",
+  "rec.decision.saveFailed":
+    "Beslutet kunde inte sparas. Ingenting har ändrats och inget besked har skickats. Sidan läser in aktuellt läge.",
+  "rec.decision.notice.label": "Besked till kandidaten",
+  "rec.decision.notice.internal": "Internt beslut – inget besked har skrivits eller skickats.",
+  "rec.decision.notice.prepared": "Besked förberett som utkast – inte skickat.",
+  "rec.decision.notice.queued":
+    "Besked lämnat i kandidatens CQrityjob-inkorg – e-postkopian är köad eller pågår.",
+  "rec.decision.notice.delivered":
+    "Besked levererat i kandidatens CQrityjob-inkorg – e-postkopian är accepterad av leverantören, eller e-post används inte.",
+  "rec.decision.notice.failed":
+    "Besked lämnat i kandidatens CQrityjob-inkorg, men e-postkopian misslyckades eller har okänt utfall. Kontrollera under Kommunikation; inget skickas om automatiskt.",
+  "rec.decision.nextCandidate": "Nästa kandidat i listan",
+  "rec.decision.backToActive": "Till aktiva ansökningar",
+  "rec.decision.closedView.rejected":
+    "Ansökan är avslutad som Ej aktuell. Den visas under Avslutade tills en person arkiverar den. Att byta färg eller arkivera skickar aldrig något till kandidaten, och inget raderas automatiskt.",
+  "rec.decision.closedView.hired":
+    "Ansökan är avslutad som Anställd. Den visas under Avslutade tills en person arkiverar den.",
+  "rec.decision.closedView.withdrawn":
+    "Kandidaten har återtagit ansökan. Den visas under Avslutade tills en person arkiverar den; inget besked behöver skrivas.",
+  // ── Requirement summary in the application header ──
+  "rec.summary.heading": "Kravgranskning",
+  "rec.summary.profileVersion": "Kravprofil version {v}, fastställd {date}",
+  "rec.summary.profileMissing":
+    "Skallkrav inte fastställda. Det är ett problem i rekryteringens kravprofil, inte hos kandidaten: fastställ kraven under Rekrytering innan ansökningar kan granskas.",
+  "rec.summary.openProfile": "Öppna kravprofilen",
+  "rec.summary.confirmed": "{n} av {m} skallkrav bekräftade av en person",
+  "rec.summary.preliminary":
+    "{n} preliminärt uppfyllda enligt kandidatens egna svar – inte mänskligt bekräftade",
+  "rec.summary.notMet": "Inte uppfyllt",
+  "rec.summary.unclear": "Oklart eller otillräckligt underlag",
+  "rec.summary.changed": "Underlaget har ändrats sedan bekräftelsen",
+  "rec.summary.nothingMissing": "Inget skallkrav saknar bekräftat underlag.",
+  "rec.summary.greenRule":
+    "Grönt visas bara när alla skallkrav är bekräftade av en person. Ogranskat eller otillräckligt underlag visas neutralt, och meriter kompenserar aldrig ett skallkrav.",
+  "rec.summary.preliminaryNote":
+    "Preliminärt underlag sammanställs automatiskt ur tillåtna uppgifter i ansökan. Det är inte en genomförd granskning, ingenting bockas av automatiskt och ingen AI används.",
+  "rec.summary.details": "Visa underlag per krav",
+  "rec.summary.detail.source": "Underlag",
+  "rec.summary.detail.noSource": "Inget underlag valt",
+  "rec.summary.detail.sourceChanged": "ändrat sedan beslutet",
+  "rec.summary.detail.reviewer": "Granskare",
+  "rec.summary.detail.preliminary": "Preliminärt ur ansökningssvaret – ingen person har bekräftat",
+  "rec.summary.detail.unreviewed": "Inte granskat",
+  "rec.summary.detail.version": "Kravprofil v{v}",
+  "rec.summary.detail.merit": "Merit – påverkar inte kravstatusen",
+  "rec.summary.state.met": "Uppfyllt",
+  "rec.summary.state.not_met": "Inte uppfyllt",
+  "rec.summary.state.clarify": "Behöver klarläggas",
+  "rec.summary.actions": "Nästa åtgärder",
+  "rec.summary.action.confirm": "Bekräfta granskning",
+  "rec.summary.action.supplement": "Begär komplettering",
+  "rec.summary.action.supplementHint":
+    "Öppnar ett meddelandeutkast med granskarens neutrala klarläggandefrågor. Ingenting skickas förrän en person läser och skickar det.",
+  "rec.summary.action.supplementNone":
+    "Skriv en neutral klarläggandefråga på kravet i granskningen först; utkastet innehåller bara granskarens egna frågor.",
+  "rec.summary.action.prepare": "Förbered intervju",
+  "rec.summary.action.proceed": "Gå vidare",
+  "rec.summary.action.reject": "Ej aktuell",
+  "rec.summary.unavailable": "Kravgranskningen kunde inte läsas.",
+  "rec.summary.loading": "Läser kravgranskning…",
+  "rec.ri.reqs.showDefinitions": "Visa definitionerna",
+  "rec.ri.savedSources.guideCopy":
+    "Intervjuguidens rollkrav (C1–C6), sparade i ärendet som citerbart underlag när det skapades. Definitionerna visas en gång, i panelen Rollens krav.",
+  "rec.ri.savedSources.guideCopyLink": "Gå till Rollens krav",
+  "rec.ri.savedSources.guideCopyShow": "Visa den sparade ordalydelsen",
+  // ── Lifecycle v0.3: supplement, reopen, interview composition ──
+  "rec.error.supplementInvalid":
+    "Kompletteringen kunde inte begäras: välj minst ett skallkrav i aktuell kravprofilversion och skriv en text.",
+  "rec.error.supplementOpen":
+    "En kompletteringsbegäran är redan öppen för ansökan. Avsluta den först.",
+  "rec.error.supplementResolved": "Kompletteringsbegäran är redan avslutad.",
+  "rec.error.reopenReason": "Ange en orsak (minst 5 tecken) för att återöppna beslutet.",
+  "rec.error.reopenNotAllowed":
+    "Bara beslutet Ej aktuell kan återöppnas. Anställd har en anställningspost och återtagen är kandidatens eget beslut.",
+  "rec.error.reopenArchived":
+    "Ansökan är arkiverad. Återställ arkiveringen först; återöppning kringgår inte arkivet.",
+  "rec.error.erasurePending":
+    "En gallring pågår för rekryteringen. Inga ändringar kan göras förrän den är klar.",
+  "rec.error.compositionInvalid":
+    "Intervjuupplägget kunde inte sparas: varje post måste vara en fråga eller godkänd följdfråga ur paketversionen.",
+  "rec.error.compositionCore":
+    "Alla kärnfrågor i paketversionen måste ingå. Upplägget får inte vara en delmängd av kärnan.",
+  "rec.error.compositionDuplicate": "Samma fråga eller samma position förekommer två gånger.",
+  "rec.error.compositionReason": "Ange orsaken till ändringen av det delade upplägget.",
+  "rec.error.compositionPackFixed":
+    "Rekryteringens upplägg är bundet till en paketversion. Byt inte paket mitt i en rekrytering.",
+  "rec.error.schemaNotInstalled":
+    "Funktionen kräver en databasuppdatering som inte är installerad i den här miljön ännu.",
+  "rec.supplement.heading": "Komplettering",
+  "rec.supplement.awaiting": "Väntar på komplettering från kandidaten",
+  "rec.supplement.awaitingHint":
+    "Begärd {date}. Ett utkast finns under Kommunikation; ingenting skickas förrän en person skickar det. När svaret kommit granskar du kravet och markerar begäran som besvarad.",
+  "rec.supplement.none": "Ingen öppen kompletteringsbegäran.",
+  "rec.supplement.request": "Begär komplettering",
+  "rec.supplement.requested":
+    "Kompletteringsbegäran sparad som utkast. Öppna Kommunikation för att granska och skicka den.",
+  "rec.supplement.markAnswered": "Markera som besvarad",
+  "rec.supplement.withdraw": "Dra tillbaka begäran",
+  "rec.supplement.resolveNote": "Anteckning (valfri)",
+  "rec.supplement.history": "Tidigare begäranden",
+  "rec.supplement.outcome.answered": "Besvarad",
+  "rec.supplement.outcome.withdrawn": "Tillbakadragen",
+  "rec.supplement.message.draft": "utkast – inte skickat",
+  "rec.supplement.message.sent": "lämnat i kandidatens inkorg",
+  "rec.supplement.notInstalled":
+    "Kompletteringsbegäran som eget ärende kräver databasuppdateringen 20270311100000. Tills den är installerad öppnas ett vanligt meddelandeutkast med granskarens frågor.",
+  "rec.reopen.action": "Återöppna beslutet",
+  "rec.reopen.title": "Återöppna beslutet Ej aktuell?",
+  "rec.reopen.body":
+    "Ansökan går tillbaka till Under granskning och syns igen i den aktiva listan. Orsaken sparas i historiken. Ingenting skickas till kandidaten.",
+  "rec.reopen.reason": "Orsak",
+  "rec.reopen.reasonPlaceholder": "Varför återöppnas beslutet?",
+  "rec.reopen.confirm": "Återöppna",
+  "rec.reopen.done":
+    "Beslutet är återöppnat. Ansökan är under granskning igen och finns i Aktiva. Ingenting har skickats till kandidaten.",
+  "rec.reopen.notInstalled":
+    "Återöppning kräver databasuppdateringen 20270311100000, som inte är installerad i den här miljön ännu.",
+  "rec.composition.heading": "Intervjuupplägg",
+  "rec.composition.lede":
+    "Rekryteringens gemensamma upplägg för jämförbara intervjuer: kärnfrågorna ur den styrda guiden ingår alltid, godkända följdfrågor väljs. Upplägget versionsbinds per rekrytering; ett påbörjat ärende behåller sin version.",
+  "rec.composition.version": "Version {v}, fastställd {date}",
+  "rec.composition.none":
+    "Inget upplägg fastställt ännu. Kärnfrågorna gäller ändå i varje intervju.",
+  "rec.composition.boundCases":
+    "{n} intervjuärenden är bundna till en äldre version och behåller den.",
+  "rec.composition.group.intro": "Inledning, bakgrund och motivation",
+  "rec.composition.group.competence": "Rollkompetens och erfarenhet",
+  "rec.composition.group.scenarios": "Scenarier",
+  "rec.composition.group.probes": "Fördjupning (godkända följdfrågor)",
+  "rec.composition.group.beskt": "BESKT för rekrytering",
+  "rec.composition.group.clarifications": "Kandidatens klarlägganden",
+  "rec.composition.group.closing": "Kandidatens frågor och avslut",
+  "rec.composition.group.introHint":
+    "Ett strukturellt moment utan styrda frågor i paketversionen. Nya SV/EN-texter kräver mänskligt innehållsgodkännande innan de kan väljas.",
+  "rec.composition.group.besktHint":
+    "Ett eget metodläge med egen godkänd version. Väljs inte här; endast rekryteringsläget får användas i intervjuguiden.",
+  "rec.composition.group.clarificationsHint":
+    "Per kandidat: granskarens neutrala klarläggandefrågor förs över från kravgranskningen till ärendet och markeras som tillägg.",
+  "rec.composition.group.closingHint":
+    "Ett strukturellt moment utan styrda frågor i paketversionen.",
+  "rec.composition.core": "Kärnfråga – ingår alltid",
+  "rec.composition.probe": "Godkänd följdfråga",
+  "rec.composition.type.behavioural": "Beteendefråga",
+  "rec.composition.type.situational": "Scenariofråga",
+  "rec.composition.time": "{min}–{max} min",
+  "rec.composition.totalTime": "Beräknad tid: {min}–{max} min",
+  "rec.composition.covered": "Täckta kompetensområden: {covered} av {total}",
+  "rec.composition.missing": "Saknas: {codes}",
+  "rec.composition.order": "Ordning",
+  "rec.composition.save": "Fastställ upplägg",
+  "rec.composition.saveNew": "Fastställ ny version",
+  "rec.composition.reason": "Orsak till ändringen",
+  "rec.composition.reasonHint":
+    "Krävs från version 2. Ärenden som redan förberetts behåller sin version.",
+  "rec.composition.saved": "Upplägget är fastställt som version {v}.",
+  "rec.composition.draftResumed": "Osparade val återupptogs från den här webbläsaren.",
+  "rec.composition.readOnly": "Du kan läsa upplägget men inte ändra det.",
+  "rec.composition.notInstalled":
+    "Intervjuupplägg kräver databasuppdateringen 20270312100000, som inte är installerad i den här miljön ännu. Kärnfrågorna gäller oförändrat.",
+  "rec.composition.case.heading": "Rekryteringens upplägg",
+  "rec.composition.case.pinned": "Det här ärendet följer upplägg version {v}.",
+  "rec.composition.case.newer": "Rekryteringen har en nyare version ({v}); ärendet behåller sin.",
+  "rec.composition.case.none": "Ärendet skapades utan fastställt upplägg; kärnfrågorna gäller.",
+  "rec.composition.case.open": "Öppna rekryteringens upplägg",
+  "rec.composition.noAi":
+    "Inga frågor genereras. Allt innehåll kommer oförändrat ur paketversionen.",
+  "rec.decision.reopenNote":
+    "Återöppning av ett beslut är en separat behörig åtgärd med angiven orsak och ingår inte i den här versionen. Återställning från arkiv återöppnar inte beslutet.",
 } as const;
 
 export const recruitmentEn: { [K in keyof typeof recruitmentSv]: string } = {
@@ -778,7 +1008,8 @@ export const recruitmentEn: { [K in keyof typeof recruitmentSv]: string } = {
   "rec.lifecycle.title": "Archiving and retention",
   "rec.lifecycle.archive": "Archive",
   "rec.lifecycle.restore": "Restore from archive",
-  "rec.lifecycle.restored": "Archiving updated. Recruitment completion and retention dates are unchanged.",
+  "rec.lifecycle.restored":
+    "Archiving updated. Recruitment completion and retention dates are unchanged.",
   "rec.lifecycle.archivedNotice":
     "The application is archived. The retention date is unchanged. It leaves the active lists and shows under Archived and All received.",
   "rec.lifecycle.restoredNotice":
@@ -795,27 +1026,37 @@ export const recruitmentEn: { [K in keyof typeof recruitmentSv]: string } = {
   "rec.lifecycle.confirm": "Permanently delete this material?",
   "rec.lifecycle.cancel": "Cancel",
   "rec.lifecycle.scope": "Applications affected",
-  "rec.lifecycle.material": "The application and CV copy, attachments, answers, notes, messages, interviews, test assignments and application reports are deleted as counted below.",
-  "rec.lifecycle.kept": "The candidate account, Security Passport, own tests and material used in other applications or organisations are kept.",
+  "rec.lifecycle.material":
+    "The application and CV copy, attachments, answers, notes, messages, interviews, test assignments and application reports are deleted as counted below.",
+  "rec.lifecycle.kept":
+    "The candidate account, Security Passport, own tests and material used in other applications or organisations are kept.",
   "rec.lifecycle.files": "CV files",
   "rec.lifecycle.shared": "Shared files kept",
   "rec.lifecycle.rows": "Material records",
   "rec.lifecycle.purgeAt": "Expected retention deletion date",
-  "rec.lifecycle.active": "The period starts when the recruitment is actually completed. Active cases are not purged.",
-  "rec.lifecycle.missing": "Completion date is missing. Complete or clarify the recruitment ending before retention can be calculated. No date is assumed.",
-  "rec.lifecycle.clock": "Archiving, page views and notes do not change the completion date. Restoring does not reopen the recruitment.",
+  "rec.lifecycle.active":
+    "The period starts when the recruitment is actually completed. Active cases are not purged.",
+  "rec.lifecycle.missing":
+    "Completion date is missing. Complete or clarify the recruitment ending before retention can be calculated. No date is assumed.",
+  "rec.lifecycle.clock":
+    "Archiving, page views and notes do not change the completion date. Restoring does not reopen the recruitment.",
   "rec.lifecycle.period": "Organisation retention period after recruitment completion",
   "rec.lifecycle.six": "6 months",
   "rec.lifecycle.standard": "24 months (default)",
-  "rec.lifecycle.periodEffect": "This applies to the organisation’s completed recruitments. A shorter period may make older material due on the next server run.",
+  "rec.lifecycle.periodEffect":
+    "This applies to the organisation’s completed recruitments. A shorter period may make older material due on the next server run.",
   "rec.lifecycle.periodConfirm": "Change the organisation retention period?",
   "rec.lifecycle.save": "Save retention period",
-  "rec.lifecycle.pending": "Deletion pending. Retention deletion is complete only when database material and affected files have been deleted.",
-  "rec.lifecycle.failed": "Deletion needs attention. Remaining material or file failures are reported and retried on the server.",
+  "rec.lifecycle.pending":
+    "Deletion pending. Retention deletion is complete only when database material and affected files have been deleted.",
+  "rec.lifecycle.failed":
+    "Deletion needs attention. Remaining material or file failures are reported and retried on the server.",
   "rec.lifecycle.done": "Retention deletion is complete.",
   "rec.lifecycle.retry": "Retry",
-  "rec.lifecycle.error": "The action could not be completed. Refresh and check permissions, completion status and shared material.",
-  "rec.lifecycle.loadingError": "Retention details are unavailable. Contact your administrator if this persists.",
+  "rec.lifecycle.error":
+    "The action could not be completed. Refresh and check permissions, completion status and shared material.",
+  "rec.lifecycle.loadingError":
+    "Retention details are unavailable. Contact your administrator if this persists.",
   "rec.list.phase.archived": "Archived",
   "rec.filter.stage.archived": "Archived",
   "rec.lifecycle.records.applications": "Applications",
@@ -1537,4 +1778,226 @@ export const recruitmentEn: { [K in keyof typeof recruitmentSv]: string } = {
   "rec.pipeline.overlapNote":
     "The assessment and interview indicators overlap the stages: one candidate can be counted in more than one place.",
   "rec.batch.restrictedTeamLink": "See the team and the responsible person",
+  // ── Views, sub-steps and the next working step (lifecycle pass 2026-10-09) ──
+  "rec.view.aria": "View",
+  "rec.view.open": "Active",
+  "rec.view.decided": "Closed",
+  "rec.view.archived": "Archive",
+  "rec.view.all": "All",
+  "rec.view.received": "All received including archive",
+  "rec.view.hint.open":
+    "Applications without a decision that are not archived. This is the working list.",
+  "rec.view.hint.decided":
+    "Applications with a decision: not proceeding, hired or withdrawn. Nothing is deleted automatically.",
+  "rec.view.hint.archived":
+    "Archived applications. Archiving is a separate action after a decision and sends nothing to the candidate.",
+  "rec.view.hint.all": "Every application that is not archived, whatever its stage or decision.",
+  "rec.substep.aria": "Step within active",
+  "rec.substep.all": "All active",
+  "rec.substep.new": "New",
+  "rec.substep.review": "In review",
+  "rec.substep.clarify": "Needs clarification",
+  "rec.substep.interview": "Interview",
+  "rec.substep.clarifyHint":
+    "Active applications where a mandatory requirement needs clarifying according to the requirement status. A view over existing status, not a new application state.",
+  "rec.filters.more": "More filters",
+  "rec.filters.moreActive": "{n} active",
+  "rec.filters.simpleHint":
+    "Responsible and recruitment are the everyday filters. Requirement status, review, selection answers and sorting are under More filters.",
+  "rec.col.requirements": "Requirements",
+  "rec.col.review": "Human review",
+  "rec.col.nextStep": "Next step",
+  "rec.next.heading": "Next step",
+  "rec.next.hint":
+    "A suggested next working step from the stage, the requirement status and the human review. It does not rank candidates and changes nothing.",
+  "rec.next.review": "Review against the requirements",
+  "rec.next.clarify": "Clarify a mandatory requirement",
+  "rec.next.profile": "Establish the mandatory requirements in the recruitment",
+  "rec.next.decideNotMet": "Decide: a mandatory requirement is not met",
+  "rec.next.prepareInterview": "Prepare the interview",
+  "rec.next.interview": "Conduct the interview and decide",
+  "rec.next.reconfirm": "Confirm the review again",
+  "rec.next.tellCandidate": "Write the outcome to the candidate",
+  "rec.next.archive": "Archive once the candidate has been told",
+  "rec.next.none": "Nothing waiting",
+  "rec.table.analysisNote":
+    "Technical analysis is not used for any application. Requirement status and human review are separate.",
+  "rec.table.statistics": "Statistics: historical coverage of every received application",
+  "rec.table.statisticsHint":
+    "The numbers include archived and decided applications. The working list above shows only what can be done now.",
+  "rec.decision.saved.rejected":
+    "The decision Not proceeding is saved. The application has left the active list and the review queue and is now under Closed. Nothing has been sent to the candidate.",
+  "rec.decision.saved.hired":
+    "The decision Hired is saved. The application is now under Closed. Nothing has been sent to the candidate.",
+  "rec.decision.saved.stage": "The stage is saved. Nothing has been sent to the candidate.",
+  "rec.decision.saveFailed":
+    "The decision could not be saved. Nothing has changed and no notice has been sent. The page is reloading the current state.",
+  "rec.decision.notice.label": "Notice to the candidate",
+  "rec.decision.notice.internal": "Internal decision – no notice has been written or sent.",
+  "rec.decision.notice.prepared": "Notice prepared as a draft – not sent.",
+  "rec.decision.notice.queued":
+    "Notice placed in the candidate's CQrityjob inbox – the e-mail copy is queued or in flight.",
+  "rec.decision.notice.delivered":
+    "Notice delivered to the candidate's CQrityjob inbox – the e-mail copy was accepted by the provider, or e-mail is not used.",
+  "rec.decision.notice.failed":
+    "Notice placed in the candidate's CQrityjob inbox, but the e-mail copy failed or its outcome is unknown. Check under Communication; nothing is resent automatically.",
+  "rec.decision.nextCandidate": "Next candidate in the list",
+  "rec.decision.backToActive": "To active applications",
+  "rec.decision.closedView.rejected":
+    "The application is closed as Not proceeding. It is shown under Closed until a person archives it. Changing a colour or archiving never sends anything to the candidate, and nothing is deleted automatically.",
+  "rec.decision.closedView.hired":
+    "The application is closed as Hired. It is shown under Closed until a person archives it.",
+  "rec.decision.closedView.withdrawn":
+    "The candidate withdrew the application. It is shown under Closed until a person archives it; no notice needs writing.",
+  // ── Requirement summary in the application header ──
+  "rec.summary.heading": "Requirement review",
+  "rec.summary.profileVersion": "Requirement profile version {v}, confirmed {date}",
+  "rec.summary.profileMissing":
+    "Mandatory requirements not established. This is a problem in the recruitment's requirement profile, not with the candidate: confirm the requirements under Recruitment before applications can be reviewed.",
+  "rec.summary.openProfile": "Open the requirement profile",
+  "rec.summary.confirmed": "{n} of {m} mandatory requirements confirmed by a person",
+  "rec.summary.preliminary":
+    "{n} preliminarily met according to the candidate's own answers – not confirmed by a person",
+  "rec.summary.notMet": "Not met",
+  "rec.summary.unclear": "Unclear or insufficient basis",
+  "rec.summary.changed": "The basis has changed since confirmation",
+  "rec.summary.nothingMissing": "No mandatory requirement lacks confirmed basis.",
+  "rec.summary.greenRule":
+    "Green is shown only when every mandatory requirement is confirmed by a person. Unreviewed or insufficient basis is shown neutrally, and merits never compensate for a mandatory requirement.",
+  "rec.summary.preliminaryNote":
+    "Preliminary basis is assembled automatically from permitted data in the application. It is not a completed review, nothing is ticked automatically and no AI is used.",
+  "rec.summary.details": "Show the basis per requirement",
+  "rec.summary.detail.source": "Basis",
+  "rec.summary.detail.noSource": "No basis chosen",
+  "rec.summary.detail.sourceChanged": "changed since the decision",
+  "rec.summary.detail.reviewer": "Reviewer",
+  "rec.summary.detail.preliminary":
+    "Preliminary from the application answer – no person has confirmed",
+  "rec.summary.detail.unreviewed": "Not reviewed",
+  "rec.summary.detail.version": "Requirement profile v{v}",
+  "rec.summary.detail.merit": "Merit – does not affect the requirement status",
+  "rec.summary.state.met": "Met",
+  "rec.summary.state.not_met": "Not met",
+  "rec.summary.state.clarify": "Needs clarification",
+  "rec.summary.actions": "Next actions",
+  "rec.summary.action.confirm": "Confirm the review",
+  "rec.summary.action.supplement": "Request a supplement",
+  "rec.summary.action.supplementHint":
+    "Opens a message draft with the reviewer's neutral clarification questions. Nothing is sent until a person reads and sends it.",
+  "rec.summary.action.supplementNone":
+    "Write a neutral clarification question on the requirement in the review first; the draft contains only the reviewer's own questions.",
+  "rec.summary.action.prepare": "Prepare the interview",
+  "rec.summary.action.proceed": "Proceed",
+  "rec.summary.action.reject": "Not proceeding",
+  "rec.summary.unavailable": "The requirement review could not be read.",
+  "rec.summary.loading": "Loading requirement review…",
+  "rec.ri.reqs.showDefinitions": "Show the definitions",
+  "rec.ri.savedSources.guideCopy":
+    "The interview guide's role requirements (C1–C6), saved in the case as citable material when it was created. The definitions are shown once, in the Role requirements panel.",
+  "rec.ri.savedSources.guideCopyLink": "Go to Role requirements",
+  "rec.ri.savedSources.guideCopyShow": "Show the saved wording",
+  // ── Lifecycle v0.3: supplement, reopen, interview composition ──
+  "rec.error.supplementInvalid":
+    "The supplement could not be requested: choose at least one mandatory requirement of the current profile version and write a text.",
+  "rec.error.supplementOpen":
+    "A supplement request is already open for this application. Resolve it first.",
+  "rec.error.supplementResolved": "The supplement request is already resolved.",
+  "rec.error.reopenReason": "State a reason (at least 5 characters) to reopen the decision.",
+  "rec.error.reopenNotAllowed":
+    "Only the decision Not proceeding can be reopened. Hired has an employment record and withdrawn is the candidate's own decision.",
+  "rec.error.reopenArchived":
+    "The application is archived. Restore it first; reopening does not bypass the archive.",
+  "rec.error.erasurePending":
+    "An erasure is in progress for the recruitment. Nothing can change until it has finished.",
+  "rec.error.compositionInvalid":
+    "The interview setup could not be saved: every item must be a question or an approved follow-up from the pack version.",
+  "rec.error.compositionCore":
+    "Every core question of the pack version must be included. The setup may not be a subset of the core.",
+  "rec.error.compositionDuplicate": "The same question or the same position occurs twice.",
+  "rec.error.compositionReason": "State the reason for changing the shared setup.",
+  "rec.error.compositionPackFixed":
+    "The recruitment's setup is bound to one pack version. Do not switch packs mid-recruitment.",
+  "rec.error.schemaNotInstalled":
+    "This needs a database update that is not installed in this environment yet.",
+  "rec.supplement.heading": "Supplement",
+  "rec.supplement.awaiting": "Awaiting a supplement from the candidate",
+  "rec.supplement.awaitingHint":
+    "Requested {date}. A draft is under Communication; nothing is sent until a person sends it. When the answer arrives, review the requirement and mark the request as answered.",
+  "rec.supplement.none": "No open supplement request.",
+  "rec.supplement.request": "Request a supplement",
+  "rec.supplement.requested":
+    "Supplement request saved as a draft. Open Communication to review and send it.",
+  "rec.supplement.markAnswered": "Mark as answered",
+  "rec.supplement.withdraw": "Withdraw the request",
+  "rec.supplement.resolveNote": "Note (optional)",
+  "rec.supplement.history": "Earlier requests",
+  "rec.supplement.outcome.answered": "Answered",
+  "rec.supplement.outcome.withdrawn": "Withdrawn",
+  "rec.supplement.message.draft": "draft – not sent",
+  "rec.supplement.message.sent": "placed in the candidate's inbox",
+  "rec.supplement.notInstalled":
+    "A supplement request as its own record needs database update 20270311100000. Until it is installed, an ordinary message draft with the reviewer's questions opens instead.",
+  "rec.reopen.action": "Reopen the decision",
+  "rec.reopen.title": "Reopen the decision Not proceeding?",
+  "rec.reopen.body":
+    "The application returns to In review and appears in the active list again. The reason is kept in the history. Nothing is sent to the candidate.",
+  "rec.reopen.reason": "Reason",
+  "rec.reopen.reasonPlaceholder": "Why is the decision reopened?",
+  "rec.reopen.confirm": "Reopen",
+  "rec.reopen.done":
+    "The decision is reopened. The application is in review again and listed under Active. Nothing has been sent to the candidate.",
+  "rec.reopen.notInstalled":
+    "Reopening needs database update 20270311100000, which is not installed in this environment yet.",
+  "rec.composition.heading": "Interview setup",
+  "rec.composition.lede":
+    "The recruitment's shared setup for comparable interviews: the governed guide's core questions are always included, approved follow-ups are chosen. The setup is version-bound per recruitment; a case already prepared keeps its version.",
+  "rec.composition.version": "Version {v}, confirmed {date}",
+  "rec.composition.none":
+    "No setup confirmed yet. The core questions apply in every interview regardless.",
+  "rec.composition.boundCases": "{n} interview cases are bound to an older version and keep it.",
+  "rec.composition.group.intro": "Introduction, background and motivation",
+  "rec.composition.group.competence": "Role competence and experience",
+  "rec.composition.group.scenarios": "Scenarios",
+  "rec.composition.group.probes": "Deepening (approved follow-ups)",
+  "rec.composition.group.beskt": "BESKT for recruitment",
+  "rec.composition.group.clarifications": "The candidate's clarifications",
+  "rec.composition.group.closing": "The candidate's questions and closing",
+  "rec.composition.group.introHint":
+    "A structural step with no governed questions in the pack version. New SV/EN texts need human content approval before they can be chosen.",
+  "rec.composition.group.besktHint":
+    "A separate method mode with its own approved version. Not chosen here; only the recruitment mode may be used in the interview guide.",
+  "rec.composition.group.clarificationsHint":
+    "Per candidate: the reviewer's neutral clarification questions are carried from the requirement review into the case and marked as additions.",
+  "rec.composition.group.closingHint":
+    "A structural step with no governed questions in the pack version.",
+  "rec.composition.core": "Core question – always included",
+  "rec.composition.probe": "Approved follow-up",
+  "rec.composition.type.behavioural": "Behavioural question",
+  "rec.composition.type.situational": "Situational question",
+  "rec.composition.time": "{min}–{max} minutes",
+  "rec.composition.totalTime": "Estimated time: {min}–{max} min",
+  "rec.composition.covered": "Competency areas covered: {covered} of {total}",
+  "rec.composition.missing": "Missing: {codes}",
+  "rec.composition.order": "Order",
+  "rec.composition.save": "Confirm the setup",
+  "rec.composition.saveNew": "Confirm a new version",
+  "rec.composition.reason": "Reason for the change",
+  "rec.composition.reasonHint":
+    "Required from version 2. Cases already prepared keep their version.",
+  "rec.composition.saved": "The setup is confirmed as version {v}.",
+  "rec.composition.draftResumed": "Unsaved choices were resumed from this browser.",
+  "rec.composition.readOnly": "You can read the setup but not change it.",
+  "rec.composition.notInstalled":
+    "Interview setups need database update 20270312100000, which is not installed in this environment yet. The core questions apply unchanged.",
+  "rec.composition.case.heading": "The recruitment's setup",
+  "rec.composition.case.pinned": "This case follows setup version {v}.",
+  "rec.composition.case.newer":
+    "The recruitment has a newer version ({v}); the case keeps its own.",
+  "rec.composition.case.none":
+    "The case was created without a confirmed setup; the core questions apply.",
+  "rec.composition.case.open": "Open the recruitment's setup",
+  "rec.composition.noAi":
+    "No questions are generated. Everything comes unchanged from the pack version.",
+  "rec.decision.reopenNote":
+    "Reopening a decision is a separate authorised action with a stated reason and is not part of this version. Restoring from the archive does not reopen the decision.",
 };

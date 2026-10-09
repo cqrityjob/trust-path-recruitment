@@ -170,6 +170,55 @@ type FoundationFunctions = {
     Returns: { may_create: boolean; may_review: boolean }[];
   };
 };
+// Lifecycle v0.3 (slots 20270311100000 / 20270312100000). Handwritten like the
+// P1 overlay: the generator has not seen these functions until the schema is
+// installed, and the client has to call them tolerantly before that (a missing
+// function is reported as "not installed", never as a failure of the act).
+type LifecycleV03Functions = {
+  rec_ri_request_supplement: {
+    Args: {
+      _application_id: string;
+      _profile_id: string;
+      _requirement_ids: string[];
+      _subject: string;
+      _body: string;
+      _language: string;
+      _operation_id: string;
+    };
+    Returns: Json;
+  };
+  rec_ri_resolve_supplement: {
+    Args: { _request_id: string; _outcome: string; _note: string | null };
+    Returns: Json;
+  };
+  rec_ri_supplement_state: { Args: { _application_id: string }; Returns: Json };
+  rec_reopen_application: {
+    Args: {
+      _application_id: string;
+      _expected_status: string;
+      _reason: string;
+      _operation_id: string;
+    };
+    Returns: Json;
+  };
+  rec_ri_composition_catalog: {
+    Args: { _employer_id: string; _pack_version_id: string };
+    Returns: Json;
+  };
+  rec_ri_get_composition: { Args: { _job_id: string }; Returns: Json };
+  rec_ri_save_composition: {
+    Args: {
+      _job_id: string;
+      _expected_version: number;
+      _operation_id: string;
+      _pack_version_id: string;
+      _selection: Json;
+      _reason: string | null;
+    };
+    Returns: Json;
+  };
+  rec_ri_case_composition: { Args: { _case_id: string }; Returns: Json };
+};
 type Overrides = {
   bcp_conduct_record_resolution: Omit<Functions["bcp_conduct_record_resolution"], "Args"> & {
     Args: RequiredNullable<
@@ -204,12 +253,17 @@ export type Database = Omit<GeneratedDatabase, "public"> & {
   public: Omit<GeneratedDatabase["public"], "Functions" | "Tables"> & {
     Functions: Omit<
       Functions,
-      keyof Overrides | keyof FoundationFunctions | keyof EvidenceUploadFunctions | keyof RecruitmentIntelligenceFunctions
+      | keyof Overrides
+      | keyof FoundationFunctions
+      | keyof EvidenceUploadFunctions
+      | keyof RecruitmentIntelligenceFunctions
+      | keyof LifecycleV03Functions
     > &
       Overrides &
       FoundationFunctions &
       EvidenceUploadFunctions &
-      RecruitmentIntelligenceFunctions;
+      RecruitmentIntelligenceFunctions &
+      LifecycleV03Functions;
     Tables: Omit<Tables, keyof TableOverrides> & TableOverrides;
   };
 };

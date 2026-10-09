@@ -31,11 +31,18 @@ import {
   BASE,
   horizontalOverflow,
   installBoundary,
+  overflowingElements,
   observeSupabaseStorageKey,
   plantSession,
   shot,
 } from "./support/public-entry-harness";
-import { JOB_UPPSALA, SLUG, table } from "./support/employer-portal-fixture";
+import {
+  APP_CLOSED,
+  APP_REVIEW,
+  JOB_UPPSALA,
+  SLUG,
+  table,
+} from "./support/employer-portal-fixture";
 
 const SV = dictionaries.sv as Record<string, string>;
 const EN = dictionaries.en as Record<string, string>;
@@ -49,8 +56,13 @@ type Area = {
     | "assessments"
     | "interviews"
     | "reports"
-    | "requirements";
+    | "requirements"
+    | "application"
+    | "closed";
   path: string;
+  /** The base commit (main c2be0b39) scrolls sideways on this page at 375px;
+   *  the head is asserted, the base only recorded. */
+  overflowOnBase?: boolean;
   /** A locator that proves the page's own content rendered, not the shell. */
   ready: string;
   /** The flow strip's station, or null on a page inside one recruitment,
@@ -82,6 +94,24 @@ const AREAS: Area[] = [
     ready: "[data-testid='requirement-profile']",
     flow: null,
   },
+  // One open application: the requirement summary in the header, assembled
+  // from the candidate's own answer, with nothing ticked for them.
+  // The ready anchors are the decision section, which exists on the base
+  // commit too: the pair photographs the same page before and after.
+  {
+    key: "application",
+    path: `applications/${APP_REVIEW}`,
+    ready: "#candidate-decision",
+    flow: null,
+  },
+  // One closed application: "ej aktuell", told, archived -- the closed view.
+  {
+    key: "closed",
+    path: `applications/${APP_CLOSED}`,
+    ready: "#candidate-decision",
+    flow: null,
+    overflowOnBase: true,
+  },
 ];
 
 /** The boundary, a planted session, and the refusals to assert empty. The
@@ -102,6 +132,17 @@ async function signedIn(page: Page) {
  *  answers, by design. */
 async function primeLang(page: Page, lang: "sv" | "en") {
   await page.evaluate((l) => window.localStorage.setItem("cqrityjob.lang", l), lang);
+}
+
+/** The historical statistics are folded by default (the queue and the list
+ *  are the work); a number inside is clicked or read after opening the fold. */
+async function openStatistics(page: Page) {
+  const fold = page.locator("[data-testid='counts-history']");
+  if (
+    (await fold.count()) > 0 &&
+    !(await fold.first().evaluate((d) => (d as HTMLDetailsElement).open))
+  )
+    await fold.first().locator(":scope > summary").click();
 }
 
 async function open(page: Page, area: Area) {
@@ -130,10 +171,24 @@ test.describe("employer portal — one journey", () => {
         await expect(
           page.getByText("Exempelvakt AB").filter({ visible: true }).first(),
         ).toBeVisible();
-        expect(
-          await horizontalOverflow(page),
-          `${area.key} (${lang}, ${width}px) scrolls sideways`,
-        ).toBe(0);
+        const overflow = await horizontalOverflow(page);
+        if (overflow !== 0) {
+          // Which element, not only how many pixels.
+          const culprits = await overflowingElements(page);
+          // The base commit is photographed as it is; its own sideways scroll
+          // on a page this pass changed is recorded in the trace, not asserted
+          // -- the head asserts it.
+          if (!(BEFORE && area.overflowOnBase)) {
+            expect(
+              overflow,
+              `${area.key} (${lang}, ${width}px) scrolls sideways: ${culprits.join(" | ")}`,
+            ).toBe(0);
+          } else {
+            console.warn(
+              `base: ${area.key} (${lang}, ${width}px) scrolls ${overflow}px: ${culprits.join(" | ")}`,
+            );
+          }
+        }
         await shot(
           page,
           `${BEFORE ? "before" : "after"}-${area.key}-${lang}-${width}`,
@@ -146,6 +201,146 @@ test.describe("employer portal — one journey", () => {
 
   test.describe("the journey has one thread (head only)", () => {
     test.skip(BEFORE, "behaviour assertions describe the head, not the base");
+
+    test("the application list is a working list: Aktiva first, sub-steps, the rest behind a fold, a next step per row", async ({
+      page,
+    }) => {
+      const refusals = await signedIn(page);
+      await primeLang(page, "sv");
+      await open(page, AREAS[2]!);
+      const views = page.locator("[data-testid='list-views']");
+      await expect(views.locator("button")).toHaveText([
+        /^Aktiva/,
+        /^Avslutade/,
+        /^Arkiv/,
+        /^Alla/,
+      ]);
+      await expect(views.locator("[data-testid='view-open']")).toHaveAttribute(
+        "aria-current",
+        "page",
+      );
+      // Aktiva: the open applications only (four of the five received).
+      await expect(page.locator("tbody tr")).toHaveCount(4);
+      await expect(page.locator("[data-testid='list-substeps'] button")).toHaveCount(5);
+      await expect(page.locator("[data-testid='substep-all']")).toHaveAttribute(
+        "aria-pressed",
+        "true",
+      );
+      // The everyday filters are in the open; the rest is folded, closed.
+      await expect(page.locator("[data-testid='owner-filter']")).toBeVisible();
+      await expect(page.locator("[data-testid='recruitment-filter']")).toBeVisible();
+      const fold = page.locator("[data-testid='more-filters']");
+      await expect(fold).not.toHaveAttribute("open", "");
+      await expect(page.locator("[data-testid='requirement-filter']")).toBeHidden();
+      // Every row says what to do next, from the shared projection: Ali (new,
+      // gray, unreviewed) → clarify; Birgitta (reviewing, green, reviewed) →
+      // prepare the interview; Kim (interview) → interview; Dana (no
+      // profile status) → the profile.
+      const kinds = await page
+        .locator("tbody tr [data-testid='next-step']")
+        .evaluateAll((els) => els.map((e) => e.getAttribute("data-kind")));
+      expect(kinds.sort()).toEqual(["clarify", "interview", "prepareInterview", "profile"]);
+      // "Technical analysis: not used" is said once, not per row.
+      await expect(page.getByText(SV["rec.table.analysisNote"]!)).toHaveCount(1);
+      // The statistics come after the list and are folded.
+      const stats = page.locator("[data-testid='counts-history']");
+      await expect(stats).toHaveCount(1);
+      await expect(stats).not.toHaveAttribute("open", "");
+      // Avslutade: the decided, not archived -- none here (Erik is archived).
+      await views.locator("[data-testid='view-decided']").click();
+      await expect(page).toHaveURL(/stage=decided/);
+      await expect(page.locator("[data-testid='candidate-empty']")).toBeVisible();
+      // Arkiv: Erik.
+      await views.locator("[data-testid='view-archived']").click();
+      await expect(page).toHaveURL(/stage=archived/);
+      await expect(page.locator("tbody tr")).toHaveCount(1);
+      await expect(page.locator("tbody tr").first()).toContainText("Erik Efterhand");
+      // Back to Aktiva, then the clarify sub-step: the server's open+gray list.
+      await views.locator("[data-testid='view-open']").click();
+      await expect(page).not.toHaveURL(/stage=/);
+      await page.locator("[data-testid='substep-clarify']").click();
+      await expect(page).toHaveURL(/requirement=gray/);
+      await expect(page.locator("tbody tr")).toHaveCount(1);
+      await expect(page.locator("tbody tr").first()).toContainText("Ali Ansökande");
+      // A filter from behind the fold, arriving by URL, opens the fold.
+      await open(page, { ...AREAS[2]!, path: "applications?review=stale" });
+      await expect(fold).toHaveAttribute("open", "");
+      assertNoRefusals(refusals);
+    });
+
+    test("the application header counts human-confirmed mandatory requirements, and a blank answer ticks nothing", async ({
+      page,
+    }) => {
+      const refusals = await signedIn(page);
+      await primeLang(page, "sv");
+      await open(page, AREAS[7]!);
+      const summary = page.locator("[data-testid='requirement-summary']");
+      await expect(summary).toBeVisible();
+      await expect(summary).toHaveAttribute("data-status", "gray");
+      await expect(summary).toHaveAttribute("data-review", "pending");
+      await expect(summary.locator("[data-testid='requirement-summary-count']")).toHaveText(
+        "0 av 1 skallkrav bekräftade av en person",
+      );
+      await expect(summary.locator("[data-testid='requirement-summary-preliminary']")).toHaveCount(
+        0,
+      );
+      await expect(summary.locator("[data-testid='requirement-summary-gaps']")).toContainText(
+        /Oklart eller otillräckligt underlag:\s*Godkänd väktarutbildning/,
+      );
+      // Colour + text + symbol, from the server's status.
+      const badge = summary.locator("[data-testid='requirement-status']");
+      await expect(badge).toContainText("Behöver klarläggas");
+      await expect(badge.locator("svg")).toHaveCount(1);
+      // Every status opens to its basis: source, reviewer, version.
+      const details = summary.locator("[data-testid='requirement-summary-details']");
+      await details.locator("summary").click();
+      const rows = details.locator("[data-testid='requirement-summary-criterion']");
+      await expect(rows).toHaveCount(2);
+      await expect(rows.nth(0)).toHaveAttribute("data-human", "false");
+      await expect(rows.nth(0)).toContainText("Inget underlag valt");
+      await expect(rows.nth(0)).toContainText("Kravprofil v1");
+      await expect(rows.nth(1)).toContainText("Merit – påverkar inte kravstatusen");
+      // The next actions, and the supplement request carries the reviewer's
+      // own neutral question into a DRAFT, which is not sent.
+      const actions = summary.locator("[data-testid='requirement-summary-actions']");
+      await expect(actions.locator("button")).toHaveText([
+        "Bekräfta granskning",
+        "Begär komplettering",
+        "Förbered intervju",
+        "Markera som under granskning",
+        "Ej aktuell",
+      ]);
+      await actions.locator("[data-testid='summary-action-supplement']").click();
+      const composer = page.locator("#candidate-communication");
+      await expect(composer.locator("textarea").first()).toHaveValue(
+        /Vilket år fick du ditt utbildningsbevis/,
+      );
+      await expect(composer.getByRole("button", { name: "Granska och skicka" })).toBeVisible();
+      assertNoRefusals(refusals);
+    });
+
+    test("a closed application: the record stays, the notice state is a separate fact, no actions", async ({
+      page,
+    }) => {
+      const refusals = await signedIn(page);
+      await primeLang(page, "sv");
+      await open(page, AREAS[8]!);
+      const summary = page.locator("[data-testid='requirement-summary']");
+      await expect(summary).toBeVisible();
+      await expect(summary).toHaveAttribute("data-status", "gray");
+      await expect(summary.locator("[data-testid='requirement-summary-count']")).toHaveText(
+        "1 av 1 skallkrav bekräftade av en person",
+      );
+      await expect(summary.locator("[data-testid='requirement-summary-actions']")).toHaveCount(0);
+      const closed = page.locator("[data-testid='decision-closed-view']");
+      await expect(closed).toContainText(SV["rec.decision.closedView.rejected"]!);
+      await expect(closed).toContainText(SV["rec.decision.reopenNote"]!);
+      const notice = page.locator("[data-testid='candidate-notice-state']");
+      await expect(notice).toHaveAttribute("data-state", "delivered");
+      await expect(notice).not.toContainText(/\bSkickat\b/);
+      await expect(page.locator("[data-testid='archived-state']")).toBeVisible();
+      assertNoRefusals(refusals);
+    });
 
     test("the flow strip is on every area page and marks the current step", async ({ page }) => {
       test.setTimeout(240_000);
@@ -253,8 +448,17 @@ test.describe("employer portal — one journey", () => {
       const n = async (testId: string) =>
         Number(await counts.locator(`[data-testid='${testId}'] strong`).innerText());
       // The queue first, apart from the historical block, with its own heading.
+      // The historical block is folded until a reader opens it: the queue is
+      // the work, the statistics are the explanation.
       const queue = counts.locator("[data-testid='review-queue']");
       await expect(queue).toBeVisible();
+      await expect(counts.locator("[data-testid='counts-history']")).not.toHaveAttribute(
+        "open",
+        "",
+      );
+      await expect(counts.locator("[data-testid='count-received']")).toBeHidden();
+      await openStatistics(page);
+      await expect(counts.locator("[data-testid='count-received']")).toBeVisible();
       await expect(queue.getByText(SV["rec.counts.queue.label"]!)).toBeVisible();
       await expect(queue.getByText(SV["rec.counts.queue.hint"]!)).toBeVisible();
       await expect(counts.getByText(SV["rec.counts.history.heading"]!)).toBeVisible();
@@ -295,6 +499,7 @@ test.describe("employer portal — one journey", () => {
       // the archived application is listed too when it is still unreviewed --
       // here it is reviewed, so the lists coincide but the scope differs.
       await page.goBack();
+      await openStatistics(page);
       await counts.locator("[data-testid='count-remaining']").click();
       await expect(page).toHaveURL(/stage=received/);
       await expect(page).toHaveURL(/review=remaining/);
@@ -406,6 +611,7 @@ test.describe("employer portal — one journey", () => {
         SV["rec.overview.counts.title"]!,
       );
       await expect(counts.getByText(SV["rec.overview.counts.intro"]!)).toBeVisible();
+      await openStatistics(page);
       const details = counts.locator("[data-testid='counts-explanation']");
       await details.locator("summary").click();
       await expect(details.getByText(SV["rec.counts.explain.remaining"]!)).toBeVisible();

@@ -131,6 +131,10 @@ export function BookingBadge({ status }: { status: string }) {
   );
 }
 
+// Two-part labels: on a 375px phone the pill wraps inside its row instead
+// of pushing the page sideways.
+const deliveryPill = "max-w-full whitespace-normal text-left";
+
 /** What happened to a message, said in two parts: it is in the candidate's
  *  CQrityjob inbox, and separately what the e-mail provider answered. */
 export function DeliveryBadge({
@@ -147,49 +151,49 @@ export function DeliveryBadge({
   switch (d) {
     case "draft":
       return (
-        <Pill icon={FileEdit} tone="neutral">
+        <Pill icon={FileEdit} tone="neutral" className={deliveryPill}>
           {t("rec.message.delivery.draft")}
         </Pill>
       );
     case "delivered_email_sent":
       return (
-        <Pill icon={MailCheck} tone="success">
+        <Pill icon={MailCheck} tone="success" className={deliveryPill}>
           {t("rec.message.delivery.emailSent")}
         </Pill>
       );
     case "delivered_email_sending":
       return (
-        <Pill icon={Mail} tone="info">
+        <Pill icon={Mail} tone="info" className={deliveryPill}>
           {t("rec.message.delivery.emailSending")}
         </Pill>
       );
     case "delivered_email_failed":
       return (
-        <Pill icon={MailWarning} tone="warning">
+        <Pill icon={MailWarning} tone="warning" className={deliveryPill}>
           {t("rec.message.delivery.emailFailed")}
         </Pill>
       );
     case "delivered_email_not_configured":
       return (
-        <Pill icon={MailWarning} tone="warning">
+        <Pill icon={MailWarning} tone="warning" className={deliveryPill}>
           {t("rec.message.delivery.emailNotConfigured")}
         </Pill>
       );
     case "delivered_in_app_only":
       return (
-        <Pill icon={Inbox} tone="info">
+        <Pill icon={Inbox} tone="info" className={deliveryPill}>
           {t("rec.message.delivery.inApp")}
         </Pill>
       );
     case "delivered_email_pending":
       return (
-        <Pill icon={Mail} tone="info">
+        <Pill icon={Mail} tone="info" className={deliveryPill}>
           {t("rec.message.delivery.emailPending")}
         </Pill>
       );
     case "delivered_email_unknown":
       return (
-        <Pill icon={MailWarning} tone="warning">
+        <Pill icon={MailWarning} tone="warning" className={deliveryPill}>
           {t("rec.message.delivery.emailUnknown")}
         </Pill>
       );

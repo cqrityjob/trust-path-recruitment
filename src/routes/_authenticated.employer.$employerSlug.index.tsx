@@ -917,7 +917,105 @@ function EmployerOverview({
         />
       </dl>
 
-      <RecruiterOverviewCounts employerId={employerId} employerSlug={employerSlug} />
+      {/* B2. What to do now, before the tables: the overview answers "what do
+          I do now" first; the recruitments and the statistics follow. */}
+      <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+        <section aria-labelledby="employer-actions">
+          <h2 id="employer-actions" className="text-lg font-semibold text-foreground">
+            {t("employer.actions.heading")}
+          </h2>
+          {actions.length === 0 ? (
+            <p className="mt-3 text-sm text-muted-foreground">{t("employer.actions.empty")}</p>
+          ) : (
+            <ul className="mt-3 divide-y divide-border rounded-lg border border-border bg-background">
+              {actions.map((item) => (
+                <li key={item.key}>
+                  {/* The whole row is the link. A number that is described as
+                    actionable and then needs a second, smaller target to act
+                    on is a number the employer has to aim at. Rows, not
+                    cards: the list is work to do, and it should read like one. */}
+                  <Link
+                    {...item.linkProps}
+                    className="flex flex-wrap items-center justify-between gap-3 px-3 py-2 transition-colors hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                  >
+                    <span className="flex min-w-0 items-center gap-3">
+                      <span
+                        className={
+                          "inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md " +
+                          (item.tone === "todo"
+                            ? "bg-accent/10 text-accent"
+                            : "bg-muted text-muted-foreground")
+                        }
+                        aria-hidden="true"
+                      >
+                        {item.icon}
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block text-sm font-medium text-foreground">
+                          <span className="tabular-nums">{item.count}</span> {item.text}
+                        </span>
+                        {item.tone === "waiting" && (
+                          <span className="block text-xs text-muted-foreground">
+                            {t("employer.actions.waitingLabel")}
+                          </span>
+                        )}
+                      </span>
+                    </span>
+                    <span className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-accent">
+                      {item.actionLabel}
+                      <ArrowRight className="h-3 w-3" aria-hidden="true" />
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        <section
+          id="upcoming-interviews"
+          aria-labelledby="upcoming-interviews-h"
+          className="scroll-mt-24"
+        >
+          <h2 id="upcoming-interviews-h" className="text-lg font-semibold text-foreground">
+            {t("rec.overview.upcomingHeading")}
+          </h2>
+          {overviewQuery.isError ? (
+            <p className="mt-3 text-sm text-muted-foreground">{t("rec.overview.unavailable")}</p>
+          ) : upcoming.length === 0 ? (
+            <p className="mt-3 text-sm text-muted-foreground">
+              {overviewQuery.isLoading ? t("employer.loading") : t("rec.overview.upcomingEmpty")}
+            </p>
+          ) : (
+            <ul className="mt-3 divide-y divide-border rounded-lg border border-border bg-background">
+              {upcoming.slice(0, 8).map((u) => (
+                <li key={u.bookingId}>
+                  <Link
+                    to="/employer/$employerSlug/applications/$applicationId"
+                    params={{ employerSlug, applicationId: u.applicationId }}
+                    hash="candidate-bookings"
+                    className="block px-3 py-2 hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                  >
+                    <span className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="text-sm font-medium tabular-nums">
+                        {formatInZone(u.startsAt, u.timezone, lang)}
+                      </span>
+                      <BookingBadge status={u.status} />
+                    </span>
+                    <span className="block text-sm text-foreground">
+                      {u.candidateName ?? t("employer.applications.anonymousCandidate")}
+                      <span className="text-xs text-muted-foreground">
+                        {" · "}
+                        {titleOf(u.jobTitleSv, u.jobTitleEn)}
+                      </span>
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
 
       {/* C. Active recruitments, as a table a recruiter reads down. */}
       <section className="mt-6" aria-labelledby="active-recruitments">
@@ -1033,104 +1131,9 @@ function EmployerOverview({
         )}
       </section>
 
-      {/* D. Tasks and upcoming interviews, side by side when there is room. */}
-      <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-        <section aria-labelledby="employer-actions">
-          <h2 id="employer-actions" className="text-lg font-semibold text-foreground">
-            {t("employer.actions.heading")}
-          </h2>
-          {actions.length === 0 ? (
-            <p className="mt-3 text-sm text-muted-foreground">{t("employer.actions.empty")}</p>
-          ) : (
-            <ul className="mt-3 divide-y divide-border rounded-lg border border-border bg-background">
-              {actions.map((item) => (
-                <li key={item.key}>
-                  {/* The whole row is the link. A number that is described as
-                    actionable and then needs a second, smaller target to act
-                    on is a number the employer has to aim at. Rows, not
-                    cards: the list is work to do, and it should read like one. */}
-                  <Link
-                    {...item.linkProps}
-                    className="flex flex-wrap items-center justify-between gap-3 px-3 py-2 transition-colors hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
-                  >
-                    <span className="flex min-w-0 items-center gap-3">
-                      <span
-                        className={
-                          "inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md " +
-                          (item.tone === "todo"
-                            ? "bg-accent/10 text-accent"
-                            : "bg-muted text-muted-foreground")
-                        }
-                        aria-hidden="true"
-                      >
-                        {item.icon}
-                      </span>
-                      <span className="min-w-0">
-                        <span className="block text-sm font-medium text-foreground">
-                          <span className="tabular-nums">{item.count}</span> {item.text}
-                        </span>
-                        {item.tone === "waiting" && (
-                          <span className="block text-xs text-muted-foreground">
-                            {t("employer.actions.waitingLabel")}
-                          </span>
-                        )}
-                      </span>
-                    </span>
-                    <span className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-accent">
-                      {item.actionLabel}
-                      <ArrowRight className="h-3 w-3" aria-hidden="true" />
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-
-        <section
-          id="upcoming-interviews"
-          aria-labelledby="upcoming-interviews-h"
-          className="scroll-mt-24"
-        >
-          <h2 id="upcoming-interviews-h" className="text-lg font-semibold text-foreground">
-            {t("rec.overview.upcomingHeading")}
-          </h2>
-          {overviewQuery.isError ? (
-            <p className="mt-3 text-sm text-muted-foreground">{t("rec.overview.unavailable")}</p>
-          ) : upcoming.length === 0 ? (
-            <p className="mt-3 text-sm text-muted-foreground">
-              {overviewQuery.isLoading ? t("employer.loading") : t("rec.overview.upcomingEmpty")}
-            </p>
-          ) : (
-            <ul className="mt-3 divide-y divide-border rounded-lg border border-border bg-background">
-              {upcoming.slice(0, 8).map((u) => (
-                <li key={u.bookingId}>
-                  <Link
-                    to="/employer/$employerSlug/applications/$applicationId"
-                    params={{ employerSlug, applicationId: u.applicationId }}
-                    hash="candidate-bookings"
-                    className="block px-3 py-2 hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
-                  >
-                    <span className="flex flex-wrap items-center justify-between gap-2">
-                      <span className="text-sm font-medium tabular-nums">
-                        {formatInZone(u.startsAt, u.timezone, lang)}
-                      </span>
-                      <BookingBadge status={u.status} />
-                    </span>
-                    <span className="block text-sm text-foreground">
-                      {u.candidateName ?? t("employer.applications.anonymousCandidate")}
-                      <span className="text-xs text-muted-foreground">
-                        {" · "}
-                        {titleOf(u.jobTitleSv, u.jobTitleEn)}
-                      </span>
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-      </div>
+      {/* E. Statistics: the historical coverage of every received application,
+          folded. It explains the numbers; it is not the work. */}
+      <RecruiterOverviewCounts employerId={employerId} employerSlug={employerSlug} />
 
       {/* E. The other areas of the product, below the work. Recruitment has
           no card here: the header action, the three counts and the table above

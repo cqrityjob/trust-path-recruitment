@@ -57,6 +57,7 @@ export function RecruiterOverviewCounts({
     <div className="mt-5">
       <RecruiterCounts
         counts={query.data.intelligenceCounts}
+        collapsible
         title={t("rec.overview.counts.title")}
         intro={t("rec.overview.counts.intro")}
         queue={{

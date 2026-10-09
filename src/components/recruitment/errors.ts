@@ -31,6 +31,25 @@ const MAP: Record<string, TranslationKey> = {
   MESSAGE_NOT_FOUND: "rec.error.notFound",
   MESSAGE_NOT_EDITABLE: "rec.error.messageNotEditable",
   MESSAGE_KEY_REUSED: "rec.error.generic",
+  // Lifecycle v0.3 (slots 20270311100000 / 20270312100000)
+  RI_SUPPLEMENT_INVALID: "rec.error.supplementInvalid",
+  RI_SUPPLEMENT_OPEN: "rec.error.supplementOpen",
+  RI_SUPPLEMENT_RESOLVED: "rec.error.supplementResolved",
+  RI_SUPPLEMENT_NOT_FOUND: "rec.error.notFound",
+  RI_STALE_VERSION: "rec.error.stale",
+  RI_OPERATION_CONFLICT: "rec.error.generic",
+  REOPEN_REASON_REQUIRED: "rec.error.reopenReason",
+  REOPEN_NOT_ALLOWED: "rec.error.reopenNotAllowed",
+  APPLICATION_ARCHIVED: "rec.error.reopenArchived",
+  RETENTION_ERASURE_PENDING: "rec.error.erasurePending",
+  RI_COMPOSITION_INVALID: "rec.error.compositionInvalid",
+  RI_COMPOSITION_CORE_REQUIRED: "rec.error.compositionCore",
+  RI_COMPOSITION_FOREIGN_ITEM: "rec.error.compositionInvalid",
+  RI_COMPOSITION_DUPLICATE: "rec.error.compositionDuplicate",
+  RI_COMPOSITION_REASON_REQUIRED: "rec.error.compositionReason",
+  RI_COMPOSITION_PACK_FIXED: "rec.error.compositionPackFixed",
+  RI_PACK_VERSION_NOT_FOUND: "rec.error.notFound",
+  SCHEMA_NOT_INSTALLED: "rec.error.schemaNotInstalled",
 };
 
 export function recruitmentErrorKey(code: string | null | undefined): TranslationKey {

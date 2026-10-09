@@ -15,8 +15,68 @@ const STATUS = "src/components/recruitment/RecruiterStatus.tsx";
 const STEP_NAV = "src/components/recruitment/ProcessStepNav.tsx";
 const PANELS = "src/components/recruitment/ApplicationPanels.tsx";
 const REPORTS = `${R}reports.tsx`;
+const WORKFLOW = "src/lib/recruitment/application-workflow.ts";
+const TABLE = "src/components/recruitment/CandidateTable.tsx";
 
 const MUTATIONS: Mutation[] = [
+  {
+    id: "EPF-MISSING-RPC-IS-A-GENERIC-FAILURE",
+    defect: "a missing lifecycle RPC is reported as a generic failure instead of 'not installed'",
+    file: "src/lib/recruitment/lifecycle-v03.functions.ts",
+    find: '  if (isSchemaMissing(error)) return new Error("SCHEMA_NOT_INSTALLED");',
+    replace: '  if (isSchemaMissing(error)) return new Error("RECRUITMENT_ACTION_FAILED");',
+    guard: G,
+    expect: "a missing RPC is 'not installed' on every read",
+  },
+  {
+    id: "EPF-CORE-QUESTIONS-BECOME-OPTIONAL",
+    defect:
+      "the composition offers the core questions as checkboxes, so a setup can be a subset of the core",
+    file: "src/lib/recruitment/interview-composition.ts",
+    find: '    out.push({\n      group: q.questionType === "situational" ? "scenarios" : "competence",\n      kind: "core_question",\n      itemId: q.id,',
+    replace:
+      '    if (chosenProbes.has(q.id)) out.push({\n      group: q.questionType === "situational" ? "scenarios" : "competence",\n      kind: "core_question",\n      itemId: q.id,',
+    guard: G,
+    expect: "The core questions are always in the selection",
+  },
+  {
+    id: "EPF-PRELIMINARY-COUNTS-AS-CONFIRMED",
+    defect:
+      "the header counts a state the server derived from the candidate's own answer as a confirmed requirement",
+    file: WORKFLOW,
+    find: '  const confirmedMet = mandatory.filter((c) => c.state === "met" && human(c) && c.sourceCurrent);',
+    replace:
+      '  const confirmedMet = mandatory.filter((c) => c.state === "met" && c.sourceCurrent);',
+    guard: G,
+    expect: "'confirmed' means a PERSON recorded met",
+  },
+  {
+    id: "EPF-FAILED-EMAIL-READS-AS-DELIVERED",
+    defect: "a failed or unknown e-mail outcome is reported as a delivered notice",
+    file: WORKFLOW,
+    find: '    case "failed":\n    case "unknown":\n      return "failed";',
+    replace: '    case "failed":\n    case "unknown":\n      return "delivered";',
+    guard: G,
+    expect: "a failed or unknown e-mail is 'failed'",
+  },
+  {
+    id: "EPF-CLARIFY-BECOMES-A-STATUS",
+    defect: "the 'needs clarification' sub-step stops being the server's open+gray view",
+    file: WORKFLOW,
+    find: '  if (stage === "open" && view.requirement === "gray") return "clarify";',
+    replace: '  if (stage === "open" && view.review === "pending") return "clarify";',
+    guard: G,
+    expect: "'Behöver klarläggande' is the server's open+gray list",
+  },
+  {
+    id: "EPF-ROWS-LOSE-THEIR-NEXT-STEP",
+    defect: "the list rows stop saying what to do next",
+    file: TABLE,
+    find: '    <span\n      data-testid="next-step"',
+    replace: '    <span\n      data-testid="next-step-label"',
+    guard: G,
+    expect: "every row carries the suggested next step",
+  },
   {
     id: "EPF-REVIEW-ROW-OPENS-THE-OLD-STATUS-FILTER",
     defect:
