@@ -97,7 +97,11 @@ export type ServerFnTable = Record<string, ServerFnStub>;
  *  Unparseable or absent bodies read as `{}`, never as a thrown error inside
  *  a route handler (which Playwright would report as a page failure). */
 function argumentsOf(route: Route): Record<string, unknown> {
-  const raw = route.request().postData();
+  // A POST server function carries its arguments in the body; a GET one in
+  // the URL's `payload` parameter (TanStack Start's encoding). Both decode
+  // the same way; neither is trusted beyond "the arguments of this call".
+  const raw =
+    route.request().postData() ?? new URL(route.request().url()).searchParams.get("payload");
   if (!raw) return {};
   try {
     const decoded = fromJSON(JSON.parse(raw)) as { data?: unknown };

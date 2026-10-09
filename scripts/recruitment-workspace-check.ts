@@ -341,7 +341,9 @@ const sql = read(F.migration);
     "C · requirement editors reset their target and draft when the job changes",
   );
   ok(
-    /jobId === null && view\.job/.test(table),
+    /if \(!page \|\| s === "archived" \|\| \(jobId === null && view\.job\)\) return "";/.test(
+      table,
+    ),
     "C · a retained job filter does not label stages with organisation-wide numbers",
   );
   ok(

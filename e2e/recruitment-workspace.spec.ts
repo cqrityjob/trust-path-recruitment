@@ -161,13 +161,20 @@ const casePath = (jobId: string, search = "") => `/employer/${SLUG}/jobs/${jobId
 
 /** The historical statistics are folded by default (the queue and the list
  *  are the work); a number inside is clicked or read after opening the fold. */
+/** The less frequent filters are behind a fold; a test that uses one opens it. */
+async function openMoreFilters(page: Page) {
+  const fold = page.locator("[data-testid='more-filters']");
+  if ((await fold.count()) > 0 && !(await fold.evaluate((d) => (d as HTMLDetailsElement).open)))
+    await fold.locator(":scope > summary").click();
+}
+
 async function openStatistics(page: Page) {
   const fold = page.locator("[data-testid='counts-history']");
   if (
     (await fold.count()) > 0 &&
     !(await fold.first().evaluate((d) => (d as HTMLDetailsElement).open))
   )
-    await fold.first().locator("summary").click();
+    await fold.first().locator(":scope > summary").click();
 }
 
 async function open(page: Page, path: string) {
@@ -289,6 +296,7 @@ test.describe("recruitment case", () => {
     // Filters over the whole list, not a sample: the licence question was
     // answered yes by every odd-numbered applicant.
     await open(page, casePath(BIG, "?step=applications&stage=all"));
+    await openMoreFilters(page);
     const licence = page.locator("select").filter({ hasText: "Alla svar" }).first();
     await licence.selectOption({ label: "Ja" });
     await expect(pager(page)).toContainText("av 2525");
@@ -423,10 +431,13 @@ test.describe("recruitment case", () => {
       page.getByText("Arkiverade ansökningar räknas inte", { exact: false }).first(),
     ).toBeVisible();
     const counts = page.locator("[data-testid='recruiter-counts']");
-    await openStatistics(page);
+    // The block renders once the organisation-wide read has answered; on a
+    // cold local stack that is the slowest read on the page.
+    await expect(counts).toBeVisible({ timeout: 60_000 });
     await expect(counts.getByRole("heading", { level: 2 })).toHaveText(
       "Kravgranskning av mottagna ansökningar",
     );
+    await openStatistics(page);
     await counts.locator("[data-testid='counts-explanation'] summary").click();
     await expect(counts.getByText(/gäller rekryteringen/)).toBeVisible();
     // Requirement status is a symbol and a label in each count button.
@@ -556,7 +567,9 @@ test.describe("recruitment case", () => {
   }) => {
     test.setTimeout(180_000);
     await signIn(page, "anna.agare@nordvakt.test");
-    const list = `/employer/${SLUG}/applications?job=${JOB}`;
+    // The recruitment's own list: its view counts are the recruitment's. (The
+    // organisation list narrowed to one recruitment hides counts by design.)
+    const list = casePath(JOB, "?step=applications");
     await open(page, list);
     await expect(page.locator("[data-testid='candidate-table']")).toBeVisible({ timeout: 90_000 });
     // The working list: Aktiva is the default view, with its count.

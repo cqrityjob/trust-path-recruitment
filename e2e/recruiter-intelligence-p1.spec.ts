@@ -70,7 +70,7 @@ async function openStatistics(page: Page) {
     (await fold.count()) > 0 &&
     !(await fold.first().evaluate((d) => (d as HTMLDetailsElement).open))
   )
-    await fold.first().locator("summary").click();
+    await fold.first().locator(":scope > summary").click();
 }
 async function counters(page: Page, reviewed = 27) {
   await openStatistics(page);

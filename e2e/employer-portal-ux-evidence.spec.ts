@@ -92,17 +92,19 @@ const AREAS: Area[] = [
   },
   // One open application: the requirement summary in the header, assembled
   // from the candidate's own answer, with nothing ticked for them.
+  // The ready anchors are the decision section, which exists on the base
+  // commit too: the pair photographs the same page before and after.
   {
     key: "application",
     path: `applications/${APP_REVIEW}`,
-    ready: "[data-testid='requirement-summary']",
+    ready: "#candidate-decision",
     flow: null,
   },
   // One closed application: "ej aktuell", told, archived -- the closed view.
   {
     key: "closed",
     path: `applications/${APP_CLOSED}`,
-    ready: "[data-testid='decision-closed-view']",
+    ready: "#candidate-decision",
     flow: null,
   },
 ];
@@ -135,7 +137,7 @@ async function openStatistics(page: Page) {
     (await fold.count()) > 0 &&
     !(await fold.first().evaluate((d) => (d as HTMLDetailsElement).open))
   )
-    await fold.first().locator("summary").click();
+    await fold.first().locator(":scope > summary").click();
 }
 
 async function open(page: Page, area: Area) {
@@ -254,6 +256,7 @@ test.describe("employer portal — one journey", () => {
       await primeLang(page, "sv");
       await open(page, AREAS[7]!);
       const summary = page.locator("[data-testid='requirement-summary']");
+      await expect(summary).toBeVisible();
       await expect(summary).toHaveAttribute("data-status", "gray");
       await expect(summary).toHaveAttribute("data-review", "pending");
       await expect(summary.locator("[data-testid='requirement-summary-count']")).toHaveText(
@@ -304,6 +307,7 @@ test.describe("employer portal — one journey", () => {
       await primeLang(page, "sv");
       await open(page, AREAS[8]!);
       const summary = page.locator("[data-testid='requirement-summary']");
+      await expect(summary).toBeVisible();
       await expect(summary).toHaveAttribute("data-status", "gray");
       await expect(summary.locator("[data-testid='requirement-summary-count']")).toHaveText(
         "1 av 1 skallkrav bekräftade av en person",
