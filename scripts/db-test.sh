@@ -266,17 +266,6 @@ if [ "$RI_P1_RC" -ne 0 ] || [ "$RI_P1_PASSED" -lt 95 ]; then
 else
   echo "    ok  ${RI_P1_PASSED} actual P1 counts, sources, CAS, access and handoff assertions"
 fi
-<<<<<<< HEAD
-# Current workspace extension must be checked while080 is still present. The
-# focused runner requires36 SQL checks, real two-session CAS/audit races and
-# nonempty refusal + empty DOWN/reapply without changing old P1 definitions.
-echo "==> Running reviewed-profile workspace and data-preserving DOWN assertions"
-TEST_DB="$TEST_DB" bash scripts/recruiter-workspace-check.sh
-# Empty test schema only: stand down this newer consumer before the unchanged
-# historical080 rollback drops its profiles/schema. Never drop real audit data.
-psql_q -d "$TEST_DB" -f supabase/rollback/20270310100000_recruiter_profile_change_review_rollback.sql >/dev/null
-[ "$(psql_q -d "$TEST_DB" -Atc "SELECT to_regclass('recruiter_intelligence.profile_change_reviews') IS NULL")" = "t" ] || exit 1
-=======
 # Slutuppdrag 2026-10-09 (slots 111 and 121): the supplement request, the
 # reopen act and the interview composition, against the full current schema.
 echo "==> Running recruitment lifecycle v0.3 (supplement, reopen, composition)"
@@ -300,7 +289,15 @@ psql_q -d "$TEST_DB" -f supabase/rollback/20270311100000_recruitment_supplement_
 RL_STOOD_DOWN="$(psql_q -d "$TEST_DB" -Atc "SELECT (to_regclass('public.rec_interview_compositions') IS NULL AND to_regclass('public.rec_requirement_supplement_requests') IS NULL AND to_regprocedure('public.rec_reopen_application(uuid,text,text,uuid)') IS NULL AND NOT EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='scp_interview_cases' AND column_name='composition_id'))::text")"
 [ "$RL_STOOD_DOWN" = "true" ] || { echo "FAIL: lifecycle v0.3 rollbacks left a consumer behind." >&2; exit 1; }
 echo "    ok  lifecycle v0.3 slots stood down before historical consumers"
->>>>>>> 89d3a5f3 (feat(schema): supplement request, reopen act and interview composition (slots 20270311100000, 20270312100000))
+# Current workspace extension must be checked while080 is still present. The
+# focused runner requires36 SQL checks, real two-session CAS/audit races and
+# nonempty refusal + empty DOWN/reapply without changing old P1 definitions.
+echo "==> Running reviewed-profile workspace and data-preserving DOWN assertions"
+TEST_DB="$TEST_DB" bash scripts/recruiter-workspace-check.sh
+# Empty test schema only: stand down this newer consumer before the unchanged
+# historical080 rollback drops its profiles/schema. Never drop real audit data.
+psql_q -d "$TEST_DB" -f supabase/rollback/20270310100000_recruiter_profile_change_review_rollback.sql >/dev/null
+[ "$(psql_q -d "$TEST_DB" -Atc "SELECT to_regclass('recruiter_intelligence.profile_change_reviews') IS NULL")" = "t" ] || exit 1
 
 # Both current-schema suites have run. Stand down the newest EMPTY additive
 # journal before080/071 and the older Passport era. Its own-read policy depends

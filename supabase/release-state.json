@@ -3649,7 +3649,6 @@
       ]
     },
     {
-<<<<<<< HEAD
       "file": "20270310100000_recruiter_profile_change_review.sql",
       "hostedState": "pending",
       "introduces": [
@@ -3685,7 +3684,8 @@
       "rollback": "supabase/rollback/20270310100000_recruiter_profile_change_review_rollback.sql",
       "note": "Schema-only, stacked after lifecycle20270310090000. Read-only comparison/page evidence/next-unreviewed and a human-reviewed profile-confirmation wrapper reuse existing member/manage/source/redaction and PT409 contracts. One private append-only profile-change audit. No client consumers, AI, stage changes, candidate sends, snapshot/report mutation or hosted installation. Keep unmerged pending owner release decision because a merge may trigger automatic installation.",
       "verify": "Run the 36 synthetic workspace SQL assertions, unchanged95 P1 assertions, actual two-SQL-session profile CAS/idempotency and locked empty/nonempty DOWN/reapply witness in an isolated ci_test database. Require strict full replay/history and actual PostgREST14/Auth/API/browser proof separately; local bootstrap role fixtures are not real Auth. Before any authorized installation compare exact six function bodies/ACL and private audit definition, verify prior ledgers/snapshots/locks/reports unchanged and record actual hosted evidence."
-=======
+    },
+    {
       "file": "20270311100000_recruitment_supplement_and_reopen.sql",
       "hostedState": "pending",
       "note": "Slutuppdrag 2026-10-09, slot supplement111. Additive: supplement_request as its own message kind (draft only, never sent here), rec_requirement_supplement_requests with an immutable open row, and rec_reopen_application (rejected -> reviewing, manager only, stated reason, refused on archive/completed/erasure pending, idempotent). No AI, no automatic message, no retention activation. Install after 20270310100000; application consumers ship after verified hosted installation.",
@@ -3754,7 +3754,6 @@
           "object": "rec_ri_case_composition"
         }
       ]
->>>>>>> 89d3a5f3 (feat(schema): supplement request, reopen act and interview composition (slots 20270311100000, 20270312100000))
     }
   ], 
   "policyVersion": 2, 
