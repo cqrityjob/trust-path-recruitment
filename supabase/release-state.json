@@ -8,7 +8,10 @@
   "frontier": [
     {
       "file": "20270310090000_interview_method_lifecycle_revocation.sql",
-      "hostedState": "pending",
+      "hostedState": "applied",
+      "hostedVersion": "20270310090000",
+      "hostedName": "interview_method_lifecycle_revocation",
+      "evidenceSource": "Installed by the official Supabase GitHub integration after #464 merged to main (dfe08858, 2026-10-09). Read-only verification 2026-10-09: hosted ledger 389 rows ending 20270310100000 (md5 195fd45d), prior 387 identities unchanged. See docs/release/2026-10-09-lifecycle-v03-hosted-verification.json.",
       "introduces": [],
       "rollback": "supabase/rollback/20270310090000_interview_method_lifecycle_revocation_rollback.sql",
       "note": "Schema-only forward correction of existing method/grant guards. Suspended/retired versions cannot start new cases; genuine grant revocation remains possible. Existing frozen cases, content versions and final reports are preserved. This migration is not installed or approved for production by the 2026-10-08 final-review assignment. A merge carrying this migration would trigger a production installation, so keep this PR unmerged pending a deployment decision. No AI, retention worker, candidate send or publication.",
@@ -3650,7 +3653,10 @@
     },
     {
       "file": "20270310100000_recruiter_profile_change_review.sql",
-      "hostedState": "pending",
+      "hostedState": "applied",
+      "hostedVersion": "20270310100000",
+      "hostedName": "recruiter_profile_change_review",
+      "evidenceSource": "Installed by the official Supabase GitHub integration after #464 merged to main (dfe08858, 2026-10-09). Read-only verification 2026-10-09: ledger row present; the six workspace functions and recruiter_intelligence.profile_change_reviews exist with the declared signatures. See docs/release/2026-10-09-lifecycle-v03-hosted-verification.json.",
       "introduces": [
         {
           "kind": "function",
@@ -3687,7 +3693,10 @@
     },
     {
       "file": "20270311100000_recruitment_supplement_and_reopen.sql",
-      "hostedState": "pending",
+      "hostedState": "applied",
+      "hostedVersion": "20270311100000",
+      "hostedName": "recruitment_supplement_and_reopen",
+      "evidenceSource": "Installed by the official Supabase GitHub integration after #467 merged to main (44bc3f48, 2026-10-09 10:53Z). Read-only verification: ledger 391 rows, prior 389 unchanged (md5 195fd45d); rec_requirement_supplement_requests RLS on, 0 rows, no client-role grant; five functions present, RPCs executable by authenticated only, guard owner-only; recruitment_messages kind check includes supplement_request. See docs/release/2026-10-09-lifecycle-v03-hosted-verification.json.",
       "note": "Slutuppdrag 2026-10-09, slot supplement111. Additive: supplement_request as its own message kind (draft only, never sent here), rec_requirement_supplement_requests with an immutable open row, and rec_reopen_application (rejected -> reviewing, manager only, stated reason, refused on archive/completed/erasure pending, idempotent). No AI, no automatic message, no retention activation. Install after 20270310100000; application consumers ship after verified hosted installation.",
       "rollback": "supabase/rollback/20270311100000_recruitment_supplement_and_reopen_rollback.sql",
       "verify": "Full-history replay plus supabase/tests/recruitment_lifecycle_v03_test.sql (supplement request/resolve/idempotency/open-conflict, reopen CAS/reason/archive/completed refusals, no client DML). Rollback refuses recorded requests or reopen operations. Hosted read-only parity of 4 functions, 1 table, 1 trigger and the kind constraint before any applied entry.",
@@ -3720,7 +3729,10 @@
     },
     {
       "file": "20270312100000_interview_question_composition.sql",
-      "hostedState": "pending",
+      "hostedState": "applied",
+      "hostedVersion": "20270312100000",
+      "hostedName": "interview_question_composition",
+      "evidenceSource": "Installed by the official Supabase GitHub integration after #467 merged to main (44bc3f48, 2026-10-09 10:53Z). Read-only verification: rec_interview_compositions RLS on, 0 rows, no client-role grant; scp_interview_cases.composition_id uuid nullable; immutability and pin triggers bound; six functions present, RPCs executable by authenticated only. See docs/release/2026-10-09-lifecycle-v03-hosted-verification.json.",
       "note": "Slutuppdrag 2026-10-09, slot composition121. Additive: versioned immutable interview setup per recruitment over ONE pack version (every core question of the version plus chosen approved probes, grouped and ordered); cases pin the version current at creation via a nullable scp_interview_cases.composition_id. scp_iv_start_session, scp_iv_report_blockers, snapshots, locks and the eight-core-question contract are untouched. No new interview texts; no AI.",
       "rollback": "supabase/rollback/20270312100000_interview_question_composition_rollback.sql",
       "verify": "Full-history replay plus supabase/tests/recruitment_lifecycle_v03_test.sql (catalog from the seeded Väktare pack, save with CAS/idempotency, core-required, foreign-item, duplicate and pack-fixed refusals, reason from version 2, immutability, pin trigger). Existing interview suites unchanged. Rollback refuses pinned or confirmed compositions.",
