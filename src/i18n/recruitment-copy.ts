@@ -1067,6 +1067,21 @@ export const recruitmentSv = {
   "rec.error.comparisonInvalid": "Välj två eller tre ansökningar från samma rekrytering.",
   "rec.error.compositionVettingOnly":
     "Den valda BESKT-frågan hör inte till rekryteringsintervjun (säkerhetsprövning, integritetskänslig eller förberedelsefas).",
+  "rec.queue.unavailable": "Nästa ogranskade kunde inte läsas.",
+  "rec.summary.staleCaveat":
+    "Den bekräftade granskningen gäller en äldre kravprofilversion och räknas inte som bekräftelse av de nuvarande kraven. Bekräfta igen mot version {v}.",
+  "rec.composition.pack": "Intervjuguide",
+  "rec.composition.packStatus.draft": "utkast",
+  "rec.composition.packStatus.in_review": "under granskning",
+  "rec.composition.packStatus.published": "publicerad",
+  "rec.composition.packStatus.suspended": "pausad",
+  "rec.composition.packStatus.retired": "avslutad",
+  "rec.composition.validation.pilot_hypothesis": "pilot – innehållet är en hypotes, inte validerat",
+  "rec.composition.validation.content_validated": "innehållet validerat",
+  "rec.composition.counts": "{core} kärnfrågor · {probes} följdfrågor · {beskt} BESKT-frågor",
+  "rec.composition.orderHint":
+    "Kärnfrågorna i guidens ordning; en följdfråga ställs efter den fråga den fördjupar; BESKT-frågorna sist.",
+  "rec.composition.beskt.short": "BESKT",
 } as const;
 
 export const recruitmentEn: { [K in keyof typeof recruitmentSv]: string } = {
@@ -2143,4 +2158,20 @@ export const recruitmentEn: { [K in keyof typeof recruitmentSv]: string } = {
   "rec.error.comparisonInvalid": "Choose two or three applications from the same recruitment.",
   "rec.error.compositionVettingOnly":
     "The chosen BESKT question does not belong to the recruitment interview (security vetting, integrity-sensitive or preparation phase).",
+  "rec.queue.unavailable": "The next unreviewed application could not be read.",
+  "rec.summary.staleCaveat":
+    "The confirmed review concerns an older requirement profile version and does not count as a confirmation of the current requirements. Confirm again against version {v}.",
+  "rec.composition.pack": "Interview guide",
+  "rec.composition.packStatus.draft": "draft",
+  "rec.composition.packStatus.in_review": "in review",
+  "rec.composition.packStatus.published": "published",
+  "rec.composition.packStatus.suspended": "suspended",
+  "rec.composition.packStatus.retired": "retired",
+  "rec.composition.validation.pilot_hypothesis":
+    "pilot – the content is a hypothesis, not validated",
+  "rec.composition.validation.content_validated": "content validated",
+  "rec.composition.counts": "{core} core questions · {probes} follow-ups · {beskt} BESKT questions",
+  "rec.composition.orderHint":
+    "The core questions in the guide's order; a follow-up is asked after the question it deepens; the BESKT questions last.",
+  "rec.composition.beskt.short": "BESKT",
 };

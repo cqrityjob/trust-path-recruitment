@@ -253,7 +253,8 @@ export function InterviewCompositionPanel({
           >
             {packs.data.packs.map((p) => (
               <option key={p.packVersionId} value={p.packVersionId}>
-                {name(p.name, p.nameEn)} · v{p.versionNumber} · {p.contentStatus}
+                {name(p.name, p.nameEn)} · v{p.versionNumber} ·{" "}
+                {t(`rec.composition.packStatus.${p.contentStatus}` as TranslationKey)}
               </option>
             ))}
           </select>
@@ -262,7 +263,24 @@ export function InterviewCompositionPanel({
 
       {cat && chosen && coverage && (
         <>
-          <p className="mt-3 text-xs text-muted-foreground">{t("rec.composition.noAi")}</p>
+          {/* The approved guide this setup is bound to, said once in plain
+              words: name, version, its real status and what may be claimed. */}
+          <p className="mt-3 text-sm" data-testid="composition-pack-summary">
+            <span className="font-medium">{t("rec.composition.pack")}:</span>{" "}
+            {name(cat.packName?.sv, cat.packName?.en)} · v{cat.versionNumber} ·{" "}
+            {t(`rec.composition.packStatus.${cat.contentStatus}` as TranslationKey)} ·{" "}
+            {t(`rec.composition.validation.${cat.validationLabel}` as TranslationKey)}
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground" data-testid="composition-counts">
+            {t("rec.composition.counts")
+              .replace("{core}", String(selection.filter((s) => s.kind === "core_question").length))
+              .replace(
+                "{probes}",
+                String(selection.filter((s) => s.kind === "approved_probe").length),
+              )
+              .replace("{beskt}", String(selection.filter((s) => s.kind === "beskt_item").length))}
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">{t("rec.composition.noAi")}</p>
           <ol className="mt-3 space-y-4" data-testid="composition-groups">
             {COMPOSITION_GROUPS.map((group) => (
               <li
@@ -461,11 +479,12 @@ export function InterviewCompositionPanel({
                   s.kind === "core_question"
                     ? cat.coreQuestions.find((q) => q.id === s.itemId)?.code
                     : s.kind === "beskt_item"
-                      ? "B"
-                      : "↳",
+                      ? t("rec.composition.beskt.short")
+                      : `+${t("rec.composition.probe").toLowerCase()}`,
                 )
-                .join(" ")}
+                .join(" · ")}
             </p>
+            <p className="mt-0.5 text-xs text-muted-foreground">{t("rec.composition.orderHint")}</p>
             <p className="mt-1">
               {t("rec.composition.totalTime")
                 .replace("{min}", String(coverage.min))

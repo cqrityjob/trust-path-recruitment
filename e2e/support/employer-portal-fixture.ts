@@ -718,6 +718,14 @@ export const table: Record<string, unknown | ((args: Record<string, unknown>) =>
         }
       : null,
   getProfileChangeHistory: [],
+  // The next open application without a confirmed review, oldest first (Ali,
+  // the first Uppsala applicant); three remain; the archived, decided Erik
+  // stands outside the queue.
+  getNextUnreviewed: {
+    remaining: 3,
+    historicalExcluded: 1,
+    next: { applicationId: APP(1), jobId: JOB_UPPSALA, name: "Ali Ansökande", profileVersion: 1 },
+  },
   getRecruitmentTeam: [{ userId: USER, name: "Rita Rekryterare", role: "owner", isSelf: true }],
   // The hub's material-lifecycle panel: nothing archived, nothing due.
   getLifecycleOverview: {

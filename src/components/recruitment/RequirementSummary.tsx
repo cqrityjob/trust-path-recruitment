@@ -156,6 +156,15 @@ export function RequirementSummary({
               .replace("{n}", String(summary.confirmedMet))
               .replace("{m}", String(summary.mandatoryTotal))}
           </p>
+          {review.reviewState === "stale" && (
+            <p
+              role="status"
+              className="mt-1 rounded-md border border-amber-500/40 bg-amber-500/10 px-2 py-1 text-xs"
+              data-testid="requirement-summary-stale"
+            >
+              {t("rec.summary.staleCaveat").replace("{v}", String(review.profile.version))}
+            </p>
+          )}
           {summary.preliminaryMet > 0 && (
             <p
               className="mt-1 text-xs text-muted-foreground"
