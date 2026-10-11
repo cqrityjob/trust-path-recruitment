@@ -13,8 +13,8 @@
   ],
   "source": "Supabase connector read-only SQL, explicit project wrygicdfxwjnrugduxnt",
   "projectRef": "wrygicdfxwjnrugduxnt",
-  "readAt": "2026-10-09T10:53:21.518762+00:00",
-  "readBy": "Read-only verification 2026-10-09 after #464 (merge dfe08858) and #467 (merge 44bc3f48) were installed by the official integration. Ledger 391 rows ending 20270312100000; the prior 389 rows unchanged (version+name md5 195fd45d). New tables RLS on, empty, no client-role grant; eleven new functions with identity arguments, body hashes and ACLs recorded; composition_id column, three triggers and the supplement_request message kind present. Full capture: docs/release/2026-10-09-lifecycle-v03-hosted-verification.json. No production fixtures or workers.",
+  "readAt": "2026-10-11T14:54:54.939609+00:00",
+  "readBy": "Read-only verification 2026-10-11 after #468 (merge 9774c9c0, head 8a736dd4) was installed by the official integration. Ledger 394 rows ending 20270315100000; the prior 391 rows unchanged (version+name md5 8a2b78d8); all 394 md5 497fb4e7. rec_candidate_replies RLS on, empty, SELECT-only for authenticated; eight functions with identity arguments, body hashes and ACLs recorded and equal to the local full replay. Full capture: docs/release/2026-10-11-slutuppdrag-hosted-verification.json. No production fixtures or workers.",
   "versions": [
     {
       "version": "20260716153446",
@@ -1579,6 +1579,18 @@
     {
       "version": "20270312100000",
       "name": "interview_question_composition"
+    },
+    {
+      "version": "20270313100000",
+      "name": "requirement_profile_change_reason"
+    },
+    {
+      "version": "20270314100000",
+      "name": "candidate_supplement_reply"
+    },
+    {
+      "version": "20270315100000",
+      "name": "interview_composition_beskt_items"
     }
   ]
 }
