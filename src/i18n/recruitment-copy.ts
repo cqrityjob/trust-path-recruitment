@@ -2081,7 +2081,7 @@ export const recruitmentEn: { [K in keyof typeof recruitmentSv]: string } = {
     "The impact could not be read right now; load the stored profile and try again.",
   "rec.profile.history.heading": "Change history",
   "rec.profile.history.none": "No motivated changes recorded.",
-  "rec.profile.history.entry": "Version {v} · {date}",
+  "rec.profile.history.entry": "Version {v}, confirmed {date}",
   "rec.profile.history.by": "by {name}",
   "rec.profile.history.impact": "{reviewed} confirmed reviews became out of date",
   "rec.profile.history.first":
