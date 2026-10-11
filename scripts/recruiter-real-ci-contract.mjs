@@ -2,8 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 import cp from "node:child_process";
 
-export const SCHEMA_SHA = "7416a1397c392efc9ef9fe096a3d3d404887eb40";
-export const APP_SHA = "7416a1397c392efc9ef9fe096a3d3d404887eb40";
+export const SCHEMA_SHA = "3e2b646cdde22349ae6ec89d615b5dbfd06ccaa6";
+export const APP_SHA = "3e2b646cdde22349ae6ec89d615b5dbfd06ccaa6";
 export const PROJECT = "cqj-ri-real-20261008b";
 export const API = "http://127.0.0.1:55690";
 export const APP = "http://127.0.0.1:3140";
