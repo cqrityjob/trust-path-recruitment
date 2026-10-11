@@ -2,8 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 
-export const APP_SHA = "3e2b646cdde22349ae6ec89d615b5dbfd06ccaa6";
-export const SCHEMA_SHA = "3e2b646cdde22349ae6ec89d615b5dbfd06ccaa6";
+export const APP_SHA = "53659419a1c243c27a59540eb849569140b71365";
+export const SCHEMA_SHA = "53659419a1c243c27a59540eb849569140b71365";
 export const PROJECT = "cqj-ri-native-p1-100";
 export const API = "http://127.0.0.1:55810";
 export const APP = "http://127.0.0.1:35810";
