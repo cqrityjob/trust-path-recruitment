@@ -56,6 +56,7 @@ type RecruitmentWorkspaceKeys =
   | "rec_ri_compare_applications"
   | "rec_ri_next_unreviewed"
   | "rec_ri_page_evidence";
+type CandidateReplyKeys = "rec_candidate_reply_to_message";
 type FoundationColumns =
   | "origin"
   | "neutral_question"
@@ -76,11 +77,17 @@ export type ContractAssertions = [
   Assert<Equal<Bcp["_expected_revision"], number>>,
   Assert<Equal<Finalise["_case_id"], string>>,
   Assert<Equal<Finalise["_expected_basis_hash"], string>>,
+  // rec_candidate_replies (slot 20270314100000) is handwritten in the overlay
+  // until the generator has seen the hosted schema, like the function overlays.
   Assert<
     Equal<
-      Omit<Database["public"]["Tables"], "scp_interview_findings">,
+      Omit<Database["public"]["Tables"], "scp_interview_findings" | "rec_candidate_replies">,
       Omit<Generated["public"]["Tables"], "scp_interview_findings">
     >
+  >,
+  Assert<Equal<Database["public"]["Tables"]["rec_candidate_replies"]["Row"]["body"], string>>,
+  Assert<
+    Equal<Database["public"]["Tables"]["rec_candidate_replies"]["Row"]["language"], string | null>
   >,
   Assert<
     Equal<
@@ -106,6 +113,7 @@ export type ContractAssertions = [
         | RecruitmentIntelligenceKeys
         | LifecycleV03Keys
         | RecruitmentWorkspaceKeys
+        | CandidateReplyKeys
       >,
       Omit<
         Generated["public"]["Functions"],
@@ -116,6 +124,7 @@ export type ContractAssertions = [
         | RecruitmentIntelligenceKeys
         | LifecycleV03Keys
         | RecruitmentWorkspaceKeys
+        | CandidateReplyKeys
       >
     >
   >,

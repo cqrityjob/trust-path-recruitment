@@ -839,10 +839,11 @@ test.describe("recruitment case", () => {
     await expect(page.locator("[data-testid='candidate-table']")).toBeVisible({ timeout: 60_000 });
   });
 
-  test("a supplement: requested as a record, sent by a person, answered by the candidate IN THE APP through the real API, read by the reviewer and resolved by hand", async ({
+  test("a supplement: requested as a record, sent by a person, answered by the candidate IN THE APP in their own browser, read by the reviewer and resolved by hand", async ({
     page,
+    browser,
   }) => {
-    test.setTimeout(240_000);
+    test.setTimeout(300_000);
     const applicationId = "a6000000-0000-4000-8000-000000000020"; // kandidat20: answered No, No
     // The supplement's body is the reviewer's own neutral questions, recorded
     // on the review (a saved draft, not a confirmation): one per mandatory
@@ -939,14 +940,49 @@ test.describe("recruitment case", () => {
     });
     expect(foreign.status).not.toBe(200);
     expect(String(foreign.body.message ?? "")).toContain("MESSAGE_NOT_FOUND");
-    const reply = await rpcAs(kim20, "rec_candidate_reply_to_message", {
-      _message_id: messageId,
-      _body:
+    // ── The addressed candidate answers IN THE APP, in a browser of their own ──
+    // The sent request is on their application card, unfolded, with the
+    // answer field under it; the saved answer is confirmed and listed, and it
+    // is still there after a reload (persisted, not local state).
+    const kimCtx = await browser.newContext({ locale: "sv-SE" });
+    const kimPage = await kimCtx.newPage();
+    await signIn(kimPage, "kandidat20@test.local");
+    await open(kimPage, `/my-career/applications?application=${applicationId}`);
+    const card = kimPage.locator(`#application-${applicationId}`);
+    await expect(card).toBeVisible({ timeout: 90_000 });
+    const request = card.locator("[data-testid='candidate-supplement-request']");
+    await expect(request).toBeVisible({ timeout: 60_000 });
+    await expect(request).toContainText("Begäran om komplettering");
+    const replyBox = request.locator("[data-testid='candidate-supplement-reply']");
+    await expect(replyBox).toHaveAttribute("data-replies", "0");
+    await expect(replyBox.locator("[data-testid='candidate-reply-not-installed']")).toHaveCount(0);
+    await expect(replyBox.locator("[data-testid='candidate-reply-send']")).toBeDisabled();
+    await replyBox
+      .locator("[data-testid='candidate-reply-body']")
+      .fill(
         "Utbildningsbeviset är från 2021, Bevakningsskolan Syd. Jag tar med originalet till intervjun.",
-      _language: "sv",
+      );
+    await replyBox.locator("[data-testid='candidate-reply-send']").click();
+    await expect(replyBox.locator("[data-testid='candidate-reply-saved']")).toBeVisible({
+      timeout: 30_000,
     });
-    expect(reply.status).toBe(200);
-    expect(reply.body.applicationId).toBe(applicationId);
+    await expect(replyBox.locator("[data-testid='candidate-reply-saved']")).toContainText(
+      "Ditt svar sparades",
+    );
+    await expect(replyBox.locator("[data-testid='candidate-reply']")).toHaveCount(1, {
+      timeout: 30_000,
+    });
+    await kimPage.reload();
+    await expect(
+      card
+        .locator("[data-testid='candidate-supplement-reply'] [data-testid='candidate-reply']")
+        .first(),
+    ).toContainText("Bevakningsskolan Syd", { timeout: 60_000 });
+    expect(
+      sql(
+        `SELECT count(*) FROM public.rec_candidate_replies WHERE application_id = '${applicationId}' AND message_id = '${messageId}'`,
+      ) ?? "1",
+    ).toBe("1");
     // The reviewer reads the answer where the request lives, and resolves it.
     await page.reload();
     await expect(supplementPanel.locator("[data-testid='supplement-replied']")).toBeVisible({
@@ -968,6 +1004,20 @@ test.describe("recruitment case", () => {
     });
     expect(late.status).not.toBe(200);
     expect(String(late.body.message ?? "")).toContain("SUPPLEMENT_ALREADY_RESOLVED");
+    // In the app the same refusal is a sentence, and the field goes away.
+    await kimPage.reload();
+    const again = kimPage
+      .locator(`#application-${applicationId} [data-testid='candidate-supplement-reply']`)
+      .first();
+    await expect(again).toBeVisible({ timeout: 60_000 });
+    await again.locator("[data-testid='candidate-reply-body']").fill("För sent.");
+    await again.locator("[data-testid='candidate-reply-send']").click();
+    await expect(again.locator("[data-testid='candidate-reply-resolved']")).toBeVisible({
+      timeout: 30_000,
+    });
+    await expect(again.locator("[data-testid='candidate-reply-body']")).toHaveCount(0);
+    await expect(again.locator("[data-testid='candidate-reply']")).toHaveCount(1);
+    await kimCtx.close();
     // The reply is append-only and never a message of its own.
     expect(
       sql(

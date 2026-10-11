@@ -339,6 +339,24 @@ export const recruitmentSv = {
   "rec.inbox.interview": "Inbjudan till intervju",
   "rec.inbox.respondFailed": "Svaret kunde inte sparas. Försök igen.",
   "rec.inbox.unavailable": "Meddelanden från arbetsgivare kunde inte hämtas just nu.",
+  "rec.inbox.supplement.kind": "Begäran om komplettering",
+  "rec.inbox.supplement.yourAnswers": "Dina svar i appen",
+  "rec.inbox.supplement.answerLabel": "Svara i appen",
+  "rec.inbox.supplement.hint":
+    "Svaret sparas på din ansökan och läses av ansvarig hos arbetsgivaren där. Det skickas inte som e-post, kan inte ändras i efterhand, tar inga bilagor och ändrar varken ditt CV eller dina tidigare svar.",
+  "rec.inbox.supplement.counter": "{n} av {max} tecken.",
+  "rec.inbox.supplement.send": "Spara svar",
+  "rec.inbox.supplement.sending": "Sparar …",
+  "rec.inbox.supplement.saved":
+    "Ditt svar sparades {time}. Ansvarig ser det på din ansökan och fortsätter granskningen.",
+  "rec.inbox.supplement.notAvailable":
+    "Svar i appen är inte tillgängligt här ännu. Svara på det sätt meddelandet anger.",
+  "rec.inbox.supplement.resolved":
+    "Arbetsgivaren har redan hanterat den här begäran. Nya svar kan inte lämnas här.",
+  "rec.inbox.supplement.error.notFound": "Meddelandet kunde inte hittas på din ansökan.",
+  "rec.inbox.supplement.error.notAllowed": "Det här meddelandet går inte att svara på i appen.",
+  "rec.inbox.supplement.error.notOpen": "Ansökan är inte längre öppen, så svaret kan inte sparas.",
+  "rec.inbox.supplement.error.body": "Svaret måste vara 1–4000 tecken.",
   "rec.list.emptyDefault":
     "Inga pågående rekryteringar eller utkast just nu. Välj Alla i statusfiltret för att se avslutade.",
   "rec.list.emptyPhase": "Inga rekryteringar med den statusen.",
@@ -1081,7 +1099,7 @@ export const recruitmentSv = {
   "rec.composition.counts": "{core} kärnfrågor · {probes} följdfrågor · {beskt} BESKT-frågor",
   "rec.composition.orderHint":
     "Kärnfrågorna i guidens ordning; en följdfråga ställs efter den fråga den fördjupar; BESKT-frågorna sist.",
-  "rec.composition.beskt.short": "BESKT",
+  "rec.composition.beskt.short": "BESKT-fråga",
 } as const;
 
 export const recruitmentEn: { [K in keyof typeof recruitmentSv]: string } = {
@@ -1419,6 +1437,25 @@ export const recruitmentEn: { [K in keyof typeof recruitmentSv]: string } = {
   "rec.inbox.interview": "Invitation to interview",
   "rec.inbox.respondFailed": "Your answer could not be saved. Try again.",
   "rec.inbox.unavailable": "Messages from employers could not be loaded right now.",
+  "rec.inbox.supplement.kind": "Request for a supplement",
+  "rec.inbox.supplement.yourAnswers": "Your answers in the app",
+  "rec.inbox.supplement.answerLabel": "Answer in the app",
+  "rec.inbox.supplement.hint":
+    "The answer is kept with your application and read there by the employer's reviewer. It is not sent as e-mail, cannot be edited afterwards, takes no attachments and changes neither your CV nor your earlier answers.",
+  "rec.inbox.supplement.counter": "{n} of {max} characters.",
+  "rec.inbox.supplement.send": "Save answer",
+  "rec.inbox.supplement.sending": "Saving …",
+  "rec.inbox.supplement.saved":
+    "Your answer was saved {time}. The reviewer sees it on your application and continues the review.",
+  "rec.inbox.supplement.notAvailable":
+    "Answering in the app is not available here yet. Answer the way the message says.",
+  "rec.inbox.supplement.resolved":
+    "The employer has already dealt with this request. New answers cannot be left here.",
+  "rec.inbox.supplement.error.notFound": "The message could not be found on your application.",
+  "rec.inbox.supplement.error.notAllowed": "This message cannot be answered in the app.",
+  "rec.inbox.supplement.error.notOpen":
+    "The application is no longer open, so the answer cannot be saved.",
+  "rec.inbox.supplement.error.body": "The answer must be 1–4000 characters.",
   "rec.list.emptyDefault":
     "No active recruitments or drafts right now. Choose All in the status filter to see completed ones.",
   "rec.list.emptyPhase": "No recruitments with that status.",
@@ -2173,5 +2210,5 @@ export const recruitmentEn: { [K in keyof typeof recruitmentSv]: string } = {
   "rec.composition.counts": "{core} core questions · {probes} follow-ups · {beskt} BESKT questions",
   "rec.composition.orderHint":
     "The core questions in the guide's order; a follow-up is asked after the question it deepens; the BESKT questions last.",
-  "rec.composition.beskt.short": "BESKT",
+  "rec.composition.beskt.short": "BESKT item",
 };
