@@ -13,6 +13,13 @@ const unexpected = async () => {
   throw new Error("Rendering dispatched a write/read/model request");
 };
 mock.module("@tanstack/react-start", () => ({ useServerFn: (fn: unknown) => fn }));
+mock.module("../src/lib/recruitment/requirement-workspace.functions", () => ({
+  getProfileChangeImpact: unexpected,
+  getProfileChangeHistory: unexpected,
+  compareApplications: unexpected,
+  getNextUnreviewed: unexpected,
+  getPageEvidence: unexpected,
+}));
 mock.module("../src/lib/recruitment/requirement-intelligence.functions", () => ({
   getRequirementReview: unexpected,
   saveRequirementReview: unexpected,
