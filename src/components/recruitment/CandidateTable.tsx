@@ -230,7 +230,7 @@ export function CandidateTable(props: Props) {
     selectedRows.length >= 2 &&
     selectedRows.length <= 3 &&
     selectedRows.every((r) => r.jobId === selectedRows[0]!.jobId)
-      ? { jobId: selectedRows[0]!.jobId, ids: selectedRows.map((r) => r.applicationId) }
+      ? { jobId: selectedRows[0]!.jobId, selected: selectedRows.map((r) => r.applicationId) }
       : null;
   const anonymous = t("employer.applications.anonymousCandidate");
   const nameOf = (r: CandidateRow) => r.name ?? anonymous;
@@ -758,7 +758,7 @@ export function CandidateTable(props: Props) {
             params={{ employerSlug }}
             search={{
               job: comparable.jobId,
-              ids: comparable.ids.join(","),
+              compare: comparable.selected.join(","),
               list: listKey,
             }}
             onClick={remember}

@@ -399,6 +399,10 @@ const RECRUITMENT_SURFACES = [
   "src/routes/_authenticated.employer.$employerSlug.applications.tsx",
   "src/routes/_authenticated.employer.$employerSlug.applications.index.tsx",
   "src/routes/_authenticated.employer.$employerSlug.applications.$applicationId.tsx",
+  // The comparison (slutuppdrag 2026-10-11): two or three applications' own
+  // requirement criteria side by side. Reads the recruitment's profile and
+  // reviews only; never a Passport, a disclosure or a link to either.
+  "src/routes/_authenticated.employer.$employerSlug.applications.compare.tsx",
   "src/lib/job-intelligence/application-status.ts",
   "src/components/academy/ApplicationAssessmentPanel.tsx",
 ];

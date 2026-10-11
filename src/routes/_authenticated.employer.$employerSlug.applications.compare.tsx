@@ -39,7 +39,8 @@ import { formatStamp } from "@/lib/recruitment/format";
 
 const searchSchema = z.object({
   job: z.string().uuid().optional().catch(undefined),
-  ids: z.string().max(120).optional().catch(undefined),
+  /** The two or three application ids to compare, comma-separated. */
+  compare: z.string().max(120).optional().catch(undefined),
   list: z.string().max(20).optional().catch(undefined),
 });
 
@@ -61,7 +62,7 @@ function CompareRoute() {
           employerId={ws.employerId}
           employerSlug={employerSlug}
           jobId={search.job ?? null}
-          ids={(search.ids ?? "")
+          ids={(search.compare ?? "")
             .split(",")
             .map((s) => s.trim())
             .filter((s) => /^[0-9a-f-]{36}$/i.test(s))}
