@@ -73,15 +73,15 @@ aldrig raderar; radering sker enbart av retention-arbetaren, som är avstängd.
 
 Talet 120 finns inte i något kontrakt, test eller workflow. Det räknbara:
 
-| Bevis                                                        | Antal                                      | Pinnat mot                   | Status                                 |
-| ------------------------------------------------------------ | ------------------------------------------ | ---------------------------- | -------------------------------------- |
-| `workspace_six_rpc_real_auth_http` (native)                  | 70 HTTP-anrop med riktiga GoTrue-sessioner | app + schema `53659419`      | grönt på `8a736dd4`                    |
-| `canonical_23_http_two_real_reviewers` (native)              | 23 räknade assertioner (`API_HASH`)        | app                          | grönt på `8a736dd4`                    |
-| fem browserfall `recruiter-intelligence-p1.spec.ts` (native) | 5 (`BROWSER_HASH`)                         | app                          | grönt på `8a736dd4`                    |
-| Passport native OP09                                         | Auth 8, actual 44, browser 4               | pinnar                       | grönt                                  |
-| Real Supabase evidence                                       | full uppspelning 394 + P1-orakel           | `RI_REAL_RELEASE_SCHEMA_SHA` | grönt                                  |
-| v0.4-SQL-sviten (nya slots)                                  | 57                                         | lokal + CI-replay            | grönt                                  |
-| real-stack-browsersviten `recruitment-workspace.spec.ts`     | 24 tester                                  | PR-huvudet                   | grönt på `8a736dd4`; PR 2:s huvud i 1b |
+| Bevis                                                        | Antal                                      | Pinnat mot                   | Status                             |
+| ------------------------------------------------------------ | ------------------------------------------ | ---------------------------- | ---------------------------------- |
+| `workspace_six_rpc_real_auth_http` (native)                  | 70 HTTP-anrop med riktiga GoTrue-sessioner | app + schema `53659419`      | grönt på `8a736dd4`                |
+| `canonical_23_http_two_real_reviewers` (native)              | 23 räknade assertioner (`API_HASH`)        | app                          | grönt på `8a736dd4`                |
+| fem browserfall `recruiter-intelligence-p1.spec.ts` (native) | 5 (`BROWSER_HASH`)                         | app                          | grönt på `8a736dd4`                |
+| Passport native OP09                                         | Auth 8, actual 44, browser 4               | pinnar                       | grönt                              |
+| Real Supabase evidence                                       | full uppspelning 394 + P1-orakel           | `RI_REAL_RELEASE_SCHEMA_SHA` | grönt                              |
+| v0.4-SQL-sviten (nya slots)                                  | 57                                         | lokal + CI-replay            | grönt                              |
+| real-stack-browsersviten `recruitment-workspace.spec.ts`     | 24 tester                                  | PR-huvudet                   | grönt på `8a736dd4` och `869cf5c4` |
 
 98 räknade native-kontroller + 56 OP09 + 57 SQL + 24 real-stack. **Gamla app-pinnar
 (`55db1e3b`) används inte som bevis för nya funktioner**; native-pinnarna pekar på
