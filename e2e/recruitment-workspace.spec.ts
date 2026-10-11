@@ -844,6 +844,47 @@ test.describe("recruitment case", () => {
   }) => {
     test.setTimeout(240_000);
     const applicationId = "a6000000-0000-4000-8000-000000000020"; // kandidat20: answered No, No
+    // The supplement's body is the reviewer's own neutral questions, recorded
+    // on the review (a saved draft, not a confirmation): one per mandatory
+    // requirement that needs clarifying, through the real API as the owner.
+    const anna = await tokenFor("anna.agare@nordvakt.test");
+    const review = await rpcAs(anna, "rec_ri_get_review", { _application_id: applicationId });
+    expect(review.status).toBe(200);
+    const criteria = review.body.criteria as {
+      requirementId: string;
+      kind: string;
+      state: string;
+      source: { kind: string; reference: string; version: string; label: string } | null;
+      validUntil: string | null;
+      note: string | null;
+      neutralQuestion: string | null;
+    }[];
+    const saved = await rpcAs(anna, "rec_ri_save_review", {
+      _application_id: applicationId,
+      _profile_id: (review.body.profile as { profileId: string }).profileId,
+      _expected_revision: review.body.revision,
+      _binding_token: review.body.bindingToken,
+      _operation_id: crypto.randomUUID(),
+      _decisions: criteria.map((c) => ({
+        requirementId: c.requirementId,
+        state: c.state,
+        sourceKind: c.source?.kind ?? null,
+        sourceReference: c.source?.reference ?? null,
+        sourceVersion: c.source?.version ?? null,
+        sourceLabel: c.source?.label ?? null,
+        validUntil: c.validUntil,
+        note: c.note ?? "Underlag saknas; kandidaten tillfrågas.",
+        neutralQuestion:
+          c.kind === "mandatory" && c.state === "clarify"
+            ? "Vilket år fick du ditt utbildningsbevis, och av vilken utbildare?"
+            : (c.neutralQuestion ?? null),
+      })),
+      _confirm: false,
+      _next_action: "Be om intyg",
+      _responsible_user_id: null,
+      _expected_assignment_version: review.body.assignmentVersion ?? null,
+    });
+    expect(saved.status).toBe(200);
     await signIn(page, "anna.agare@nordvakt.test");
     await open(page, `/employer/${SLUG}/applications/${applicationId}`);
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible({ timeout: 90_000 });
@@ -971,7 +1012,9 @@ test.describe("recruitment case", () => {
         `SELECT count(*) FROM public.job_application_status_events WHERE application_id = '${applicationId}' AND previous_status = 'rejected' AND new_status = 'reviewing' AND note LIKE 'Återöppnad:%'`,
       ) ?? "1",
     ).toBe("1");
-    await open(page, casePath(JOB, "?step=applications"));
+    // Back in the active list, under "Under granskning" (the default page of
+    // Aktiva holds the newest 25 of 32; the reopened one is the oldest).
+    await open(page, casePath(JOB, "?step=applications&stage=review"));
     await expect(page.locator(`tr[data-application-id='${applicationId}']`)).toHaveCount(1, {
       timeout: 60_000,
     });

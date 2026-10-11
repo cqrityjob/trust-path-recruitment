@@ -10,7 +10,7 @@ import {
   appId,
 } from "./recruiter-p1-native-contract.mjs";
 
-export const SQL_HASH = "45db1d33d64f1fc1c424f2a22090105694daecdb079cf2eaee5afa277a1f98ce";
+export const SQL_HASH = "8a1f3c06d5043bb803c4a03d5f8d1304eb44570a4488785729c0695978877cab";
 export const API_HASH = "10d2b18c6abb1e99e3c1d737ee1d962ca39ab8292b54b94295fbd4473d1e7c4f";
 export const BROWSER_HASH = "655659d14bd589af981d60d374002c5a1c5fccd42844f26abee6417cfb89f7f2";
 function pinned(source, expected) {
