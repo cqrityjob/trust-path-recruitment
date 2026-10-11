@@ -260,7 +260,7 @@ RL4_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/recruitment_l
 RL4_RC=$?
 set -e
 RL4_PASSED="$(echo "$RL4_OUT" | grep -c "NOTICE:  ok " || true)"
-if [ "$RL4_RC" -ne 0 ] || [ "$RL4_PASSED" -lt 56 ]; then
+if [ "$RL4_RC" -ne 0 ] || [ "$RL4_PASSED" -lt 57 ]; then
   echo "$RL4_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
   suite_failed "Recruitment lifecycle v0.4"
 else
