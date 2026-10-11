@@ -574,15 +574,28 @@ test.describe("employer portal — one journey", () => {
       await expect(
         form.getByText(/En person bekräftar kravet enligt instruktionen/).first(),
       ).toBeVisible();
-      // Identifiers are behind closed details: not visible until opened.
+      // Identifiers are behind closed details: not visible until opened. The
+      // fourth fold is the change history (slutuppdrag 2026-10-11): version 1
+      // is the first confirmation, so it lists no motivated change.
       const details = form.locator("details");
-      await expect(details).toHaveCount(3);
+      await expect(details).toHaveCount(4);
+      const history = form.locator("[data-testid='profile-change-history']");
+      await expect(history).toHaveCount(1);
       await expect(form.getByText(/Befintligt krav-ID/)).toHaveCount(2);
       await expect(form.getByText(/Befintligt krav-ID/).first()).toBeHidden();
       await details.first().locator("summary").click();
       await expect(form.getByText(/Befintligt krav-ID/).first()).toBeVisible();
-      // The confirmation explains what it does, and stays gated by the acknowledgement.
+      // The confirmation explains what it does, shows what a change would
+      // touch, requires a reason, and stays gated by the acknowledgement.
       await expect(form.getByText(/skapar version 2 av kravprofilen/)).toBeVisible();
+      await expect(
+        form.locator("[data-testid='profile-change-impact'] [data-active]"),
+      ).toHaveAttribute("data-active", "4");
+      await expect(form.locator("[data-testid='profile-change-reason']")).toBeVisible();
+      await history.locator("summary").click();
+      await expect(
+        history.locator("[data-testid='profile-history-entry'][data-version='1']"),
+      ).toHaveAttribute("data-kind", "first");
       await expect(
         form.getByRole("button", { name: "Fastställ ny kravprofilversion" }),
       ).toBeDisabled();
