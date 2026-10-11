@@ -773,8 +773,8 @@ const UI = "src/components/employer/interview/InterviewUi.tsx";
   expect(
     /export const COMPOSITION_GROUPS = \[\s*"intro",\s*"competence",\s*"scenarios",\s*"probes",\s*"beskt",\s*"clarifications",\s*"closing",\s*\] as const;/.test(
       lib,
-    ) && /new Set\(\[\s*"competence",\s*"scenarios",\s*"probes",\s*\]\)/.test(lib),
-    "interview-composition: the seven groups in the brief's order; only the three with governed content are selectable.",
+    ) && /new Set\(\[\s*"competence",\s*"scenarios",\s*"probes",\s*"beskt",\s*\]\)/.test(lib),
+    "interview-composition: the seven groups in the brief's order; selectable are the pack's three and the published BESKT items for recruitment (slot 20270315100000) -- introduction, clarifications and closing stay structural.",
   );
   expect(
     /\.sort\(\(a, b\) => a\.displayOrder - b\.displayOrder\)\) \{\s*out\.push\(\{\s*group: q\.questionType === "situational" \? "scenarios" : "competence",\s*kind: "core_question",\s*itemId: q\.id,/.test(

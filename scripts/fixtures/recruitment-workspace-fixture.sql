@@ -358,4 +358,67 @@ SELECT app, '55555555-eeee-4000-8000-0000000000a1', '11111111-aaaa-4000-8000-000
   FROM rec_big
 ON CONFLICT DO NOTHING;
 
+-- ── Interview setup and BESKT (slots 20270312100000 / 20270315100000) ────
+-- A pilot grant lets Nordvakt start interviews on the seeded Väktare pack
+-- version, so the recruitment's interview setup has a catalogue to choose
+-- from; and ONE published BESKT method version for recruitment support with
+-- one interview-phase item of ordinary sensitivity, one integrity-sensitive
+-- item and one preparation item, plus ONE published vetting method with one
+-- item -- so the browser walk can prove what is selectable and what is
+-- refused. Written as the table owner the way the SQL suites write it;
+-- publication goes through the lifecycle guard's own legal transitions and
+-- is a no-op once done (every statement is idempotent; the child rows are
+-- inserted only when absent, because a BEFORE trigger runs before ON CONFLICT
+-- and refuses a child of a published version).
+INSERT INTO public.scp_interview_pack_pilot_grants (employer_id, pack_version_id, rationale, usage_mode, environment, expires_on)
+SELECT '11111111-aaaa-4000-8000-000000000001', ver.id, 'Synthetic local walk.', 'internal_qa', 'development', current_date + 365
+  FROM public.scp_interview_pack_versions ver JOIN public.scp_interview_packs p ON p.id = ver.pack_id
+ WHERE p.slug = 'vaktare-se'
+ON CONFLICT (employer_id, pack_version_id) DO NOTHING;
+INSERT INTO public.scp_interview_packs (id, slug, name_sv, name_en, purpose_sv, pack_kind)
+VALUES ('bb5e0000-5555-4000-8000-000000000001', 'rec-fixture-beskt', 'BESKT rekryteringsstöd (syntetisk)', 'BESKT recruitment support (synthetic)', 'Syntetiskt syfte för den lokala kontrollen.', 'beskt_method'),
+       ('bb5e0000-5555-4000-8000-000000000002', 'rec-fixture-beskt-vetting', 'BESKT säkerhetsprövning (syntetisk)', 'BESKT vetting (synthetic)', 'Syntetiskt syfte för den lokala kontrollen.', 'beskt_method')
+ON CONFLICT (id) DO NOTHING;
+INSERT INTO public.beskt_method_versions (id, pack_id, version_number, mode, source_reference, source_document_version, content_provenance, summary_sv, summary_en)
+SELECT v.id::uuid, v.pack_id::uuid, v.version_number, v.mode, v.source_reference, v.source_document_version, v.content_provenance, v.summary_sv, v.summary_en
+  FROM (VALUES ('bb5e0000-6666-4000-8000-000000000001', 'bb5e0000-5555-4000-8000-000000000001', 1, 'recruitment_support', 'rec fixture', 'fixture-1', 'cqrity_design_hypothesis', 'Rekryteringsstöd.', 'Recruitment support.'),
+       ('bb5e0000-6666-4000-8000-000000000002', 'bb5e0000-5555-4000-8000-000000000002', 1, 'security_vetting_support', 'rec fixture', 'fixture-1', 'cqrity_design_hypothesis', NULL, NULL)) AS v(id, pack_id, version_number, mode, source_reference, source_document_version, content_provenance, summary_sv, summary_en)
+ WHERE NOT EXISTS (SELECT 1 FROM public.beskt_method_versions t WHERE t.id = v.id::uuid);
+INSERT INTO public.beskt_exposure_profiles (id, method_version_id, profile_key, display_order, exposure_area, permitted_mode, owning_review_role, retention_class, access_class, content_provenance)
+SELECT v.id::uuid, v.method_version_id::uuid, v.profile_key, v.display_order, v.exposure_area, v.permitted_mode, v.owning_review_role, v.retention_class, v.access_class, v.content_provenance
+  FROM (VALUES ('bb5e0000-7777-4000-8000-000000000001', 'bb5e0000-6666-4000-8000-000000000001', 'keys', 1, 'keys_alarms_and_access_control', 'recruitment_support', 'recruitment', 'recruitment_record', 'recruiter', 'cqrity_design_hypothesis'),
+       ('bb5e0000-7777-4000-8000-000000000002', 'bb5e0000-6666-4000-8000-000000000002', 'info', 1, 'access_to_protected_information', 'security_vetting_support', 'personnel_security', 'security_vetting_record', 'authorised_security_function', 'cqrity_design_hypothesis')) AS v(id, method_version_id, profile_key, display_order, exposure_area, permitted_mode, owning_review_role, retention_class, access_class, content_provenance)
+ WHERE NOT EXISTS (SELECT 1 FROM public.beskt_exposure_profiles t WHERE t.id = v.id::uuid);
+INSERT INTO public.beskt_sections (id, method_version_id, section_key, display_order, phase, title_sv, title_en)
+SELECT v.id::uuid, v.method_version_id::uuid, v.section_key, v.display_order, v.phase, v.title_sv, v.title_en
+  FROM (VALUES ('bb5e0000-8888-4000-8000-000000000001', 'bb5e0000-6666-4000-8000-000000000001', 'interview_keys', 1, 'interview', 'Nycklar och larm', 'Keys and alarms'),
+       ('bb5e0000-8888-4000-8000-000000000002', 'bb5e0000-6666-4000-8000-000000000001', 'prep', 2, 'candidate_preparation', 'Förberedelse', 'Preparation'),
+       ('bb5e0000-8888-4000-8000-000000000003', 'bb5e0000-6666-4000-8000-000000000002', 'vetting', 1, 'interview', 'Säkerhetsprövning', 'Vetting')) AS v(id, method_version_id, section_key, display_order, phase, title_sv, title_en)
+ WHERE NOT EXISTS (SELECT 1 FROM public.beskt_sections t WHERE t.id = v.id::uuid);
+INSERT INTO public.beskt_items (id, method_version_id, section_id, exposure_profile_id, item_key, display_order, wording_sv, wording_en, purpose_sv, purpose_en,
+  permitted_mode, phase, answer_type, requiredness, sensitivity_class, access_class, content_provenance)
+SELECT v.id::uuid, v.method_version_id::uuid, v.section_id::uuid, v.exposure_profile_id::uuid, v.item_key, v.display_order, v.wording_sv, v.wording_en, v.purpose_sv, v.purpose_en, v.permitted_mode, v.phase, v.answer_type, v.requiredness, v.sensitivity_class, v.access_class, v.content_provenance
+  FROM (VALUES ('bb5e0000-9999-4000-8000-000000000001', 'bb5e0000-6666-4000-8000-000000000001', 'bb5e0000-8888-4000-8000-000000000001', 'bb5e0000-7777-4000-8000-000000000001', 'keys_routine', 1,
+        'Berätta hur du hanterat nycklar och larmkoder i ett tidigare uppdrag.', 'Tell us how you handled keys and alarm codes in an earlier assignment.',
+        'Rollen innebär ansvar för nycklar och larm.', 'The role carries responsibility for keys and alarms.',
+        'recruitment_support', 'interview', 'long_text', 'voluntary', 'ordinary', 'recruiter', 'cqrity_design_hypothesis'),
+       ('bb5e0000-9999-4000-8000-000000000002', 'bb5e0000-6666-4000-8000-000000000001', 'bb5e0000-8888-4000-8000-000000000001', 'bb5e0000-7777-4000-8000-000000000001', 'keys_sensitive', 2,
+        'Känslig fråga (syntetisk).', 'Sensitive item (synthetic).', 'Syfte.', 'Purpose.',
+        'recruitment_support', 'interview', 'long_text', 'voluntary', 'integrity_sensitive', 'beskt_interviewer', 'cqrity_design_hypothesis'),
+       ('bb5e0000-9999-4000-8000-000000000003', 'bb5e0000-6666-4000-8000-000000000001', 'bb5e0000-8888-4000-8000-000000000002', 'bb5e0000-7777-4000-8000-000000000001', 'prep_ack', 1,
+        'Förberedelsefråga (syntetisk).', 'Preparation item (synthetic).', 'Syfte.', 'Purpose.',
+        'recruitment_support', 'candidate_preparation', 'acknowledgement', 'voluntary', 'ordinary', 'recruiter', 'cqrity_design_hypothesis'),
+       ('bb5e0000-9999-4000-8000-000000000004', 'bb5e0000-6666-4000-8000-000000000002', 'bb5e0000-8888-4000-8000-000000000003', 'bb5e0000-7777-4000-8000-000000000002', 'vetting_item', 1,
+        'Säkerhetsprövningsfråga (syntetisk).', 'Vetting item (synthetic).', 'Syfte.', 'Purpose.',
+        'security_vetting_support', 'interview', 'long_text', 'voluntary', 'security_vetting_only', 'authorised_security_function', 'cqrity_design_hypothesis')) AS v(id, method_version_id, section_id, exposure_profile_id, item_key, display_order, wording_sv, wording_en, purpose_sv, purpose_en, permitted_mode, phase, answer_type, requiredness, sensitivity_class, access_class, content_provenance)
+ WHERE NOT EXISTS (SELECT 1 FROM public.beskt_items t WHERE t.id = v.id::uuid);
+-- Publish both once, through the guard: draft -> in_review -> published.
+SELECT set_config('beskt.governed_transition', 'on', true);
+UPDATE public.beskt_method_versions SET content_status = 'in_review', revision = revision + 1
+ WHERE id IN ('bb5e0000-6666-4000-8000-000000000001', 'bb5e0000-6666-4000-8000-000000000002') AND content_status = 'draft';
+UPDATE public.beskt_method_versions SET content_status = 'published', revision = revision + 1, content_hash = repeat('f', 64),
+       published_at = now(), published_by = 'd016a3c5-f43b-4452-aabc-1ff7f7d3672c'
+ WHERE id IN ('bb5e0000-6666-4000-8000-000000000001', 'bb5e0000-6666-4000-8000-000000000002') AND content_status = 'in_review';
+SELECT set_config('beskt.governed_transition', '', true);
+
 COMMIT;

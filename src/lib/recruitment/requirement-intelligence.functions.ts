@@ -29,7 +29,7 @@ const sourceSchema = z.object({
   answerText: stringOrNull,
   caseId: stringOrNull.optional(),
 });
-const profileSchema = z.object({
+export const profileSchema = z.object({
   jobId: z.string().uuid(),
   profileId: stringOrNull,
   version: z.number(),
@@ -57,7 +57,7 @@ const profileSchema = z.object({
     }),
   ),
 });
-const criterionSchema = ruleSchema.extend({
+export const criterionSchema = ruleSchema.extend({
   state: z.enum(CRITERION_STATES),
   source: sourceSchema.nullable(),
   sourceCurrent: z.boolean(),
@@ -67,7 +67,7 @@ const criterionSchema = ruleSchema.extend({
   reviewedBy: stringOrNull,
   reviewedAt: stringOrNull,
 });
-const reviewSchema = z.object({
+export const reviewSchema = z.object({
   applicationId: z.string(),
   jobId: z.string(),
   employerId: z.string(),
@@ -102,6 +102,8 @@ const CODES = [
   "RI_ACCEPTED_SOURCE_REQUIRED",
   "RI_PROFILE_IDENTITY_IN_USE",
   "RI_PROFILE_IMMUTABLE",
+  "RI_CHANGE_REASON_REQUIRED",
+  "RI_COMPARISON_INVALID",
 ] as const;
 export function requirementError(error: { message?: string } | null): Error {
   const code = CODES.find((value) => error?.message?.includes(value));
@@ -141,13 +143,29 @@ export const confirmRequirementProfile = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const ctx = context as Context;
     await assertScope(ctx, data.employerId, "job", data.jobId);
-    const result = await ctx.supabase.rpc("rec_ri_confirm_profile", {
-      _job_id: data.jobId,
-      _expected_version: data.expectedVersion,
-      _operation_id: data.operationId,
-      _start_date: data.startDate ?? null,
-      _rules: data.rules,
-    });
+    // The FIRST confirmation (0 -> 1) has no earlier confirmed profile to
+    // motivate a change against and goes through the P1 path. Every later
+    // version is a CHANGE: it carries its reason through the reviewed wrapper
+    // (workspace 20270310100000), which writes one history row per change and
+    // which the server -- from slot 20270313100000 -- is the only path that
+    // still accepts a change at all.
+    const result =
+      data.expectedVersion === 0
+        ? await ctx.supabase.rpc("rec_ri_confirm_profile", {
+            _job_id: data.jobId,
+            _expected_version: data.expectedVersion,
+            _operation_id: data.operationId,
+            _start_date: data.startDate ?? null,
+            _rules: data.rules,
+          })
+        : await ctx.supabase.rpc("rec_ri_confirm_reviewed_profile", {
+            _job_id: data.jobId,
+            _expected_version: data.expectedVersion,
+            _operation_id: data.operationId,
+            _start_date: data.startDate ?? null,
+            _rules: data.rules,
+            _change_reason: data.changeReason ?? "",
+          });
     if (result.error) throw requirementError(result.error);
     return profileSchema.parse(result.data);
   });

@@ -963,7 +963,7 @@ export const recruitmentSv = {
   "rec.composition.group.introHint":
     "Ett strukturellt moment utan styrda frågor i paketversionen. Nya SV/EN-texter kräver mänskligt innehållsgodkännande innan de kan väljas.",
   "rec.composition.group.besktHint":
-    "Ett eget metodläge med egen godkänd version. Väljs inte här; endast rekryteringsläget får användas i intervjuguiden.",
+    "Publicerade BESKT-frågor för rekryteringsstöd kan väljas här, var och en med sitt syfte. Innehåll för säkerhetsprövning, integritetskänsliga frågor och förberedelsefrågor väljs aldrig i intervjuguiden; endast rekryteringsläget får användas.",
   "rec.composition.group.clarificationsHint":
     "Per kandidat: granskarens neutrala klarläggandefrågor förs över från kravgranskningen till ärendet och markeras som tillägg.",
   "rec.composition.group.closingHint":
@@ -996,6 +996,77 @@ export const recruitmentSv = {
     "Inga frågor genereras. Allt innehåll kommer oförändrat ur paketversionen.",
   "rec.decision.reopenNote":
     "Återöppning av ett beslut är en separat behörig åtgärd med angiven orsak och ingår inte i den här versionen. Återställning från arkiv återöppnar inte beslutet.",
+  "rec.profile.reason": "Orsak till ändringen",
+  "rec.profile.reasonHint":
+    "Krävs för varje ändring av en fastställd kravprofil. Sparas i ändringshistoriken tillsammans med vilka granskningar som berördes.",
+  "rec.profile.impact.heading": "Vad ändringen berör",
+  "rec.profile.impact.body":
+    "{active} aktiva ansökningar läses mot den nya versionen. {reviewed} bekräftade granskningar blir inaktuella och behöver bekräftas igen. {decided} avgjorda, {archived} arkiverade och {withdrawn} tillbakadragna behåller sin historik och räknas inte som bekräftelser av de nya kraven.",
+  "rec.profile.impact.unavailable":
+    "Påverkan kunde inte läsas just nu; läs in den sparade kravprofilen och försök igen.",
+  "rec.profile.history.heading": "Ändringshistorik",
+  "rec.profile.history.none": "Inga motiverade ändringar registrerade.",
+  "rec.profile.history.entry": "Version {v} · {date}",
+  "rec.profile.history.by": "av {name}",
+  "rec.profile.history.impact": "{reviewed} bekräftade granskningar blev inaktuella",
+  "rec.profile.history.first":
+    "Version 1 är det första fastställandet; det finns ingen ändring att motivera.",
+  "rec.profile.history.legacy":
+    "Version {v} fastställdes via en äldre skrivväg utan registrerad motivering. Ingen motivering uppfinns i efterhand.",
+  "rec.profile.history.unavailable": "Ändringshistoriken kunde inte läsas.",
+  "rec.compare.action": "Jämför",
+  "rec.compare.actionHint":
+    "Markera två eller tre kandidater i samma rekrytering för att jämföra underlaget per krav.",
+  "rec.compare.title": "Jämför kandidater",
+  "rec.compare.lede":
+    "Underlag per krav, sida vid sida, mot samma kravprofilversion. Jämförelsen rangordnar inte, väger inte meriter mot skallkrav och ersätter inte granskningen av varje ansökan.",
+  "rec.compare.back": "Till listan",
+  "rec.compare.invalid": "Välj två eller tre kandidater från samma rekrytering.",
+  "rec.compare.noProfile":
+    "Rekryteringen har ingen fastställd kravprofil; det finns inget att jämföra mot.",
+  "rec.compare.openProfile": "Öppna kravprofilen",
+  "rec.compare.profile": "Mot kravprofil version {v}",
+  "rec.compare.stale":
+    "Kravprofilen har ändrats sedan listan lästes. Jämförelsen läses om mot den nya versionen.",
+  "rec.compare.loading": "Läser underlag…",
+  "rec.compare.unavailable": "Jämförelsen kunde inte läsas.",
+  "rec.compare.requirement": "Krav",
+  "rec.compare.open": "Öppna ansökan",
+  "rec.compare.source": "Underlag",
+  "rec.compare.noSource": "inget underlag",
+  "rec.compare.reviewed": "bekräftat av {name} {date}",
+  "rec.compare.preliminary": "preliminärt – kandidatens eget svar, inte granskat",
+  "rec.compare.unreviewed": "inte granskat",
+  "rec.compare.staleReview": "granskningen gäller en äldre profilversion och räknas inte",
+  "rec.compare.sourceChanged": "underlaget har ändrats sedan granskningen",
+  "rec.compare.merit": "Merit – vägs av en person, kompenserar inte skallkrav",
+  "rec.queue.next": "Nästa ogranskade",
+  "rec.queue.remaining": "{n} aktiva ansökningar återstår att granska.",
+  "rec.queue.historical":
+    "{n} avgjorda, arkiverade eller tillbakadragna ansökningar står utanför kön; äldre granskningar räknas inte som bekräftelser av nuvarande krav.",
+  "rec.queue.done": "Inga ogranskade aktiva ansökningar.",
+  "rec.supplement.replied": "Kandidaten har svarat i appen",
+  "rec.supplement.repliedHint":
+    "Läs svaret nedan, granska kravet och markera begäran som besvarad – eller begär mer. Ingenting registreras åt dig.",
+  "rec.supplement.replies": "Kandidatens svar",
+  "rec.supplement.noReply": "Inget svar i appen ännu.",
+  "rec.supplement.emailNote":
+    "Ett svar som kommer med e-post registreras av en person: läs det och markera begäran som besvarad.",
+  "rec.supplement.replyNotInstalled":
+    "Kandidatens svar i appen kräver databasuppdateringen 20270314100000. Tills den är installerad svarar kandidaten via e-post och en person registrerar svaret.",
+  "rec.composition.beskt.none":
+    "Inga publicerade BESKT-frågor för rekryteringsstöd finns i den här miljön.",
+  "rec.composition.beskt.item": "BESKT-fråga",
+  "rec.composition.beskt.purpose": "Syfte",
+  "rec.composition.beskt.vetting":
+    "Säkerhetsprövning är ett eget uppdrag med egen ansvarig och eget metodläge. Dess innehåll väljs aldrig i rekryteringsintervjun.",
+  "rec.composition.beskt.notInstalled":
+    "BESKT-frågor i upplägget kräver databasuppdateringen 20270315100000, som inte är installerad i den här miljön ännu.",
+  "rec.error.changeReason":
+    "Ange varför kravprofilen ändras. Ändringen sparas med motiveringen i historiken.",
+  "rec.error.comparisonInvalid": "Välj två eller tre ansökningar från samma rekrytering.",
+  "rec.error.compositionVettingOnly":
+    "Den valda BESKT-frågan hör inte till rekryteringsintervjun (säkerhetsprövning, integritetskänslig eller förberedelsefas).",
 } as const;
 
 export const recruitmentEn: { [K in keyof typeof recruitmentSv]: string } = {
@@ -1965,7 +2036,7 @@ export const recruitmentEn: { [K in keyof typeof recruitmentSv]: string } = {
   "rec.composition.group.introHint":
     "A structural step with no governed questions in the pack version. New SV/EN texts need human content approval before they can be chosen.",
   "rec.composition.group.besktHint":
-    "A separate method mode with its own approved version. Not chosen here; only the recruitment mode may be used in the interview guide.",
+    "Published BESKT questions for recruitment support can be chosen here, each with its purpose. Security-vetting content, integrity-sensitive questions and preparation items are never chosen in the interview guide; only the recruitment mode may be used.",
   "rec.composition.group.clarificationsHint":
     "Per candidate: the reviewer's neutral clarification questions are carried from the requirement review into the case and marked as additions.",
   "rec.composition.group.closingHint":
@@ -2000,4 +2071,76 @@ export const recruitmentEn: { [K in keyof typeof recruitmentSv]: string } = {
     "No questions are generated. Everything comes unchanged from the pack version.",
   "rec.decision.reopenNote":
     "Reopening a decision is a separate authorised action with a stated reason and is not part of this version. Restoring from the archive does not reopen the decision.",
+  "rec.profile.reason": "Reason for the change",
+  "rec.profile.reasonHint":
+    "Required for every change of a confirmed requirement profile. Stored in the change history together with the reviews it affected.",
+  "rec.profile.impact.heading": "What the change affects",
+  "rec.profile.impact.body":
+    "{active} active applications are read against the new version. {reviewed} confirmed reviews become out of date and need confirming again. {decided} decided, {archived} archived and {withdrawn} withdrawn keep their history and never count as confirmations of the new requirements.",
+  "rec.profile.impact.unavailable":
+    "The impact could not be read right now; load the stored profile and try again.",
+  "rec.profile.history.heading": "Change history",
+  "rec.profile.history.none": "No motivated changes recorded.",
+  "rec.profile.history.entry": "Version {v} · {date}",
+  "rec.profile.history.by": "by {name}",
+  "rec.profile.history.impact": "{reviewed} confirmed reviews became out of date",
+  "rec.profile.history.first":
+    "Version 1 is the first confirmation; there is no change to motivate.",
+  "rec.profile.history.legacy":
+    "Version {v} was confirmed through an older write path without a recorded reason. No reason is invented after the fact.",
+  "rec.profile.history.unavailable": "The change history could not be read.",
+  "rec.compare.action": "Compare",
+  "rec.compare.actionHint":
+    "Select two or three candidates in the same recruitment to compare the evidence per requirement.",
+  "rec.compare.title": "Compare candidates",
+  "rec.compare.lede":
+    "Evidence per requirement, side by side, against the same requirement profile version. The comparison does not rank, does not weigh merits against mandatory requirements and does not replace the review of each application.",
+  "rec.compare.back": "Back to the list",
+  "rec.compare.invalid": "Choose two or three candidates from the same recruitment.",
+  "rec.compare.noProfile":
+    "The recruitment has no confirmed requirement profile; there is nothing to compare against.",
+  "rec.compare.openProfile": "Open the requirement profile",
+  "rec.compare.profile": "Against requirement profile version {v}",
+  "rec.compare.stale":
+    "The requirement profile changed after the list was read. The comparison is re-read against the new version.",
+  "rec.compare.loading": "Loading evidence…",
+  "rec.compare.unavailable": "The comparison could not be loaded.",
+  "rec.compare.requirement": "Requirement",
+  "rec.compare.open": "Open application",
+  "rec.compare.source": "Evidence",
+  "rec.compare.noSource": "no evidence",
+  "rec.compare.reviewed": "confirmed by {name} {date}",
+  "rec.compare.preliminary": "preliminary – the candidate's own answer, not reviewed",
+  "rec.compare.unreviewed": "not reviewed",
+  "rec.compare.staleReview": "the review concerns an older profile version and does not count",
+  "rec.compare.sourceChanged": "the evidence changed after the review",
+  "rec.compare.merit":
+    "Desirable – weighed by a person, never compensates for a mandatory requirement",
+  "rec.queue.next": "Next unreviewed",
+  "rec.queue.remaining": "{n} active applications remain to review.",
+  "rec.queue.historical":
+    "{n} decided, archived or withdrawn applications stand outside the queue; older reviews do not count as confirmations of the current requirements.",
+  "rec.queue.done": "No unreviewed active applications.",
+  "rec.supplement.replied": "The candidate has answered in the app",
+  "rec.supplement.repliedHint":
+    "Read the answer below, review the requirement and mark the request as answered – or ask for more. Nothing is recorded on your behalf.",
+  "rec.supplement.replies": "The candidate's answers",
+  "rec.supplement.noReply": "No answer in the app yet.",
+  "rec.supplement.emailNote":
+    "An answer that arrives by e-mail is recorded by a person: read it and mark the request as answered.",
+  "rec.supplement.replyNotInstalled":
+    "The candidate's in-app answer requires database update 20270314100000. Until it is installed the candidate answers by e-mail and a person records the answer.",
+  "rec.composition.beskt.none":
+    "No published BESKT questions for recruitment support exist in this environment.",
+  "rec.composition.beskt.item": "BESKT question",
+  "rec.composition.beskt.purpose": "Purpose",
+  "rec.composition.beskt.vetting":
+    "Security vetting is a separate assignment with its own owner and its own method mode. Its content is never chosen in the recruitment interview.",
+  "rec.composition.beskt.notInstalled":
+    "BESKT questions in the setup require database update 20270315100000, which is not installed in this environment yet.",
+  "rec.error.changeReason":
+    "State why the requirement profile changes. The change is stored with its reason in the history.",
+  "rec.error.comparisonInvalid": "Choose two or three applications from the same recruitment.",
+  "rec.error.compositionVettingOnly":
+    "The chosen BESKT question does not belong to the recruitment interview (security vetting, integrity-sensitive or preparation phase).",
 };

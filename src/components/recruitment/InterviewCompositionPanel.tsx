@@ -8,7 +8,10 @@
 //   - groups without governed content in the version (introduction, the
 //     candidate's own questions) are shown as steps with a sentence on why
 //     nothing can be ticked there -- new SV/EN texts need human approval;
-//   - BESKT is a separate method mode and is not chosen here;
+//   - BESKT items: from slot 20270315100000 the catalogue lists the published
+//     BESKT items for recruitment support (interview phase, ordinary
+//     sensitivity), chosen here with their purpose; security-vetting content
+//     is never selectable and the server refuses it again;
 //   - a change is a NEW version with a reason, and the panel says how many
 //     cases keep an older version;
 //   - the selection is resumable: the confirmed version is the server's, an
@@ -74,22 +77,27 @@ export function InterviewCompositionPanel({
   });
   const cat = catalog.data?.installed ? catalog.data : null;
 
-  // The chosen probes: the confirmed version's, or this browser's unsaved
-  // draft, whichever is newer in the reader's hands.
+  // The chosen probes and BESKT items: the confirmed version's, or this
+  // browser's unsaved draft, whichever is newer in the reader's hands.
   const draftKey = `cqj.composition.draft.${jobId}`;
   const [chosen, setChosen] = useState<Set<string> | null>(null);
+  const [chosenBeskt, setChosenBeskt] = useState<Set<string>>(new Set());
   const [resumed, setResumed] = useState(false);
   useEffect(() => {
     if (!current || chosen !== null) return;
     const fromServer = new Set<string>(
       current.selection.filter((s) => s.kind === "approved_probe").map((s) => s.itemId),
     );
+    const besktFromServer = new Set<string>(
+      current.selection.filter((s) => s.kind === "beskt_item").map((s) => s.itemId),
+    );
     try {
       const raw = window.sessionStorage.getItem(draftKey);
       if (raw) {
-        const parsed = JSON.parse(raw) as { version: number; probes: string[] };
+        const parsed = JSON.parse(raw) as { version: number; probes: string[]; beskt?: string[] };
         if (parsed.version === current.version && Array.isArray(parsed.probes)) {
           setChosen(new Set(parsed.probes as string[]));
+          setChosenBeskt(new Set((parsed.beskt ?? []) as string[]));
           setResumed(true);
           return;
         }
@@ -98,22 +106,30 @@ export function InterviewCompositionPanel({
       /* a draft is a convenience */
     }
     setChosen(fromServer);
+    setChosenBeskt(besktFromServer);
   }, [current, chosen, draftKey]);
-  const remember = (next: Set<string>) => {
-    setChosen(next);
+  const persistDraft = (probes: Set<string>, beskt: Set<string>) => {
     try {
       window.sessionStorage.setItem(
         draftKey,
-        JSON.stringify({ version: current?.version ?? 0, probes: [...next] }),
+        JSON.stringify({ version: current?.version ?? 0, probes: [...probes], beskt: [...beskt] }),
       );
     } catch {
       /* ignore */
     }
   };
+  const remember = (next: Set<string>) => {
+    setChosen(next);
+    persistDraft(next, chosenBeskt);
+  };
+  const rememberBeskt = (next: Set<string>) => {
+    setChosenBeskt(next);
+    persistDraft(chosen ?? new Set(), next);
+  };
 
   const selection = useMemo(
-    () => (cat && chosen ? buildSelection(cat, chosen) : []),
-    [cat, chosen],
+    () => (cat && chosen ? buildSelection(cat, chosen, chosenBeskt) : []),
+    [cat, chosen, chosenBeskt],
   );
   const coverage = useMemo(() => (cat ? coverageOf(cat, selection) : null), [cat, selection]);
   const [reason, setReason] = useState("");
@@ -137,6 +153,7 @@ export function InterviewCompositionPanel({
       setReason("");
       setResumed(false);
       setChosen(null);
+      setChosenBeskt(new Set());
       try {
         window.sessionStorage.removeItem(draftKey);
       } catch {
@@ -375,6 +392,63 @@ export function InterviewCompositionPanel({
                     )}
                   </ul>
                 )}
+                {group === "beskt" && (
+                  <div className="mt-2 text-xs" data-testid="composition-beskt">
+                    <p className="text-muted-foreground">{t("rec.composition.group.besktHint")}</p>
+                    {cat.besktItems === undefined ? (
+                      <p className="mt-1" data-testid="composition-beskt-not-installed">
+                        {t("rec.composition.beskt.notInstalled")}
+                      </p>
+                    ) : cat.besktItems.length === 0 ? (
+                      <p className="mt-1" data-testid="composition-beskt-none">
+                        {t("rec.composition.beskt.none")}
+                      </p>
+                    ) : (
+                      <ul className="mt-2 space-y-2">
+                        {cat.besktItems.map((b) => (
+                          <li key={b.id} className="rounded border border-border/60 p-2">
+                            <label className="flex items-start gap-2">
+                              <input
+                                type="checkbox"
+                                data-testid="composition-beskt-item"
+                                data-item-id={b.id}
+                                disabled={!canManage}
+                                checked={chosenBeskt.has(b.id)}
+                                onChange={(e) => {
+                                  const next = new Set(chosenBeskt);
+                                  if (e.target.checked) next.add(b.id);
+                                  else next.delete(b.id);
+                                  rememberBeskt(next);
+                                }}
+                                className="mt-0.5 h-4 w-4"
+                              />
+                              <span>
+                                <span className="font-medium text-foreground">
+                                  {name(b.wordingSv, b.wordingEn)}
+                                </span>
+                                <span className="mt-0.5 block text-muted-foreground">
+                                  {t("rec.composition.beskt.item")}
+                                  {b.sectionTitleSv || b.sectionTitleEn
+                                    ? ` · ${name(b.sectionTitleSv, b.sectionTitleEn)}`
+                                    : ""}
+                                  {b.purposeSv || b.purposeEn
+                                    ? ` · ${t("rec.composition.beskt.purpose")}: ${name(b.purposeSv, b.purposeEn)}`
+                                    : ""}
+                                </span>
+                              </span>
+                            </label>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    <p
+                      className="mt-2 text-muted-foreground"
+                      data-testid="composition-beskt-vetting"
+                    >
+                      {t("rec.composition.beskt.vetting")}
+                    </p>
+                  </div>
+                )}
               </li>
             ))}
           </ol>
@@ -386,7 +460,9 @@ export function InterviewCompositionPanel({
                 .map((s) =>
                   s.kind === "core_question"
                     ? cat.coreQuestions.find((q) => q.id === s.itemId)?.code
-                    : "↳",
+                    : s.kind === "beskt_item"
+                      ? "B"
+                      : "↳",
                 )
                 .join(" ")}
             </p>

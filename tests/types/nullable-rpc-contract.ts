@@ -47,6 +47,15 @@ type LifecycleV03Keys =
   | "rec_ri_get_composition"
   | "rec_ri_save_composition"
   | "rec_ri_case_composition";
+// Reviewed-profile workspace (slot 20270310100000, installed): handwritten
+// beside the P1 overlay until the generator has seen the hosted functions.
+type RecruitmentWorkspaceKeys =
+  | "rec_ri_profile_change_impact"
+  | "rec_ri_confirm_reviewed_profile"
+  | "rec_ri_profile_change_history"
+  | "rec_ri_compare_applications"
+  | "rec_ri_next_unreviewed"
+  | "rec_ri_page_evidence";
 type FoundationColumns =
   | "origin"
   | "neutral_question"
@@ -96,6 +105,7 @@ export type ContractAssertions = [
         | EvidenceUploadKeys
         | RecruitmentIntelligenceKeys
         | LifecycleV03Keys
+        | RecruitmentWorkspaceKeys
       >,
       Omit<
         Generated["public"]["Functions"],
@@ -105,6 +115,7 @@ export type ContractAssertions = [
         | EvidenceUploadKeys
         | RecruitmentIntelligenceKeys
         | LifecycleV03Keys
+        | RecruitmentWorkspaceKeys
       >
     >
   >,
@@ -286,6 +297,12 @@ client.rpc("sp_list_my_evidence_upload_attempts", { _claim_id: null, _period_id:
 client.rpc("sp_list_my_evidence_upload_attempts", { _claim_id: null });
 // @ts-expect-error Own cleanup always requires an opaque UUID, never NULL.
 client.rpc("sp_authorize_evidence_upload_cleanup", { _attempt_id: null });
+export type RecruitmentWorkspaceAssertions = [
+  Assert<Equal<Functions["rec_ri_confirm_reviewed_profile"]["Args"]["_change_reason"], string>>,
+  Assert<Equal<Functions["rec_ri_compare_applications"]["Args"]["_application_ids"], string[]>>,
+  Assert<Equal<Functions["rec_ri_next_unreviewed"]["Args"]["_job_id"], string | null>>,
+  Assert<Equal<Functions["rec_ri_page_evidence"]["Args"]["_requirement_ids"], string[]>>,
+];
 export type LifecycleV03Assertions = [
   Assert<Equal<Functions["rec_ri_resolve_supplement"]["Args"]["_note"], string | null>>,
   Assert<Equal<Functions["rec_ri_save_composition"]["Args"]["_reason"], string | null>>,

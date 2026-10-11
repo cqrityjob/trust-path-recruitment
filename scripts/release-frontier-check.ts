@@ -450,8 +450,20 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // 20270312100000) were merged under the owner's release decision and installed
 // by the official integration; the read-only hosted verification is recorded in
 // docs/release/2026-10-09-lifecycle-v03-hosted-verification.json. The hosted
-// ledger holds 391 identities ending 20270312100000; nothing is pending.
-const expectedPending: string[] = [];
+// ledger holds 391 identities ending 20270312100000.
+//
+// Slutuppdrag 2026-10-11 (PR 1): three forward slots are genuinely WAITING on
+// the owner's release decision and the official integration:
+//   20270313100000_requirement_profile_change_reason    (reason131)
+//   20270314100000_candidate_supplement_reply           (reply141)
+//   20270315100000_interview_composition_beskt_items    (beskt151)
+// They come OFF this list in the same change that records their hosted
+// installation with evidence, as every earlier name did.
+const expectedPending: string[] = [
+  "20270313100000_requirement_profile_change_reason.sql",
+  "20270314100000_candidate_supplement_reply.sql",
+  "20270315100000_interview_composition_beskt_items.sql",
+];
 
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",

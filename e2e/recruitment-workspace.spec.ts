@@ -703,6 +703,352 @@ test.describe("recruitment case", () => {
     );
   });
 
+  // ── Slutuppdrag 2026-10-11: the requirement profile's change history, the
+  //    comparison, the supplement with the candidate's in-app answer, the
+  //    reopen and the BESKT items of the interview setup -- on the real stack
+  //    (GoTrue sessions, PostgREST, the local database), against the schema
+  //    this branch carries.
+  const rpcAs = (token: string, name: string, body: unknown) =>
+    fetch(`${API}/rest/v1/rpc/${name}`, {
+      method: "POST",
+      headers: {
+        apikey: ANON,
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    }).then(async (r) => ({ status: r.status, body: (await r.json()) as Record<string, unknown> }));
+
+  test("the requirement profile: version 1 through the form, a change only with its reason (impact shown, history written), and the legacy path refuses a silent change", async ({
+    page,
+  }) => {
+    test.setTimeout(180_000);
+    await signIn(page, "anna.agare@nordvakt.test");
+    await open(page, casePath(JOB, "?step=requirements"));
+    const panel = page.locator("[data-testid='requirement-profile']");
+    await expect(panel).toBeVisible({ timeout: 90_000 });
+    // Version 1: every requirement gets accepted evidence and an instruction.
+    const fill = async (instruction: string) => {
+      const rules = panel.locator("fieldset[data-requirement-id]");
+      const n = await rules.count();
+      expect(n).toBeGreaterThan(0);
+      for (let i = 0; i < n; i++) {
+        const rule = rules.nth(i);
+        const cv = rule.getByLabel("Inskickat CV / dokument");
+        if (!(await cv.isChecked())) await cv.check();
+        await rule.getByLabel("Regel och kontrollinstruktion (svenska)").fill(instruction);
+      }
+    };
+    await fill("Kontrollera intyget mot kravet; två personer ska nå samma svar.");
+    await expect(panel.locator("[data-testid='profile-change-reason']")).toHaveCount(0);
+    await panel.locator("[data-testid='profile-confirm-ack']").check();
+    await panel.getByRole("button", { name: "Fastställ ny kravprofilversion" }).click();
+    await expect(page.locator("[data-testid='requirement-profile']")).toContainText(
+      "Fastställd version 1",
+      { timeout: 60_000 },
+    );
+    // A change: the impact is read before anything is written, the reason is
+    // required, the confirm button stays disabled without it.
+    const panel2 = page.locator("[data-testid='requirement-profile']");
+    const impact = panel2.locator("[data-testid='profile-change-impact']");
+    await expect(impact).toBeVisible();
+    await expect(impact.locator("[data-active]")).toBeVisible({ timeout: 30_000 });
+    await fill("Kontrollera intyget OCH utbildarens namn mot kravet.");
+    await panel2.locator("[data-testid='profile-confirm-ack']").check();
+    const confirm = panel2.getByRole("button", { name: "Fastställ ny kravprofilversion" });
+    await expect(confirm).toBeDisabled();
+    await panel2
+      .locator("[data-testid='profile-change-reason']")
+      .fill("Utbildarens namn ska kontrolleras, inte bara intyget.");
+    await panel2.locator("[data-testid='profile-confirm-ack']").check();
+    await expect(confirm).toBeEnabled();
+    await confirm.click();
+    await expect(page.locator("[data-testid='requirement-profile']")).toContainText(
+      "Fastställd version 2",
+      { timeout: 60_000 },
+    );
+    // The history: version 2 with its reason, version 1 as the first confirmation.
+    const history = page.locator("[data-testid='profile-change-history']");
+    await history.locator("summary").click();
+    const v2 = history.locator("[data-testid='profile-history-entry'][data-version='2']");
+    await expect(v2).toHaveAttribute("data-kind", "reasoned");
+    await expect(v2).toContainText("Utbildarens namn ska kontrolleras");
+    await expect(
+      history.locator("[data-testid='profile-history-entry'][data-version='1']"),
+    ).toHaveAttribute("data-kind", "first");
+    expect(
+      sql(`SELECT count(*) FROM public.rec_requirement_profiles WHERE job_id = '${JOB}'`) ?? "2",
+    ).toBe("2");
+    expect(
+      sql(
+        `SELECT count(*) FROM recruiter_intelligence.profile_change_reviews WHERE job_id = '${JOB}'`,
+      ) ?? "1",
+    ).toBe("1");
+    // The legacy write path, through the real API with the owner's own session:
+    // a change without a reason is refused and leaves no version behind.
+    const anna = await tokenFor("anna.agare@nordvakt.test");
+    const current = await rpcAs(anna, "rec_ri_get_profile", { _job_id: JOB });
+    expect(current.status).toBe(200);
+    const refused = await rpcAs(anna, "rec_ri_confirm_profile", {
+      _job_id: JOB,
+      _expected_version: 2,
+      _operation_id: crypto.randomUUID(),
+      _start_date: null,
+      _rules: current.body.rules,
+    });
+    expect(refused.status).toBe(400);
+    expect(String(refused.body.message ?? "")).toContain("RI_CHANGE_REASON_REQUIRED");
+    expect(
+      sql(`SELECT count(*) FROM public.rec_requirement_profiles WHERE job_id = '${JOB}'`) ?? "2",
+    ).toBe("2");
+  });
+
+  test("two candidates compared against the same profile version: one row per requirement, source-bound cells, no ranking", async ({
+    page,
+  }) => {
+    test.setTimeout(120_000);
+    await signIn(page, "anna.agare@nordvakt.test");
+    await open(page, casePath(JOB, "?step=applications"));
+    await expect(page.locator("[data-testid='candidate-table']")).toBeVisible({ timeout: 90_000 });
+    const compare = actionBar(page).locator("[data-testid='compare-selected']");
+    await expect(compare).toBeDisabled();
+    await rowCheckboxes(page).nth(0).check();
+    await expect(compare).toBeDisabled();
+    await rowCheckboxes(page).nth(1).check();
+    await expect(compare).toBeEnabled();
+    await compare.click();
+    const cmp = page.locator("[data-testid='compare-page']");
+    await expect(cmp).toHaveAttribute("data-state", "ready", { timeout: 60_000 });
+    await expect(cmp.locator("[data-testid='compare-profile-version']")).toContainText("version 2");
+    await expect(cmp.locator("[data-testid='compare-candidate']")).toHaveCount(2);
+    const rows = cmp.locator("[data-testid='compare-row']");
+    await expect(rows).toHaveCount(
+      Number(
+        sql(`SELECT count(*) FROM public.recruitment_requirements WHERE job_id = '${JOB}'`) ?? "3",
+      ),
+    );
+    // Every cell names its basis: a state and its evidence (or "no evidence").
+    const cells = cmp.locator("[data-testid='compare-cell']");
+    await expect(cells).toHaveCount(2 * (await rows.count()));
+    for (let i = 0; i < (await cells.count()); i++)
+      await expect(cells.nth(i)).toContainText("Underlag:");
+    await expect(cmp).toContainText("rangordnar inte");
+    await expect(cmp).not.toContainText(/poäng|ranking/i);
+    // Back to the list, the selection's recruitment.
+    await cmp.locator("[data-testid='compare-back']").click();
+    await expect(page.locator("[data-testid='candidate-table']")).toBeVisible({ timeout: 60_000 });
+  });
+
+  test("a supplement: requested as a record, sent by a person, answered by the candidate IN THE APP through the real API, read by the reviewer and resolved by hand", async ({
+    page,
+  }) => {
+    test.setTimeout(240_000);
+    const applicationId = "a6000000-0000-4000-8000-000000000020"; // kandidat20: answered No, No
+    await signIn(page, "anna.agare@nordvakt.test");
+    await open(page, `/employer/${SLUG}/applications/${applicationId}`);
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible({ timeout: 90_000 });
+    const summary = page.locator("[data-testid='requirement-summary']");
+    await expect(summary).toBeVisible();
+    const supplementPanel = page.locator("[data-testid='supplement-panel']");
+    await expect(supplementPanel).toHaveAttribute("data-awaiting", "false");
+    await summary.locator("[data-testid='summary-action-supplement']").click();
+    await expect(page.locator("[data-testid='supplement-notice']")).toBeVisible({
+      timeout: 30_000,
+    });
+    await expect(supplementPanel).toHaveAttribute("data-awaiting", "true");
+    // The slot is installed on this stack: the panel says "no answer in the
+    // app yet", not that the feature is missing.
+    await expect(
+      supplementPanel.locator("[data-testid='supplement-reply-not-installed']"),
+    ).toHaveCount(0);
+    await expect(supplementPanel.locator("[data-testid='supplement-no-reply']")).toBeVisible();
+    await expect(
+      supplementPanel.locator("[data-testid='supplement-message-state']"),
+    ).toHaveAttribute("data-state", "draft");
+    // The candidate cannot answer a DRAFT: nothing has reached them.
+    const kim20 = await tokenFor("kandidat20@test.local");
+    const messageId =
+      sql(
+        `SELECT id FROM public.recruitment_messages WHERE application_id = '${applicationId}' AND kind = 'supplement_request' ORDER BY created_at DESC LIMIT 1`,
+      ) ?? "";
+    expect(messageId).toMatch(/^[0-9a-f-]{36}$/);
+    const early = await rpcAs(kim20, "rec_candidate_reply_to_message", {
+      _message_id: messageId,
+      _body: "För tidigt.",
+      _language: "sv",
+    });
+    expect(early.status).not.toBe(200);
+    expect(String(early.body.message ?? "")).toContain("MESSAGE_NOT_FOUND");
+    // A person sends the draft, from the communication section.
+    await page.locator("#candidate-communication").scrollIntoViewIfNeeded();
+    await page.getByRole("button", { name: "Fortsätt utkastet" }).first().click();
+    await page.getByRole("button", { name: "Granska och skicka" }).click();
+    const dialog = page.getByRole("alertdialog");
+    await expect(dialog).toContainText("Skicka meddelandet?");
+    await dialog.getByRole("button", { name: "Skicka" }).click();
+    await expect(
+      supplementPanel.locator("[data-testid='supplement-message-state']"),
+    ).toHaveAttribute("data-state", "sent", { timeout: 60_000 });
+    // Another candidate learns nothing; the addressed candidate answers in the app.
+    const kim19 = await tokenFor("kandidat19@test.local");
+    const foreign = await rpcAs(kim19, "rec_candidate_reply_to_message", {
+      _message_id: messageId,
+      _body: "Fel person.",
+      _language: "sv",
+    });
+    expect(foreign.status).not.toBe(200);
+    expect(String(foreign.body.message ?? "")).toContain("MESSAGE_NOT_FOUND");
+    const reply = await rpcAs(kim20, "rec_candidate_reply_to_message", {
+      _message_id: messageId,
+      _body:
+        "Utbildningsbeviset är från 2021, Bevakningsskolan Syd. Jag tar med originalet till intervjun.",
+      _language: "sv",
+    });
+    expect(reply.status).toBe(200);
+    expect(reply.body.applicationId).toBe(applicationId);
+    // The reviewer reads the answer where the request lives, and resolves it.
+    await page.reload();
+    await expect(supplementPanel.locator("[data-testid='supplement-replied']")).toBeVisible({
+      timeout: 60_000,
+    });
+    await expect(supplementPanel.locator("[data-testid='supplement-reply']")).toHaveCount(1);
+    await expect(supplementPanel.locator("[data-testid='supplement-reply']")).toContainText(
+      "Bevakningsskolan Syd",
+    );
+    await supplementPanel.locator("[data-testid='supplement-answered']").click();
+    await expect(supplementPanel).toHaveAttribute("data-awaiting", "false", { timeout: 30_000 });
+    await expect(
+      supplementPanel.locator("[data-testid='supplement-history-replies']"),
+    ).toContainText("1");
+    const late = await rpcAs(kim20, "rec_candidate_reply_to_message", {
+      _message_id: messageId,
+      _body: "För sent.",
+      _language: "sv",
+    });
+    expect(late.status).not.toBe(200);
+    expect(String(late.body.message ?? "")).toContain("SUPPLEMENT_ALREADY_RESOLVED");
+    // The reply is append-only and never a message of its own.
+    expect(
+      sql(
+        `SELECT count(*) FROM public.recruitment_messages WHERE application_id = '${applicationId}' AND status = 'sent'`,
+      ) ?? "1",
+    ).toBe("1");
+  });
+
+  test("'Ej aktuell' is reopened only as its own act with a reason; a plain member cannot", async ({
+    page,
+  }) => {
+    test.setTimeout(120_000);
+    const applicationId = "a6000000-0000-4000-8000-000000000032"; // rejected in the fixture
+    const mats = await tokenFor("mats.medlem@nordvakt.test");
+    const denied = await rpcAs(mats, "rec_reopen_application", {
+      _application_id: "a6000000-0000-4000-8000-000000000031",
+      _expected_status: "rejected",
+      _reason: "Medlem försöker återöppna.",
+      _operation_id: crypto.randomUUID(),
+    });
+    expect(denied.status).not.toBe(200);
+    expect(String(denied.body.message ?? "")).toContain("RECRUITMENT_DECISION_NOT_PERMITTED");
+    await signIn(page, "anna.agare@nordvakt.test");
+    await open(page, `/employer/${SLUG}/applications/${applicationId}`);
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible({ timeout: 90_000 });
+    await page.locator("[data-testid='reopen-open']").click();
+    const dialog = page.getByRole("alertdialog");
+    await expect(dialog).toContainText("Återöppna beslutet Ej aktuell?");
+    await dialog
+      .locator("[data-testid='reopen-reason']")
+      .fill("Felaktigt avslut; kandidaten ska granskas igen.");
+    await dialog.getByRole("button", { name: "Återöppna" }).click();
+    await expect(page.locator("[data-testid='reopen-notice']")).toHaveAttribute("data-tone", "ok", {
+      timeout: 30_000,
+    });
+    expect(
+      sql(`SELECT status FROM public.job_applications WHERE id = '${applicationId}'`) ??
+        "reviewing",
+    ).toBe("reviewing");
+    expect(
+      sql(
+        `SELECT count(*) FROM public.job_application_status_events WHERE application_id = '${applicationId}' AND previous_status = 'rejected' AND new_status = 'reviewing' AND note LIKE 'Återöppnad:%'`,
+      ) ?? "1",
+    ).toBe("1");
+    await open(page, casePath(JOB, "?step=applications"));
+    await expect(page.locator(`tr[data-application-id='${applicationId}']`)).toHaveCount(1, {
+      timeout: 60_000,
+    });
+  });
+
+  test("the interview setup offers the published BESKT item for recruitment, saves it with the core, and the API refuses vetting content", async ({
+    page,
+  }) => {
+    test.setTimeout(180_000);
+    await signIn(page, "anna.agare@nordvakt.test");
+    await open(page, casePath(JOB, "?step=requirements"));
+    const setup = page.locator("[data-testid='interview-composition']");
+    await expect(setup).toHaveAttribute("data-installed", "true", { timeout: 90_000 });
+    const beskt = setup.locator("[data-testid='composition-beskt']");
+    await expect(beskt).toBeVisible({ timeout: 60_000 });
+    await expect(beskt.locator("[data-testid='composition-beskt-not-installed']")).toHaveCount(0);
+    // Exactly the one ordinary, interview-phase, recruitment-support item; the
+    // sensitive, the preparation and the vetting items are not offered.
+    const items = beskt.locator("[data-testid='composition-beskt-item']");
+    await expect(items).toHaveCount(1);
+    await expect(items.first()).toHaveAttribute(
+      "data-item-id",
+      "bb5e0000-9999-4000-8000-000000000001",
+    );
+    await expect(beskt).toContainText("Syfte: Rollen innebär ansvar för nycklar och larm.");
+    await expect(beskt.locator("[data-testid='composition-beskt-vetting']")).toContainText(
+      "väljs aldrig i rekryteringsintervjun",
+    );
+    // Core questions are never a checkbox; behavioural and scenario questions
+    // are grouped by their own type.
+    await expect(setup.locator("[data-testid='composition-core-question']")).toHaveCount(8);
+    await expect(
+      setup.locator(
+        "[data-testid='composition-group-scenarios'] [data-testid='composition-core-question']",
+      ),
+    ).not.toHaveCount(0);
+    await items.first().check();
+    await setup.locator("[data-testid='composition-save']").click();
+    await expect(setup.locator("[data-testid='composition-notice']")).toHaveAttribute(
+      "data-tone",
+      "ok",
+      {
+        timeout: 30_000,
+      },
+    );
+    expect(
+      sql(
+        `SELECT count(*) FROM public.rec_interview_compositions c, jsonb_array_elements(c.selection) x WHERE c.job_id = '${JOB}' AND x->>'kind' = 'beskt_item'`,
+      ) ?? "1",
+    ).toBe("1");
+    // Vetting content through the real API, by the owner herself: refused.
+    const anna = await tokenFor("anna.agare@nordvakt.test");
+    const current = await rpcAs(anna, "rec_ri_get_composition", { _job_id: JOB });
+    expect(current.status).toBe(200);
+    const selection = (current.body.selection as { itemId: string }[]).map((s) => ({
+      ...s,
+    }));
+    const refused = await rpcAs(anna, "rec_ri_save_composition", {
+      _job_id: JOB,
+      _expected_version: current.body.version,
+      _operation_id: crypto.randomUUID(),
+      _pack_version_id: current.body.packVersionId,
+      _selection: [
+        ...selection,
+        {
+          group: "beskt",
+          kind: "beskt_item",
+          itemId: "bb5e0000-9999-4000-8000-000000000004",
+          position: 999,
+        },
+      ],
+      _reason: "Försök att ta in säkerhetsprövningsinnehåll.",
+    });
+    expect(refused.status).toBe(400);
+    expect(String(refused.body.message ?? "")).toContain("RI_COMPOSITION_VETTING_ONLY");
+  });
+
   test("25 candidates, 45 minutes from 10:00: the series does not fit the day, and nothing is saved", async ({
     page,
   }) => {

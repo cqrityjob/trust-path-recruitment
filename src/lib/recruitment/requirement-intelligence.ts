@@ -126,17 +126,27 @@ export const requirementDecisionSchema = z.object({
 });
 export type RequirementDecision = z.infer<typeof requirementDecisionSchema>;
 
-export const confirmProfileSchema = z.object({
-  employerId: z.string().uuid(),
-  jobId: z.string().uuid(),
-  expectedVersion: z.number().int().min(0),
-  operationId: z.string().uuid(),
-  startDate: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .nullable(),
-  rules: z.array(requirementRuleSchema).max(30),
-});
+export const confirmProfileSchema = z
+  .object({
+    employerId: z.string().uuid(),
+    jobId: z.string().uuid(),
+    expectedVersion: z.number().int().min(0),
+    operationId: z.string().uuid(),
+    startDate: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/)
+      .nullable(),
+    rules: z.array(requirementRuleSchema).max(30),
+    /** Why the profile changes. Required from version 1 onwards (a CHANGE of a
+     *  confirmed profile); the first confirmation has nothing to motivate
+     *  against and carries null. The server refuses a change without it on
+     *  every write path (RI_CHANGE_REASON_REQUIRED). */
+    changeReason: z.string().trim().max(2000).nullable(),
+  })
+  .refine((d) => d.expectedVersion === 0 || (d.changeReason ?? "").length > 0, {
+    message: "RI_CHANGE_REASON_REQUIRED",
+    path: ["changeReason"],
+  });
 export const saveRequirementReviewSchema = z.object({
   employerId: z.string().uuid(),
   applicationId: z.string().uuid(),
