@@ -29,16 +29,25 @@ samtliga gröna på exakt `8a736dd4`:
 Tidigare gröna körningar på `aece303d` är **tidigare bevis** (CI-körningen där avbröts av bot-pushen
 och räknas inte); slutverifieringen är försök 2 på `8a736dd4`.
 
-### PR 2 (#469) – slutcommit: se avsnitt 1b
+### PR 2 (#469) – kodhuvud `869cf5c4` (bildbotens par för `946a3ade`, bas main `9774c9c0`)
 
-Kodhuvud `946a3ade` (merge av main `9774c9c0` + installationsregistrering + kandidatens svarsvy),
-därefter bildbotens commit och eventuell docs-commit. Resultat per exakt commit förs in nedan när
-jobben gått; ingen rad fylls i i förväg.
+Kedjan: `946a3ade` (merge av main + installationsregistrering + kandidatens svarsvy) → `bfbe02e7`
+(denna not, docs) → `869cf5c4` (botens färska bildpar: före = main `9774c9c0`, efter = `946a3ade`,
+samma instrument). Botens commit utlöste alla 13 workflows med `action_required`; de kördes om av
+underhållarkontot och **försök 2 är beviset**, samtliga gröna på exakt `869cf5c4`:
 
-#### 1b. Resultat på PR 2:s slutcommit
+| Workflow                                                                                                                                                                                                                                                                        | Körning                                        | Resultat |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- | -------- |
+| CI (lint/typecheck/guards inkl. nullable-RPC-kontraktet och workspace-guarden, migrationsreplay PG16+PG17/PostgREST14, P1 PG17+HTTP, **P1 full SQL/HTTP/browser – PostgREST-starten gick igenom**, CV, Passport, publika browsersviter, före/efter-paret komplett och aktuellt) | run 1882 attempt 2                             | ✅       |
+| Recruitment workspace — routed browser evidence (riktig GoTrue/PostgREST; kandidat20 svarar i appen i egen webbläsare, ansvarig läser och avslutar)                                                                                                                             | run 512 attempt 2                              | ✅       |
+| Recruiter P1 native 100-application evidence                                                                                                                                                                                                                                    | run 96 attempt 2                               | ✅       |
+| Recruiter real Supabase evidence                                                                                                                                                                                                                                                | run 93 attempt 2                               | ✅       |
+| Passport native OP09 recovery evidence                                                                                                                                                                                                                                          | run 79 attempt 2                               | ✅       |
+| Employer portal UX evidence — before and after                                                                                                                                                                                                                                  | run 65 attempt 2                               | ✅       |
+| E4 / Career Center / Job ad back navigation / Passport public pilot / Role assessment / Security Work / Application retention                                                                                                                                                   | 763/2, 475/2, 477/2, 437/2, 108/2, 525/2, 86/2 | ✅       |
 
-_Fylls i av leveransen: run-id och resultat per workflow på den exakta slutcommiten, inklusive
-"Recruiter Intelligence P1 — full SQL, HTTP and browser proof" (PostgREST-start, se avsnitt 5)._
+Den commit som för in denna tabell är docs-only (ingen omfotografering); dess egen CI-körning
+rapporteras i PR:en och i chatten före merge, och merge sker på den exakta commiten.
 
 ## 2. Matris per krav
 
