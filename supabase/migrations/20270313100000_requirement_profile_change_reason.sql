@@ -13,9 +13,10 @@
 --     private recruiter_intelligence.confirm_profile_core;
 --   - rec_ri_confirm_profile keeps its signature and still serves the FIRST
 --     confirmation of a recruitment (version 0 -> 1: there is no earlier
---     confirmed profile to motivate a change against) and the idempotent
---     replay of operations it already recorded; a change of an existing
---     version through it is refused with RI_CHANGE_REASON_REQUIRED;
+--     confirmed profile to motivate a change against), the idempotent
+--     replay of operations it already recorded and the CAS (a stale expected
+--     version is RI_STALE_VERSION / PT409 exactly as before); a change of an
+--     existing version through it is refused with RI_CHANGE_REASON_REQUIRED;
 --   - rec_ri_confirm_reviewed_profile calls the core directly and stays the
 --     one path for a change: manager, CAS on the version, reason 1..2000
 --     characters, idempotent by operation, one history row per change.
@@ -77,6 +78,10 @@ BEGIN
   request:=jsonb_build_object('version',_expected_version,'start',_start_date,'rules',_rules);
   result:=recruiter_intelligence.operation_result(_operation_id,_job_id,'profile',request); IF result IS NOT NULL THEN RETURN result; END IF;
   SELECT coalesce(max(version),0) INTO v FROM public.rec_requirement_profiles WHERE job_id=_job_id;
+  -- The CAS first, exactly as before (a stale expected version is PT409 on
+  -- every path); only a request that matches the current version and would
+  -- CHANGE it is the one that needs a reason.
+  IF v<>_expected_version THEN RAISE EXCEPTION 'RI_STALE_VERSION' USING ERRCODE='PT409'; END IF;
   IF v>0 THEN
     RAISE EXCEPTION 'RI_CHANGE_REASON_REQUIRED' USING ERRCODE='check_violation',
       HINT='A confirmed requirement profile changes only through rec_ri_confirm_reviewed_profile with a stated reason.';

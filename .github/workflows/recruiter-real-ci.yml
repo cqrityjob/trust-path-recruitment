@@ -21,7 +21,7 @@ jobs:
     timeout-minutes: 55
     env:
       RI_REAL_SCHEMA_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-      RI_REAL_RELEASE_SCHEMA_SHA: 7416a1397c392efc9ef9fe096a3d3d404887eb40
+      RI_REAL_RELEASE_SCHEMA_SHA: 3e2b646cdde22349ae6ec89d615b5dbfd06ccaa6
       RI_OPS_STACK_ROOT: ${{ github.workspace }}/real-stack
     steps:
       - name: Exact current schema and evidence code
@@ -38,7 +38,7 @@ jobs:
       - name: Exact reviewed snapshot application
         uses: actions/checkout@v4
         with:
-          ref: 7416a1397c392efc9ef9fe096a3d3d404887eb40
+          ref: 3e2b646cdde22349ae6ec89d615b5dbfd06ccaa6
           path: app
           persist-credentials: false
       # The CLI composite installs its own Bun. Restore our reviewed test

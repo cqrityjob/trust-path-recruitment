@@ -182,6 +182,8 @@ SELECT pg_temp.ok((public.rec_ri_get_review((SELECT app FROM fx))->>'reviewState
   'P12 the confirmed review of version 1 is STALE under version 2, never a confirmation of the new requirements');
 SELECT pg_temp.must_fail(format($f$SELECT public.rec_ri_confirm_profile(%L, 2, 'b4000000-9999-4000-8000-000000000006', NULL, (SELECT body FROM rules))$f$, (SELECT job FROM fx)),
   'RI_CHANGE_REASON_REQUIRED', 'P13 the legacy path refuses the next change as well (2 -> 3)');
+SELECT pg_temp.must_fail(format($f$SELECT public.rec_ri_confirm_profile(%L, 0, 'b4000000-9999-4000-8000-000000000016', NULL, (SELECT body FROM rules))$f$, (SELECT job FROM fx)),
+  'RI_STALE_VERSION', 'P13b the legacy path keeps its CAS: a stale expected version is PT409 before anything else (the P1 contract)');
 SELECT pg_temp.must_fail(format($f$SELECT public.rec_ri_confirm_reviewed_profile(%L, 1, 'b4000000-9999-4000-8000-000000000007', NULL, (SELECT body FROM rules), 'Igen')$f$, (SELECT job FROM fx)),
   'RI_STALE_VERSION', 'P14 the reviewed path keeps the CAS: an older expected version is refused');
 SELECT pg_temp.must_fail(format($f$SELECT public.rec_ri_confirm_reviewed_profile(%L, 2, 'b4000000-9999-4000-8000-000000000008', NULL, '[]'::jsonb, 'Tom regel')$f$, (SELECT job FROM fx)),
