@@ -28,7 +28,7 @@ jobs:
       - name: Exact pending recovery application
         uses: actions/checkout@v4
         with:
-          ref: 55db1e3b83ace033450899a93ca0961edde05217
+          ref: 7416a1397c392efc9ef9fe096a3d3d404887eb40
           path: app
           persist-credentials: false
       - uses: supabase/setup-cli@v3
@@ -55,7 +55,7 @@ jobs:
         run: |
           bun test ./scripts/passport-native-op09.test.ts
           bunx tsc --noEmit --allowJs --checkJs false --skipLibCheck --module preserve --moduleResolution bundler --target ES2022 --types node scripts/passport-native-op09.test.ts scripts/passport-native-op09-browser.config.ts e2e/passport-native-op09.spec.ts
-      - name: Complete391 native schema, Auth8, actual44 and browser4
+      - name: Complete394 native schema, Auth8, actual44 and browser4
         run: node scripts/passport-native-op09-run.mjs
       - name: Validate sanitized public evidence
         id: public_evidence

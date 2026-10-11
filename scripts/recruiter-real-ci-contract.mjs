@@ -2,8 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 import cp from "node:child_process";
 
-export const SCHEMA_SHA = "05520f2995f24ba697be41ecf8364b71a6ef1491";
-export const APP_SHA = "55db1e3b83ace033450899a93ca0961edde05217";
+export const SCHEMA_SHA = "7416a1397c392efc9ef9fe096a3d3d404887eb40";
+export const APP_SHA = "7416a1397c392efc9ef9fe096a3d3d404887eb40";
 export const PROJECT = "cqj-ri-real-20261008b";
 export const API = "http://127.0.0.1:55690";
 export const APP = "http://127.0.0.1:3140";
@@ -14,7 +14,7 @@ export const EXCLUDED =
 export function requireCompleteHistory(names) {
   const files = names.filter((name) => name.endsWith(".sql")).sort();
   if (
-    files.length !== 391 ||
+    files.length !== 394 ||
     files.some((name) => !/^\d{14}_.+\.sql$/.test(name)) ||
     new Set(files.map((name) => name.slice(0, 14))).size !== files.length
   )
@@ -39,6 +39,12 @@ export function requireCompleteHistory(names) {
     !files.some((name) => name.startsWith("20270312100000_"))
   )
     throw Error("REAL_CI_LIFECYCLE_V03_FORWARD_REQUIRED");
+  if (
+    !files.some((name) => name.startsWith("20270313100000_")) ||
+    !files.some((name) => name.startsWith("20270314100000_")) ||
+    !files.some((name) => name.startsWith("20270315100000_"))
+  )
+    throw Error("REAL_CI_LIFECYCLE_V04_FORWARD_REQUIRED");
   return files;
 }
 

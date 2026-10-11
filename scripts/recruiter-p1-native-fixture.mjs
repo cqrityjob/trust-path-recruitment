@@ -11,8 +11,8 @@ import {
 } from "./recruiter-p1-native-contract.mjs";
 
 export const SQL_HASH = "45db1d33d64f1fc1c424f2a22090105694daecdb079cf2eaee5afa277a1f98ce";
-export const API_HASH = "b650ce6987192c88404cc65bca63bad4f23983fd711e2af7c89cb3327ae4b3a4";
-export const BROWSER_HASH = "3ac000be5fbaf613e11ef8393ce51f0e4f0da0adafee5d69d45173fe25f8988b";
+export const API_HASH = "10d2b18c6abb1e99e3c1d737ee1d962ca39ab8292b54b94295fbd4473d1e7c4f";
+export const BROWSER_HASH = "655659d14bd589af981d60d374002c5a1c5fccd42844f26abee6417cfb89f7f2";
 function pinned(source, expected) {
   if (sha256(source) !== expected) throw Error("P1_NATIVE_CANONICAL_SOURCE_CHANGED");
 }

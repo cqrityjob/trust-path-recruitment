@@ -3,8 +3,8 @@ import path from "node:path";
 import cp from "node:child_process";
 import crypto from "node:crypto";
 
-export const SCHEMA_SHA = "05520f2995f24ba697be41ecf8364b71a6ef1491";
-export const APP_SHA = "55db1e3b83ace033450899a93ca0961edde05217";
+export const SCHEMA_SHA = "7416a1397c392efc9ef9fe096a3d3d404887eb40";
+export const APP_SHA = "7416a1397c392efc9ef9fe096a3d3d404887eb40";
 export const PROJECT = "cqj-ri-native-op09-20261008";
 export const API = "http://127.0.0.1:55820";
 export const APP = "http://127.0.0.1:35820";
@@ -123,7 +123,7 @@ export function validateStatus(status) {
 export function history(names) {
   const files = names.filter((n) => n.endsWith(".sql")).sort();
   if (
-    files.length !== 391 ||
+    files.length !== 394 ||
     files.some((n) => !/^\d{14}_.+\.sql$/.test(n)) ||
     new Set(files.map((n) => n.slice(0, 14))).size !== files.length ||
     [
@@ -135,6 +135,9 @@ export function history(names) {
       "20270310100000_",
       "20270311100000_",
       "20270312100000_",
+      "20270313100000_",
+      "20270314100000_",
+      "20270315100000_",
     ].some((prefix) => !files.some((n) => n.startsWith(prefix)))
   )
     throw Error("OP09_NATIVE_EXACT_COMPLETE_HISTORY_REQUIRED");
