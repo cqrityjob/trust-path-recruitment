@@ -32,13 +32,13 @@ jobs:
       - name: Exact reviewed P1 application
         uses: actions/checkout@v4
         with:
-          ref: 55db1e3b83ace033450899a93ca0961edde05217
+          ref: 53659419a1c243c27a59540eb849569140b71365
           path: app
           persist-credentials: false
       - name: Exact reviewed schema including native hash fix
         uses: actions/checkout@v4
         with:
-          ref: 05520f2995f24ba697be41ecf8364b71a6ef1491
+          ref: 53659419a1c243c27a59540eb849569140b71365
           path: schema
           persist-credentials: false
           sparse-checkout: |

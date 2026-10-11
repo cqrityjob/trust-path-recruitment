@@ -50,6 +50,11 @@ const MAP: Record<string, TranslationKey> = {
   RI_COMPOSITION_PACK_FIXED: "rec.error.compositionPackFixed",
   RI_PACK_VERSION_NOT_FOUND: "rec.error.notFound",
   SCHEMA_NOT_INSTALLED: "rec.error.schemaNotInstalled",
+  // Slutuppdrag 2026-10-11 (workspace API, slots 20270313100000 .. 20270315100000)
+  RI_CHANGE_REASON_REQUIRED: "rec.error.changeReason",
+  RI_COMPARISON_INVALID: "rec.error.comparisonInvalid",
+  RI_SOURCE_STALE: "rec.error.stale",
+  RI_COMPOSITION_VETTING_ONLY: "rec.error.compositionVettingOnly",
 };
 
 export function recruitmentErrorKey(code: string | null | undefined): TranslationKey {

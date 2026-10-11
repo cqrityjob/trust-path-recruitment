@@ -219,6 +219,41 @@ type LifecycleV03Functions = {
   };
   rec_ri_case_composition: { Args: { _case_id: string }; Returns: Json };
 };
+// Reviewed-profile workspace (slot 20270310100000, installed 2026-10-09):
+// comparison, page evidence, next unreviewed, change impact/history and the
+// reviewed confirmation with a stated reason. Handwritten like the P1 overlay.
+type RecruitmentWorkspaceFunctions = {
+  rec_ri_profile_change_impact: {
+    Args: { _job_id: string; _expected_version: number };
+    Returns: Json;
+  };
+  rec_ri_confirm_reviewed_profile: {
+    Args: {
+      _job_id: string;
+      _expected_version: number;
+      _operation_id: string;
+      _start_date: string | null;
+      _rules: Json;
+      _change_reason: string;
+    };
+    Returns: Json;
+  };
+  rec_ri_profile_change_history: { Args: { _job_id: string }; Returns: Json };
+  rec_ri_compare_applications: {
+    Args: { _job_id: string; _profile_id: string; _application_ids: string[] };
+    Returns: Json;
+  };
+  rec_ri_next_unreviewed: { Args: { _employer_id: string; _job_id: string | null }; Returns: Json };
+  rec_ri_page_evidence: {
+    Args: {
+      _job_id: string;
+      _profile_id: string;
+      _application_ids: string[];
+      _requirement_ids: string[];
+    };
+    Returns: Json;
+  };
+};
 type Overrides = {
   bcp_conduct_record_resolution: Omit<Functions["bcp_conduct_record_resolution"], "Args"> & {
     Args: RequiredNullable<
@@ -258,12 +293,14 @@ export type Database = Omit<GeneratedDatabase, "public"> & {
       | keyof EvidenceUploadFunctions
       | keyof RecruitmentIntelligenceFunctions
       | keyof LifecycleV03Functions
+      | keyof RecruitmentWorkspaceFunctions
     > &
       Overrides &
       FoundationFunctions &
       EvidenceUploadFunctions &
       RecruitmentIntelligenceFunctions &
-      LifecycleV03Functions;
+      LifecycleV03Functions &
+      RecruitmentWorkspaceFunctions;
     Tables: Omit<Tables, keyof TableOverrides> & TableOverrides;
   };
 };

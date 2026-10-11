@@ -93,6 +93,11 @@ export function SupplementPanel({
             )}{" "}
             <MessageState r={openRequest} />
           </p>
+          {/* The candidate's half (slot 20270314100000). Said exactly as it
+              is: answers written in the app are listed; where the slot is not
+              installed, the e-mail path and the person who records it are
+              the whole flow, and the panel does not pretend otherwise. */}
+          <Replies r={openRequest} />
           {canManage && open && (
             <div className="mt-2 flex flex-wrap items-end gap-2">
               <label className="flex flex-col gap-0.5 text-xs text-muted-foreground">
@@ -149,12 +154,61 @@ export function SupplementPanel({
                 {formatStamp(r.requestedAt, lang)} ·{" "}
                 {t(`rec.supplement.outcome.${r.outcome ?? "withdrawn"}` as TranslationKey)}
                 {r.resolutionNote ? ` · ${r.resolutionNote}` : ""} · <MessageState r={r} />
+                {r.replies && r.replies.length > 0 && (
+                  <span data-testid="supplement-history-replies">
+                    {" "}
+                    · {t("rec.supplement.replies")}: {r.replies.length}
+                  </span>
+                )}
               </li>
             ))}
           </ul>
         </details>
       )}
     </section>
+  );
+}
+
+function Replies({ r }: { r: SupplementRequest }) {
+  const { t, lang } = useT();
+  if (r.replies === undefined) {
+    return (
+      <p
+        className="mt-2 text-xs text-muted-foreground"
+        data-testid="supplement-reply-not-installed"
+      >
+        {t("rec.supplement.replyNotInstalled")} {t("rec.supplement.emailNote")}
+      </p>
+    );
+  }
+  if (r.replies.length === 0) {
+    return (
+      <p className="mt-2 text-xs text-muted-foreground" data-testid="supplement-no-reply">
+        {t("rec.supplement.noReply")} {t("rec.supplement.emailNote")}
+      </p>
+    );
+  }
+  return (
+    <div className="mt-2 text-sm" data-testid="supplement-replies" data-count={r.replies.length}>
+      <p className="font-medium text-foreground" data-testid="supplement-replied">
+        {t("rec.supplement.replied")}
+      </p>
+      <p className="text-xs text-muted-foreground">{t("rec.supplement.repliedHint")}</p>
+      <ul className="mt-1 space-y-1">
+        {r.replies.map((reply) => (
+          <li
+            key={reply.replyId}
+            data-testid="supplement-reply"
+            className="rounded-md border border-border bg-muted/30 px-3 py-2"
+          >
+            <p className="whitespace-pre-wrap">{reply.body}</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {formatStamp(reply.createdAt, lang)}
+            </p>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 

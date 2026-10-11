@@ -225,6 +225,13 @@ export function CandidateTable(props: Props) {
   const allOnPage = rows.length > 0 && rows.every((r) => selected.has(r.applicationId));
   const one = selectedRows.length === 1 ? selectedRows[0] : null;
   const none = selectedRows.length === 0;
+  // Comparable: two or three selected rows that all belong to one recruitment.
+  const comparable =
+    selectedRows.length >= 2 &&
+    selectedRows.length <= 3 &&
+    selectedRows.every((r) => r.jobId === selectedRows[0]!.jobId)
+      ? { jobId: selectedRows[0]!.jobId, selected: selectedRows.map((r) => r.applicationId) }
+      : null;
   const anonymous = t("employer.applications.anonymousCandidate");
   const nameOf = (r: CandidateRow) => r.name ?? anonymous;
 
@@ -741,6 +748,35 @@ export function CandidateTable(props: Props) {
         )}
         {none && (
           <span className="text-xs text-muted-foreground">{t("rec.action.hint.select")}</span>
+        )}
+        {/* Two or three candidates of ONE recruitment, side by side against the
+            same requirement profile version (rec_ri_compare_applications). No
+            ranking: the page shows the server's criteria and their sources. */}
+        {comparable ? (
+          <Link
+            to="/employer/$employerSlug/applications/compare"
+            params={{ employerSlug }}
+            search={{
+              job: comparable.jobId,
+              compare: comparable.selected.join(","),
+              list: listKey,
+            }}
+            onClick={remember}
+            data-testid="compare-selected"
+            className={barBtn}
+          >
+            {t("rec.compare.action")}
+          </Link>
+        ) : (
+          <button
+            type="button"
+            className={barBtn}
+            disabled
+            data-testid="compare-selected"
+            title={t("rec.compare.actionHint")}
+          >
+            {t("rec.compare.action")}
+          </button>
         )}
         {canManage && (
           <button

@@ -700,6 +700,25 @@ export const table: Record<string, unknown | ((args: Record<string, unknown>) =>
     args.jobId === JOB_UPPSALA ? recruitmentDetail : null,
   getRequirementProfile: (args: Record<string, unknown>) =>
     args.jobId === JOB_UPPSALA ? requirementProfile : null,
+  // The reviewed-profile workspace (installed slot 20270310100000), as the
+  // requirement step reads it for version 1: what a change would touch (the
+  // five Uppsala applications: four open, one archived and decided; one
+  // confirmed review among the open ones), and a history with no motivated
+  // change yet -- version 1 is the first confirmation.
+  getProfileChangeImpact: (args: Record<string, unknown>) =>
+    args.jobId === JOB_UPPSALA
+      ? {
+          version: 1,
+          received: 5,
+          active: 4,
+          archived: 1,
+          withdrawn: 0,
+          decided: 1,
+          reviewedActive: 1,
+        }
+      : null,
+  getProfileChangeHistory: [],
+  getRecruitmentTeam: [{ userId: USER, name: "Rita Rekryterare", role: "owner", isSelf: true }],
   // The hub's material-lifecycle panel: nothing archived, nothing due.
   getLifecycleOverview: {
     months: 24,

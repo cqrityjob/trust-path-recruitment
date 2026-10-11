@@ -251,6 +251,50 @@ RI_UPLOAD_PASSED="$(echo "$RI_UPLOAD_OUT" | command grep -c 'NOTICE:  ok ' || tr
 [ "$RI_UPLOAD_PASSED" -ge 41 ] || { echo "$RI_UPLOAD_OUT"; echo "FAIL:41 upload assertions required" >&2; exit 1; }
 echo "    ok  ${RI_UPLOAD_PASSED} durable upload SQL assertions"
 
+# Slutuppdrag 2026-10-11 (slots 131, 141, 151): the motivated profile change on
+# every write path, the candidate's in-app supplement answer and BESKT items in
+# the composition, against the full current schema. The suite rolls back.
+echo "==> Running recruitment lifecycle v0.4 (change reason, candidate reply, BESKT items)"
+set +e
+RL4_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/recruitment_lifecycle_v04_test.sql 2>&1)"
+RL4_RC=$?
+set -e
+RL4_PASSED="$(echo "$RL4_OUT" | grep -c "NOTICE:  ok " || true)"
+if [ "$RL4_RC" -ne 0 ] || [ "$RL4_PASSED" -lt 57 ]; then
+  echo "$RL4_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "Recruitment lifecycle v0.4"
+else
+  echo "    ok  ${RL4_PASSED} change-reason, candidate-reply and BESKT-item assertions"
+fi
+# The two data-bearing rollbacks must refuse recorded data before changing
+# anything: the suite's own fixture, with the rollback in place of its ROLLBACK.
+RL4_PROBE="$(mktemp)"
+for rl4_slot in 20270314100000_candidate_supplement_reply 20270315100000_interview_composition_beskt_items; do
+  sed '$d' supabase/tests/recruitment_lifecycle_v04_test.sql > "$RL4_PROBE"
+  printf 'RESET ROLE;\n\\i supabase/rollback/%s_rollback.sql\nROLLBACK;\n' "$rl4_slot" >> "$RL4_PROBE"
+  set +e
+  RL4_REFUSED="$(psql -X -d "$TEST_DB" -f "$RL4_PROBE" 2>&1)"
+  set -e
+  echo "$RL4_REFUSED" | grep -q 'RI_ROLLBACK_REQUIRES_PRESERVED_DATA' || { echo "$RL4_REFUSED" | tail -5 >&2; echo "FAIL: ${rl4_slot} rollback must refuse recorded data" >&2; exit 1; }
+done
+rm -f "$RL4_PROBE"
+[ "$(psql_q -d "$TEST_DB" -Atc "SELECT (NOT EXISTS(SELECT 1 FROM public.rec_candidate_replies) AND NOT EXISTS(SELECT 1 FROM public.rec_interview_compositions) AND NOT EXISTS(SELECT 1 FROM auth.users WHERE id='b4000000-0000-4000-8000-00000000000a'))::text")" = "true" ] || { echo "FAIL: v0.4 probe fixture persisted" >&2; exit 1; }
+echo "    ok  v0.4 data-bearing rollbacks refuse recorded data; probe fixtures rolled back"
+# Stand the three EMPTY slots down, newest first, before every older consumer:
+# the P1 oracle and the workspace runner exercise the requirements080 and
+# workspace20270310100000 contracts, whose bodies 131 replaces, and the 141
+# table references supplement111. Each rollback restores the previous bodies
+# verbatim; the suite above leaves no data behind.
+RL4_BASE_SELECT="SELECT md5(string_agg(pg_get_functiondef(p.oid)||coalesce(p.proacl::text,'')||coalesce(p.proconfig::text,''),E'\\n' ORDER BY n.nspname,p.proname,p.oid)) FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE (n.nspname='recruiter_intelligence' AND p.proname<>'confirm_profile_core') OR (n.nspname='public' AND p.proname LIKE 'rec_ri_%' AND p.proname NOT IN('rec_ri_confirm_profile','rec_ri_confirm_reviewed_profile','rec_ri_supplement_state','rec_ri_composition_catalog','rec_ri_save_composition'))"
+RL4_BASE_BEFORE="$(psql_q -d "$TEST_DB" -Atc "$RL4_BASE_SELECT")"
+psql_q -d "$TEST_DB" -f supabase/rollback/20270315100000_interview_composition_beskt_items_rollback.sql >/dev/null
+psql_q -d "$TEST_DB" -f supabase/rollback/20270314100000_candidate_supplement_reply_rollback.sql >/dev/null
+psql_q -d "$TEST_DB" -f supabase/rollback/20270313100000_requirement_profile_change_reason_rollback.sql >/dev/null
+[ "$(psql_q -d "$TEST_DB" -Atc "$RL4_BASE_SELECT")" = "$RL4_BASE_BEFORE" ] || { echo "FAIL: v0.4 rollbacks changed a function they do not own" >&2; exit 1; }
+RL4_STOOD_DOWN="$(psql_q -d "$TEST_DB" -Atc "SELECT (to_regclass('public.rec_candidate_replies') IS NULL AND to_regprocedure('recruiter_intelligence.confirm_profile_core(uuid,integer,uuid,date,jsonb)') IS NULL AND to_regprocedure('public.rec_candidate_reply_to_message(uuid,text,text)') IS NULL AND pg_get_functiondef('public.rec_ri_confirm_profile(uuid,integer,uuid,date,jsonb)'::regprocedure) NOT LIKE '%RI_CHANGE_REASON_REQUIRED%' AND pg_get_functiondef('public.rec_ri_confirm_reviewed_profile(uuid,integer,uuid,date,jsonb,text)'::regprocedure) NOT LIKE '%confirm_profile_core%' AND pg_get_functiondef('public.rec_ri_supplement_state(uuid)'::regprocedure) NOT LIKE '%candidateReplied%' AND pg_get_functiondef('public.rec_ri_composition_catalog(uuid,uuid)'::regprocedure) NOT LIKE '%beskt%' AND pg_get_functiondef('public.rec_ri_save_composition(uuid,integer,uuid,uuid,jsonb,text)'::regprocedure) NOT LIKE '%beskt_item%')::text")"
+[ "$RL4_STOOD_DOWN" = "true" ] || { echo "FAIL: lifecycle v0.4 rollbacks left a body or object behind." >&2; exit 1; }
+echo "    ok  lifecycle v0.4 slots stood down to the v0.3 bodies before historical consumers"
+
 # P1 runs against the fully migrated schema (including permanent case content
 # snapshots) before historical-era rollback tests. Its synthetic fixture rolls
 # back; stand down only the EMPTY additive schema, keeping old assertions exact.

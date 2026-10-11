@@ -342,12 +342,26 @@ ok(
 );
 const profile = await rpc("rec_ri_get_profile", { _job_id: job });
 assert.equal(profile.status, 200);
-const profileV2 = await rpc("rec_ri_confirm_profile", {
+// A CHANGE of a confirmed profile carries its reason through the reviewed
+// wrapper (workspace 20270310100000); from slot 20270313100000 the legacy
+// path refuses a change without one, on every client.
+const legacyChange = await rpc("rec_ri_confirm_profile", {
   _job_id: job,
   _expected_version: 1,
   _operation_id: randomUUID(),
   _start_date: "2026-12-01",
   _rules: profile.body.rules,
+});
+// Asserted outside ok(): the canonical count stays 23; the refusal is required.
+assert.equal(legacyChange.status, 400);
+assert.match(String(legacyChange.body?.message ?? ""), /RI_CHANGE_REASON_REQUIRED/);
+const profileV2 = await rpc("rec_ri_confirm_reviewed_profile", {
+  _job_id: job,
+  _expected_version: 1,
+  _operation_id: randomUUID(),
+  _start_date: "2026-12-01",
+  _rules: profile.body.rules,
+  _change_reason: "Synthetic start-date change for the canonical check",
 });
 assert.equal(profileV2.status, 200);
 const changed = await read();

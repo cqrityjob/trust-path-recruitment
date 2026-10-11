@@ -3766,8 +3766,56 @@
           "object": "rec_ri_case_composition"
         }
       ]
+    },
+    {
+      "file": "20270313100000_requirement_profile_change_reason.sql",
+      "hostedState": "pending",
+      "hostedVersion": "20270313100000",
+      "hostedName": "requirement_profile_change_reason",
+      "note": "Slutuppdrag 2026-10-11, slot reason131. Every CHANGE of a confirmed requirement profile needs a stated reason and one history row on every write path: the validating body of requirements080's rec_ri_confirm_profile moves verbatim into the private recruiter_intelligence.confirm_profile_core; the public legacy function keeps its signature, still serves the first confirmation (0 -> 1) and its own recorded replays, and refuses a change with RI_CHANGE_REASON_REQUIRED; rec_ri_confirm_reviewed_profile calls the core directly. No table, row, grant or ledger changes. Install after 20270312100000; the client switches its change path to the reviewed wrapper in the same release.",
+      "rollback": "supabase/rollback/20270313100000_requirement_profile_change_reason_rollback.sql",
+      "verify": "Full-history replay plus supabase/tests/recruitment_lifecycle_v04_test.sql group P (legacy first confirmation and replay still work, legacy change refused without a version or operation left behind, reviewed path writes exactly one history row, the confirmed review of version N is stale under N+1, CAS and rule validation preserved, core private). Rollback restores both public bodies verbatim (checked against the original migration sources) and drops the core.",
+      "introduces": [
+        {
+          "kind": "function",
+          "object": "confirm_profile_core"
+        }
+      ]
+    },
+    {
+      "file": "20270314100000_candidate_supplement_reply.sql",
+      "hostedState": "pending",
+      "hostedVersion": "20270314100000",
+      "hostedName": "candidate_supplement_reply",
+      "note": "Slutuppdrag 2026-10-11, slot reply141. The candidate's in-app answer to a SENT supplement request on their own open application: table rec_candidate_replies (RLS, append-only, read by the author and by members, written only through rec_candidate_reply_to_message), and rec_ri_supplement_state replaced with the same signature plus `replies` per request and `candidateReplied`. Draft, foreign, non-supplement, closed and resolved cases are refused; no message is sent; resolution stays a person's act. Install after 20270313100000; the candidate client ships after verified hosted installation.",
+      "rollback": "supabase/rollback/20270314100000_candidate_supplement_reply_rollback.sql",
+      "verify": "Full-history replay plus supabase/tests/recruitment_lifecycle_v04_test.sql group A (draft/foreign/anon/empty/resolved/closed refusals, author and member reads under RLS, immutability, employer read with replies and candidateReplied, no message of its own). Rollback refuses recorded replies, restores rec_ri_supplement_state to its supplement111 body verbatim and drops the table.",
+      "introduces": [
+        {
+          "kind": "table",
+          "object": "rec_candidate_replies"
+        },
+        {
+          "kind": "function",
+          "object": "rec_candidate_reply_guard"
+        },
+        {
+          "kind": "function",
+          "object": "rec_candidate_reply_to_message"
+        }
+      ]
+    },
+    {
+      "file": "20270315100000_interview_composition_beskt_items.sql",
+      "hostedState": "pending",
+      "hostedVersion": "20270315100000",
+      "hostedName": "interview_composition_beskt_items",
+      "note": "Slutuppdrag 2026-10-11, slot beskt151. The interview composition may select published BESKT items meant for recruitment support, interview phase, ordinary sensitivity, in the group `beskt` (kind beskt_item): rec_ri_composition_catalog adds besktMethodVersions, besktItems and vettingSelectable=false; rec_ri_save_composition verifies the item against the published method version and refuses vetting, sensitive, preparation and unpublished content (RI_COMPOSITION_VETTING_ONLY / RI_COMPOSITION_FOREIGN_ITEM). Same signatures; no BESKT table, trigger or row is touched; the core stays mandatory. Install after 20270314100000.",
+      "rollback": "supabase/rollback/20270315100000_interview_composition_beskt_items_rollback.sql",
+      "verify": "Full-history replay plus supabase/tests/recruitment_lifecycle_v04_test.sql group B (catalogue filter over a published recruitment method, a published vetting method and a draft; group, sensitivity, phase, vetting and unpublished refusals; core still required; read-back; session seeding and report blockers unchanged). Rollback refuses while a confirmed composition selects a BESKT item and restores both bodies verbatim.",
+      "introduces": []
     }
-  ], 
+  ],
   "policyVersion": 2, 
   "activeDirectory": "supabase/migrations", 
   "evidenceBaseline": {

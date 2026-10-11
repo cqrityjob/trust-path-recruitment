@@ -40,6 +40,7 @@ const CODES = [
   "RI_COMPOSITION_DUPLICATE",
   "RI_COMPOSITION_REASON_REQUIRED",
   "RI_COMPOSITION_PACK_FIXED",
+  "RI_COMPOSITION_VETTING_ONLY",
   "RI_PACK_VERSION_NOT_FOUND",
   "SCP_IV_NOT_CASE_MEMBER",
 ] as const;
@@ -90,11 +91,27 @@ const supplementRequestSchema = z.object({
   resolvedAt: z.string().nullable(),
   outcome: z.enum(["answered", "withdrawn"]).nullable(),
   resolutionNote: z.string().nullable(),
+  /** The candidate's in-app answers (slot 20270314100000). Absent -- not an
+   *  empty list -- on a database where that slot is not installed, so the
+   *  panel can say which of the two it is. */
+  replies: z
+    .array(
+      z.object({
+        replyId: z.string(),
+        body: z.string(),
+        language: z.enum(["sv", "en"]).nullable(),
+        createdAt: z.string(),
+      }),
+    )
+    .optional(),
 });
 export type SupplementRequest = z.infer<typeof supplementRequestSchema>;
 const supplementStateSchema = z.object({
   applicationId: z.string(),
   awaitingSupplement: z.boolean(),
+  /** An unresolved request already has an in-app answer: the ball is with the
+   *  reviewer. Absent where slot 20270314100000 is not installed. */
+  candidateReplied: z.boolean().optional(),
   requests: z.array(supplementRequestSchema),
 });
 export type SupplementState =
@@ -218,7 +235,7 @@ export const reopenApplication = createServerFn({ method: "POST" })
 
 export const selectionItemSchema = z.object({
   group: z.string().min(1).max(60),
-  kind: z.enum(["core_question", "approved_probe"]),
+  kind: z.enum(["core_question", "approved_probe", "beskt_item"]),
   itemId: z.string().uuid(),
   position: z.number().int(),
 });
@@ -295,8 +312,50 @@ const catalogSchema = z.object({
       displayOrder: z.number(),
     }),
   ),
+  // Slot 20270315100000: published BESKT method versions for recruitment
+  // support and their interview-phase items of ordinary sensitivity. Absent
+  // (not empty) where that slot is not installed; `vettingSelectable` is the
+  // server saying, once, that vetting content is never chosen here.
+  besktMethodVersions: z
+    .array(
+      z.object({
+        id: z.string(),
+        packId: z.string(),
+        versionNumber: z.number(),
+        mode: z.literal("recruitment_support"),
+        localeSv: z.string(),
+        localeEn: z.string(),
+        summarySv: z.string().nullable(),
+        summaryEn: z.string().nullable(),
+        publishedAt: z.string().nullable(),
+        packName: z.object({ sv: z.string().nullable(), en: z.string().nullable() }).nullable(),
+      }),
+    )
+    .optional(),
+  besktItems: z
+    .array(
+      z.object({
+        id: z.string(),
+        methodVersionId: z.string(),
+        itemKey: z.string(),
+        displayOrder: z.number(),
+        sectionKey: z.string().nullable(),
+        sectionTitleSv: z.string().nullable(),
+        sectionTitleEn: z.string().nullable(),
+        wordingSv: z.string().nullable(),
+        wordingEn: z.string().nullable(),
+        purposeSv: z.string().nullable(),
+        purposeEn: z.string().nullable(),
+        answerType: z.string(),
+        requiredness: z.enum(["required", "voluntary"]),
+        sensitivityClass: z.literal("ordinary"),
+      }),
+    )
+    .optional(),
+  vettingSelectable: z.literal(false).optional(),
 });
 export type CompositionCatalog = z.infer<typeof catalogSchema>;
+export type BesktCatalogItem = NonNullable<CompositionCatalog["besktItems"]>[number];
 
 export const getCompositionCatalog = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

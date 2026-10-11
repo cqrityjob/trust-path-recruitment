@@ -1,3 +1,6 @@
+-- A CHANGE of the confirmed profile (version 1 -> 2) goes through the reviewed
+-- wrapper with a stated reason: from slot 20270313100000 the legacy
+-- rec_ri_confirm_profile serves the first confirmation, replays and the CAS only.
 -- Actual database/RPC acceptance oracle: synthetic only, not a pure model.
 -- Defaults to rollback. RI_P1_KEEP_FIXTURE=1 commits the unchanged baseline
 -- after every destructive scenario is rolled back to its savepoint.
@@ -135,13 +138,13 @@ RESET ROLE;
 ROLLBACK TO explicit_no_priority;
 SAVEPOINT nullable_rule_contract;
 SET LOCAL ROLE authenticated;
-CREATE TEMP TABLE normalized_profile AS SELECT public.rec_ri_confirm_profile((SELECT job FROM fixture),1,gen_random_uuid(),'2026-11-01',(SELECT body#-'{0,instructionEn}'#-'{1,questionId}' FROM rules))v;
+CREATE TEMP TABLE normalized_profile AS SELECT public.rec_ri_confirm_reviewed_profile((SELECT job FROM fixture),1,gen_random_uuid(),'2026-11-01',(SELECT body#-'{0,instructionEn}'#-'{1,questionId}' FROM rules),'Synthetic normalisation change')v;
 SELECT pg_temp.ok((SELECT v#>'{rules,0,instructionEn}'='null'::jsonb AND v#>'{rules,1,questionId}'='null'::jsonb FROM normalized_profile),'direct profile RPC normalizes missing nullable rule keys to explicit JSON null');
 RESET ROLE;
 ROLLBACK TO nullable_rule_contract;
 SAVEPOINT profile_change;
 SET LOCAL ROLE authenticated;
-SELECT public.rec_ri_confirm_profile((SELECT job FROM fixture),1,'ee100000-3333-4000-8000-000000000002','2026-12-01',(SELECT body FROM rules));
+SELECT public.rec_ri_confirm_reviewed_profile((SELECT job FROM fixture),1,'ee100000-3333-4000-8000-000000000002','2026-12-01',(SELECT body FROM rules),'Synthetic start-date change');
 SELECT pg_temp.ok((public.rec_ri_candidate_view((SELECT employer FROM fixture),(SELECT job FROM fixture),'{"stage":"received"}','requirements',NULL,1,25,NULL)->'intelligenceCounts')@>'{"green":30,"yellow":35,"gray":35,"reviewed":0,"remaining":100}','V1 to V2 date change: 30/35/35, no prior review silently current');
 SELECT pg_temp.fails('UPDATE public.rec_requirement_profiles SET start_date=''2027-01-01''','permission denied','direct profile mutation denied');
 RESET ROLE;
@@ -238,7 +241,7 @@ RESET ROLE;
 CREATE TEMP TABLE immutable_report AS SELECT id,payload,content_hash FROM public.scp_interview_reports WHERE case_id=(SELECT case_id FROM handoff);
 GRANT SELECT ON immutable_report TO PUBLIC;
 SET LOCAL ROLE authenticated;
-SELECT public.rec_ri_confirm_profile((SELECT job FROM fixture),1,gen_random_uuid(),'2026-12-01',(SELECT body FROM rules));
+SELECT public.rec_ri_confirm_reviewed_profile((SELECT job FROM fixture),1,gen_random_uuid(),'2026-12-01',(SELECT body FROM rules),'Synthetic start-date change');
 RESET ROLE;
 DELETE FROM storage.objects WHERE name=(SELECT uid||'/'||app||'/synthetic.pdf' FROM seq WHERE n=1);
 SELECT pg_temp.ok((SELECT r.payload=f.payload AND r.content_hash=f.content_hash FROM public.scp_interview_reports r JOIN immutable_report f USING(id)),'later profile/source change preserves final report byte-for-byte');
@@ -282,7 +285,7 @@ END $$;
 SET LOCAL ROLE authenticated;
 -- Boolean fallback can be public while the associated human text remains
 -- private. This confirmed version explicitly accepts either kind for R1.
-SELECT public.rec_ri_confirm_profile((SELECT job FROM fixture),1,gen_random_uuid(),'2026-11-01',(SELECT jsonb_agg(CASE WHEN r->>'requirementId'='10000000-0000-4000-8000-000000000001' THEN r||'{"acceptedSources":["application_answer","interview_source"]}'::jsonb ELSE r END) FROM rules,jsonb_array_elements(body)r));
+SELECT public.rec_ri_confirm_reviewed_profile((SELECT job FROM fixture),1,gen_random_uuid(),'2026-11-01',(SELECT jsonb_agg(CASE WHEN r->>'requirementId'='10000000-0000-4000-8000-000000000001' THEN r||'{"acceptedSources":["application_answer","interview_source"]}'::jsonb ELSE r END) FROM rules,jsonb_array_elements(body)r),'Synthetic accepted-source change');
 DO $$ DECLARE o record;v jsonb;src jsonb;rid uuid;BEGIN FOR o IN SELECT * FROM origins LOOP
  v:=public.rec_ri_get_review(o.app);SELECT value INTO src FROM jsonb_array_elements(v->'availableSources')WHERE value->>'reference'=o.source_id::text;
  rid:=CASE WHEN o.app=(SELECT app FROM seq WHERE n=41) THEN '10000000-0000-4000-8000-000000000001'::uuid ELSE '10000000-0000-4000-8000-000000000002'::uuid END;
@@ -343,7 +346,7 @@ ROLLBACK TO immutable_history;
 SAVEPOINT genuine_user_erasure;
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claim.sub='ee100000-0000-4000-8000-000000000002';
-SELECT public.rec_ri_confirm_profile((SELECT job FROM fixture),1,gen_random_uuid(),'2026-12-01',(SELECT body FROM rules));
+SELECT public.rec_ri_confirm_reviewed_profile((SELECT job FROM fixture),1,gen_random_uuid(),'2026-12-01',(SELECT body FROM rules),'Synthetic start-date change');
 DO $$ DECLARE v jsonb;BEGIN
  v:=public.rec_ri_get_review((SELECT app FROM seq WHERE n=1));
  PERFORM public.rec_ri_save_review((v->>'applicationId')::uuid,(v->>'profileId')::uuid,(v->>'revision')::integer,v->>'bindingToken',gen_random_uuid(),pg_temp.decisions(1,v),false,'Synthetic erasure audit',(SELECT bob FROM fixture),(v->>'assignmentVersion')::integer);

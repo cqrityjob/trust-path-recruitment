@@ -13,6 +13,12 @@ import {
   type RequirementRuleInput,
 } from "@/lib/recruitment/requirement-intelligence";
 import { ManualControlPointIntent } from "@/lib/interview-intelligence/manual-control-point-intent";
+import {
+  getProfileChangeHistory,
+  getProfileChangeImpact,
+} from "@/lib/recruitment/requirement-workspace.functions";
+import { formatStamp } from "@/lib/recruitment/format";
+import { recruitmentErrorKey } from "./errors";
 
 import { sourceLabels, controlClass } from "@/lib/recruitment/requirement-presentation";
 const ruleLabels = {
@@ -79,7 +85,7 @@ export function RequirementProfileEditor({
   profile: RequirementProfile;
   onReload: () => Promise<void>;
 }) {
-  const { lang } = useT();
+  const { lang, t } = useT();
   const sv = lang === "sv";
   const [base] = useState(profile);
   const [rules, setRules] = useState<RequirementRuleInput[]>(() =>
@@ -96,7 +102,26 @@ export function RequirementProfileEditor({
         })),
   );
   const [startDate, setStartDate] = useState(base.startDate ?? "");
+  const [changeReason, setChangeReason] = useState("");
   const [acknowledged, setAcknowledged] = useState(false);
+  // What a change touches, read from the server before the change is made
+  // (workspace 20270310100000). Only a CHANGE has an impact: version 0 has
+  // no reviews to make stale.
+  const readImpact = useServerFn(getProfileChangeImpact);
+  const impact = useQuery({
+    queryKey: ["employer", employerId, "profile-change-impact", base.jobId, base.version],
+    queryFn: () =>
+      readImpact({ data: { employerId, jobId: base.jobId, expectedVersion: base.version } }),
+    enabled: base.canManage && base.version > 0,
+  });
+  // The motivated changes of this profile, newest first. A version without a
+  // row was confirmed through the older write path and is shown as such.
+  const readHistory = useServerFn(getProfileChangeHistory);
+  const history = useQuery({
+    queryKey: ["employer", employerId, "profile-change-history", base.jobId],
+    queryFn: () => readHistory({ data: { employerId, jobId: base.jobId } }),
+    enabled: base.version > 0,
+  });
   const intent = useRef(new ManualControlPointIntent());
   const qc = useQueryClient();
   const save = useServerFn(confirmRequirementProfile);
@@ -109,6 +134,7 @@ export function RequirementProfileEditor({
         expectedVersion: base.version,
         startDate: startDate || null,
         rules,
+        changeReason: base.version > 0 ? changeReason.trim() || null : null,
       };
       return save({ data: { ...payload, operationId: intent.current.operationIdFor(payload) } });
     },
@@ -388,6 +414,53 @@ export function RequirementProfileEditor({
                 ? `Fastställandet skapar version ${base.version + 1} av kravprofilen. Redan granskade ansökningar behöver då granskas igen mot de nya reglerna; fastställda rapporter och tidigare beslut ändras inte.`
                 : `Confirming creates version ${base.version + 1} of the requirement profile. Applications already reviewed then need a new review against the new rules; confirmed reports and earlier decisions do not change.`}
             </p>
+            {base.version > 0 && (
+              <div
+                className="rounded-md border border-border bg-muted/30 p-3 text-sm"
+                data-testid="profile-change-impact"
+              >
+                <p className="font-medium">{t("rec.profile.impact.heading")}</p>
+                {impact.data ? (
+                  <p
+                    className="mt-1 text-xs text-muted-foreground"
+                    data-active={impact.data.active}
+                    data-reviewed={impact.data.reviewedActive}
+                  >
+                    {t("rec.profile.impact.body")
+                      .replace("{active}", String(impact.data.active))
+                      .replace("{reviewed}", String(impact.data.reviewedActive))
+                      .replace("{decided}", String(impact.data.decided))
+                      .replace("{archived}", String(impact.data.archived))
+                      .replace("{withdrawn}", String(impact.data.withdrawn))}
+                  </p>
+                ) : impact.isError ? (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {t("rec.profile.impact.unavailable")}
+                  </p>
+                ) : (
+                  <p className="mt-1 text-xs text-muted-foreground">…</p>
+                )}
+              </div>
+            )}
+            {base.version > 0 && (
+              <label className="block text-sm">
+                {t("rec.profile.reason")}
+                <textarea
+                  data-testid="profile-change-reason"
+                  required
+                  maxLength={2000}
+                  value={changeReason}
+                  onChange={(e) => {
+                    setChangeReason(e.target.value);
+                    setAcknowledged(false);
+                  }}
+                  className={controlClass}
+                />
+                <span className="mt-1 block text-xs text-muted-foreground">
+                  {t("rec.profile.reasonHint")}
+                </span>
+              </label>
+            )}
             <label className="flex min-h-11 items-start gap-2 text-sm">
               <input
                 data-testid="profile-confirm-ack"
@@ -403,6 +476,7 @@ export function RequirementProfileEditor({
               type="submit"
               disabled={
                 !acknowledged ||
+                (base.version > 0 && changeReason.trim().length === 0) ||
                 rules.length === 0 ||
                 rules.some((r) => r.acceptedSources.length === 0 || !r.instructionSv.trim()) ||
                 (rules.some((r) => r.decisionRule === "valid_at_start") && !startDate)
@@ -423,14 +497,101 @@ export function RequirementProfileEditor({
             </details>
           </fieldset>
           {mutation.isError && (
-            <p role="alert" className="mt-3 text-sm">
+            <p role="alert" className="mt-3 text-sm" data-testid="profile-confirm-error">
               {sv
                 ? "Kravprofilen kunde inte fastställas. Utkastet finns kvar."
                 : "The requirement profile could not be confirmed. Your draft is retained."}{" "}
+              {t(recruitmentErrorKey((mutation.error as Error | null)?.message))}
             </p>
           )}
         </form>
       )}
+      {base.version > 0 && (
+        <ProfileChangeHistory
+          version={base.version}
+          entries={history.data ?? null}
+          error={history.isError}
+        />
+      )}
     </section>
+  );
+}
+
+/** The change history as the server holds it: one row per motivated change.
+ *  Versions without a row were written before slot 20270313100000 through the
+ *  older path; they are listed with that fact, never with an invented reason. */
+function ProfileChangeHistory({
+  version,
+  entries,
+  error,
+}: {
+  version: number;
+  entries:
+    | {
+        version: number;
+        reason: string;
+        actorId: string | null;
+        reviewedAt: string;
+        impact: { reviewedActive?: number } | null;
+      }[]
+    | null;
+  error: boolean;
+}) {
+  const { t, lang } = useT();
+  const byVersion = new Map((entries ?? []).map((e) => [e.version, e]));
+  const versions = Array.from({ length: version }, (_, i) => version - i);
+  return (
+    <details className="mt-4 text-sm" data-testid="profile-change-history">
+      <summary className="min-h-10 cursor-pointer list-item py-2 font-medium">
+        {t("rec.profile.history.heading")} ({entries ? entries.length : "…"})
+      </summary>
+      {error ? (
+        <p className="mt-1 text-xs text-muted-foreground">{t("rec.profile.history.unavailable")}</p>
+      ) : entries === null ? null : (
+        <ol className="mt-1 space-y-2">
+          {versions.map((v) => {
+            const e = byVersion.get(v);
+            if (e) {
+              return (
+                <li
+                  key={v}
+                  data-testid="profile-history-entry"
+                  data-version={v}
+                  data-kind="reasoned"
+                >
+                  <p className="font-medium">
+                    {t("rec.profile.history.entry")
+                      .replace("{v}", String(v))
+                      .replace("{date}", formatStamp(e.reviewedAt, lang))}
+                  </p>
+                  <p className="text-sm">{e.reason}</p>
+                  {typeof e.impact?.reviewedActive === "number" && (
+                    <p className="text-xs text-muted-foreground">
+                      {t("rec.profile.history.impact").replace(
+                        "{reviewed}",
+                        String(e.impact.reviewedActive),
+                      )}
+                    </p>
+                  )}
+                </li>
+              );
+            }
+            return (
+              <li
+                key={v}
+                data-testid="profile-history-entry"
+                data-version={v}
+                data-kind={v === 1 ? "first" : "legacy"}
+                className="text-xs text-muted-foreground"
+              >
+                {v === 1
+                  ? t("rec.profile.history.first")
+                  : t("rec.profile.history.legacy").replace("{v}", String(v))}
+              </li>
+            );
+          })}
+        </ol>
+      )}
+    </details>
   );
 }

@@ -197,8 +197,8 @@ describe("native mobile preset validation", () => {
 
 describe("official real Supabase CI target", () => {
   test("the revised application pin is exact and old native evidence cannot stand in for it", () => {
-    expect(APP_SHA).toBe("55db1e3b83ace033450899a93ca0961edde05217");
-    expect(SCHEMA_SHA).toBe("05520f2995f24ba697be41ecf8364b71a6ef1491");
+    expect(APP_SHA).toBe("53659419a1c243c27a59540eb849569140b71365");
+    expect(SCHEMA_SHA).toBe("53659419a1c243c27a59540eb849569140b71365");
     expect(() =>
       validateTarget(env, env.RI_REAL_SCHEMA_SHA, "40e5775de5195050571421827434ec2872a61506"),
     ).toThrow("REAL_CI_UNREVIEWED_APP_HEAD");
@@ -235,7 +235,7 @@ describe("official real Supabase CI target", () => {
     ).toThrow("UNREVIEWED_APP_HEAD");
   });
   test("release schema binding is separate from test code and requires a full SHA", () => {
-    const release = "05520f2995f24ba697be41ecf8364b71a6ef1491";
+    const release = "53659419a1c243c27a59540eb849569140b71365";
     const context = validateTarget(
       { ...env, RI_REAL_RELEASE_SCHEMA_SHA: release },
       env.RI_REAL_SCHEMA_SHA,
@@ -390,7 +390,7 @@ describe("real CI execution and publication cannot silently narrow", () => {
     expect(job["runs-on"]).toBe("ubuntu-latest");
     expect(job.if).toBeUndefined();
     expect(job["continue-on-error"]).toBeUndefined();
-    expect(job.env.RI_REAL_RELEASE_SCHEMA_SHA).toBe("05520f2995f24ba697be41ecf8364b71a6ef1491");
+    expect(job.env.RI_REAL_RELEASE_SCHEMA_SHA).toBe("53659419a1c243c27a59540eb849569140b71365");
     expect(job.steps[0].with["fetch-depth"]).toBe(0);
     expect(job.steps.every((step: { [key: string]: unknown }) => !step["continue-on-error"])).toBe(
       true,
@@ -475,30 +475,40 @@ describe("real CI execution and publication cannot silently narrow", () => {
       "20270310100000_workspace.sql",
       "20270311100000_supplement.sql",
       "20270312100000_composition.sql",
+      "20270313100000_change_reason.sql",
+      "20270314100000_candidate_reply.sql",
+      "20270315100000_beskt_items.sql",
     );
-    expect(requireCompleteHistory(files)).toHaveLength(391);
+    expect(requireCompleteHistory(files)).toHaveLength(394);
     expect(() => requireCompleteHistory(files.slice(0, -2))).toThrow(
       "COMPLETE_CANONICAL_HISTORY_REQUIRED",
     );
     for (const version of ["20270308090000_", "20270309090000_"]) {
       const omitted = files.filter((name) => !name.startsWith(version));
       expect(() => requireCompleteHistory(omitted)).toThrow("COMPLETE_CANONICAL_HISTORY_REQUIRED");
-      expect(() => requireCompleteHistory([...omitted, "20270313100000_other.sql"])).toThrow(
+      expect(() => requireCompleteHistory([...omitted, "20270316100000_other.sql"])).toThrow(
         "REQUIREMENTS_UPLOAD_FORWARD_REQUIRED",
       );
     }
     for (const version of ["20270310090000_", "20270310100000_"]) {
       const omitted = files.filter((name) => !name.startsWith(version));
       expect(() => requireCompleteHistory(omitted)).toThrow("COMPLETE_CANONICAL_HISTORY_REQUIRED");
-      expect(() => requireCompleteHistory([...omitted, "20270313100000_other.sql"])).toThrow(
+      expect(() => requireCompleteHistory([...omitted, "20270316100000_other.sql"])).toThrow(
         "METHOD_WORKSPACE_FORWARD_REQUIRED",
       );
     }
     for (const version of ["20270311100000_", "20270312100000_"]) {
       const omitted = files.filter((name) => !name.startsWith(version));
       expect(() => requireCompleteHistory(omitted)).toThrow("COMPLETE_CANONICAL_HISTORY_REQUIRED");
-      expect(() => requireCompleteHistory([...omitted, "20270313100000_other.sql"])).toThrow(
+      expect(() => requireCompleteHistory([...omitted, "20270316100000_other.sql"])).toThrow(
         "LIFECYCLE_V03_FORWARD_REQUIRED",
+      );
+    }
+    for (const version of ["20270313100000_", "20270314100000_", "20270315100000_"]) {
+      const omitted = files.filter((name) => !name.startsWith(version));
+      expect(() => requireCompleteHistory(omitted)).toThrow("COMPLETE_CANONICAL_HISTORY_REQUIRED");
+      expect(() => requireCompleteHistory([...omitted, "20270316100000_other.sql"])).toThrow(
+        "LIFECYCLE_V04_FORWARD_REQUIRED",
       );
     }
     expect(() => requireCompleteHistory(files.slice(0, -1))).toThrow();

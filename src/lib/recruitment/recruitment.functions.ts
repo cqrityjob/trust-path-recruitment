@@ -1832,6 +1832,17 @@ export type CandidateInboxItem = {
 /** What an employer has sent the signed-in candidate, per application. The
  *  policies show a candidate only SENT messages and INVITED bookings on their
  *  own applications -- never a draft, never an internal comment. */
+/** The organisation's team, for screens that name a reviewer next to a
+ *  server-recorded decision (the comparison page). Membership-checked. */
+export const getRecruitmentTeam = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ employerId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }): Promise<TeamMember[]> => {
+    const ctx = context as Ctx;
+    await requireMember(ctx, data.employerId);
+    return readTeam(ctx, data.employerId);
+  });
+
 export const listMyRecruitmentInbox = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<CandidateInboxItem[]> => {

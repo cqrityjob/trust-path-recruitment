@@ -91,7 +91,7 @@ const catalog: CompositionCatalog = {
 };
 
 describe("the seven groups", () => {
-  test("in the order the brief names them; only three carry governed content today", () => {
+  test("in the order the brief names them; four carry choosable governed content, three stay structural", () => {
     expect([...COMPOSITION_GROUPS]).toEqual([
       "intro",
       "competence",
@@ -101,7 +101,10 @@ describe("the seven groups", () => {
       "clarifications",
       "closing",
     ]);
-    expect([...SELECTABLE_GROUPS].sort()).toEqual(["competence", "probes", "scenarios"]);
+    // The pack's three, plus the published BESKT items for recruitment support
+    // (slot 20270315100000). Introduction, clarifications and closing stay
+    // structural until their SV/EN texts are approved by a person.
+    expect([...SELECTABLE_GROUPS].sort()).toEqual(["beskt", "competence", "probes", "scenarios"]);
   });
 });
 
@@ -163,5 +166,60 @@ describe("time and coverage come from the pack's own numbers", () => {
     );
     expect(partial.missing).toEqual(["C6"]);
     expect(partial.covered).toBe(5);
+  });
+});
+
+// ── BESKT items (slot 20270315100000) ────────────────────────────────────
+describe("BESKT items in the selection", () => {
+  const beskt = (n: number) => ({
+    id: `b${n}`,
+    methodVersionId: "mv",
+    itemKey: `item_${n}`,
+    displayOrder: n,
+    sectionKey: "interview_keys",
+    sectionTitleSv: "Nycklar och larm",
+    sectionTitleEn: "Keys and alarms",
+    wordingSv: `BESKT ${n}`,
+    wordingEn: null,
+    purposeSv: "Syfte",
+    purposeEn: null,
+    answerType: "long_text",
+    requiredness: "voluntary" as const,
+    sensitivityClass: "ordinary" as const,
+  });
+  const withBeskt: CompositionCatalog = {
+    ...catalog,
+    besktMethodVersions: [],
+    besktItems: [beskt(1), beskt(2)],
+    vettingSelectable: false,
+  };
+  test("beskt is a selectable group; introduction, clarifications and closing are not", () => {
+    expect(SELECTABLE_GROUPS.has("beskt")).toBe(true);
+    for (const g of ["intro", "clarifications", "closing"] as const)
+      expect(SELECTABLE_GROUPS.has(g)).toBe(false);
+  });
+  test("chosen BESKT items come last, in catalogue order, in the beskt group, as beskt_item", () => {
+    const sel = buildSelection(withBeskt, new Set(), new Set(["b2", "b1"]));
+    const tail = sel.slice(-2);
+    expect(tail.map((s) => s.itemId)).toEqual(["b1", "b2"]);
+    expect(tail.every((s) => s.group === "beskt" && s.kind === "beskt_item")).toBe(true);
+    expect(new Set(sel.map((s) => s.position)).size).toBe(sel.length);
+    expect(sel.filter((s) => s.kind === "core_question").length).toBe(catalog.coreQuestions.length);
+  });
+  test("an unknown BESKT id is never put into the selection (the server verifies again)", () => {
+    const sel = buildSelection(withBeskt, new Set(), new Set(["nope"]));
+    expect(sel.some((s) => s.kind === "beskt_item")).toBe(false);
+  });
+  test("a catalogue without the slot yields no BESKT items and the same selection as before", () => {
+    expect(buildSelection(catalog, new Set(), new Set(["b1"]))).toEqual(
+      buildSelection(catalog, new Set()),
+    );
+  });
+  test("a BESKT item adds two to four minutes and no competency coverage", () => {
+    const base = coverageOf(withBeskt, buildSelection(withBeskt, new Set()));
+    const more = coverageOf(withBeskt, buildSelection(withBeskt, new Set(), new Set(["b1"])));
+    expect(more.min - base.min).toBe(2);
+    expect(more.max - base.max).toBe(4);
+    expect(more.covered).toBe(base.covered);
   });
 });
