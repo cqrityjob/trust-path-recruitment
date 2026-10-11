@@ -105,7 +105,13 @@ export function RecruiterCounts({
    *  shown first and apart from the historical coverage below it. `count` is
    *  null while loading and "failed" when the read failed; the view is what
    *  its button opens. Lists that already are a queue pass none. */
-  queue?: { count: number | null | "failed"; view: CandidateView; retry: () => void };
+  queue?: {
+    count: number | null | "failed";
+    view: CandidateView;
+    retry: () => void;
+    /** The one application to open next, rendered inside the queue box. */
+    next?: ReactNode;
+  };
   /** Fold the historical coverage behind a "Statistics" summary. The queue,
    *  when there is one, stays in the open: it is the work; the history is
    *  the explanation. Collapsed by default -- a number inside still opens
@@ -169,6 +175,9 @@ export function RecruiterCounts({
           >
             {t("rec.counts.queue.cta")}
           </button>
+          {queue.next && (
+            <div className="basis-full border-t border-accent/20 pt-2">{queue.next}</div>
+          )}
         </div>
       )}
       <HistoryFold

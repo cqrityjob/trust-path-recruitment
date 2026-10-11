@@ -87,6 +87,7 @@ import {
 } from "@/lib/job-intelligence/employer-jobs.functions";
 import type { ApplicationStatus } from "@/lib/job-intelligence/applications.functions";
 import { z } from "zod";
+import { NextUnreviewed } from "@/components/recruitment/NextUnreviewed";
 import { RequirementProfilePanel } from "@/components/recruitment/RequirementProfilePanel";
 import { InterviewCompositionPanel } from "@/components/recruitment/InterviewCompositionPanel";
 import { getRequirementProfile } from "@/lib/recruitment/requirement-intelligence.functions";
@@ -1016,6 +1017,11 @@ function JobHub({
               </p>
             </div>
           </section>
+          {/* The one application to open next, as the server picks it: the
+              oldest open one without a confirmed review. */}
+          <div className="mt-2">
+            <NextUnreviewed employerId={employerId} employerSlug={employerSlug} jobId={jobId} />
+          </div>
 
           <section className="mt-3 pb-4" aria-labelledby="job-candidates">
             <h2 id="job-candidates" className="sr-only">

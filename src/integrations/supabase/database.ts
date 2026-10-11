@@ -254,6 +254,26 @@ type RecruitmentWorkspaceFunctions = {
     Returns: Json;
   };
 };
+// Candidate reply (slot 20270314100000, installed 2026-10-11): the
+// candidate's in-app answer to a SENT supplement request. Handwritten like
+// the overlays above until the generator has seen the hosted schema.
+type CandidateReplyFunctions = {
+  rec_candidate_reply_to_message: {
+    Args: { _message_id: string; _body: string; _language: string | null };
+    Returns: Json;
+  };
+};
+type CandidateReplyRow = {
+  id: string;
+  application_id: string;
+  employer_id: string;
+  message_id: string;
+  request_id: string | null;
+  body: string;
+  language: string | null;
+  created_by: string | null;
+  created_at: string;
+};
 type Overrides = {
   bcp_conduct_record_resolution: Omit<Functions["bcp_conduct_record_resolution"], "Args"> & {
     Args: RequiredNullable<
@@ -283,6 +303,13 @@ type TableOverrides = {
   scp_interview_findings: Omit<Tables["scp_interview_findings"], "Row"> & {
     Row: Omit<Tables["scp_interview_findings"]["Row"], keyof FindingFields> & FindingFields;
   };
+  // Append-only through rec_candidate_reply_to_message; no client DML.
+  rec_candidate_replies: {
+    Row: CandidateReplyRow;
+    Insert: never;
+    Update: never;
+    Relationships: [];
+  };
 };
 export type Database = Omit<GeneratedDatabase, "public"> & {
   public: Omit<GeneratedDatabase["public"], "Functions" | "Tables"> & {
@@ -294,13 +321,15 @@ export type Database = Omit<GeneratedDatabase, "public"> & {
       | keyof RecruitmentIntelligenceFunctions
       | keyof LifecycleV03Functions
       | keyof RecruitmentWorkspaceFunctions
+      | keyof CandidateReplyFunctions
     > &
       Overrides &
       FoundationFunctions &
       EvidenceUploadFunctions &
       RecruitmentIntelligenceFunctions &
       LifecycleV03Functions &
-      RecruitmentWorkspaceFunctions;
+      RecruitmentWorkspaceFunctions &
+      CandidateReplyFunctions;
     Tables: Omit<Tables, keyof TableOverrides> & TableOverrides;
   };
 };

@@ -5,6 +5,7 @@ import { useT } from "@/i18n/context";
 import { listRecruitmentCandidatesPage } from "@/lib/recruitment/recruitment.functions";
 import { compactView } from "@/lib/recruitment/definitions";
 import { RecruiterCounts } from "./RecruiterStatus";
+import { NextUnreviewed } from "./NextUnreviewed";
 
 export function RecruiterOverviewCounts({
   employerId,
@@ -64,6 +65,7 @@ export function RecruiterOverviewCounts({
           count: queue.isSuccess ? queue.data.total : queue.isError ? "failed" : null,
           view: queueView,
           retry: () => void queue.refetch(),
+          next: <NextUnreviewed employerId={employerId} employerSlug={employerSlug} jobId={null} />,
         }}
         scopeLabel={
           lang === "sv"

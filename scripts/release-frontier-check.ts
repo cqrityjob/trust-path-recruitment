@@ -459,11 +459,7 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 //   20270315100000_interview_composition_beskt_items    (beskt151)
 // They come OFF this list in the same change that records their hosted
 // installation with evidence, as every earlier name did.
-const expectedPending: string[] = [
-  "20270313100000_requirement_profile_change_reason.sql",
-  "20270314100000_candidate_supplement_reply.sql",
-  "20270315100000_interview_composition_beskt_items.sql",
-];
+const expectedPending: string[] = [];
 
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",

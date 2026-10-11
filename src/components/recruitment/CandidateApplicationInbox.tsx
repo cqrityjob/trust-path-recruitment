@@ -15,6 +15,8 @@ import {
   type CandidateInboxItem,
 } from "@/lib/recruitment/recruitment.functions";
 import { formatStamp } from "@/lib/recruitment/format";
+import type { CandidateReply } from "@/lib/recruitment/candidate-reply.functions";
+import { CandidateSupplementReply } from "./CandidateSupplementReply";
 import {
   bookingIcs,
   formatBookingWhen,
@@ -26,11 +28,18 @@ export function CandidateApplicationInbox({
   employerName,
   jobTitle,
   onChanged,
+  repliesByMessage,
+  replyInApp = true,
+  onReplied,
 }: {
   item: CandidateInboxItem | undefined;
   employerName: string;
   jobTitle: string;
   onChanged: () => void;
+  /** The candidate's own in-app answers, by the message they answer. */
+  repliesByMessage?: Map<string, CandidateReply[]>;
+  replyInApp?: boolean;
+  onReplied?: () => void;
 }) {
   const { t, lang } = useT();
   const respondFn = useServerFn(respondToInterviewBooking);
@@ -137,21 +146,47 @@ export function CandidateApplicationInbox({
           )}
         </div>
       ))}
-      {item.messages.map((m) => (
-        <details key={m.id} className="rounded-md border border-border p-3">
-          <summary className="flex cursor-pointer flex-wrap items-center gap-2 text-sm">
-            <Mail className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-            <span className="font-medium">{m.subject}</span>
-            {m.kind === "receipt" && (
-              <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">
-                {t("rec.message.kind.receipt")}
-              </span>
+      {item.messages.map((m) => {
+        // A supplement request asks the candidate for something, so it opens
+        // unfolded with the answer field under it; the other kinds fold.
+        const supplement = m.kind === "supplement_request";
+        return (
+          <details
+            key={m.id}
+            open={supplement || undefined}
+            className={
+              "rounded-md border p-3 " +
+              (supplement ? "border-accent/40 bg-accent/5" : "border-border")
+            }
+            data-testid={supplement ? "candidate-supplement-request" : undefined}
+          >
+            <summary className="flex cursor-pointer flex-wrap items-center gap-2 text-sm">
+              <Mail className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+              <span className="font-medium">{m.subject}</span>
+              {m.kind === "receipt" && (
+                <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">
+                  {t("rec.message.kind.receipt")}
+                </span>
+              )}
+              {supplement && (
+                <span className="rounded-full border border-accent/50 px-2 py-0.5 text-xs font-medium text-accent">
+                  {t("rec.inbox.supplement.kind")}
+                </span>
+              )}
+              <span className="text-xs text-muted-foreground">{formatStamp(m.sentAt, lang)}</span>
+            </summary>
+            <InvitationMessageBody body={m.body} />
+            {supplement && (
+              <CandidateSupplementReply
+                messageId={m.id}
+                replies={repliesByMessage?.get(m.id) ?? []}
+                replyInApp={replyInApp}
+                onReplied={() => onReplied?.()}
+              />
             )}
-            <span className="text-xs text-muted-foreground">{formatStamp(m.sentAt, lang)}</span>
-          </summary>
-          <InvitationMessageBody body={m.body} />
-        </details>
-      ))}
+          </details>
+        );
+      })}
     </div>
   );
 }

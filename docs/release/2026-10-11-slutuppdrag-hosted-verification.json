@@ -1,0 +1,133 @@
+{
+  "formatVersion": 1,
+  "projectRef": "wrygicdfxwjnrugduxnt",
+  "installation": "official_supabase_github_integration",
+  "readOnly": true,
+  "observedBy": "Claude session under the owner's release decision 2026-10-11 (merge of #468 delegated; #469 follows)",
+  "merges": [
+    {
+      "pr": 468,
+      "head": "8a736dd47064bd92fd92604702262babd6f1fed1",
+      "mergeSha": "9774c9c055e7cd8bac3496835bb49e458192ac6b",
+      "mergedAt": "2026-10-11T14:53Z",
+      "slots": ["20270313100000", "20270314100000", "20270315100000"],
+      "verifiedOnHead": "All 13 workflows green on the exact head 8a736dd4 (bot image commit on aece303d): CI run 1878 attempt 2, recruiter-p1-native-ci 92/2, recruiter-real-ci 89/2, passport-native-op09-ci 76/2, recruitment-evidence 509/2, employer-portal-ux-evidence 62/2, e4-evidence 760/2, career-center-persistence-evidence 472/2, job-back-navigation-evidence 474/2, passport-public-pilot-evidence 434/2, role-assessment-browser 105/2, security-work-browser 522/2, application-retention 83/2. The bot-triggered runs were action_required (repository policy) and were re-run by the maintainer account; attempt 2 is the evidence."
+    }
+  ],
+  "migrationSha256": {
+    "20270313100000_requirement_profile_change_reason.sql": "712eccc827f89ab2393f41b423e49ca0f8e4f2fdb24bbeb06b802678f80e9eb1",
+    "20270314100000_candidate_supplement_reply.sql": "25c673667cc325eb39c9632fe241937570c37bcafb6b7175fa8a0f45dfd135fa",
+    "20270315100000_interview_composition_beskt_items.sql": "c6f173f646b15eec0d9ebbecb4f5af0c48366508bd4b5c48e74543cf4acd8979"
+  },
+  "ledger": {
+    "before468": {
+      "count": 391,
+      "latest": "20270312100000",
+      "versionNameNewlineMd5": "8a2b78d8773722d3fbad432d4fa046d4",
+      "observedAt": "2026-10-11T12:33Z (read-only, before the merge)"
+    },
+    "after468": {
+      "count": 394,
+      "latest": "20270315100000",
+      "versionNameNewlineMd5": "497fb4e7494ac527968368b44d8b9896",
+      "observedAt": "2026-10-11T14:54:54.939609+00:00",
+      "newRows": [
+        "20270313100000 requirement_profile_change_reason",
+        "20270314100000 candidate_supplement_reply",
+        "20270315100000 interview_composition_beskt_items"
+      ]
+    },
+    "prior391UnchangedAfter468": {
+      "count": 391,
+      "versionNameNewlineMd5": "8a2b78d8773722d3fbad432d4fa046d4"
+    },
+    "formula": "md5(string_agg(version || ' ' || name, E'\\n' ORDER BY version)) over supabase_migrations.schema_migrations"
+  },
+  "functions": {
+    "note": "Identity arguments, body md5 (pg_proc.prosrc) and EXECUTE privileges as read on the hosted project. localReplayMd5 is the same hash on the isolated local PostgreSQL 16 after a strict full replay of the 394 canonical migrations; equal everywhere.",
+    "rows": [
+      {
+        "function": "recruiter_intelligence.confirm_profile_core(_job_id uuid, _expected_version integer, _operation_id uuid, _start_date date, _rules jsonb)",
+        "securityDefiner": true,
+        "bodyMd5": "e9369ee15b52e3defb9d952127e64362",
+        "localReplayMd5": "e9369ee15b52e3defb9d952127e64362",
+        "execute": { "anon": false, "authenticated": false, "service_role": false }
+      },
+      {
+        "function": "public.rec_ri_confirm_profile(_job_id uuid, _expected_version integer, _operation_id uuid, _start_date date, _rules jsonb)",
+        "securityDefiner": true,
+        "bodyMd5": "07d4631dd9dfc3637e8b4923f2fdc5ce",
+        "localReplayMd5": "07d4631dd9dfc3637e8b4923f2fdc5ce",
+        "execute": { "anon": false, "authenticated": true, "service_role": false }
+      },
+      {
+        "function": "public.rec_ri_confirm_reviewed_profile(_job_id uuid, _expected_version integer, _operation_id uuid, _start_date date, _rules jsonb, _change_reason text)",
+        "securityDefiner": true,
+        "bodyMd5": "9ab9b7e4d4867c6328487f58e22f27d3",
+        "localReplayMd5": "9ab9b7e4d4867c6328487f58e22f27d3",
+        "execute": { "anon": false, "authenticated": true, "service_role": false }
+      },
+      {
+        "function": "public.rec_candidate_reply_guard()",
+        "securityDefiner": false,
+        "bodyMd5": "fddd4c75ed17ff7a7e697bb7bbb65d14",
+        "localReplayMd5": "fddd4c75ed17ff7a7e697bb7bbb65d14",
+        "execute": { "anon": false, "authenticated": false, "service_role": false }
+      },
+      {
+        "function": "public.rec_candidate_reply_to_message(_message_id uuid, _body text, _language text)",
+        "securityDefiner": true,
+        "bodyMd5": "a762a92ab2f03c5074d9237c0253da7d",
+        "localReplayMd5": "a762a92ab2f03c5074d9237c0253da7d",
+        "execute": { "anon": false, "authenticated": true, "service_role": false }
+      },
+      {
+        "function": "public.rec_ri_supplement_state(_application_id uuid)",
+        "securityDefiner": true,
+        "bodyMd5": "de8b834e06c769cccc446a4e4272afca",
+        "localReplayMd5": "de8b834e06c769cccc446a4e4272afca",
+        "execute": { "anon": false, "authenticated": true, "service_role": false }
+      },
+      {
+        "function": "public.rec_ri_composition_catalog(_employer_id uuid, _pack_version_id uuid)",
+        "securityDefiner": true,
+        "bodyMd5": "01f5d8d19c806d7f188fe24f770d01be",
+        "localReplayMd5": "01f5d8d19c806d7f188fe24f770d01be",
+        "execute": { "anon": false, "authenticated": true, "service_role": false }
+      },
+      {
+        "function": "public.rec_ri_save_composition(_job_id uuid, _expected_version integer, _operation_id uuid, _pack_version_id uuid, _selection jsonb, _reason text)",
+        "securityDefiner": true,
+        "bodyMd5": "860100934850898452350b746f6adc78",
+        "localReplayMd5": "860100934850898452350b746f6adc78",
+        "execute": { "anon": false, "authenticated": true, "service_role": false }
+      }
+    ]
+  },
+  "tables": {
+    "public.rec_candidate_replies": {
+      "rowLevelSecurity": true,
+      "forceRowLevelSecurity": false,
+      "rows": 0,
+      "privileges": {
+        "anon": { "select": false },
+        "authenticated": { "select": true, "insert": false, "update": false, "delete": false }
+      },
+      "policies": [
+        "rec_candidate_replies_own_read: SELECT to authenticated",
+        "rec_candidate_replies_member_read: SELECT to authenticated"
+      ],
+      "triggers": ["rec_candidate_replies_guard"],
+      "indexes": [
+        "rec_candidate_replies_pkey",
+        "rec_candidate_replies_application_idx",
+        "rec_candidate_replies_request_idx"
+      ]
+    }
+  },
+  "notInstalledOrActivated": [
+    "No BESKT method content: slot 20270315100000 only filters and admits published recruitment-phase items; the hosted project holds no published BESKT pack for recruitment, so the catalogue is empty there until content is approved and published by its own governed path.",
+    "No AI, no retention worker or cron, no production fixtures, no candidate mailings, no deletions."
+  ],
+  "releaseStateUpdate": "supabase/release-state.json: the three frontier entries move from pending to applied with this file as evidenceSource; supabase/hosted-ledger.json refreshed to 394 rows; scripts/release-frontier-check.ts expects nothing pending; deploy-plan-check reports an empty plan."
+}

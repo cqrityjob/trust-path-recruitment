@@ -20,6 +20,7 @@ import { MyPreparations } from "@/components/beskt/MyPreparations";
 import { ConfirmAction } from "@/components/employer/ConfirmAction";
 import { CandidateApplicationInbox } from "@/components/recruitment/CandidateApplicationInbox";
 import { listMyRecruitmentInbox } from "@/lib/recruitment/recruitment.functions";
+import { listMyCandidateReplies } from "@/lib/recruitment/candidate-reply.functions";
 import {
   listMyApplications,
   withdrawMyApplication,
@@ -60,6 +61,7 @@ function MyApplicationsPage() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [withdrawing, setWithdrawing] = useState<MyApplicationRow | null>(null);
   const inboxFn = useServerFn(listMyRecruitmentInbox);
+  const repliesFn = useServerFn(listMyCandidateReplies);
 
   const query = useQuery({
     queryKey: ["my-career", "applications"],
@@ -72,6 +74,21 @@ function MyApplicationsPage() {
     queryFn: () => inboxFn(),
   });
   const inbox = new Map((inboxQuery.data ?? []).map((i) => [i.applicationId, i]));
+  // The candidate's own in-app answers to supplement requests (slot
+  // 20270314100000). Its own read too: where the slot is missing the inbox
+  // says so under the request instead of losing the page.
+  const repliesQuery = useQuery({
+    queryKey: ["my-career", "candidate-replies"],
+    queryFn: () => repliesFn(),
+  });
+  const replyInApp = repliesQuery.data?.installed ?? true;
+  const repliesByMessage = new Map<string, (typeof replies)[number][]>();
+  const replies = repliesQuery.data?.replies ?? [];
+  for (const r of replies) {
+    const list = repliesByMessage.get(r.messageId) ?? [];
+    list.push(r);
+    repliesByMessage.set(r.messageId, list);
+  }
   const { application: focusId } = Route.useSearch();
   const focusRef = useRef<HTMLLIElement>(null);
   useEffect(() => {
@@ -218,6 +235,9 @@ function MyApplicationsPage() {
                       employerName={r.employerName ?? ""}
                       jobTitle={jobTitle}
                       onChanged={() => void inboxQuery.refetch()}
+                      repliesByMessage={repliesByMessage}
+                      replyInApp={replyInApp}
+                      onReplied={() => void repliesQuery.refetch()}
                     />
                   </li>
                 );

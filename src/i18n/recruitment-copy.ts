@@ -339,6 +339,24 @@ export const recruitmentSv = {
   "rec.inbox.interview": "Inbjudan till intervju",
   "rec.inbox.respondFailed": "Svaret kunde inte sparas. Försök igen.",
   "rec.inbox.unavailable": "Meddelanden från arbetsgivare kunde inte hämtas just nu.",
+  "rec.inbox.supplement.kind": "Begäran om komplettering",
+  "rec.inbox.supplement.yourAnswers": "Dina svar i appen",
+  "rec.inbox.supplement.answerLabel": "Svara i appen",
+  "rec.inbox.supplement.hint":
+    "Svaret sparas på din ansökan och läses av ansvarig hos arbetsgivaren där. Det skickas inte som e-post, kan inte ändras i efterhand, tar inga bilagor och ändrar varken ditt CV eller dina tidigare svar.",
+  "rec.inbox.supplement.counter": "{n} av {max} tecken.",
+  "rec.inbox.supplement.send": "Spara svar",
+  "rec.inbox.supplement.sending": "Sparar …",
+  "rec.inbox.supplement.saved":
+    "Ditt svar sparades {time}. Ansvarig ser det på din ansökan och fortsätter granskningen.",
+  "rec.inbox.supplement.notAvailable":
+    "Svar i appen är inte tillgängligt här ännu. Svara på det sätt meddelandet anger.",
+  "rec.inbox.supplement.resolved":
+    "Arbetsgivaren har redan hanterat den här begäran. Nya svar kan inte lämnas här.",
+  "rec.inbox.supplement.error.notFound": "Meddelandet kunde inte hittas på din ansökan.",
+  "rec.inbox.supplement.error.notAllowed": "Det här meddelandet går inte att svara på i appen.",
+  "rec.inbox.supplement.error.notOpen": "Ansökan är inte längre öppen, så svaret kan inte sparas.",
+  "rec.inbox.supplement.error.body": "Svaret måste vara 1–4000 tecken.",
   "rec.list.emptyDefault":
     "Inga pågående rekryteringar eller utkast just nu. Välj Alla i statusfiltret för att se avslutade.",
   "rec.list.emptyPhase": "Inga rekryteringar med den statusen.",
@@ -1067,6 +1085,21 @@ export const recruitmentSv = {
   "rec.error.comparisonInvalid": "Välj två eller tre ansökningar från samma rekrytering.",
   "rec.error.compositionVettingOnly":
     "Den valda BESKT-frågan hör inte till rekryteringsintervjun (säkerhetsprövning, integritetskänslig eller förberedelsefas).",
+  "rec.queue.unavailable": "Nästa ogranskade kunde inte läsas.",
+  "rec.summary.staleCaveat":
+    "Den bekräftade granskningen gäller en äldre kravprofilversion och räknas inte som bekräftelse av de nuvarande kraven. Bekräfta igen mot version {v}.",
+  "rec.composition.pack": "Intervjuguide",
+  "rec.composition.packStatus.draft": "utkast",
+  "rec.composition.packStatus.in_review": "under granskning",
+  "rec.composition.packStatus.published": "publicerad",
+  "rec.composition.packStatus.suspended": "pausad",
+  "rec.composition.packStatus.retired": "avslutad",
+  "rec.composition.validation.pilot_hypothesis": "pilot – innehållet är en hypotes, inte validerat",
+  "rec.composition.validation.content_validated": "innehållet validerat",
+  "rec.composition.counts": "{core} kärnfrågor · {probes} följdfrågor · {beskt} BESKT-frågor",
+  "rec.composition.orderHint":
+    "Kärnfrågorna i guidens ordning; en följdfråga ställs efter den fråga den fördjupar; BESKT-frågorna sist.",
+  "rec.composition.beskt.short": "BESKT-fråga",
 } as const;
 
 export const recruitmentEn: { [K in keyof typeof recruitmentSv]: string } = {
@@ -1404,6 +1437,25 @@ export const recruitmentEn: { [K in keyof typeof recruitmentSv]: string } = {
   "rec.inbox.interview": "Invitation to interview",
   "rec.inbox.respondFailed": "Your answer could not be saved. Try again.",
   "rec.inbox.unavailable": "Messages from employers could not be loaded right now.",
+  "rec.inbox.supplement.kind": "Request for a supplement",
+  "rec.inbox.supplement.yourAnswers": "Your answers in the app",
+  "rec.inbox.supplement.answerLabel": "Answer in the app",
+  "rec.inbox.supplement.hint":
+    "The answer is kept with your application and read there by the employer's reviewer. It is not sent as e-mail, cannot be edited afterwards, takes no attachments and changes neither your CV nor your earlier answers.",
+  "rec.inbox.supplement.counter": "{n} of {max} characters.",
+  "rec.inbox.supplement.send": "Save answer",
+  "rec.inbox.supplement.sending": "Saving …",
+  "rec.inbox.supplement.saved":
+    "Your answer was saved {time}. The reviewer sees it on your application and continues the review.",
+  "rec.inbox.supplement.notAvailable":
+    "Answering in the app is not available here yet. Answer the way the message says.",
+  "rec.inbox.supplement.resolved":
+    "The employer has already dealt with this request. New answers cannot be left here.",
+  "rec.inbox.supplement.error.notFound": "The message could not be found on your application.",
+  "rec.inbox.supplement.error.notAllowed": "This message cannot be answered in the app.",
+  "rec.inbox.supplement.error.notOpen":
+    "The application is no longer open, so the answer cannot be saved.",
+  "rec.inbox.supplement.error.body": "The answer must be 1–4000 characters.",
   "rec.list.emptyDefault":
     "No active recruitments or drafts right now. Choose All in the status filter to see completed ones.",
   "rec.list.emptyPhase": "No recruitments with that status.",
@@ -2143,4 +2195,20 @@ export const recruitmentEn: { [K in keyof typeof recruitmentSv]: string } = {
   "rec.error.comparisonInvalid": "Choose two or three applications from the same recruitment.",
   "rec.error.compositionVettingOnly":
     "The chosen BESKT question does not belong to the recruitment interview (security vetting, integrity-sensitive or preparation phase).",
+  "rec.queue.unavailable": "The next unreviewed application could not be read.",
+  "rec.summary.staleCaveat":
+    "The confirmed review concerns an older requirement profile version and does not count as a confirmation of the current requirements. Confirm again against version {v}.",
+  "rec.composition.pack": "Interview guide",
+  "rec.composition.packStatus.draft": "draft",
+  "rec.composition.packStatus.in_review": "in review",
+  "rec.composition.packStatus.published": "published",
+  "rec.composition.packStatus.suspended": "suspended",
+  "rec.composition.packStatus.retired": "retired",
+  "rec.composition.validation.pilot_hypothesis":
+    "pilot – the content is a hypothesis, not validated",
+  "rec.composition.validation.content_validated": "content validated",
+  "rec.composition.counts": "{core} core questions · {probes} follow-ups · {beskt} BESKT questions",
+  "rec.composition.orderHint":
+    "The core questions in the guide's order; a follow-up is asked after the question it deepens; the BESKT questions last.",
+  "rec.composition.beskt.short": "BESKT item",
 };
