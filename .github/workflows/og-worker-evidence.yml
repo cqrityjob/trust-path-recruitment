@@ -85,9 +85,30 @@ jobs:
           # pointing at the bundle: wrangler is started from the root, as the
           # build intends, and follows that redirect.
           echo "the build's deploy redirect:"; cat .wrangler/deploy/config.json
+          # ── THE RUNTIME'S DATE, NOT THE CALENDAR'S ──────────────────────
+          # Nitro's cloudflare-module preset stamps the BUILD DAY as the
+          # bundle's compatibility_date. The pinned wrangler ships a workerd
+          # that refuses any date newer than the one it was released for, so
+          # on a day newer than that release this step failed for every PR
+          # (2026-10-13: bundle "2026-10-13", runtime newest "2026-10-08").
+          # The local runtime is therefore served with the bundle's own date
+          # when it knows it, else with the newest date the pinned workerd
+          # package declares. This only chooses which runtime-feature date the
+          # LOCAL workerd emulates; Cloudflare in production runs the bundle's
+          # date. Nothing the application checks depends on it: the share's
+          # expiry, revocation and the unknown and failed reads below are all
+          # asserted exactly as before.
+          npm install --prefix "$RUNNER_TEMP/wrangler" --no-audit --no-fund --silent wrangler@4.147.0
+          WRANGLER="$RUNNER_TEMP/wrangler/node_modules/.bin/wrangler"
+          BUNDLE_DATE=$(node -p "require('./.output/server/wrangler.json').compatibility_date")
+          RUNTIME_DATE=$(node -p "require('$RUNNER_TEMP/wrangler/node_modules/workerd').compatibilityDate")
+          [[ "$BUNDLE_DATE" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ && "$RUNTIME_DATE" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] \
+            || { echo "unreadable compatibility date: bundle '$BUNDLE_DATE', runtime '$RUNTIME_DATE'"; exit 1; }
+          if [[ "$BUNDLE_DATE" > "$RUNTIME_DATE" ]]; then SERVE_DATE="$RUNTIME_DATE"; else SERVE_DATE="$BUNDLE_DATE"; fi
+          echo "compatibility date: bundle $BUNDLE_DATE, pinned runtime declares $RUNTIME_DATE, serving with $SERVE_DATE"
           # The same variables the host gives the Worker. Nothing else is set:
           # the real project is never contacted.
-          nohup npx --yes wrangler@4.147.0 dev --local --port 8787 \
+          nohup "$WRANGLER" dev --local --port 8787 --compatibility-date "$SERVE_DATE" \
             --var SUPABASE_URL:http://127.0.0.1:54399 \
             --var SUPABASE_PUBLISHABLE_KEY:sb_publishable_synthetic_test_only_not_a_key \
             --var SUPABASE_PROJECT_ID:synthetictestrefzzzz \
