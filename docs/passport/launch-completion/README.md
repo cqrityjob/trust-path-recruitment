@@ -101,3 +101,30 @@ vara ”direkt klickbart till rätt merit och åtgärd”. Det länkar nu till
 dess negativa kontroller uttrycker den nya regeln lika strikt som den gamla: en enda sådan länk,
 rätt sektion per steg, åtgärd och meritnamn i det tillgängliga namnet, och målen finns på
 meritsidan.
+
+## 7. CI-rättelser inför merge (2026-10-13, ägarens beslut)
+
+Två röda kontroller berodde inte på Passport-ändringen. Båda är nu rättade i denna PR.
+
+**Arbetsgivarportalens före-/efterbilder.** Bilderna var gamla referensbilder, inte en
+UX-regression:
+- Den sparade efter-uppsättningen togs vid `946a3ad` (#469). På alla fotograferade sökvägar är
+  den identisk med `main` (`fd5d171`), och denna PR ändrar ingen av dem.
+- Före-uppsättningen visade portalen före #469 (`9774c9c`).
+
+Paret togs om med repots egen workflow (`employer-portal-ux-evidence.yml`). Före-bilderna togs
+från `fd5d171`, efter-bilderna från PR-huvudet, med samma instrument, och workflowens
+publiceringsjobb committade dem (`d8cd0bb`). Alla 36 före/efter-par är byte-identiska.
+Jämfört med #469:s efter-bilder skiljer bara dagens datum i översiktens hälsning
+("11 OKTOBER 2026" → "13 OKTOBER 2026"). Workflowen ändrades på en punkt: en manuell körning på
+en PR-gren får nu publicera sitt par, men aldrig på `main`. Annars kunde en PR som inte rör
+portalen aldrig förnya ett par som blivit inaktuellt när `main` flyttats.
+
+**Förhandsbilden i workerd.** Byggets `cloudflare-module`-preset sätter byggdagen som
+`compatibility_date`. Den pinnade `wrangler@4.147.0` har en workerd som avvisar datum efter
+2026-10-08, så varje körning från 2026-10-09 föll innan första anropet. Den lokala runtimen
+startas nu med det äldsta av två datum: bundlens eget och det datum som pinnade `workerd`
+deklarerar (`--compatibility-date`). Produktionen kör fortfarande bundlens datum. Inga
+applikationskontroller påverkas. Lokalt reproducerades först felet, därefter gick
+`og-worker-evidence.ts` igenom med 62 av 62 kontroller, inklusive återkallad, utgången, okänd
+och misslyckad läsning.
