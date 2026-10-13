@@ -21,6 +21,11 @@ import {
   searchUnavailableDefinitions,
 } from "@/lib/security-passport/catalogue-requests.functions";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
+import { getMyPassport } from "@/lib/security-passport/passport.functions";
+import {
+  existingCredentialsOf,
+  type ExistingCredential,
+} from "@/lib/security-passport/duplicate-credential";
 
 export const Route = createFileRoute("/_authenticated/passport/credentials/new")({
   ssr: false,
@@ -51,6 +56,8 @@ function NewCredentialRoute() {
   const searchUnavailable = useServerFn(searchUnavailableDefinitions);
   const requestDefinition = useServerFn(requestCatalogueDefinition);
   const listRequests = useServerFn(listMyCatalogueRequests);
+  const loadPassport = useServerFn(getMyPassport);
+  const [existing, setExisting] = useState<readonly ExistingCredential[]>([]);
   const [draft, setDraft] = useState<InternationalCredentialInput | undefined>();
   const [metadata, setMetadata] = useState<InternationalPassportMetadata | null>(null);
   const [failed, setFailed] = useState(false);
@@ -77,6 +84,19 @@ function NewCredentialRoute() {
       active = false;
     };
   }, [load, readDraft, search.draft, attempt]);
+  // What the holder already has, for the duplicate warning. Best effort: an
+  // unreadable Passport means no warning, never a blocked form.
+  useEffect(() => {
+    let active = true;
+    void loadPassport({ data: undefined })
+      .then((snapshot) => {
+        if (active) setExisting(existingCredentialsOf(snapshot.holder.claims));
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [loadPassport]);
   return (
     <div className="mx-auto w-full max-w-3xl space-y-5">
       <Link
@@ -117,6 +137,7 @@ function NewCredentialRoute() {
           onSearchUnavailable={(search) => searchUnavailable({ data: { search } })}
           onRequestDefinition={(data) => requestDefinition({ data })}
           onListRequests={() => listRequests()}
+          existingCredentials={existing}
         />
       )}
     </div>

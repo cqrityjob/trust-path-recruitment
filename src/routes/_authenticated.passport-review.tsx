@@ -97,9 +97,28 @@ function PassportReviewRoute() {
     );
   }
 
+  // A failed CHECK is not a denial: a reviewer whose access read timed out
+  // was told they had no access at all, and a reviewer told that stops.
+  if (q.isError) {
+    return (
+      <SiteLayout>
+        <div role="alert" className="mx-auto max-w-md px-4 py-16 text-center">
+          <p className="text-sm text-foreground">{pt("vq.whoamiFailed")}</p>
+          <button
+            type="button"
+            onClick={() => void q.refetch()}
+            className="mt-4 inline-flex h-11 items-center rounded-md border border-input px-4 text-sm font-medium text-foreground hover:bg-accent/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          >
+            {pt("vq.retry")}
+          </button>
+        </div>
+      </SiteLayout>
+    );
+  }
+
   // A signed-in non-reviewer is told plainly, and told nothing about the
   // queue itself -- not how many entries wait, not whose they are.
-  if (q.isError || !q.data?.isVerifier) {
+  if (!q.data?.isVerifier) {
     return (
       <SiteLayout>
         <div className="mx-auto max-w-md px-4 py-16 text-center">
@@ -125,7 +144,11 @@ function PassportReviewRoute() {
           </h1>
         </div>
       </div>
-      <PassportReviewWorkspace />
+      {/* The admin route gets its gutter from the admin shell; this route
+          has no shell, so it brings its own. */}
+      <div className="mx-auto max-w-6xl px-4 py-6 sm:py-8">
+        <PassportReviewWorkspace />
+      </div>
     </SiteLayout>
   );
 }
@@ -185,9 +208,24 @@ export function PassportReviewWorkspace() {
   );
   const viewEvidence = useServerFn(getEvidenceViewUrl);
 
-  const [isVerifier, setIsVerifier] = useState<boolean | null>(null);
+  // null = not answered yet; "failed" = the check itself failed, which is
+  // NOT the same as being refused and is never rendered as a refusal.
+  const [isVerifier, setIsVerifier] = useState<boolean | "failed" | null>(null);
+  const [whoAmIAttempt, setWhoAmIAttempt] = useState(0);
   const [filter, setFilter] = useState<string | null>(null);
   const [queue, setQueue] = useState<readonly VerifierQueueItem[]>([]);
+  // ── A FAILED READ IS NEVER "NOTHING TO REVIEW" ───────────────────────
+  // The queue starts empty, so before this the page said "Nothing to review
+  // right now" while the first read was still in flight, and kept saying it
+  // beside the error banner when the read failed. A reviewer reading that
+  // closes the tab. "Nothing to review" is now drawn only for a read that
+  // ANSWERED with no rows.
+  const [queueState, setQueueState] = useState<"loading" | "available" | "failed">("loading");
+  // Narrowing within what was read: merit type and free text. Client-side on
+  // purpose -- the server function still decides WHICH requests this
+  // reviewer may see; this only helps them find one among them.
+  const [typeFilter, setTypeFilter] = useState<string>("");
+  const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<string | null>(null);
   const [detail, setDetail] = useState<VerifierRequestDetail | null>(null);
   const [busy, setBusy] = useState(false);
@@ -229,26 +267,29 @@ export function PassportReviewWorkspace() {
   const holderMessageRequired = decision === "rejected" || decision === "clarification_requested";
 
   const refresh = useCallback(async () => {
+    setQueueState((current) => (current === "available" ? current : "loading"));
     try {
       const rows = await loadQueue({ data: { status: filter } });
       setQueue(rows);
+      setQueueState("available");
       // Cleared on success: a stale banner from an earlier transient
       // failure must not outlive the request that fixed it.
       setQueueError(null);
     } catch (err) {
       console.error("[passport] verifier queue failed", err);
       setQueueError(pt("vq.error.queue"));
+      setQueueState("failed");
     }
   }, [loadQueue, filter, pt]);
 
   useEffect(() => {
     void whoAmI({ data: undefined })
       .then((r) => setIsVerifier(r.isVerifier))
-      .catch(() => setIsVerifier(false));
-  }, [whoAmI]);
+      .catch(() => setIsVerifier("failed"));
+  }, [whoAmI, whoAmIAttempt]);
 
   useEffect(() => {
-    if (isVerifier) void refresh();
+    if (isVerifier === true) void refresh();
   }, [isVerifier, refresh]);
 
   useEffect(() => {
@@ -272,6 +313,24 @@ export function PassportReviewWorkspace() {
 
   if (isVerifier === null) {
     return <p className="text-sm text-muted-foreground">{pt("common.loading")}</p>;
+  }
+
+  if (isVerifier === "failed") {
+    return (
+      <div role="alert" className="mx-auto max-w-md py-10 text-center">
+        <p className="text-sm text-foreground">{pt("vq.whoamiFailed")}</p>
+        <button
+          type="button"
+          onClick={() => {
+            setIsVerifier(null);
+            setWhoAmIAttempt((n) => n + 1);
+          }}
+          className="mt-4 inline-flex h-11 items-center rounded-md border border-input px-4 text-sm font-medium text-foreground hover:bg-accent/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        >
+          {pt("vq.retry")}
+        </button>
+      </div>
+    );
   }
 
   if (!isVerifier) {
@@ -358,6 +417,26 @@ export function PassportReviewWorkspace() {
     }
   }
 
+  // The merit types actually present in what was read, so the type filter
+  // never offers a type that would show nothing.
+  const typeKeyOf = (item: VerifierQueueItem) =>
+    item.subjectType === "experience" ? "experience" : (item.claimType ?? "other");
+  const typesPresent = [...new Set(queue.map(typeKeyOf))];
+  const needle = search.trim().toLocaleLowerCase();
+  const shown = queue.filter(
+    (item) =>
+      (!typeFilter || typeKeyOf(item) === typeFilter) &&
+      (!needle ||
+        [item.title, item.holderName, item.issuer, item.employer]
+          .filter(Boolean)
+          .some((v) => (v as string).toLocaleLowerCase().includes(needle))),
+  );
+  const narrowed = typeFilter !== "" || needle !== "";
+  const typeLabel = (key: string) =>
+    key === "experience"
+      ? pt("vq.filter.type.experience")
+      : codeLabel(key, CLAIM_TYPE_KEY, pt) || pt("claims.type.other");
+
   const evidence = detail?.evidence ?? [];
   const priorDecisions = detail?.priorDecisions ?? [];
   const previousVersions = detail?.previousVersions ?? [];
@@ -416,14 +495,85 @@ export function PassportReviewWorkspace() {
         </select>
       </div>
 
-      {queue.length === 0 ? (
-        <p className="mt-8 flex items-center gap-2 text-sm text-muted-foreground">
+      {queueState === "available" && queue.length > 0 ? (
+        <div className="mt-4 grid gap-3 sm:grid-cols-[minmax(0,18rem)_minmax(0,1fr)] sm:items-end">
+          <div>
+            <label htmlFor="sp-vq-type" className="block text-sm font-medium text-foreground">
+              {pt("vq.filter.type")}
+            </label>
+            <select
+              id="sp-vq-type"
+              data-vq-type-filter
+              value={typeFilter}
+              onChange={(e) => {
+                setTypeFilter(e.target.value);
+                setSelected(null);
+              }}
+              className="mt-1 h-11 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            >
+              <option value="">{pt("vq.filter.type.all")}</option>
+              {typesPresent.map((key) => (
+                <option key={key} value={key}>
+                  {typeLabel(key)}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label htmlFor="sp-vq-search" className="block text-sm font-medium text-foreground">
+              {pt("vq.filter.search")}
+            </label>
+            <input
+              id="sp-vq-search"
+              type="search"
+              data-vq-search
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="mt-1 h-11 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            />
+          </div>
+          <div className="flex flex-wrap items-center gap-3 sm:col-span-2">
+            <p aria-live="polite" data-vq-count className="text-sm text-muted-foreground">
+              {pt("vq.filter.count")
+                .replace("{shown}", String(shown.length))
+                .replace("{total}", String(queue.length))}
+            </p>
+            {narrowed ? (
+              <button
+                type="button"
+                data-vq-clear-filters
+                onClick={() => {
+                  setTypeFilter("");
+                  setSearch("");
+                }}
+                className="inline-flex h-11 items-center rounded-md border border-input px-3 text-sm font-medium text-foreground hover:bg-accent/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              >
+                {pt("vq.filter.clear")}
+              </button>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+
+      {queueState === "loading" ? (
+        <p role="status" data-vq-state="loading" className="mt-8 text-sm text-muted-foreground">
+          {pt("vq.loadingQueue")}
+        </p>
+      ) : queueState === "failed" ? null : queue.length === 0 ? (
+        <p
+          data-vq-state="empty"
+          className="mt-8 flex items-center gap-2 text-sm text-muted-foreground"
+        >
           <Inbox aria-hidden="true" className="h-4 w-4" />
           {pt("vq.empty")}
         </p>
+      ) : shown.length === 0 ? (
+        <p data-vq-state="no-match" className="mt-8 text-sm text-muted-foreground">
+          {pt("vq.filter.noMatch")}
+        </p>
       ) : (
-        <ul className="mt-6 space-y-3">
-          {queue.map((item) => (
+        <ul className="mt-6 space-y-3" data-vq-state="list">
+          {shown.map((item) => (
             <li key={item.id} className="rounded-xl border border-border bg-card p-4">
               <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
                 <div className="min-w-0">
@@ -860,6 +1010,26 @@ export function PassportReviewWorkspace() {
 
                       <p className="text-xs text-muted-foreground">{pt("vq.immutableNote")}</p>
 
+                      {/* WHICH version this decision binds to, said beside the
+                          button: the database refuses it if the entry or its
+                          documents changed after this page loaded. */}
+                      {detail?.submittedAt ? (
+                        <p
+                          data-vq-decision-version
+                          className="rounded-md bg-secondary/40 p-3 text-xs leading-relaxed text-foreground"
+                        >
+                          {pt("vq.decisionAppliesTo")
+                            .replace(
+                              "{version}",
+                              String(detail.claim?.versionNo ?? detail.period?.versionNo ?? 1),
+                            )
+                            .replace(
+                              "{submitted}",
+                              detail.submittedAt.slice(0, 16).replace("T", " "),
+                            )}
+                        </p>
+                      ) : null}
+
                       {decisionError ? (
                         <p role="alert" className="text-sm text-destructive">
                           {decisionError}
@@ -921,6 +1091,8 @@ function DisputeQueue() {
 
   const [rows, setRows] = useState<readonly DisputeQueueItem[]>([]);
   const [loaded, setLoaded] = useState(false);
+  // Whether the last READ answered. A failed read is never "no disputes".
+  const [readFailed, setReadFailed] = useState(false);
   // Named for the operation, not for the page. The verification queue above
   // owns four separate error states for the same reason: one shared string is
   // how a working queue came to sit under a red banner about something else.
@@ -933,9 +1105,11 @@ function DisputeQueue() {
     try {
       setRows(await loadDisputes({ data: undefined }));
       setDisputeError(null);
+      setReadFailed(false);
     } catch (err) {
       console.error("[passport] dispute queue failed", err);
       setDisputeError(pt("vq.error.queue"));
+      setReadFailed(true);
     } finally {
       setLoaded(true);
     }
@@ -984,14 +1158,25 @@ function DisputeQueue() {
         </p>
       ) : null}
       {disputeError ? (
-        <p role="alert" className="mt-4 text-sm text-destructive">
-          {disputeError}
-        </p>
+        <div role="alert" className="mt-4 flex flex-wrap items-center gap-3">
+          <p className="text-sm text-destructive">{disputeError}</p>
+          {readFailed ? (
+            <button
+              type="button"
+              onClick={() => void refresh()}
+              className="inline-flex h-11 items-center rounded-md border border-input px-3 text-sm font-medium text-foreground hover:bg-accent/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            >
+              {pt("vq.retry")}
+            </button>
+          ) : null}
+        </div>
       ) : null}
 
       {!loaded ? (
-        <p className="mt-4 text-sm text-muted-foreground">{pt("common.loading")}</p>
-      ) : rows.length === 0 ? (
+        <p role="status" className="mt-4 text-sm text-muted-foreground">
+          {pt("common.loading")}
+        </p>
+      ) : readFailed ? null : rows.length === 0 ? (
         <p className="mt-4 text-sm text-muted-foreground">{pt("vq.dispute.empty")}</p>
       ) : (
         <ul className="mt-5 space-y-3">

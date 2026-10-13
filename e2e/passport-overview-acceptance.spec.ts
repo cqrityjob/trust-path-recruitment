@@ -320,9 +320,10 @@ for (const lang of ["sv", "en"] as const) {
       await expect(shields(page)).toHaveCount(3);
       const threeHeight = (await card(page).boundingBox())!.height;
 
-      // ONE claim-specific link per credential on the whole overview, and it
-      // is the row's. The next step and "Needs attention" name a credential;
-      // they do not link to it. No .first(): a second link must FAIL here.
+      // ONE plain claim link per credential on the whole overview, and it is
+      // the row's. The next step links to the step's credential AT the action
+      // (a fragment), and "Needs attention" names a credential without a
+      // link. No .first(): a second plain link must FAIL here.
       for (const c of THREE) {
         const link = page.locator(`a[href="/passport/entry/claim/${c.id}"]`);
         await expect(link).toHaveCount(1);
@@ -331,14 +332,19 @@ for (const lang of ["sv", "en"] as const) {
           page.locator(`[data-credential-row] a[href="/passport/entry/claim/${c.id}"]`),
         ).toHaveCount(1);
       }
-      await expect(page.locator("[data-passport-panel] a[href*='/passport/entry/']")).toHaveCount(
-        0,
-      );
       const step = page.locator('[data-cta="next-step"]');
+      await expect(page.locator("[data-passport-panel] a[href*='/passport/entry/']")).toHaveCount(
+        1,
+      );
       await expect(step).toHaveCount(1);
-      await expect(step).toHaveAttribute("href", `/passport#${credentialRowAnchor(CPP.id)}`);
-      await expect(step).toHaveText(T("Visa meriten", "View credential"));
-      await expect(step).not.toHaveText(/Bifoga underlag|Add supporting evidence/);
+      await expect(step).toHaveAttribute(
+        "href",
+        `/passport/entry/claim/${CPP.id}#sp-entry-evidence`,
+      );
+      await expect(step).toHaveText(T("Bifoga underlag", "Add evidence"));
+      await expect(step).toHaveAccessibleName(
+        `${T("Bifoga underlag", "Add evidence")}: ${lang === "sv" ? CPP.titleSv : CPP.titleEn}`,
+      );
       // Still says WHICH credential, and the expiring one is still named.
       await expect(page.locator("[data-passport-next-step]")).toContainText(CPP.titleEn);
       await expect(page.locator(`[data-passport-expiring-item="${OV.id}"]`)).toBeVisible();
@@ -541,7 +547,7 @@ for (const lang of ["sv", "en"] as const) {
     }
   });
 
-  test(`the next step takes the holder to that credential's row · ${lang}`, async ({ page }) => {
+  test(`the next step opens that credential at the action · ${lang}`, async ({ page }) => {
     test.setTimeout(180_000);
     const T = (sv: string, en: string) => (lang === "sv" ? sv : en);
     /** Whether the row is on screen and owns keyboard focus. */
@@ -577,40 +583,24 @@ for (const lang of ["sv", "en"] as const) {
         "data-passport-next-step",
         "evidence",
       );
-      await expect(step).toHaveText(T("Visa meriten", "View credential"));
-      const target = await step.getAttribute("data-next-step-target");
-      expect(target).toBe(credentialRowAnchor(CPP.id));
-      // The target EXISTS before anybody presses anything: never an empty region.
-      await expect(page.locator(`#${target}`)).toHaveCount(1);
-
-      await step.click();
-      await expect(page).toHaveURL(new RegExp(`/passport#${target}$`));
-      const row = await arrived(CPP);
-      await expect(row).toContainText(CPP.titleEn);
-      // Its REAL action is still there, and still the only claim link for it.
-      const action = row.getByRole("link", {
-        name: T("Bifoga underlag", "Add supporting evidence"),
-      });
-      await expect(action).toBeVisible();
-      await expect(action).toHaveAttribute("href", `/passport/entry/claim/${CPP.id}`);
+      await expect(step).toHaveText(T("Bifoga underlag", "Add evidence"));
+      await expect(step).toHaveAttribute("data-next-step-target", `${CPP.id}#sp-entry-evidence`);
+      await expect(step).toHaveAttribute(
+        "href",
+        `/passport/entry/claim/${CPP.id}#sp-entry-evidence`,
+      );
+      // The row still carries its own plain link, and only one.
       await expect(page.locator(`a[href="/passport/entry/claim/${CPP.id}"]`)).toHaveCount(1);
-      // Exactly one row is marked as the arrival.
-      await expect(page.locator("[data-hash-target]")).toHaveCount(1);
 
-      // A second press, fragment unchanged, still arrives.
-      await page.evaluate(() => {
-        window.scrollTo(0, 0);
-        (document.activeElement as HTMLElement | null)?.blur();
-      });
-      await expect(row).not.toBeFocused();
-      await step.click();
-      await arrived(CPP);
-
-      // By keyboard too.
-      await page.evaluate(() => window.scrollTo(0, 0));
+      // By keyboard: Enter on the step leaves the overview for the
+      // credential's page, at the documents section.
       await step.focus();
       await page.keyboard.press("Enter");
-      await arrived(CPP);
+      await expect(page).toHaveURL(
+        new RegExp(`/passport/entry/claim/${CPP.id}#sp-entry-evidence$`),
+      );
+      await page.goBack();
+      await expect(page.locator("[data-credential-wallet]")).toBeVisible({ timeout: 30_000 });
 
       // ── clarify: a reviewer is waiting on the Swedish appointment ──────
       await mount(page, "/passport", lang, snapshotFor("Mostafa Alshawi", NINE), {
@@ -631,9 +621,12 @@ for (const lang of ["sv", "en"] as const) {
         "clarify",
         { timeout: 30_000 },
       );
-      await expect(step).toHaveText(T("Visa meriten", "View credential"));
-      await step.click();
-      const ovRow = await arrived(OV);
+      await expect(step).toHaveText(T("Svara granskaren", "Answer the reviewer"));
+      await expect(step).toHaveAttribute(
+        "href",
+        `/passport/entry/claim/${OV.id}#sp-entry-verification`,
+      );
+      const ovRow = page.locator(`#${credentialRowAnchor(OV.id)}`);
       const provide = ovRow.getByRole("link", {
         name: T("Komplettera uppgifter", "Provide information"),
       });
@@ -820,7 +813,7 @@ for (const lang of ["sv", "en"] as const) {
       // The labels say what they are, in this language.
       const first = page.locator('[data-recipient-credential="long-self"]');
       await expect(first.locator("[data-recipient-credential-status]")).toContainText(
-        T("Gällande", "Active"),
+        T("Gällande", "Current"),
       );
       await expect(
         page

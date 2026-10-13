@@ -1,8 +1,12 @@
 import { AbuDhabiIssuerAttribution } from "./AbuDhabiIssuerAttribution";
 import { CredentialDateInput } from "./CredentialDateInput";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "@tanstack/react-router";
-import { ArrowRight, Lock, Check, FileCheck2 } from "lucide-react";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { AlertTriangle, ArrowRight, Lock, Check, FileCheck2 } from "lucide-react";
+import {
+  likelyDuplicatesOf,
+  type ExistingCredential,
+} from "@/lib/security-passport/duplicate-credential";
 import type {
   InternationalCredentialInput,
   InternationalPassportMetadata,
@@ -109,6 +113,7 @@ export function InternationalCredentialForm({
   onListRequests,
   accountName,
   documentReader,
+  existingCredentials = [],
 }: {
   initial?: InternationalCredentialInput;
   preselectCode?: string;
@@ -151,6 +156,10 @@ export function InternationalCredentialForm({
   accountName?: string | null;
   /** Replaceable document reader; defaults to the in-browser pdf.js + OCR reader. */
   documentReader?: DocumentReader;
+  /** The holder's standing credentials. A selection matching one of them is
+   *  WARNED about, never refused: see duplicate-credential.ts. Empty (or not
+   *  readable) simply means no warning. */
+  existingCredentials?: readonly ExistingCredential[];
 }) {
   const { lang, pt } = usePassportCopy();
   const copy = (sv: string, en: string) => (lang === "sv" ? sv : en);
@@ -268,6 +277,13 @@ export function InternationalCredentialForm({
   const answer = filterCatalogue(index, filters, localisedHaystack);
   const visible = answer.results;
   const selected = index.find((d) => d.code === draft.definition_code);
+  // The same catalogue credential already on the Passport. A NEW record only:
+  // a correction (`initial`) is the existing record, not a second one.
+  const duplicates = initial ? [] : likelyDuplicatesOf(existingCredentials, selected?.code);
+  // The holder's own answer, per credential: choosing another one asks again.
+  const [separateConfirmedFor, setSeparateConfirmedFor] = useState<string | null>(null);
+  const duplicateUnanswered =
+    duplicates.length > 0 && separateConfirmedFor !== (selected?.code ?? null);
   // Whether the selected definition is offered as a PUBLIC PILOT: open to every
   // signed-in holder, not approved (`is_active` false), its market's legal
   // review pending. The catalogue view already decided it may be selected;
@@ -519,6 +535,17 @@ export function InternationalCredentialForm({
   });
   async function save() {
     if (!selected || saving.current || uploadNeedsCheck) return;
+    // A likely duplicate needs the holder's answer first (a ?code= link starts
+    // at step 2, past the step-1 control, so the answer is asked for here too).
+    if (duplicateUnanswered && !savedId.current) {
+      setError(
+        copy(
+          "Du har redan den här meriten. Öppna den befintliga eller bekräfta att det är en separat merit.",
+          "You already have this credential. Open the existing one or confirm that it is a separate credential.",
+        ),
+      );
+      return;
+    }
     // The database refuses valid_until <= issued_on (SP_INVALID_DATES). Said
     // here, in the holder's words, instead of as a generic save failure.
     if (
@@ -660,6 +687,79 @@ export function InternationalCredentialForm({
   }
   const regulatorOf = (d: IndexedDefinition) =>
     d.organisations.find((o) => o.role === "regulator")?.name ?? null;
+  const duplicateWarning = selected && duplicates.length > 0 && (
+    <div
+      role="status"
+      data-duplicate-warning={selected.code}
+      className="space-y-3 rounded-lg border border-amber-500/50 bg-amber-500/[0.07] p-4 text-sm"
+    >
+      <p className="flex items-start gap-2 font-semibold text-foreground">
+        <AlertTriangle
+          size={16}
+          aria-hidden="true"
+          className="mt-0.5 shrink-0 text-amber-700 dark:text-amber-400"
+        />
+        {duplicates.length === 1
+          ? copy(
+              "Du har redan registrerat den här meriten",
+              "You have already registered this credential",
+            )
+          : copy(
+              `Du har redan registrerat den här meriten ${duplicates.length} gånger`,
+              `You have already registered this credential ${duplicates.length} times`,
+            )}
+      </p>
+      <ul className="space-y-2">
+        {duplicates.map((d) => (
+          <li
+            key={d.id}
+            data-duplicate-existing={d.id}
+            className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-card px-3 py-2"
+          >
+            <span className="min-w-0 break-words">
+              <span className="font-medium">{lang === "sv" ? d.titleSv : d.titleEn}</span>
+              <span className="block text-xs text-muted-foreground">
+                {[
+                  d.issuedOn ? `${copy("Utfärdad", "Issued")} ${d.issuedOn}` : null,
+                  d.validUntil ? `${copy("Giltig till", "Valid until")} ${d.validUntil}` : null,
+                  pt(`lifecycle.${d.lifecycleState}` as const),
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </span>
+            </span>
+            <Link
+              to="/passport/entry/$kind/$entryId"
+              params={{ kind: "claim", entryId: d.id }}
+              data-duplicate-open={d.id}
+              className="inline-flex min-h-11 items-center gap-1 rounded-md border border-input bg-background px-3 text-sm font-medium"
+            >
+              {copy("Öppna befintlig merit", "Open existing credential")}
+            </Link>
+          </li>
+        ))}
+      </ul>
+      <p className="text-muted-foreground">
+        {copy(
+          "Är det samma merit? Öppna den befintliga och lägg till underlag eller rätta uppgifterna där, så hålls historik och granskning samlade. Är det en separat merit, till exempel ett nytt intyg med eget nummer, kan du registrera den separat. Ingenting raderas eller slås ihop automatiskt.",
+          "Is it the same credential? Open the existing one and add evidence or correct the details there, so its history and review stay together. If it is a separate credential, for example a new certificate with its own number, you can register it separately. Nothing is deleted or merged automatically.",
+        )}
+      </p>
+      <label className="flex min-h-11 items-start gap-3 font-medium text-foreground">
+        <input
+          type="checkbox"
+          data-duplicate-confirm
+          className="mt-1 h-4 w-4 shrink-0"
+          checked={separateConfirmedFor === selected.code}
+          onChange={(e) => setSeparateConfirmedFor(e.target.checked ? selected.code : null)}
+        />
+        {copy(
+          "Det här är en separat merit och jag vill registrera den",
+          "This is a separate credential and I want to register it",
+        )}
+      </label>
+    </div>
+  );
   const selectedMaintenance = metadata?.abbreviations?.find(
     (a) => a.credential_code === selected?.code,
   );
@@ -1094,6 +1194,7 @@ export function InternationalCredentialForm({
               {!selectedIsListed && facts}
             </div>
           )}
+          {duplicateWarning}
           <CatalogueRequestPanel
             lang={lang}
             suggestedName={filters.search}
@@ -1105,7 +1206,7 @@ export function InternationalCredentialForm({
             <button
               type="button"
               data-step-continue
-              disabled={!definitions || !selected}
+              disabled={!definitions || !selected || duplicateUnanswered}
               className="inline-flex min-h-11 items-center gap-2 rounded-md bg-primary px-5 text-sm font-semibold text-primary-foreground disabled:opacity-50"
               onClick={() => {
                 setError(null);
@@ -1136,6 +1237,7 @@ export function InternationalCredentialForm({
             <h3 className="mt-1 text-xl font-semibold">{steps[step - 1]}</h3>
           </div>
           {selected && facts}
+          {!savedId.current && duplicateWarning}
           {step === 2 && selected && (
             <div className="grid gap-5 sm:grid-cols-2">
               {selected.issuerStatedOnDocument && (

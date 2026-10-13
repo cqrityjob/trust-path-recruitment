@@ -2177,6 +2177,18 @@ const sv = {
   "vq.error.evidence": "Dokumentet kunde inte öppnas.",
   "vq.error.decision": "Beslutet kunde inte sparas. Dina val är kvar — försök igen.",
   "vq.retry": "Försök igen",
+  "vq.loadingQueue": "Hämtar ärenden …",
+  "vq.whoamiFailed":
+    "Vi kunde inte kontrollera din granskarbehörighet. Det betyder inte att du saknar den.",
+  "vq.filter.type": "Typ av merit",
+  "vq.filter.type.all": "Alla typer",
+  "vq.filter.type.experience": "Anställningserfarenhet",
+  "vq.filter.search": "Sök på merit, innehavare eller utfärdare",
+  "vq.filter.noMatch": "Inga ärenden matchar sökningen eller typen. Rensa filtren för att se alla.",
+  "vq.filter.clear": "Rensa filter",
+  "vq.filter.count": "Visar {shown} av {total}",
+  "vq.decisionAppliesTo":
+    "Beslutet gäller version {version}, inskickad {submitted} (UTC). Ändrar innehavaren uppgiften eller lägger till underlag efter att du öppnade ärendet nekas beslutet, och ärendet laddas om så att du ser det nya.",
   // A refusal the reviewer can act on. One line each: what happened, and what
   // to do instead. None of them says "try again" unless trying again is
   // genuinely the right move.
@@ -3132,7 +3144,9 @@ const en: Record<PassportCopyKey, string> = {
   "assertion.verified.stored": "APPROVED IN AN EARLIER REVIEW",
 
   "lifecycle.draft": "Draft",
-  "lifecycle.active": "Active",
+  // "Current", not "Active": it is the DATE axis, and "active" was read as
+  // "approved". Verification is the other chip, never this one.
+  "lifecycle.active": "Current",
   "lifecycle.expired": "Expired",
   "lifecycle.revoked": "Revoked",
   "lifecycle.superseded": "Superseded",
@@ -4444,6 +4458,17 @@ const en: Record<PassportCopyKey, string> = {
   "vq.error.evidence": "This document could not be opened.",
   "vq.error.decision": "The decision could not be saved. Your entries are still here — try again.",
   "vq.retry": "Try again",
+  "vq.loadingQueue": "Loading requests …",
+  "vq.whoamiFailed": "We could not check your reviewer access. That does not mean you lack it.",
+  "vq.filter.type": "Credential type",
+  "vq.filter.type.all": "All types",
+  "vq.filter.type.experience": "Employment experience",
+  "vq.filter.search": "Search by credential, holder or issuer",
+  "vq.filter.noMatch": "No requests match the search or type. Clear the filters to see all.",
+  "vq.filter.clear": "Clear filters",
+  "vq.filter.count": "Showing {shown} of {total}",
+  "vq.decisionAppliesTo":
+    "This decision applies to version {version}, submitted {submitted} (UTC). If the holder changes the entry or adds evidence after you opened the request, the decision is refused and the request reloads so you see what changed.",
   "vq.decline.self_verification":
     "This is your own request. You cannot verify yourself — another reviewer has to decide it.",
   "vq.decline.not_authorised": "You are not authorised to decide this review.",

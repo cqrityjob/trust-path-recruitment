@@ -252,6 +252,13 @@ jobs:
   # The image commit does start this workflow again (the path filter is
   # matched against the whole pull request), but it changes nothing that is
   # photographed, so `changed` stops it there.
+  #
+  # A manual run on a pull request's branch publishes too. A PR that does not
+  # touch the portal never photographs on its own, yet the committed pair goes
+  # stale for it as soon as `main` moves something photographed (2026-10-13:
+  # #469 merged, every later PR's "before" was pre-#469). Dispatching this
+  # workflow on that branch with `base_ref` = the PR's base refreshes the pair
+  # through the same jobs and the same check. Never on `main`.
   publish-images:
     name: Commit the before/after images to the PR branch
     needs: [before, after]
@@ -259,7 +266,11 @@ jobs:
     # photograph job leaves a partial set, and a partial set committed over a
     # complete one is worse than none. Artifacts of the failed run remain for
     # diagnosis.
-    if: needs.before.result == 'success' && needs.after.result == 'success' && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    if: >-
+      needs.before.result == 'success' && needs.after.result == 'success' && (
+        (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) ||
+        (github.event_name == 'workflow_dispatch' && github.ref_type == 'branch' && github.ref_name != 'main')
+      )
     runs-on: ubuntu-latest
     # Pushes to the branch queue behind each other rather than cancel.
     concurrency:
@@ -271,7 +282,7 @@ jobs:
       - name: Checkout the PR branch
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.ref }}
+          ref: ${{ github.event.pull_request.head.ref || github.ref_name }}
 
       # A download that fails fails the job: a missing artifact must never
       # become a half-committed pair.
@@ -306,10 +317,10 @@ jobs:
             echo "no image changed"
             exit 0
           fi
-          git commit -m "evidence(employer): before/after images for ${{ github.event.pull_request.head.sha }}" \
+          git commit -m "evidence(employer): before/after images for ${{ github.event.pull_request.head.sha || github.sha }}" \
             -m "Photographed by employer-portal-ux-evidence.yml run ${{ github.run_id }}: the base commit (before) and the PR head (after) on the same synthetic fixture."
           # The branch may have moved while the images were taken; rebase the
           # one image commit onto it rather than fail on a non-fast-forward.
-          git pull --rebase origin ${{ github.event.pull_request.head.ref }}
-          git push origin HEAD:${{ github.event.pull_request.head.ref }}
+          git pull --rebase origin ${{ github.event.pull_request.head.ref || github.ref_name }}
+          git push origin HEAD:${{ github.event.pull_request.head.ref || github.ref_name }}
 

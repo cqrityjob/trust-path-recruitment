@@ -31,6 +31,12 @@ export function credentialRowAnchor(claimId: string): string {
   return `sp-credential-${claimId.replace(/[^A-Za-z0-9_-]/g, "_")}`;
 }
 
+/** The two sections of a credential's own page that the overview's "Next
+ *  step" can land on: where a document is added, and where a reviewer's
+ *  question is answered. Shared, so the link and the id cannot drift. */
+export const ENTRY_EVIDENCE_ANCHOR = "sp-entry-evidence";
+export const ENTRY_VERIFICATION_ANCHOR = "sp-entry-verification";
+
 /** A projection, never a second editable record or a change to the v1 reader. */
 export function credentialPassportHolder(holder: PassportHolder): PassportHolder {
   return { ...holder, claims: holder.claims.filter(isPassportCredential), periods: [] };

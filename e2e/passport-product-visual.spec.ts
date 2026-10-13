@@ -396,7 +396,16 @@ for (const lang of ["en", "sv"] as const) {
     await expect(page.locator("[data-result]").first()).toBeVisible();
     await capture("add-results");
     await chooseCredential(page, "INTL_ASIS_CPP", { lang, proceed: false });
+    // This holder already has a CPP (the wallet above), so the form warns
+    // first and continues only once the holder says it is a separate one.
+    const duplicate = page.locator('[data-duplicate-warning="INTL_ASIS_CPP"]');
+    await expect(duplicate).toBeVisible();
+    await expect(duplicate.locator(`[data-duplicate-open="${claim.id}"]`)).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: lang === "sv" ? "Fortsätt" : "Continue", exact: true }),
+    ).toBeDisabled();
     await capture("add-selected");
+    await duplicate.locator("[data-duplicate-confirm]").check();
     await next();
     await page
       .getByLabel(

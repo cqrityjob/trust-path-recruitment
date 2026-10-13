@@ -72,6 +72,11 @@ import {
 import { CredentialVersionHistory } from "@/components/security-passport/CredentialVersionHistory";
 import { LifecycleChip, LifecycleNote } from "@/components/security-passport/LifecycleChip";
 import { EvidencePanel } from "@/components/security-passport/live/EvidencePanel";
+import { ScrollToHashOnceReady } from "@/components/security-passport/ScrollToHashOnceReady";
+import {
+  ENTRY_EVIDENCE_ANCHOR,
+  ENTRY_VERIFICATION_ANCHOR,
+} from "@/lib/security-passport/credential-passport";
 import { EvidenceUploadRecoveryPanel } from "@/components/security-passport/live/EvidenceUploadRecoveryPanel";
 import {
   listMyUploadAttempts,
@@ -498,6 +503,9 @@ function PassportEntryRoute() {
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-5">
+      {/* The overview's "Next step" lands on #sp-entry-evidence or
+          #sp-entry-verification: the section where that step is done. */}
+      <ScrollToHashOnceReady />
       <Link
         to="/passport"
         className="inline-flex h-11 items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
@@ -627,45 +635,47 @@ function PassportEntryRoute() {
         onResolved={refresh}
         onPendingChange={setUploadRecoveryPending}
       />
-      <EvidencePanel
-        key={`${kind}:${entryId}:evidence`}
-        uploadRecoveryPending={uploadRecoveryPending}
-        evidence={entryEvidence}
-        // A clarification asks the holder for a document and then has to let
-        // them attach one. Adding is allowed whenever the database allows it,
-        // which is always; removing is barred while any request is open,
-        // because `sp_withdraw_evidence` refuses it and the reviewer is
-        // relying on what is there.
-        canAdd={true}
-        canRemove={openRequest === null}
-        onUpload={async (file) => {
-          try {
-            await doUpload({
-              data: {
-                claimId: isClaim ? entryId : null,
-                periodId: isClaim ? null : entryId,
-                fileName: file.fileName,
-                mimeType: file.mimeType,
-                contentBase64: file.contentBase64,
-              },
-            });
-          } finally {
-            setUploadRecoveryGeneration((v) => v + 1);
+      <div id={ENTRY_EVIDENCE_ANCHOR} className="scroll-mt-24 space-y-5">
+        <EvidencePanel
+          key={`${kind}:${entryId}:evidence`}
+          uploadRecoveryPending={uploadRecoveryPending}
+          evidence={entryEvidence}
+          // A clarification asks the holder for a document and then has to let
+          // them attach one. Adding is allowed whenever the database allows it,
+          // which is always; removing is barred while any request is open,
+          // because `sp_withdraw_evidence` refuses it and the reviewer is
+          // relying on what is there.
+          canAdd={true}
+          canRemove={openRequest === null}
+          onUpload={async (file) => {
+            try {
+              await doUpload({
+                data: {
+                  claimId: isClaim ? entryId : null,
+                  periodId: isClaim ? null : entryId,
+                  fileName: file.fileName,
+                  mimeType: file.mimeType,
+                  contentBase64: file.contentBase64,
+                },
+              });
+            } finally {
+              setUploadRecoveryGeneration((v) => v + 1);
+              await refresh();
+            }
+          }}
+          onOpen={async (evidenceId) => {
+            const { url } = await doOpen({ data: { evidenceId } });
+            // noopener/noreferrer: the signed URL must not leak through the
+            // opener reference or a Referer header.
+            window.open(url, "_blank", "noopener,noreferrer");
+          }}
+          onWithdraw={async (evidenceId) => {
+            const result = await doWithdrawEvidence({ data: { evidenceId } });
             await refresh();
-          }
-        }}
-        onOpen={async (evidenceId) => {
-          const { url } = await doOpen({ data: { evidenceId } });
-          // noopener/noreferrer: the signed URL must not leak through the
-          // opener reference or a Referer header.
-          window.open(url, "_blank", "noopener,noreferrer");
-        }}
-        onWithdraw={async (evidenceId) => {
-          const result = await doWithdrawEvidence({ data: { evidenceId } });
-          await refresh();
-          return result;
-        }}
-      />
+            return result;
+          }}
+        />
+      </div>
 
       {claim && isPassportCredential(claim) ? (
         <section className="rounded-xl border border-border bg-card p-5">
@@ -702,64 +712,66 @@ function PassportEntryRoute() {
         />
       )}
 
-      <VerificationPanel
-        assertionLevel={subject.assertionLevel}
-        subjectKind={isClaim ? "credential" : "employment"}
-        validity={validity}
-        openRequest={openRequest}
-        rejectedRequest={rejectedRequest}
-        requests={entryRequests}
-        decisions={entryDecisions}
-        hasEvidence={entryEvidence.some((item) => item.lifecycleState === "active")}
-        canAskEmployer={!isClaim}
-        employerSearch={employerSearch}
-        onEmployerSearch={(q) => runEmployerSearch(q)}
-        // The organisation an OPEN employer request went to, looked up BY ID
-        // rather than found in a list. Null when the lookup could not name it
-        // -- said as "the employer" rather than substituted with the company
-        // name typed onto the period, which is a different fact and would read
-        // as an attestation nobody made. The id equality is not belt and
-        // braces: `linkedEmployerName` is the name of whatever
-        // `linkedEmployerId` resolved to, and printing it beside a DIFFERENT
-        // open request would be naming the wrong company. A DECIDED request
-        // does not use this at all: the panel reads its organisation from the
-        // decision record, which is what the database wrote at the moment the
-        // decision was made.
-        openRequestEmployerName={
-          openRequest?.targetEmployerId &&
-          openRequest.targetEmployerId === linkedEmployerId &&
-          linkedEmployerName !== null
-            ? linkedEmployerName
-            : null
-        }
-        onSubmit={async (requestKind, employerId) => {
-          await doSubmit({
-            data: {
-              claimId: isClaim ? entryId : null,
-              periodId: isClaim ? null : entryId,
-              kind: requestKind,
-              employerId,
-            },
-          });
-          // Anonymous funnel event, name only; never the credential or request.
-          if (requestKind === "cqrityjob_review") trackFunnelOnce("passport_review_requested");
-          await refresh();
-        }}
-        onWithdrawRequest={async (requestId) => {
-          await doWithdrawRequest({ data: { requestId } });
-          await refresh();
-        }}
-        onDispute={async (reason) => {
-          await doDispute({
-            data: {
-              claimId: isClaim ? entryId : null,
-              periodId: isClaim ? null : entryId,
-              reason,
-            },
-          });
-          await navigate({ to: "/passport" });
-        }}
-      />
+      <div id={ENTRY_VERIFICATION_ANCHOR} className="scroll-mt-24">
+        <VerificationPanel
+          assertionLevel={subject.assertionLevel}
+          subjectKind={isClaim ? "credential" : "employment"}
+          validity={validity}
+          openRequest={openRequest}
+          rejectedRequest={rejectedRequest}
+          requests={entryRequests}
+          decisions={entryDecisions}
+          hasEvidence={entryEvidence.some((item) => item.lifecycleState === "active")}
+          canAskEmployer={!isClaim}
+          employerSearch={employerSearch}
+          onEmployerSearch={(q) => runEmployerSearch(q)}
+          // The organisation an OPEN employer request went to, looked up BY ID
+          // rather than found in a list. Null when the lookup could not name it
+          // -- said as "the employer" rather than substituted with the company
+          // name typed onto the period, which is a different fact and would read
+          // as an attestation nobody made. The id equality is not belt and
+          // braces: `linkedEmployerName` is the name of whatever
+          // `linkedEmployerId` resolved to, and printing it beside a DIFFERENT
+          // open request would be naming the wrong company. A DECIDED request
+          // does not use this at all: the panel reads its organisation from the
+          // decision record, which is what the database wrote at the moment the
+          // decision was made.
+          openRequestEmployerName={
+            openRequest?.targetEmployerId &&
+            openRequest.targetEmployerId === linkedEmployerId &&
+            linkedEmployerName !== null
+              ? linkedEmployerName
+              : null
+          }
+          onSubmit={async (requestKind, employerId) => {
+            await doSubmit({
+              data: {
+                claimId: isClaim ? entryId : null,
+                periodId: isClaim ? null : entryId,
+                kind: requestKind,
+                employerId,
+              },
+            });
+            // Anonymous funnel event, name only; never the credential or request.
+            if (requestKind === "cqrityjob_review") trackFunnelOnce("passport_review_requested");
+            await refresh();
+          }}
+          onWithdrawRequest={async (requestId) => {
+            await doWithdrawRequest({ data: { requestId } });
+            await refresh();
+          }}
+          onDispute={async (reason) => {
+            await doDispute({
+              data: {
+                claimId: isClaim ? entryId : null,
+                periodId: isClaim ? null : entryId,
+                reason,
+              },
+            });
+            await navigate({ to: "/passport" });
+          }}
+        />
+      </div>
 
       {/* ── Disputed: what happens next, said to the holder ─────────────
           The tester pressed "Anmäl att uppgiften är fel", watched the chip
