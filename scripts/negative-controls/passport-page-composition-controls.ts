@@ -155,35 +155,44 @@ const MUTATIONS: readonly Mutation[] = [
     expect: "exactly ONE Add credential",
   },
   {
-    id: "PPC-NC-NEXT-STEP-DUPLICATES-THE-ROW-LINK",
+    id: "PPC-NC-NEXT-STEP-BACK-TO-THE-ROW",
     defect:
-      "the next step links straight to the claim route again, so the overview shows two claim links for one credential — the strict-mode failure of PR #263",
+      "the next step only locates the credential's row again, one click short of the action the owner asked it to open (2026-10-13)",
     file: SIDE,
-    find: '          to="/passport"\n          hash={credentialRowAnchor(next.claimId)}\n',
-    replace:
-      '          to="/passport/entry/$kind/$entryId"\n          params={{ kind: "claim", entryId: next.claimId }}\n',
+    find: '        to="/passport/entry/$kind/$entryId"\n        params={{ kind: "claim", entryId: next.claimId }}\n',
+    replace: '        to="/passport"\n',
     guard: GUARD,
-    expect: "the side column links to NO claim",
+    expect: "links to a claim ONLY through the one next-step action",
   },
   {
-    id: "PPC-NC-NEXT-STEP-LEADS-TO-AN-EMPTY-REGION",
+    id: "PPC-NC-NEXT-STEP-WRONG-SECTION",
     defect:
-      "the next step points at #attention again, which renders nothing for a self-reported credential with no review outcome — a visible button that goes nowhere",
+      "a reviewer's question sends the holder to the documents instead of the review panel where the question is answered",
     file: SIDE,
-    find: "          hash={credentialRowAnchor(next.claimId)}\n",
-    replace: '          hash="attention"\n',
+    find: '        hash={next.kind === "clarify" ? ENTRY_VERIFICATION_ANCHOR : ENTRY_EVIDENCE_ANCHOR}\n',
+    replace: "        hash={ENTRY_EVIDENCE_ANCHOR}\n",
     guard: GUARD,
-    expect: "never to a generic region",
+    expect: "the clarify step lands on the review panel",
   },
   {
-    id: "PPC-NC-NEXT-STEP-OVERCLAIMS-ITS-LABEL",
+    id: "PPC-NC-NEXT-STEP-UNNAMED",
     defect:
-      "the button that only locates a record is labelled with the evidence action again ('Bifoga underlag' / 'Add supporting evidence'), promising an action it does not perform",
+      "the step's accessible name loses the credential, so a screen-reader user hears 'Add evidence' without knowing for which credential",
     file: SIDE,
-    find: '{copy("Visa meriten", "View credential")}',
-    replace: '{copy("Bifoga underlag", "Add supporting evidence")}',
+    find: "        }: ${next.title}`}\n",
+    replace: "        }`}\n",
     guard: GUARD,
-    expect: "labelled truthfully",
+    expect: "labelled with the action it opens and the credential",
+  },
+  {
+    id: "PPC-NC-ENTRY-LOSES-ITS-TARGET",
+    defect:
+      "the credential's page drops the documents anchor, so the next step lands on the top of the page instead of where the step is done",
+    file: "src/routes/_authenticated.passport.entry.$kind.$entryId.tsx",
+    find: "      <div id={ENTRY_EVIDENCE_ANCHOR} ",
+    replace: "      <div ",
+    guard: GUARD,
+    expect: "carries both targets",
   },
   {
     id: "PPC-NC-ROW-LOSES-ITS-ANCHOR",
@@ -204,16 +213,6 @@ const MUTATIONS: readonly Mutation[] = [
     replace: "  return claimId;",
     guard: GUARD,
     expect: "cannot collide with a section id",
-  },
-  {
-    id: "PPC-NC-SECOND-PRESS-IS-INERT",
-    defect:
-      "the click no longer re-runs the arrival, so pressing the step a second time — fragment unchanged — does nothing",
-    file: SIDE,
-    find: "            requestAnimationFrame(() => goToHash(anchor));\n",
-    replace: "",
-    guard: GUARD,
-    expect: "a second press re-runs the arrival",
   },
   {
     id: "PPC-NC-EDIT-ROLE-URL-RESPELLED",

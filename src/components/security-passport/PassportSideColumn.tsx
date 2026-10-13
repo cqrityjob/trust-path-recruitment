@@ -18,21 +18,16 @@
 //   2. WHO CAN SEE IT the privacy mode, reported here and changed on the page
 //                     that owns it, and the way into Preview and share.
 //
-// ── ONE LINK PER CREDENTIAL, AND IT IS THE ROW'S ───────────────────────
+// ── THE NEXT STEP GOES WHERE THE STEP IS DONE (2026-10-13) ─────────────
 //
-// This column is mounted INSIDE the wallet, beside the credential rows. Each
-// row already carries the one claim-specific link for its credential ("Add
-// evidence", "Provide information", "View credential"). A second link to the
-// same claim from here put two identical actions on one screen, and which of
-// the two a reader — or a test — meant became a guess.
-//
-// So nothing in this column links to a claim ROUTE. The next step names the
-// credential and takes the reader to THAT CREDENTIAL'S ROW on this page
-// (`credentialRowAnchor`), labelled "View credential" because locating the
-// record is all it does. It used to point at `#attention`, which renders
-// nothing for a self-reported credential with no review outcome — a visible
-// button that led to an empty region. What needs attention names the
-// credential and its date, as text. A guard asserts all of it.
+// It used to take the reader to the credential's ROW on this page, labelled
+// "View credential", so that each credential had exactly one claim link.
+// Launch testing showed that as one click too many: the owner asked for the
+// next step to open the right credential AT the right action. So the step
+// now links to that credential's page, at the section that does the step —
+// `#sp-entry-evidence` to add a document, `#sp-entry-verification` to answer
+// a reviewer — and is labelled with that action and the credential's name.
+// What needs attention still names the credential and its date, as text.
 //
 // ── NO SERVER TIER ─────────────────────────────────────────────────────
 //
@@ -47,9 +42,9 @@ import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import type { PassportCopyKey } from "@/lib/security-passport/i18n";
 import {
   credentialPassportHolder,
-  credentialRowAnchor,
+  ENTRY_EVIDENCE_ANCHOR,
+  ENTRY_VERIFICATION_ANCHOR,
 } from "@/lib/security-passport/credential-passport";
-import { goToHash } from "@/lib/security-passport/hash-arrival";
 import { credentialProductStatus } from "@/lib/security-passport/product-status";
 import type { PassportSnapshot } from "@/lib/security-passport/passport.functions";
 
@@ -122,30 +117,32 @@ export function PassportSideColumn({
             }
           : { kind: "share" };
 
-  const viewCredential =
+  // The step is DONE where it is done: on that credential's own page, at the
+  // section that does it — the documents for "add evidence", the review panel
+  // for "a reviewer has a question". Labelled with the action and the
+  // credential, so a reader (and a screen reader) knows where it goes.
+  const stepAction =
     next.kind === "clarify" || next.kind === "evidence" ? (
-      <>
-        {/* Locates the record; it does not act on it. So it says "View
-            credential", and goes to that credential's own row — where
-            the one real action for it lives — never to a generic region
-            that may have nothing in it. The click re-runs the arrival,
-            because a second press leaves the fragment unchanged and the
-            router then has nothing to announce. */}
-        <Link
-          to="/passport"
-          hash={credentialRowAnchor(next.claimId)}
-          onClick={() => {
-            const anchor = credentialRowAnchor(next.claimId);
-            requestAnimationFrame(() => goToHash(anchor));
-          }}
-          className={`${PRIMARY} mt-4`}
-          data-cta="next-step"
-          data-next-step-target={credentialRowAnchor(next.claimId)}
-        >
-          {copy("Visa meriten", "View credential")}
-          <ArrowRight aria-hidden="true" className="h-3.5 w-3.5" />
-        </Link>
-      </>
+      <Link
+        to="/passport/entry/$kind/$entryId"
+        params={{ kind: "claim", entryId: next.claimId }}
+        hash={next.kind === "clarify" ? ENTRY_VERIFICATION_ANCHOR : ENTRY_EVIDENCE_ANCHOR}
+        className={`${PRIMARY} mt-4`}
+        data-cta="next-step"
+        data-next-step-target={`${next.claimId}#${
+          next.kind === "clarify" ? ENTRY_VERIFICATION_ANCHOR : ENTRY_EVIDENCE_ANCHOR
+        }`}
+        aria-label={`${
+          next.kind === "clarify"
+            ? copy("Svara granskaren", "Answer the reviewer")
+            : copy("Bifoga underlag", "Add evidence")
+        }: ${next.title}`}
+      >
+        {next.kind === "clarify"
+          ? copy("Svara granskaren", "Answer the reviewer")
+          : copy("Bifoga underlag", "Add evidence")}
+        <ArrowRight aria-hidden="true" className="h-3.5 w-3.5" />
+      </Link>
     ) : null;
 
   return (
@@ -197,7 +194,7 @@ export function PassportSideColumn({
               <p className="mt-1.5 break-words text-sm leading-relaxed text-muted-foreground">
                 {next.title}
               </p>
-              {viewCredential}
+              {stepAction}
             </>
           )}
 
@@ -217,7 +214,7 @@ export function PassportSideColumn({
                       `${next.count} credentials are self-reported. Start with ${next.title}.`,
                     )}
               </p>
-              {viewCredential}
+              {stepAction}
             </>
           )}
 

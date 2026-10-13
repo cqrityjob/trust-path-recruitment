@@ -148,7 +148,9 @@ export function CredentialWallet({
   const active = rows.filter((r) => r.lifecycle === "active");
   const horizon = new Date(new Date(now).getTime() + 30 * 86400000).toISOString().slice(0, 10);
   const stats: readonly [number, string][] = [
-    [active.length, copy("Aktiva", "Active")],
+    // "Gällande", not "Aktiva": a count of credentials whose DATES are
+    // current. It says nothing about review, which the next two count.
+    [active.length, copy("Gällande nu", "Current now")],
     [
       active.filter((r) => r.trust.status !== "self_reported" && !r.sourceConfirmed).length,
       copy("Dokumenterade", "Documented"),
@@ -292,7 +294,7 @@ export function CredentialWallet({
             ? copy("Bifoga underlag", "Add supporting evidence")
             : r.status === "clarification"
               ? copy("Komplettera uppgifter", "Provide information")
-              : copy("Öppna meriter", "View credential")}
+              : copy("Öppna meriten", "View credential")}
           <ArrowUpRight size={15} aria-hidden="true" />
         </Link>
       </li>
@@ -466,26 +468,39 @@ export function CredentialWallet({
             ))}
           </dl>
 
-          {/* The trust layer's statement about titles. Never on the card. */}
+          {/* The trust layer's statement about titles. Never on the card, and
+              never worded as a title the holder holds: it is a summary of what
+              their REGISTERED credentials point to, kept apart from the
+              occupation they state in the Profile. */}
           {credentialDerivedTitle ? (
-            <p
+            <div
               data-passport-derived-title
               className="mt-4 rounded-lg border border-border bg-secondary/40 p-3 text-xs leading-relaxed text-muted-foreground"
             >
-              <span className="font-semibold text-foreground">
-                {copy("Titel som meriterna ger stöd för", "Title your credentials support")}
-                {": "}
+              <p className="font-semibold text-foreground">
+                {copy(
+                  "Vad dina registrerade meriter visar",
+                  "What your registered credentials show",
+                )}
+              </p>
+              <p className="mt-0.5 text-sm font-semibold text-foreground">
                 {credentialDerivedTitle}
-              </span>
-              {derivedIsSelfDeclared ? (
-                <span data-testid="sp-self-declared-marker">
-                  {" · "}
-                  {pt("identity.selfDeclared")}
-                  {". "}
-                  {pt("identity.selfDeclaredNote")}
-                </span>
-              ) : null}
-            </p>
+              </p>
+              <p className="mt-1">
+                {copy(
+                  "En sammanfattning av meriterna i ditt Passport. Den ersätter inte ditt yrke i Profil och är ingen verifiering i sig.",
+                  "A summary of the credentials in your Passport. It does not replace your occupation in Profile and is not a verification in itself.",
+                )}
+                {derivedIsSelfDeclared ? (
+                  <span data-testid="sp-self-declared-marker">
+                    {" "}
+                    {pt("identity.selfDeclared")}
+                    {". "}
+                    {pt("identity.selfDeclaredNote")}
+                  </span>
+                ) : null}
+              </p>
+            </div>
           ) : null}
 
           {panel}

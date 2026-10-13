@@ -297,7 +297,7 @@ const expiring = html(
   />,
 );
 check(
-  /aria-label="SIA Licence · Sweden · SELF-DECLARED · Active · valid until 20 Oct 2026"/.test(
+  /aria-label="SIA Licence · Sweden · SELF-DECLARED · Current · valid until 20 Oct 2026"/.test(
     expiring,
   ),
   "the full label states name, scope, trust, lifecycle and expiry",

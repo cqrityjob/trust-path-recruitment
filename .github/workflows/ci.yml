@@ -1611,6 +1611,11 @@ jobs:
       - name: Passport page composition (sketch 2)
         run: bun run passport-page-composition:check
 
+      # Launch completion: duplicate warning, current is not verified, and a
+      # failed reviewer read is never "nothing to review".
+      - name: Passport launch completion
+        run: bun run passport-launch-completion:check
+
       # The credential shield system (PR #263): one scope resolver, four shield
       # slots at every count, trust told by shape and words, and a shared view
       # whose "+N" counts disclosed credentials only. Read-only over committed

@@ -224,33 +224,47 @@ check(
   "source order is card, panel, privacy, collection — which is the order on a phone",
 );
 
-check(
-  !/passport\/entry/.test(side) && !/entryId/.test(side),
-  "the side column links to NO claim — the credential row owns the one claim-specific link",
-);
-// ── A VISIBLE ACTION NEVER LEADS TO AN EMPTY REGION ─────────────────────
-// 1317be8 pointed these two steps at `#attention`, which renders nothing for
-// a self-reported credential with no review outcome. They go to the
-// credential's OWN ROW, and because locating a record is all they do, they
-// are labelled "View credential" and nothing stronger.
-check(
-  (side.match(/data-cta="next-step"/g) ?? []).length === 2 &&
-    (side.match(/to="\/passport"\s+hash=\{credentialRowAnchor\(next\.claimId\)\}/g) ?? [])
-      .length === 1 &&
-    (side.match(/\{viewCredential\}/g) ?? []).length === 2 &&
-    /next\.kind === "clarify" \|\| next\.kind === "evidence" \?/.test(side),
-  "the clarify and evidence steps share ONE action, to that credential's own row on this page",
-);
+// ── THE NEXT STEP GOES WHERE THE STEP IS DONE (owner, 2026-10-13) ──────
+// It used to locate the credential's row on this page ("View credential"),
+// one click short of the action. The owner asked for the step to open the
+// right credential AT the right action, so it now links to that credential's
+// page, at the section that does the step, and says the action.
+{
+  const entry = code(read("src/routes/_authenticated.passport.entry.$kind.$entryId.tsx"));
+  const shared = read("src/lib/security-passport/credential-passport.ts");
+  check(
+    (side.match(/to="\/passport\/entry\/\$kind\/\$entryId"/g) ?? []).length === 1 &&
+      /params=\{\{ kind: "claim", entryId: next\.claimId \}\}/.test(side),
+    "the side column links to a claim ONLY through the one next-step action, for the step's own credential",
+  );
+  check(
+    (side.match(/data-cta="next-step"/g) ?? []).length === 2 &&
+      (side.match(/\{stepAction\}/g) ?? []).length === 2 &&
+      /next\.kind === "clarify" \|\| next\.kind === "evidence" \?/.test(side) &&
+      /hash=\{next\.kind === "clarify" \? ENTRY_VERIFICATION_ANCHOR : ENTRY_EVIDENCE_ANCHOR\}/.test(
+        side,
+      ),
+    "the clarify step lands on the review panel and the evidence step on the documents — one action, shared",
+  );
+  check(
+    /copy\("Svara granskaren", "Answer the reviewer"\)/.test(side) &&
+      /copy\("Bifoga underlag", "Add evidence"\)/.test(side) &&
+      /aria-label=\{`\$\{[\s\S]{0,200}\}: \$\{next\.title\}`\}/.test(side) &&
+      !/copy\("Visa meriten", "View credential"\)/.test(side),
+    'labelled with the action it opens and the credential it is for — never a bare "View credential"',
+  );
+  check(
+    /export const ENTRY_EVIDENCE_ANCHOR = "sp-entry-evidence"/.test(shared) &&
+      /export const ENTRY_VERIFICATION_ANCHOR = "sp-entry-verification"/.test(shared) &&
+      /id=\{ENTRY_EVIDENCE_ANCHOR\}[\s\S]{0,200}<EvidencePanel/.test(entry) &&
+      /id=\{ENTRY_VERIFICATION_ANCHOR\}[\s\S]{0,200}<VerificationPanel/.test(entry) &&
+      /<ScrollToHashOnceReady \/>/.test(entry),
+    "and the credential's page carries both targets and honours the arrival, so the step never lands on nothing",
+  );
+}
 check(
   !/hash="attention"/.test(side) && !/hash="merits"/.test(side),
   "and never to a generic region that may have nothing in it",
-);
-check(
-  (side.match(/\{copy\("Visa meriten", "View credential"\)\}/g) ?? []).length === 1 &&
-    !/data-cta="next-step"[\s\S]{0,260}copy\("(Bifoga underlag|Lägg till underlag|Komplettera uppgifter)"/.test(
-      side,
-    ),
-  'labelled truthfully — "Visa meriten" / "View credential" — because they locate, they do not act',
 );
 check(
   /id=\{credentialRowAnchor\(c\.id\)\}\s+data-credential-row/.test(workspace) &&
@@ -268,11 +282,6 @@ check(
       !anchors.includes("merits") &&
       !anchors.includes("attention"),
     "the anchor is one shared function: namespaced, fragment-safe, and cannot collide with a section id",
-  );
-  check(
-    /goToHash\(anchor\)/.test(side) &&
-      /export function goToHash/.test(read("src/lib/security-passport/hash-arrival.ts")),
-    "a second press re-runs the arrival, so the step is never inert when the fragment is unchanged",
   );
 }
 check(
