@@ -352,8 +352,13 @@ test("international add, correction successor and archive remain reachable", asy
         };
       return ok({ id: current.id });
     }
+    // The holder has no CPP until the first save; holding it from the start
+    // would (rightly) raise the add form's duplicate warning.
     if (name === "getMyPassport")
-      return ok({ ...snapshot, holder: { ...snapshot.holder, claims: [current] } });
+      return ok({
+        ...snapshot,
+        holder: { ...snapshot.holder, claims: writes.length ? [current] : [] },
+      });
     if (name === "getInternationalPassportMetadata")
       return ok({ ...metadata, details: [detail()] });
     if (name === "archiveCredential") {

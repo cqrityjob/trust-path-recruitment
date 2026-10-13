@@ -483,13 +483,27 @@ const savedCheck = (over: Record<string, unknown> = {}) => ({
   ...over,
 });
 const entry = `/passport/entry/claim/${CLAIM_ID}`;
+/** The Passport as it really is around a save: without the new claim until
+ *  `saveInternationalCredential` answers, with it afterwards. A stub that held
+ *  the saved claim from the start would make the add form (rightly) warn that
+ *  the holder already has this credential, and hold the save for an answer. */
+const savedOnlyAfterSave = (claims: unknown[]) => {
+  let saved = false;
+  return {
+    saveInternationalCredential: () => {
+      saved = true;
+      return { id: CLAIM_ID };
+    },
+    getMyPassport: () => passportWith(saved ? claims : []),
+  };
+};
 
 test("save: a file with a signed credential is checked BY THE SERVER, and the reopened credential shows the saved check", async ({
   page,
 }) => {
   const credential = "eyJhbGciOiJFZERTQSJ9.eyJzeW50aGV0aWMiOnRydWV9.c2lnbmF0dXJl";
   const { refusals, requests } = await mount(page, "en", {
-    getMyPassport: passportWith([savedClaim]),
+    ...savedOnlyAfterSave([savedClaim]),
     getSavedAssessment: savedCheck(),
   });
   await choose(
@@ -527,9 +541,7 @@ test("save: a file with a signed credential is checked BY THE SERVER, and the re
 });
 
 test("save: a plain document asks the server to check nothing", async ({ page }) => {
-  const { refusals, requests } = await mount(page, "en", {
-    getMyPassport: passportWith([savedClaim]),
-  });
+  const { refusals, requests } = await mount(page, "en", savedOnlyAfterSave([savedClaim]));
   await choose(page, "certificate.pdf", "application/pdf", await fixtures.textPdf(ENGLISH_CPP));
   await expect(panel(page, "read")).toBeVisible({ timeout: 60_000 });
   await page.getByRole("button", { name: "Continue", exact: true }).click();
