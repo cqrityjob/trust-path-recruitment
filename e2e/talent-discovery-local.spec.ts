@@ -36,7 +36,10 @@ test.skip(
     ANON === "",
   "This spec signs synthetic people in and writes; it runs against loopback only.",
 );
-test.describe.configure({ mode: "serial", timeout: 240_000 });
+// Ordered (one worker) but NOT serial: an early failure must not leave the
+// later scenarios skipped and unproven. State a later scenario needs is read
+// from the database, never carried in a variable an earlier test set.
+test.describe.configure({ mode: "default", timeout: 240_000 });
 
 const PASSWORD = "LocalJourney!2026";
 const SHOTS = path.resolve(process.env.TD_EVIDENCE_DIR ?? "test-results/talent-discovery");
@@ -151,10 +154,12 @@ async function noHorizontalOverflow(page: Page) {
   expect(overflow, "horizontal overflow").toBeLessThanOrEqual(1);
 }
 
-let cppClaim = "";
-let reviewerPage: Page;
+/** Cecilia's current CPP entry (scenario 1 creates it). */
+const cppClaim = () =>
+  sql(
+    `select id from sp_claims where holder_user_id='${A_ID}' and credential_code='INTL_ASIS_CPP' and lifecycle_state='active' order by created_at desc limit 1`,
+  );
 /** The version the reviewer's first page was loaded on, before the answer. */
-let seenBeforeReply = "";
 const PDF = Buffer.from("%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n");
 
 test("1 · A registers a credential, documents it and asks for review from the next step", async ({
@@ -177,7 +182,6 @@ test("1 · A registers a credential, documents it and asks for review from the n
   await page.getByRole("button", { name: /^(Fortsätt|Continue)$/, exact: true }).click();
   await page.getByRole("button", { name: /^(Spara merit|Save credential)$/, exact: true }).click();
   await page.waitForURL(/\/passport\/entry\/claim\/[0-9a-f-]{36}/, { timeout: 60_000 });
-  cppClaim = page.url().match(/claim\/([0-9a-f-]{36})/)![1];
 
   const next = page.locator("[data-entry-next-step]");
   await expect(next).toHaveAttribute("data-entry-next-step", "add_evidence", { timeout: 30_000 });
@@ -196,7 +200,7 @@ test("1 · A registers a credential, documents it and asks for review from the n
   // Double click on the request: one request.
   await next.getByRole("button", { name: "Begär granskning" }).dblclick();
   await expect(next).toHaveAttribute("data-entry-next-step", "waiting", { timeout: 60_000 });
-  expect(sql(`select count(*) from sp_verification_requests where claim_id='${cppClaim}'`)).toBe(
+  expect(sql(`select count(*) from sp_verification_requests where claim_id='${cppClaim()}'`)).toBe(
     "1",
   );
   expect(
@@ -208,7 +212,7 @@ test("1 · A registers a credential, documents it and asks for review from the n
 test("2 · the reviewer asks for more information; the holder is told in the app and by mail", async ({
   browser,
 }) => {
-  reviewerPage = await signIn(browser, REVIEWER, "/passport-review");
+  const reviewerPage = await signIn(browser, REVIEWER, "/passport-review");
   const item = reviewerPage
     .locator("li")
     .filter({ hasText: "Certified Protection Professional" })
@@ -220,16 +224,11 @@ test("2 · the reviewer asks for more information; the holder is told in the app
     .fill("Vilket år avlade du examen? Intyget saknar datum.");
   await reviewerPage.getByRole("button", { name: "Ja, spara beslutet" }).click();
   await expect
-    .poll(() => sql(`select status from sp_verification_requests where claim_id='${cppClaim}'`), {
+    .poll(() => sql(`select status from sp_verification_requests where claim_id='${cppClaim()}'`), {
       timeout: 30_000,
     })
     .toBe("clarification_requested");
-  seenBeforeReply = sql(
-    `select submitted_at from sp_verification_requests where claim_id='${cppClaim}'`,
-  );
-  // The reviewer opens the case again and leaves this page open: it is the
-  // "old review view" step 4 uses after the holder has answered.
-  await reviewerPage.reload();
+  await reviewerPage.context().close();
   const mail = await expectProductNotice(A, "passport_clarification_requested");
   if (mail) {
     expect(mail.subject).toContain("Komplettering");
@@ -238,7 +237,7 @@ test("2 · the reviewer asks for more information; the holder is told in the app
 });
 
 test("3 · the holder answers in text, bound to the version", async ({ browser }) => {
-  const page = await signIn(browser, A, `/passport/entry/claim/${cppClaim}`);
+  const page = await signIn(browser, A, `/passport/entry/claim/${cppClaim()}`);
   const next = page.locator("[data-entry-next-step]");
   await expect(next).toHaveAttribute("data-entry-next-step", "clarification", { timeout: 60_000 });
   const reply = page.locator("[data-clarification-reply]");
@@ -265,8 +264,12 @@ test("4 · the review page opened before the answer is refused; after reload the
   const stale = await rpc(
     "sp_verifier_decide_reviewed",
     {
-      _request_id: sql(`select id from sp_verification_requests where claim_id='${cppClaim}'`),
-      _reviewed_submitted_at: seenBeforeReply,
+      _request_id: sql(`select id from sp_verification_requests where claim_id='${cppClaim()}'`),
+      // The version a review page opened before the answer carried: the one
+      // the holder's reply answered.
+      _reviewed_submitted_at: sql(
+        `select p.answers_submitted_at from sp_verification_replies p join sp_verification_requests r on r.id=p.request_id where r.claim_id='${cppClaim()}' order by p.created_at desc limit 1`,
+      ),
       _decision: "approved",
       _method: "document_review",
       _decision_note: null,
@@ -281,23 +284,22 @@ test("4 · the review page opened before the answer is refused; after reload the
   await fresh.getByLabel(/Godkänn dokumentgranskning/).check();
   await fresh.getByRole("button", { name: "Ja, spara beslutet" }).click();
   await expect
-    .poll(() => sql(`select assertion_level from sp_claims where id='${cppClaim}'`), {
+    .poll(() => sql(`select assertion_level from sp_claims where id='${cppClaim()}'`), {
       timeout: 30_000,
     })
     .toBe("verified");
   expect(
     sql(
-      `select count(*) from sp_verification_decisions d join sp_verification_requests r on r.id=d.request_id where r.claim_id='${cppClaim}'`,
+      `select count(*) from sp_verification_decisions d join sp_verification_requests r on r.id=d.request_id where r.claim_id='${cppClaim()}'`,
     ),
   ).toBe("2");
   await fresh.context().close();
-  await reviewerPage.context().close();
 });
 
 test("5 · A sees one current status and its history, then becomes discoverable for chosen items", async ({
   browser,
 }) => {
-  const page = await signIn(browser, A, `/passport/entry/claim/${cppClaim}`);
+  const page = await signIn(browser, A, `/passport/entry/claim/${cppClaim()}`);
   await expect(page.locator("[data-entry-next-step]")).toHaveAttribute(
     "data-entry-next-step",
     "done",
@@ -412,7 +414,6 @@ test("6 · the owner binds the confirmed requirements to the catalogue; a plain 
   await other.context().close();
 });
 
-let aRef = "";
 test("7 · the recruiter finds the discoverable people and reads why; the private person is never shown or counted", async ({
   browser,
 }) => {
@@ -449,7 +450,6 @@ test("7 · the recruiter finds the discoverable people and reads why; the privat
   await noHorizontalOverflow(page);
   await shot(page, "after-talent-results-sv-390");
   await page.setViewportSize({ width: 1440, height: 1000 });
-  aRef = sql(`select search_ref from sp_talent_profiles where holder_user_id='${A_ID}'`);
 
   // A private person, by direct API: same answer as an unknown reference.
   const token = await tokenOf(RECRUITER);
@@ -569,6 +569,7 @@ test("10 · revocation and pause take effect on the next read; the dated snapsho
   await expect(page.locator("main")).not.toContainText("Ordningsvaktsförordnande (OV)");
 
   // Cecilia pauses: her old reference stops at once, and she leaves the count.
+  const aRef = sql(`select search_ref from sp_talent_profiles where holder_user_id='${A_ID}'`);
   const a = await signIn(browser, A, "/passport/discoverability");
   await a.locator("[data-pause-discoverability]").click();
   await expect(a.locator("[data-current-visibility]")).toHaveAttribute(
@@ -706,4 +707,110 @@ test("11 · a rejection reaches the holder in the reviewer's words; a removed pe
   await noHorizontalOverflow(a);
   await shot(a, "after-discoverability-keyboard-sv-720");
   await a.context().close();
+});
+
+test("12 · a signed-out session reads nothing; a removed reviewer role ends inbox and thread access; an attestation note stays the employer's", async () => {
+  const REVIEWER_ID = "7d000000-0000-4000-8000-0000000000f1";
+  const logout = async (token: string) => {
+    const res = await fetch(`${API}/auth/v1/logout?scope=local`, {
+      method: "POST",
+      headers: { apikey: ANON, Authorization: `Bearer ${token}` },
+    });
+    expect(res.status).toBeLessThan(300);
+  };
+  const refused = (r: { status: number; body: string }) =>
+    r.status >= 400 && r.body.includes("SP_SESSION_REVOKED");
+
+  // The holder signs out; the access token is still unexpired, its session is gone.
+  const holder = await tokenOf(A);
+  const holderCalls: [string, Record<string, unknown>][] = [
+    ["sp_talent_preview", {}],
+    ["sp_talent_get_settings", {}],
+    ["user_notices_inbox", { _limit: 30 }],
+    ["sp_talent_my_contacts", {}],
+    ["sp_review_thread", { _claim_id: cppClaim(), _period_id: null }],
+  ];
+  for (const [fn, args] of holderCalls) expect((await rpc(fn, args, holder)).status).toBe(200);
+  await logout(holder);
+  for (const [fn, args] of holderCalls)
+    expect(refused(await rpc(fn, args, holder)), `${fn} after sign-out`).toBe(true);
+  expect(
+    refused(
+      await rpc(
+        "sp_talent_save_settings",
+        {
+          _expected_version: 0,
+          _visibility: "private",
+          _consent_text_version: null,
+          _claim_ids: [],
+          _experience_ids: [],
+          _preferences: {},
+        },
+        holder,
+      ),
+    ),
+  ).toBe(true);
+
+  // The same on the employer side.
+  const owner = await tokenOf(OWNER);
+  expect((await rpc("rec_talent_search", { _job_id: JOB, _filters: {} }, owner)).status).toBe(200);
+  await logout(owner);
+  expect(refused(await rpc("rec_talent_search", { _job_id: JOB, _filters: {} }, owner))).toBe(true);
+  expect(refused(await rpc("rec_talent_contacts", { _job_id: JOB }, owner))).toBe(true);
+  // A fresh sign-in works again: the rule is the session, not the account.
+  expect(
+    (await rpc("rec_talent_search", { _job_id: JOB, _filters: {} }, await tokenOf(OWNER))).status,
+  ).toBe(200);
+
+  // An employer attestation with an internal note on Cecilia's employment.
+  const period = "7d000000-5555-4000-8000-0000000000a1";
+  sql(`insert into sp_verification_requests (holder_user_id, period_id, request_kind, target_employer_id, status, submitted_at, decided_at, decided_by, verification_method, decision_note, holder_message)
+       select '${A_ID}', '${period}', 'employer_attestation', id, 'approved', now() - interval '1 hour', now(), '7d000000-0000-4000-8000-0000000000e1',
+              'employer_confirmation', 'INTERN-ARBETSGIVARE-E2E', 'Bekräftad.' from employers where slug = 'td-bevakning'`);
+  sql(`insert into sp_verification_decisions (request_id, holder_user_id, decided_by, decider_organisation, decision, verification_method, decision_note, holder_message)
+       select id, holder_user_id, decided_by, 'TD Bevakning AB', 'approved', 'employer_confirmation', decision_note, holder_message
+         from sp_verification_requests where period_id = '${period}' and request_kind = 'employer_attestation'`);
+  const reviewer = await tokenOf(REVIEWER);
+  const attestation = await rpc(
+    "sp_review_thread",
+    { _claim_id: null, _period_id: period },
+    reviewer,
+  );
+  expect(attestation.body).not.toContain("INTERN-ARBETSGIVARE-E2E");
+  expect(attestation.body).toContain("SP_TARGET_NOT_FOUND");
+  // The holder sees the confirmation named as an employer's, and never the note.
+  const own = await rpc("user_notices_inbox", { _limit: 50 }, await tokenOf(A));
+  expect(own.body).toContain('"verificationMethod": "employer_confirmation"');
+  const ownThread = await rpc(
+    "sp_review_thread",
+    { _claim_id: null, _period_id: period },
+    await tokenOf(A),
+  );
+  expect(ownThread.body).not.toContain("INTERN-ARBETSGIVARE-E2E");
+
+  // The reviewer role is removed: the inbox, the thread and the table all close at once.
+  const before = await rpc("user_notices_inbox", { _limit: 50 }, reviewer);
+  expect(before.body).toContain('"audience": "reviewer"');
+  sql(`delete from user_roles where user_id = '${REVIEWER_ID}' and role = 'passport_verifier'`);
+  try {
+    const after = await rpc("user_notices_inbox", { _limit: 50 }, reviewer);
+    expect(after.body).not.toContain('"audience": "reviewer"');
+    expect(
+      (await rpc("sp_review_thread", { _claim_id: cppClaim(), _period_id: null }, reviewer)).body,
+    ).toContain("SP_TARGET_NOT_FOUND");
+    const direct = await fetch(`${API}/rest/v1/user_notices?select=id`, {
+      headers: { apikey: ANON, Authorization: `Bearer ${reviewer}` },
+    });
+    expect(direct.status).toBeGreaterThanOrEqual(400);
+  } finally {
+    sql(
+      `insert into user_roles (user_id, role) values ('${REVIEWER_ID}', 'passport_verifier') on conflict do nothing`,
+    );
+  }
+
+  // No session at all: the anon key reaches none of it.
+  expect(
+    (await rpc("rec_talent_search", { _job_id: JOB, _filters: {} }, null)).status,
+  ).toBeGreaterThanOrEqual(400);
+  expect((await rpc("sp_talent_preview", {}, null)).status).toBeGreaterThanOrEqual(400);
 });

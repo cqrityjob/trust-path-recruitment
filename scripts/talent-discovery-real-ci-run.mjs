@@ -33,6 +33,7 @@ import {
   requireStatus,
   appEnvironment,
   requireBrowserCounts,
+  SCENARIOS,
   isRegistryThrottle,
 } from "./talent-discovery-real-ci-contract.mjs";
 
@@ -214,7 +215,7 @@ async function main() {
       await fetch(`${APP}${route}`, { signal: AbortSignal.timeout(180_000) }).catch(() => {});
   });
 
-  await stage("eleven_browser_scenarios", async () => {
+  await stage("browser_scenarios", async () => {
     const jsonFile = path.join(privateRoot, "playwright.json");
     const env = {
       ...process.env,
@@ -244,7 +245,7 @@ async function main() {
       failure = error;
     }
     const stats = JSON.parse(fs.readFileSync(jsonFile, "utf8")).stats;
-    report.browser = requireBrowserCounts(stats, 11, { allowFailure: Boolean(failure) });
+    report.browser = requireBrowserCounts(stats, SCENARIOS, { allowFailure: Boolean(failure) });
     if (failure) throw Error("TD_REAL_BROWSER_FAILED");
   });
 

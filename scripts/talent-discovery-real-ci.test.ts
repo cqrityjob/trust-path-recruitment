@@ -12,6 +12,7 @@ import {
   requireBrowserCounts,
   requireRunner,
   requireStatus,
+  SCENARIOS,
 } from "./talent-discovery-real-ci-contract.mjs";
 
 const read = (p: string) => fs.readFileSync(p, "utf8");
@@ -76,14 +77,17 @@ test("the services that matter are on and mail cannot leave", () => {
   expect(env.PUBLIC_SITE_URL).toBe(APP);
 });
 
-test("eleven passing scenarios, no fewer, none flaky or skipped", () => {
-  const ok = { expected: 11, unexpected: 0, flaky: 0, skipped: 0 };
-  expect(requireBrowserCounts(ok, 11).complete).toBe(true);
+test("every scenario passes, no fewer, none flaky or skipped", () => {
+  const spec = read("e2e/talent-discovery-local.spec.ts");
+  expect((spec.match(/^test\("/gm) ?? []).length).toBe(SCENARIOS);
+  expect(spec).not.toMatch(/mode: "serial"/);
+  const ok = { expected: SCENARIOS, unexpected: 0, flaky: 0, skipped: 0 };
+  expect(requireBrowserCounts(ok, SCENARIOS).complete).toBe(true);
   for (const patch of [{ expected: 10 }, { unexpected: 1 }, { flaky: 1 }, { skipped: 1 }])
-    expect(() => requireBrowserCounts({ ...ok, ...patch }, 11)).toThrow("COUNTS_MISMATCH");
-  expect(requireBrowserCounts({ ...ok, unexpected: 1 }, 11, { allowFailure: true }).complete).toBe(
-    false,
-  );
+    expect(() => requireBrowserCounts({ ...ok, ...patch }, SCENARIOS)).toThrow("COUNTS_MISMATCH");
+  expect(
+    requireBrowserCounts({ ...ok, unexpected: 1 }, SCENARIOS, { allowFailure: true }).complete,
+  ).toBe(false);
 });
 
 test("only a registry throttle is retried", () => {

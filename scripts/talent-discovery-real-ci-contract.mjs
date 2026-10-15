@@ -7,6 +7,8 @@ export const API = "http://127.0.0.1:55790";
 export const APP = "http://127.0.0.1:3150";
 export const CLI_VERSION = "2.111.0";
 export const PASSWORD = "LocalJourney!2026";
+/** Scenarios in e2e/talent-discovery-local.spec.ts; all must pass, none skipped. */
+export const SCENARIOS = 12;
 export const EXCLUDED =
   "realtime,imgproxy,mailpit,postgres-meta,studio,edge-runtime,logflare,vector,supavisor";
 
