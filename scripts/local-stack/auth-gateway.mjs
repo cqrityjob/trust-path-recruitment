@@ -696,10 +696,19 @@ async function handle(req, res) {
   //    leaves this process, so a synthetic address can never receive mail.
   //    The Idempotency-Key is honoured the way the provider honours it: a
   //    repeat of one key is accepted and not delivered twice.
+  //    PRODUCT NOTICES ONLY. Every other kind (invitations, receipts,
+  //    recruitment messages, registration mail) keeps the answer this stack
+  //    gave before the catcher existed -- no function deployed, 404 -- which
+  //    the application reads as "not configured". Suites that prove that
+  //    path (test-bank-dispatch) keep proving it.
   if (url.pathname === "/functions/v1/transactional-email" && req.method === "POST") {
     const claims = verify(bearer(req));
     if (!claims || claims.role !== "service_role") return send(res, 401, { error: "unauthorised" });
     const mail = JSON.parse((await readBody(req)).toString("utf8") || "{}");
+    if (String(mail.kind ?? "") !== "product_notice")
+      return send(res, 404, {
+        msg: "the local gateway serves /auth/v1, /rest/v1 and the Passport's storage calls only",
+      });
     const key = String(req.headers["idempotency-key"] ?? "");
     if (key && inbox.some((m) => m.idempotencyKey === key))
       return send(res, 200, { id: key, repeat: true });
