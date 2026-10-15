@@ -29,6 +29,16 @@
 // a reviewer — and is labelled with that action and the credential's name.
 // What needs attention still names the credential and its date, as text.
 //
+// ── THE SAME STEP AS THE CREDENTIAL'S OWN PAGE (workshop 2026-10-15) ───
+//
+// Each credential's step is `entryNextStep` -- the function the credential's
+// page uses -- over the same facts: the open review from the holder's request
+// list, the latest recorded decision, whether a document is there (the
+// assertion level moves to document_provided with the first upload) and the
+// validity window. `overviewNextStep` then picks the most pressing one, in a
+// documented order, and the words are the page's own (NEXT_STEP_COPY). A step
+// that needs the request list is not offered while that list is unreadable.
+//
 // ── NO SERVER TIER ─────────────────────────────────────────────────────
 //
 // The route owns every read, as every Passport component does and as
@@ -46,6 +56,15 @@ import {
   ENTRY_VERIFICATION_ANCHOR,
 } from "@/lib/security-passport/credential-passport";
 import { credentialProductStatus } from "@/lib/security-passport/product-status";
+import {
+  entryNextStep,
+  entryNextStepAnchor,
+  NEXT_STEP_COPY,
+  overviewNextStep,
+  overviewReviewState,
+  type EntryNextStep,
+} from "@/lib/security-passport/entry-next-step";
+import { validityOf } from "@/lib/security-passport/validity";
 import type { PassportSnapshot } from "@/lib/security-passport/passport.functions";
 
 const LINK =
@@ -56,9 +75,8 @@ const PRIMARY =
 
 type NextStep =
   | { kind: "first" }
-  | { kind: "clarify"; claimId: string; title: string }
-  | { kind: "evidence"; claimId: string; title: string; count: number }
-  | { kind: "share" };
+  | { kind: "unknown" }
+  | { kind: EntryNextStep; claimId: string; title: string; count: number };
 
 export function PassportSideColumn({
   snapshot,
@@ -92,55 +110,78 @@ export function PassportSideColumn({
   const rows = credentialPassportHolder(snapshot.holder).claims.map((c) =>
     credentialProductStatus(c, metadata?.verificationEvents ?? [], today, reviews?.get(c.id)),
   );
-  const titleOf = (row: (typeof rows)[number]) =>
-    lang === "sv" ? row.claim.titleSv : row.claim.titleEn || row.claim.titleSv;
-  const clarify = rows.find((r) => r.status === "clarification");
-  const registered = rows.filter((r) => r.status === "registered");
+  // The wallet row's own name: the catalogue's, else the entered title.
+  const titleOf = (row: (typeof rows)[number]) => {
+    const definition = metadata?.definitions?.find((d) => d.code === row.claim.credentialCode);
+    return definition
+      ? definition[lang === "sv" ? "name_sv" : "name_en"]
+      : lang === "sv"
+        ? row.claim.titleSv
+        : row.claim.titleEn || row.claim.titleSv;
+  };
   // The wallet header's own window: active rows lapsing within 30 days.
   const horizon = new Date(new Date(today).getTime() + 30 * 86400000).toISOString().slice(0, 10);
   const expiring = rows
     .filter((r) => r.lifecycle === "active" && r.claim.validUntil && r.claim.validUntil <= horizon)
     .sort((a, b) => a.claim.validUntil!.localeCompare(b.claim.validUntil!));
 
-  // A reviewer's question first: it is the only step with somebody waiting.
+  // Every credential's own step, by the function its page uses.
+  const events = metadata?.verificationEvents ?? [];
+  const steps = rows.flatMap((row) => {
+    const c = row.claim;
+    const validity = validityOf(c.lifecycleState, c.validUntil, today);
+    const latest = events
+      .filter((e) => e.claimId === c.id)
+      .sort((a, b) => b.decidedAt.localeCompare(a.decidedAt))[0];
+    const step = entryNextStep({
+      kind: "claim",
+      assertionLevel: c.assertionLevel,
+      hasActiveEvidence:
+        c.assertionLevel === "document_provided" || c.assertionLevel === "verified",
+      reviewState: overviewReviewState(reviews?.get(c.id), latest?.result),
+      hasExpired: validity.hasExpired,
+      expiresSoon: validity.expiresSoon,
+    });
+    // Without the request list a review may already be open: do not ask for one.
+    if (reviews === null && step === "request_review") return [];
+    return [{ claimId: c.id, title: titleOf(row), step }];
+  });
+  const picked = overviewNextStep(steps);
   const next: NextStep =
     rows.length === 0
       ? { kind: "first" }
-      : clarify
-        ? { kind: "clarify", claimId: clarify.claim.id, title: titleOf(clarify) }
-        : registered.length > 0
-          ? {
-              kind: "evidence",
-              claimId: registered[0].claim.id,
-              title: titleOf(registered[0]),
-              count: registered.length,
-            }
-          : { kind: "share" };
+      : picked.entry === null
+        ? { kind: "unknown" }
+        : {
+            kind: picked.step as EntryNextStep,
+            claimId: picked.entry.claimId,
+            title: picked.entry.title,
+            count: picked.count,
+          };
+  const stepCopy =
+    next.kind === "first" || next.kind === "unknown" ? null : NEXT_STEP_COPY[next.kind];
+  const anchor =
+    next.kind === "first" || next.kind === "unknown" ? null : entryNextStepAnchor(next.kind);
 
   // The step is DONE where it is done: on that credential's own page, at the
-  // section that does it — the documents for "add evidence", the review panel
-  // for "a reviewer has a question". Labelled with the action and the
-  // credential, so a reader (and a screen reader) knows where it goes.
+  // section that does it -- the documents for an upload or a renewal, the
+  // review panel for a review, an answer or a decision. Labelled with the
+  // page's own action and the credential, so a reader (and a screen reader)
+  // knows where it goes.
   const stepAction =
-    next.kind === "clarify" || next.kind === "evidence" ? (
+    next.kind !== "first" && next.kind !== "unknown" && stepCopy?.action && anchor ? (
       <Link
         to="/passport/entry/$kind/$entryId"
         params={{ kind: "claim", entryId: next.claimId }}
-        hash={next.kind === "clarify" ? ENTRY_VERIFICATION_ANCHOR : ENTRY_EVIDENCE_ANCHOR}
+        hash={anchor === "verification" ? ENTRY_VERIFICATION_ANCHOR : ENTRY_EVIDENCE_ANCHOR}
         className={`${PRIMARY} mt-4`}
         data-cta="next-step"
         data-next-step-target={`${next.claimId}#${
-          next.kind === "clarify" ? ENTRY_VERIFICATION_ANCHOR : ENTRY_EVIDENCE_ANCHOR
+          anchor === "verification" ? ENTRY_VERIFICATION_ANCHOR : ENTRY_EVIDENCE_ANCHOR
         }`}
-        aria-label={`${
-          next.kind === "clarify"
-            ? copy("Svara granskaren", "Answer the reviewer")
-            : copy("Bifoga underlag", "Add evidence")
-        }: ${next.title}`}
+        aria-label={`${pt(stepCopy.action)}: ${next.title}`}
       >
-        {next.kind === "clarify"
-          ? copy("Svara granskaren", "Answer the reviewer")
-          : copy("Bifoga underlag", "Add evidence")}
+        {pt(stepCopy.action)}
         <ArrowRight aria-hidden="true" className="h-3.5 w-3.5" />
       </Link>
     ) : null;
@@ -186,53 +227,52 @@ export function PassportSideColumn({
             </>
           )}
 
-          {next.kind === "clarify" && (
+          {next.kind === "unknown" && (
             <>
               <p className="mt-3 text-base font-semibold tracking-tight text-foreground">
-                {copy("En granskare har en fråga", "A reviewer has a question")}
-              </p>
-              <p className="mt-1.5 break-words text-sm leading-relaxed text-muted-foreground">
-                {next.title}
-              </p>
-              {stepAction}
-            </>
-          )}
-
-          {next.kind === "evidence" && (
-            <>
-              <p className="mt-3 text-base font-semibold tracking-tight text-foreground">
-                {copy("Lägg till underlag", "Add evidence")}
-              </p>
-              <p className="mt-1.5 break-words text-sm leading-relaxed text-muted-foreground">
-                {next.count === 1
-                  ? copy(
-                      `${next.title} är en egen uppgift. Med ett dokument kan den granskas.`,
-                      `${next.title} is self-reported. With a document it can be reviewed.`,
-                    )
-                  : copy(
-                      `${next.count} meriter är egna uppgifter. Börja med ${next.title}.`,
-                      `${next.count} credentials are self-reported. Start with ${next.title}.`,
-                    )}
-              </p>
-              {stepAction}
-            </>
-          )}
-
-          {next.kind === "share" && (
-            <>
-              <p className="mt-3 text-base font-semibold tracking-tight text-foreground">
-                {copy("Redo att delas", "Ready to share")}
+                {copy("Nästa steg kunde inte läsas", "The next step could not be read")}
               </p>
               <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
                 {copy(
-                  "Välj meriter, se exakt vad mottagaren ser och skapa en tidsbegränsad länk.",
-                  "Select credentials, see exactly what the recipient sees and create a time-limited link.",
+                  "Dina granskningsärenden kunde inte hämtas just nu. Öppna en merit för att se dess läge.",
+                  "Your review cases could not be loaded right now. Open a credential to see where it stands.",
                 )}
               </p>
-              <Link to="/passport/share" className={`${PRIMARY} mt-4`} data-cta="next-step">
-                {copy("Förhandsvisa och dela", "Preview and share")}
-                <ArrowRight aria-hidden="true" className="h-3.5 w-3.5" />
-              </Link>
+            </>
+          )}
+
+          {next.kind !== "first" && next.kind !== "unknown" && stepCopy && (
+            <>
+              <p className="mt-3 text-base font-semibold tracking-tight text-foreground">
+                {pt(stepCopy.title)}
+              </p>
+              <p
+                data-passport-next-step-entry={next.claimId}
+                className="mt-1 break-words text-sm font-medium text-foreground"
+              >
+                {next.title}
+                {next.count > 1 ? (
+                  <span className="font-normal text-muted-foreground">
+                    {" "}
+                    {copy(`och ${next.count - 1} till`, `and ${next.count - 1} more`)}
+                  </span>
+                ) : null}
+              </p>
+              <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+                {pt(stepCopy.body)}
+              </p>
+              {stepAction}
+              {next.kind === "done" ? (
+                <div className="mt-4 flex flex-col gap-2">
+                  <Link to="/passport/discoverability" className={PRIMARY} data-cta="next-step">
+                    {pt("next.done.discover")}
+                    <ArrowRight aria-hidden="true" className="h-3.5 w-3.5" />
+                  </Link>
+                  <Link to="/passport/share" className={LINK}>
+                    {pt("next.done.share")}
+                  </Link>
+                </div>
+              ) : null}
             </>
           )}
         </section>
@@ -318,7 +358,7 @@ export function PassportSideColumn({
           <div className="mt-3 flex flex-col gap-1">
             {/* Where the recipient's view lives. Not repeated when it is
               already the next step above. */}
-            {next.kind !== "share" && (
+            {next.kind !== "done" && (
               <Link to="/passport/share" data-cta="open-preview-share" className={LINK}>
                 <Eye aria-hidden="true" className="h-3.5 w-3.5" />
                 {copy("Förhandsvisa och dela", "Preview and share")}

@@ -154,6 +154,27 @@ async function noHorizontalOverflow(page: Page) {
   expect(overflow, "horizontal overflow").toBeLessThanOrEqual(1);
 }
 
+/** The export a TanStack server-function request calls, from its URL. */
+function serverFnName(url: string): string {
+  const m = /\/_serverFn\/([A-Za-z0-9_-]+)/.exec(url);
+  if (!m) return "";
+  try {
+    const json = JSON.parse(
+      Buffer.from(m[1]!.replace(/-/g, "+").replace(/_/g, "/"), "base64").toString("utf8"),
+    ) as { export?: string };
+    return String(json.export ?? "");
+  } catch {
+    return "";
+  }
+}
+
+/** Top edge of an element, to check the order a phone reads the page in. */
+async function topOf(page: Page, selector: string): Promise<number> {
+  const box = await page.locator(selector).first().boundingBox();
+  expect(box, selector).not.toBeNull();
+  return box!.y;
+}
+
 /** Cecilia's current CPP entry (scenario 1 creates it). */
 const cppClaim = () =>
   sql(
@@ -320,6 +341,16 @@ test("5 · A sees one current status and its history, then becomes discoverable 
     { timeout: 30_000 },
   );
   await shot(page, "before-discoverability-private-sv-1440");
+  // The choice shows how each merit is supported and whether it is valid --
+  // the words the employer card will use -- not the name alone.
+  const cppChoice = page
+    .locator("label")
+    .filter({ hasText: "Certified Protection Professional (CPP)" });
+  await expect(cppChoice.locator("[data-item-support]")).toHaveAttribute(
+    "data-item-support",
+    "document_reviewed",
+  );
+  await expect(cppChoice).toContainText("Granskad, dokumenterad uppgift");
   await page.getByLabel(/Öppen för relevanta möjligheter/).check();
   await page.getByLabel("Certified Protection Professional (CPP)").check();
   await page.getByLabel("Security Guard Training 1 (VU1)").check();
@@ -327,30 +358,67 @@ test("5 · A sees one current status and its history, then becomes discoverable 
   await page.getByLabel("Företagssäkerhet").check();
   await page.getByLabel("Länder du vill arbeta i").fill("SE");
   await page.getByLabel("Heltid").check();
+  // The draft is summarised as the form's own choices; the saved preview
+  // still shows what is saved, and says the change is not saved yet.
+  const summary = page.locator("[data-discoverability-summary]");
+  await expect(summary).toContainText("Certified Protection Professional (CPP)");
+  await expect(summary).toContainText("Inte lämnat än");
+  const preview = page.locator("[data-discoverability-preview]");
+  await expect(preview).toContainText("Så visas dina sparade uppgifter");
+  await expect(preview.locator("[data-unsaved-notice]")).toContainText("Osparade ändringar");
+  await expect(preview).not.toContainText("Certified Protection Professional (CPP)");
+  // The first time, the one main action says what it does.
+  const save = page.locator("[data-save-discoverability]");
+  await expect(save).toHaveAttribute("data-save-action", "activate");
+  await expect(save).toHaveText("Gör mig sökbar");
+  await shot(page, "after-discoverability-draft-sv-1440");
   // Without consent nothing is saved.
-  await page.locator("[data-save-discoverability]").click();
+  await save.click();
   await expect(page.getByRole("alert")).toContainText("samtycket");
   expect(sql(`select count(*) from sp_talent_profiles where holder_user_id='${A_ID}'`)).toBe("0");
   await page.getByLabel(/Jag samtycker/).check();
-  await page.locator("[data-save-discoverability]").click();
+  await expect(summary).toContainText("Du samtycker");
+  await save.click();
   await expect(page.locator("[data-current-visibility]")).toHaveAttribute(
     "data-current-visibility",
     "open",
     { timeout: 30_000 },
   );
-  const preview = page.locator("[data-discoverability-preview]");
+  await expect(page.getByRole("status").filter({ hasText: "Du är sökbar" })).toBeVisible();
   await expect(preview).toContainText("Certified Protection Professional (CPP)");
-  await expect(preview).toContainText("Dokumentgranskad av CQrityjob");
+  await expect(preview).toContainText("Granskad, dokumenterad uppgift");
+  await expect(preview).not.toContainText("Dokumentgranskad av CQrityjob");
+  await expect(preview.locator("[data-unsaved-notice]")).toHaveCount(0);
   await expect(preview).not.toContainText("Fiktiv Nuvarande Arbetsgivare");
   await expect(preview).not.toContainText("Cecilia");
+  // From now on the action saves changes.
+  await expect(save).toHaveAttribute("data-save-action", "save");
+  await expect(save).toHaveText("Spara ändringar");
   await shot(page, "after-discoverability-open-sv-1440");
   expect(
     sql(`select count(*) from product_metric_events where event_name='talent_visibility_enabled'`),
   ).not.toBe("0");
-  // Mobile and 200 % zoom (half the CSS width): no sideways scrolling.
+  // Mobile and 200 % zoom (half the CSS width): no sideways scrolling, and
+  // the workshop's order -- back, saved status and pause, choices,
+  // preferences, draft summary, saved preview, consent and action, contacts.
   await page.setViewportSize({ width: 390, height: 844 });
   await noHorizontalOverflow(page);
+  const order = [
+    await topOf(page, "[data-discoverability-back]"),
+    await topOf(page, "#disc-saved-state"),
+    await topOf(page, "#disc-state"),
+    await topOf(page, "#disc-items"),
+    await topOf(page, "#disc-prefs"),
+    await topOf(page, "#disc-summary"),
+    await topOf(page, "#disc-preview"),
+    await topOf(page, "#disc-consent"),
+    await topOf(page, "#disc-contacts"),
+  ];
+  expect(order, "phone reading order").toEqual([...order].sort((x, y) => x - y));
   await shot(page, "after-discoverability-open-sv-390");
+  // Desktop: the saved preview sits beside the form.
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  expect(await topOf(page, "#disc-preview")).toBeLessThan(await topOf(page, "#disc-state"));
   await page.setViewportSize({ width: 720, height: 500 });
   await noHorizontalOverflow(page);
   await page.context().close();
@@ -363,6 +431,18 @@ test("6 · the owner binds the confirmed requirements to the catalogue; a plain 
   const panel = page.locator("[data-talent-criteria]");
   await expect(panel).toBeVisible({ timeout: 60_000 });
   await shot(page, "before-criteria-sv-1440");
+  // A chosen catalogue binding with no merit is not filled in: it says so,
+  // and the criteria cannot be confirmed until it is completed or set to
+  // "Klarläggs i dialog". The form says its edits do not affect the search.
+  const first = panel.locator('[data-criterion="7d000000-3333-4000-8000-000000000001"]');
+  await first.getByLabel("Merit i katalogen").check();
+  await expect(first.locator('[data-criterion-empty="empty_credential"]')).toContainText(
+    "Klarläggs i dialog",
+  );
+  await expect(panel.locator("[data-confirm-criteria]")).toBeDisabled();
+  await expect(panel.locator("[data-criteria-unconfirmed]")).toContainText(
+    "påverkar inte sökningen",
+  );
   const bind = async (requirement: string, query: string, pick: RegExp) => {
     const row = panel.locator(`[data-criterion="${requirement}"]`);
     await row.getByLabel("Merit i katalogen").check();
@@ -396,6 +476,8 @@ test("6 · the owner binds the confirmed requirements to the catalogue; a plain 
   await exp.getByLabel("Minst antal månader").fill("24");
   await panel.locator("[data-confirm-criteria]").click();
   await expect(panel).toContainText("Matchningsvillkoren är bekräftade", { timeout: 30_000 });
+  await expect(panel.locator("[data-criteria-in-use]")).toContainText("Sökningen använder");
+  await expect(panel.locator("[data-criteria-unconfirmed]")).toHaveCount(0);
   await shot(page, "after-criteria-sv-1440");
   await page.context().close();
 
@@ -424,7 +506,16 @@ test("7 · the recruiter finds the discoverable people and reads why; the privat
   await expect(results).toHaveCount(2);
   // Bo (OV reviewed, VU1, CPP) is first; Cecilia second.
   await expect(results.nth(0)).toContainText("Ordningsvaktsförordnande (OV)");
-  await expect(results.nth(0)).toContainText("Dokumentgranskad av CQrityjob");
+  await expect(results.nth(0)).toContainText("Granskad, dokumenterad uppgift");
+  // A neutral anonymous reference names each result, never its place.
+  await expect(results.locator("[data-talent-reference]").nth(0)).toHaveText(
+    /^Anonym profil [0-9A-F]{6}$/,
+  );
+  await expect(page.locator("main")).not.toContainText(/Kandidat \d/);
+  // Which confirmed criteria the search uses.
+  await expect(page.locator("[data-talent-criteria-version]")).toContainText(
+    "bekräftade matchningsvillkor version",
+  );
   await expect(results.nth(1)).toContainText("Inte bland delade uppgifter");
   await expect(results.nth(1)).toContainText("Det betyder inte att personen saknar det.");
   await expect(results.nth(1)).toContainText("Certified Protection Professional (CPP)");
@@ -468,7 +559,14 @@ test("7 · the recruiter finds the discoverable people and reads why; the privat
 
   // Contact Cecilia, double click on send: one request.
   const second = results.nth(1);
+  const secondRef = await second.locator("[data-talent-reference]").innerText();
   await second.locator("[data-contact-open]").click();
+  // The dialog says which company, which position and which anonymous
+  // profile the request goes to.
+  const context = page.locator("[data-contact-context]");
+  await expect(context).toContainText("TD Bevakning AB");
+  await expect(context).toContainText("Ordningsvakt Stockholm");
+  await expect(context).toContainText(secondRef);
   await page
     .getByLabel("Meddelande")
     .fill("Hej! Vi söker en ordningsvakt i Stockholm och din profil berör flera av våra krav.");
@@ -478,6 +576,59 @@ test("7 · the recruiter finds the discoverable people and reads why; the privat
   expect(
     sql(`select count(*) from rec_talent_contact_requests where holder_user_id='${A_ID}'`),
   ).toBe("1");
+  await page.getByRole("button", { name: "Avbryt" }).click();
+
+  // Bo too, and the recruiter takes it back. The first attempt fails on the
+  // way: the page says so, nothing changed, and a retry withdraws it. The
+  // contact list and the result list then show the same status.
+  await results.nth(0).locator("[data-contact-open]").click();
+  await page
+    .getByLabel("Meddelande")
+    .fill("Hej! Vi vill gärna berätta mer om tjänsten som ordningsvakt i Stockholm.");
+  await page.locator("[data-contact-send]").click();
+  await expect(page.getByText("Förfrågan är skickad.")).toBeVisible({ timeout: 30_000 });
+  await page.getByRole("button", { name: "Avbryt" }).click();
+  await expect(results.nth(0).locator("[data-contact-status]")).toHaveText(
+    "Kontaktförfrågan: Väntar på svar",
+    { timeout: 30_000 },
+  );
+  let failWithdraw = true;
+  await page.route("**/_serverFn/**", async (route) => {
+    if (failWithdraw && serverFnName(route.request().url()).includes("withdrawTalentContact")) {
+      failWithdraw = false;
+      await route.abort("failed");
+      return;
+    }
+    await route.fallback();
+  });
+  await page.getByRole("link", { name: /^Kontaktförfrågningar/ }).click();
+  // Cecilia's request is still pending too; Bo's is the one with his message.
+  const toBo = page
+    .locator('[data-sent-contact="pending"]')
+    .filter({ hasText: "Vi vill gärna berätta mer" });
+  await expect(toBo).toHaveCount(1, { timeout: 30_000 });
+  await toBo.locator("[data-contact-withdraw]").click();
+  await expect(toBo.getByRole("alert")).toContainText("kunde inte dras tillbaka");
+  expect(
+    sql(
+      `select status from rec_talent_contact_requests where holder_user_id='${B_ID}' order by created_at desc limit 1`,
+    ),
+  ).toBe("pending");
+  await shot(page, "after-withdraw-failed-sv-1440");
+  await toBo.getByRole("button", { name: "Försök igen" }).click();
+  await expect(page.locator('[data-sent-contact="withdrawn"]')).toHaveCount(1, {
+    timeout: 30_000,
+  });
+  expect(
+    sql(
+      `select status from rec_talent_contact_requests where holder_user_id='${B_ID}' order by created_at desc limit 1`,
+    ),
+  ).toBe("withdrawn");
+  await page.getByRole("link", { name: /^Resultat/ }).click();
+  await expect(results.nth(0).locator("[data-contact-status]")).toHaveText(
+    "Kontaktförfrågan: Återtagen",
+    { timeout: 30_000 },
+  );
   await page.context().close();
 });
 
@@ -499,11 +650,28 @@ test("8 · Cecilia reads who, about what and what accepting means, accepts, and 
   await expect(request).toContainText("TD Bevakning AB", { timeout: 60_000 });
   await expect(request).toContainText("Ordningsvakt Stockholm");
   await expect(request).toContainText("din profil berör");
-  await expect(request).toContainText("Ingen ansökan skapas");
+  // The advert can be read before deciding, and the consequence is the
+  // shared sentence: the name, no application, her own later choice.
+  await expect(request.locator("[data-contact-advert]")).toHaveAttribute(
+    "href",
+    "/jobs/td-ordningsvakt-stockholm",
+  );
+  await expect(request).toContainText(
+    "När du accepterar får företaget se ditt namn. Ingen ansökan skickas. Du väljer själv om du söker och vilka Passport-uppgifter du delar då.",
+  );
+  // Stopping names the company and covers every position there.
+  await expect(
+    request.getByRole("button", { name: "Avböj och stoppa TD Bevakning AB" }),
+  ).toBeVisible();
+  await expect(request).toContainText("Att stoppa gäller hela TD Bevakning AB");
   await shot(page, "after-contact-received-sv-1440");
-  await request.getByRole("button", { name: "Acceptera", exact: true }).dblclick();
+  await request.getByRole("button", { name: "Acceptera och dela mitt namn" }).dblclick();
   const accepted = page.locator('[data-contact-request="accepted"]');
   await expect(accepted).toBeVisible({ timeout: 30_000 });
+  await expect(accepted.locator('[data-contact-next="apply"]')).toContainText(
+    "ingen ansökan har skickats",
+  );
+  await shot(page, "after-contact-accepted-sv-1440");
   expect(sql(`select count(*) from job_applications where applicant_user_id='${A_ID}'`)).toBe("0");
   await accepted.getByRole("link", { name: "Läs annonsen och sök tjänsten" }).click();
   await expect(page).toHaveURL(/\/jobs\/td-ordningsvakt-stockholm/);
@@ -851,6 +1019,17 @@ test("13 · a corrected credential and a corrected employment: the employer read
   // never the replaced one.
   expect(sql(`select count(*) from sp_talent_items where claim_id='${current}'`)).toBe("1");
   expect(sql(`select count(*) from sp_talent_items where claim_id='${replaced}'`)).toBe("0");
+  // Her own choice list says the same: the new version is her own statement.
+  await a.goto(`${BASE}/passport/discoverability`);
+  const cppChoice = a
+    .locator("label")
+    .filter({ hasText: "Certified Protection Professional (CPP)" });
+  await expect(cppChoice.locator("[data-item-support]")).toHaveAttribute(
+    "data-item-support",
+    "self_declared",
+    { timeout: 60_000 },
+  );
+  await expect(cppChoice).toContainText("Egen uppgift");
 
   // She corrects her own employment on the CV page; it is read live.
   await a.goto(`${BASE}/my-career/cv`);
@@ -885,7 +1064,7 @@ test("13 · a corrected credential and a corrected employment: the employer read
   // level the job asks for. The reviewed level of the replaced version is gone.
   await expect(cecilia).toContainText(/Certified Protection Professional \(CPP\)\s*Egen uppgift/);
   await expect(cecilia).toContainText("Lägre granskningsnivå än ni angett");
-  await expect(cecilia).not.toContainText("Dokumentgranskad");
+  await expect(cecilia).not.toContainText("Granskad, dokumenterad");
   // Her shared profile: the corrected CPP and the employment under its new title.
   await cecilia.getByRole("button", { name: "Visa delad profil" }).click();
   const card = cecilia.locator("[data-talent-card]");
@@ -896,7 +1075,7 @@ test("13 · a corrected credential and a corrected employment: the employer read
     "self_declared",
   );
   await expect(card).toContainText("Väktare och skyddsvakt");
-  await expect(card).not.toContainText("Dokumentgranskad");
+  await expect(card).not.toContainText("Granskad, dokumenterad");
   await expect(page.locator("main")).not.toContainText("Cecilia");
   await shot(page, "after-talent-corrected-sv-1440");
   await page.context().close();

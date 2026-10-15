@@ -2673,17 +2673,17 @@ const sv = {
     "Dokumentgranskad betyder att CQrityjob har granskat underlaget. Det är inte en bekräftelse från utfärdaren.",
 
   "next.title": "Nästa steg",
-  "next.addEvidence.title": "Ladda upp underlag",
+  "next.addEvidence.title": "Underlag saknas",
   "next.addEvidence.body":
     "Meriten är registrerad som din egen uppgift. Med ett intyg eller kort kan du begära dokumentgranskning.",
-  "next.addEvidence.action": "Ladda upp underlag",
+  "next.addEvidence.action": "Bifoga underlag",
   "next.requestReview.title": "Begär granskning",
   "next.requestReview.body":
     "Underlaget är uppladdat men inte granskat. Begär dokumentgranskning så att meriten kan visas som dokumentgranskad.",
   "next.requestReview.action": "Begär granskning",
   "next.waiting.title": "Granskning pågår",
   "next.waiting.body":
-    "Du behöver inte göra något just nu. Du får besked i Passport och via e-post när granskaren har bedömt underlaget.",
+    "Nu är det granskaren som gör nästa steg. Du behöver inte göra något; du får besked i Passport och via e-post när ärendet är bedömt.",
   "next.clarification.title": "Komplettering begärd",
   "next.clarification.body":
     "Granskaren behöver mer information. Svara med text eller ladda upp nytt underlag.",
@@ -2695,14 +2695,14 @@ const sv = {
   "next.revoked.title": "Granskningen är återkallad",
   "next.revoked.body":
     "Meriten visas inte längre som granskad. Läs varför och ladda upp nytt underlag om du vill begära en ny granskning.",
-  "next.revoked.action": "Läs mer",
+  "next.revoked.action": "Läs beslutet",
   "next.renew.title": "Förnya meriten",
   "next.renew.body":
     "Meriten har gått ut eller går snart ut. Rätta giltighetsdatumet när du har ett nytt intyg, ladda upp det och begär ny granskning. En ändrad merit behåller inte en tidigare granskning.",
   "next.renew.action": "Uppdatera meriten",
-  "next.done.title": "Meriten är godkänd",
+  "next.done.title": "Granskningen är godkänd",
   "next.done.body":
-    "Du väljer själv om meriten ska delas via länk eller vara sökbar för arbetsgivare. Inget delas automatiskt.",
+    "Beslutet gäller underlaget som granskades. Det är inget löfte om behörighet eller om att meriten fortfarande gäller. Du väljer själv om meriten ska delas via länk eller vara sökbar för arbetsgivare. Inget delas automatiskt.",
   "next.done.share": "Dela med en länk",
   "next.done.discover": "Välj synlighet för arbetsgivare",
   "next.employer.title": "Bekräftelse från arbetsgivare",
@@ -2742,6 +2742,32 @@ const sv = {
   "disc.notInstalled":
     "Sökbarhet för arbetsgivare är inte aktiverad i den här miljön ännu. Ditt Passport är privat.",
   "disc.retry": "Försök igen",
+  "disc.back": "Tillbaka till ditt Passport",
+  "disc.savedState.title": "Sparat läge",
+  "disc.savedState.private": "Du är inte sökbar. Ingen arbetsgivare kan hitta dig.",
+  "disc.savedState.searchable":
+    "Arbetsgivare med en publicerad tjänst kan hitta de uppgifter du har sparat, utan ditt namn.",
+  "disc.pause.help":
+    "Pausa döljer dig direkt och ger dig en ny anonym referens, så att tidigare sökresultat inte längre leder till dig.",
+  "disc.items.support":
+    "Under varje uppgift står hur den styrks och om den är giltig, med samma ord som arbetsgivaren ser. Egna uppgifter kan också göras sökbara och märks då som egen uppgift.",
+  "disc.items.ongoing": "pågår",
+  "disc.summary.title": "Sammanfattning av dina val",
+  "disc.summary.lead":
+    "Det här blir sökbart när du sparar. Sammanfattningen visar formulärets val; hur arbetsgivare ser dig visas under Så visas dina sparade uppgifter när du har sparat.",
+  "disc.summary.private":
+    "Du har valt Privat. Om du sparar blir ingenting sökbart och ingen arbetsgivare kan hitta dig.",
+  "disc.summary.state": "Läge",
+  "disc.summary.none": "Inget valt",
+  "disc.summary.noPrefs": "Inga angivna",
+  "disc.summary.consentGiven":
+    "Du samtycker till att godkända arbetsgivare kan hitta det som står ovan och be om kontakt. Du kan pausa när som helst.",
+  "disc.summary.consentMissing": "Inte lämnat än. Kryssa i samtycket nedan innan du sparar.",
+  "disc.unsaved.title": "Osparade ändringar",
+  "disc.unsaved.body": "Arbetsgivare ser fortfarande det sparade läget nedan tills du sparar.",
+  "disc.activate": "Gör mig sökbar",
+  "disc.saveChanges": "Spara ändringar",
+  "disc.activated": "Du är sökbar. Så visas dina sparade uppgifter för arbetsgivare.",
   "disc.state.title": "Vill du vara sökbar?",
   "disc.state.private": "Privat – inte sökbar",
   "disc.state.private.help":
@@ -2751,7 +2777,6 @@ const sv = {
     "Arbetsgivare med en publicerad tjänst där dina valda meriter är relevanta kan hitta dig och be om kontakt.",
   "disc.state.active": "Aktivt jobbsökande",
   "disc.state.active.help": "Som ovan, och arbetsgivare ser att du söker aktivt.",
-  "disc.current": "Just nu",
   "disc.since": "sedan",
   "disc.items.title": "Vilka meriter ska vara sökbara?",
   "disc.items.help":
@@ -2768,13 +2793,12 @@ const sv = {
   "disc.prefs.employmentTypes": "Anställningsform",
   "disc.prefs.workplaceTypes": "Arbetsplats",
   "disc.prefs.availableFrom": "Tillgänglig från",
-  "disc.preview.title": "Så här ser arbetsgivare dig",
+  "disc.preview.title": "Så visas dina sparade uppgifter",
   "disc.preview.lead":
-    "Exakt detta visas för en behörig rekryterare när du är sökbar. Namn och kontaktuppgifter visas inte förrän du själv accepterar en kontaktförfrågan.",
+    "Det här ser en behörig rekryterare när du är sökbar, byggt från det du har sparat. Namn och kontaktuppgifter visas inte förrän du själv accepterar en kontaktförfrågan.",
   "disc.preview.notSearchable":
     "Du är inte sökbar just nu. Så här skulle du visas om du blir sökbar:",
   "disc.preview.empty": "Inget är valt ännu.",
-  "disc.preview.saveFirst": "Spara för att se förhandsvisningen med dina val.",
   "disc.preview.months": "månader säkerhetsrelevant erfarenhet",
   "disc.preview.limited": "Begränsad till ett visst uppdrag",
   "disc.consent.title": "Samtycke",
@@ -2782,7 +2806,6 @@ const sv = {
     "Jag samtycker till att godkända arbetsgivare kan hitta de meriter och preferenser jag valt ovan och be om kontakt med mig. Jag kan pausa när som helst.",
   "disc.consent.note":
     "Det här är ett eget val. Att du delar ditt Passport med en ansökan gör dig inte sökbar.",
-  "disc.save": "Spara",
   "disc.saving": "Sparar …",
   "disc.saved": "Sparat.",
   "disc.pause": "Pausa sökbarhet",
@@ -2811,12 +2834,19 @@ const sv = {
   "disc.contacts.received": "Mottagen",
   "disc.contacts.jobClosed": "Tjänsten är inte längre öppen.",
   "disc.contacts.whatAccept":
-    "Om du accepterar får företaget se ditt namn och kan bjuda in dig att söka tjänsten. Ingen ansökan skapas och inget mer delas förrän du själv söker.",
-  "disc.contacts.accept": "Acceptera",
+    "När du accepterar får företaget se ditt namn. Ingen ansökan skickas. Du väljer själv om du söker och vilka Passport-uppgifter du delar då.",
+  "disc.contacts.readAdvert": "Läs annonsen",
+  "disc.contacts.accept": "Acceptera och dela mitt namn",
   "disc.contacts.decline": "Avböj",
-  "disc.contacts.declineBlock": "Avböj och stoppa kontakt från företaget",
+  "disc.contacts.declineBlock": "Avböj och stoppa {company}",
+  "disc.contacts.declineHelp":
+    "Avböj svarar nej på den här förfrågan. Att stoppa gäller hela {company}: företaget kan inte längre hitta dig eller kontakta dig om någon tjänst. Du kan ångra det under Företag du har stoppat.",
   "disc.contacts.declineBlockConfirm":
-    "Företaget kommer inte längre att kunna hitta eller kontakta dig. Du kan ångra det under Företag du har stoppat. Fortsätta?",
+    "{company} kommer inte längre att kunna hitta dig eller kontakta dig om någon tjänst. Du kan ångra det under Företag du har stoppat. Fortsätta?",
+  "disc.contacts.acceptedApplyLeft":
+    "Företaget ser nu ditt namn. Du har inte sökt tjänsten och ingen ansökan har skickats. Vill du söka gör du det i annonsen; där väljer du själv om du delar ditt Passport och vilka uppgifter.",
+  "disc.contacts.acceptedExternal":
+    "Företaget ser nu ditt namn. Den här tjänsten söks via företagets egen kanal, som annonsen beskriver. En ansökan där registreras inte i CQrityjob.",
   "disc.contacts.status.pending": "Väntar på ditt svar",
   "disc.contacts.status.accepted": "Accepterad",
   "disc.contacts.status.declined": "Avböjd",
@@ -2824,7 +2854,6 @@ const sv = {
   "disc.contacts.apply": "Läs annonsen och sök tjänsten",
   "disc.contacts.applied": "Du har sökt tjänsten. Fortsätt under Mina ansökningar.",
   "disc.contacts.openApplications": "Mina ansökningar",
-  "disc.contacts.noInternalApply": "Den här tjänsten söks via företagets egen kanal. Se annonsen.",
   "disc.contacts.error.TALENT_JOB_CLOSED":
     "Tjänsten är inte längre öppen, så förfrågan kan inte accepteras.",
   "disc.contacts.error.TALENT_CONTACT_ALREADY_ANSWERED":
@@ -5130,17 +5159,17 @@ const en: Record<PassportCopyKey, string> = {
     "Document-reviewed means CQrityjob has reviewed the documentation. It is not a confirmation from the issuer.",
 
   "next.title": "Next step",
-  "next.addEvidence.title": "Upload documentation",
+  "next.addEvidence.title": "Documentation missing",
   "next.addEvidence.body":
     "The credential is registered as your own statement. With a certificate or card you can request a document review.",
-  "next.addEvidence.action": "Upload documentation",
+  "next.addEvidence.action": "Add supporting evidence",
   "next.requestReview.title": "Request a review",
   "next.requestReview.body":
     "The documentation is uploaded but not reviewed. Request a document review so the credential can be shown as document-reviewed.",
   "next.requestReview.action": "Request a review",
   "next.waiting.title": "Review in progress",
   "next.waiting.body":
-    "You do not need to do anything right now. You will hear in Passport and by e-mail when the reviewer has assessed the documentation.",
+    "The reviewer takes the next step now. You do not need to do anything; you will hear in Passport and by e-mail when the case has been assessed.",
   "next.clarification.title": "More information requested",
   "next.clarification.body":
     "The reviewer needs more information. Reply in text or upload new documentation.",
@@ -5152,14 +5181,14 @@ const en: Record<PassportCopyKey, string> = {
   "next.revoked.title": "The review has been revoked",
   "next.revoked.body":
     "The credential is no longer shown as reviewed. Read why, and upload new documentation if you want to request a new review.",
-  "next.revoked.action": "Read more",
+  "next.revoked.action": "Read the decision",
   "next.renew.title": "Renew the credential",
   "next.renew.body":
     "The credential has expired or expires soon. Correct the validity date when you have a new certificate, upload it and request a new review. A changed credential does not keep an earlier review.",
   "next.renew.action": "Update the credential",
-  "next.done.title": "The credential is approved",
+  "next.done.title": "The review was approved",
   "next.done.body":
-    "You decide whether the credential is shared by link or discoverable by employers. Nothing is shared automatically.",
+    "The decision covers the documentation that was reviewed. It is not a promise of an authorisation or that the credential is still valid. You decide whether the credential is shared by link or discoverable by employers. Nothing is shared automatically.",
   "next.done.share": "Share with a link",
   "next.done.discover": "Choose visibility for employers",
   "next.employer.title": "Confirmation from an employer",
@@ -5199,6 +5228,32 @@ const en: Record<PassportCopyKey, string> = {
   "disc.notInstalled":
     "Discoverability for employers is not enabled in this environment yet. Your Passport is private.",
   "disc.retry": "Try again",
+  "disc.back": "Back to your Passport",
+  "disc.savedState.title": "Saved setting",
+  "disc.savedState.private": "You are not discoverable. No employer can find you.",
+  "disc.savedState.searchable":
+    "Employers with a published position can find the details you have saved, without your name.",
+  "disc.pause.help":
+    "Pausing hides you at once and gives you a new anonymous reference, so earlier search results no longer lead to you.",
+  "disc.items.support":
+    "Under each item you see how it is supported and whether it is valid, in the same words the employer sees. Your own statements can be made discoverable too and are then labelled as your own statement.",
+  "disc.items.ongoing": "ongoing",
+  "disc.summary.title": "Summary of your choices",
+  "disc.summary.lead":
+    "This becomes discoverable when you save. The summary shows the form's choices; how employers see you is shown under How your saved details are shown once you have saved.",
+  "disc.summary.private":
+    "You have chosen Private. If you save, nothing becomes discoverable and no employer can find you.",
+  "disc.summary.state": "Setting",
+  "disc.summary.none": "Nothing chosen",
+  "disc.summary.noPrefs": "None given",
+  "disc.summary.consentGiven":
+    "You consent to approved employers finding what is listed above and asking to get in touch. You can pause at any time.",
+  "disc.summary.consentMissing": "Not given yet. Tick the consent below before you save.",
+  "disc.unsaved.title": "Unsaved changes",
+  "disc.unsaved.body": "Employers still see the saved setting below until you save.",
+  "disc.activate": "Make me discoverable",
+  "disc.saveChanges": "Save changes",
+  "disc.activated": "You are discoverable. This is how employers see your saved details.",
   "disc.state.title": "Do you want to be discoverable?",
   "disc.state.private": "Private – not discoverable",
   "disc.state.private.help":
@@ -5208,7 +5263,6 @@ const en: Record<PassportCopyKey, string> = {
     "Employers with a published position where your chosen credentials are relevant can find you and ask to get in touch.",
   "disc.state.active": "Actively looking for a job",
   "disc.state.active.help": "As above, and employers see that you are actively looking.",
-  "disc.current": "Now",
   "disc.since": "since",
   "disc.items.title": "Which credentials should be discoverable?",
   "disc.items.help":
@@ -5225,13 +5279,12 @@ const en: Record<PassportCopyKey, string> = {
   "disc.prefs.employmentTypes": "Employment type",
   "disc.prefs.workplaceTypes": "Workplace",
   "disc.prefs.availableFrom": "Available from",
-  "disc.preview.title": "How employers see you",
+  "disc.preview.title": "How your saved details are shown",
   "disc.preview.lead":
-    "Exactly this is shown to an authorised recruiter while you are discoverable. Your name and contact details are not shown until you accept a contact request yourself.",
+    "This is what an authorised recruiter sees while you are discoverable, built from what you have saved. Your name and contact details are not shown until you accept a contact request yourself.",
   "disc.preview.notSearchable":
     "You are not discoverable right now. This is how you would appear if you become discoverable:",
   "disc.preview.empty": "Nothing is selected yet.",
-  "disc.preview.saveFirst": "Save to see the preview with your choices.",
   "disc.preview.months": "months of security-relevant experience",
   "disc.preview.limited": "Limited to a specific assignment",
   "disc.consent.title": "Consent",
@@ -5239,7 +5292,6 @@ const en: Record<PassportCopyKey, string> = {
     "I consent to approved employers finding the credentials and preferences I chose above and asking to get in touch with me. I can pause at any time.",
   "disc.consent.note":
     "This is a separate choice. Sharing your Passport with an application does not make you discoverable.",
-  "disc.save": "Save",
   "disc.saving": "Saving …",
   "disc.saved": "Saved.",
   "disc.pause": "Pause discoverability",
@@ -5268,12 +5320,19 @@ const en: Record<PassportCopyKey, string> = {
   "disc.contacts.received": "Received",
   "disc.contacts.jobClosed": "The position is no longer open.",
   "disc.contacts.whatAccept":
-    "If you accept, the company sees your name and can invite you to apply for the position. No application is created and nothing more is shared until you apply yourself.",
-  "disc.contacts.accept": "Accept",
+    "When you accept, the company sees your name. No application is sent. You decide yourself whether to apply and which Passport details you share then.",
+  "disc.contacts.readAdvert": "Read the advert",
+  "disc.contacts.accept": "Accept and share my name",
   "disc.contacts.decline": "Decline",
-  "disc.contacts.declineBlock": "Decline and stop contact from this company",
+  "disc.contacts.declineBlock": "Decline and stop {company}",
+  "disc.contacts.declineHelp":
+    "Decline says no to this request. Stopping covers all of {company}: the company can no longer find you or contact you about any position. You can undo it under Companies you have stopped.",
   "disc.contacts.declineBlockConfirm":
-    "The company will no longer be able to find or contact you. You can undo this under Companies you have stopped. Continue?",
+    "{company} will no longer be able to find you or contact you about any position. You can undo this under Companies you have stopped. Continue?",
+  "disc.contacts.acceptedApplyLeft":
+    "The company now sees your name. You have not applied and no application has been sent. If you want to apply, do it from the advert; there you choose whether to share your Passport and which details.",
+  "disc.contacts.acceptedExternal":
+    "The company now sees your name. This position is applied for through the company's own channel, described in the advert. An application there is not recorded in CQrityjob.",
   "disc.contacts.status.pending": "Waiting for your answer",
   "disc.contacts.status.accepted": "Accepted",
   "disc.contacts.status.declined": "Declined",
@@ -5281,8 +5340,6 @@ const en: Record<PassportCopyKey, string> = {
   "disc.contacts.apply": "Read the advert and apply",
   "disc.contacts.applied": "You have applied for the position. Continue under My applications.",
   "disc.contacts.openApplications": "My applications",
-  "disc.contacts.noInternalApply":
-    "This position is applied for through the company's own channel. See the advert.",
   "disc.contacts.error.TALENT_JOB_CLOSED":
     "The position is no longer open, so the request cannot be accepted.",
   "disc.contacts.error.TALENT_CONTACT_ALREADY_ANSWERED": "You have already answered this request.",

@@ -13,6 +13,11 @@
 //
 // Contact is a request tied to this job. The person decides; the name is
 // shown only after they accept, and applying stays their own act.
+//
+// A result is named by a neutral anonymous reference, never by its place in
+// the list; the contact dialog says which company, which position and which
+// anonymous profile the request goes to; a withdrawal that fails says so and
+// can be tried again (workshop 2026-10-15, package C).
 
 import { useMemo, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
@@ -36,6 +41,7 @@ import {
 } from "@/lib/talent/talent-search.functions";
 import {
   SEARCH_FILTERS,
+  anonymousReference,
   classKey,
   levelKey,
   meritDisplayName,
@@ -81,6 +87,7 @@ function TalentRoute() {
         <TalentSearch
           key={jobId}
           employerId={ws.employerId}
+          employerName={ws.employerName}
           employerSlug={employerSlug}
           jobId={jobId}
         />
@@ -108,10 +115,12 @@ function errorKey(code: string): string {
 
 function TalentSearch({
   employerId,
+  employerName,
   employerSlug,
   jobId,
 }: {
   employerId: string;
+  employerName: string;
   employerSlug: string;
   jobId: string;
 }) {
@@ -306,6 +315,22 @@ function TalentSearch({
                   {tt("talent.ui.total")} · {tt("talent.ui.searchedAt")}{" "}
                   {results.data.searchedAt.slice(11, 16)}
                 </p>
+                <p
+                  className="mt-1 text-sm text-muted-foreground"
+                  data-talent-criteria-version={results.data.criteriaVersion}
+                >
+                  {tt("talent.ui.basis")
+                    .replace("{criteria}", String(results.data.criteriaVersion))
+                    .replace("{profile}", String(results.data.profileVersion))}{" "}
+                  <Link
+                    to="/employer/$employerSlug/jobs/$jobId"
+                    params={{ employerSlug, jobId }}
+                    search={{ step: "requirements" }}
+                    className="font-medium text-foreground underline underline-offset-4"
+                  >
+                    {tt("talent.ui.toCriteria")}
+                  </Link>
+                </p>
                 {results.data.results.length === 0 ? (
                   <div className="mt-3 rounded-xl border border-border bg-card p-5 text-sm">
                     <p className="text-foreground">{tt("talent.ui.empty")}</p>
@@ -314,7 +339,14 @@ function TalentSearch({
                 ) : (
                   <ol className="mt-3 space-y-4">
                     {results.data.results.map((r) => (
-                      <ResultCard key={r.ref} result={r} employerId={employerId} jobId={jobId} />
+                      <ResultCard
+                        key={r.ref}
+                        result={r}
+                        employerId={employerId}
+                        employerName={employerName}
+                        jobId={jobId}
+                        jobTitle={title}
+                      />
                     ))}
                   </ol>
                 )}
@@ -386,11 +418,15 @@ function CriterionRow({ c }: { c: CriterionEvaluation }) {
 function ResultCard({
   result,
   employerId,
+  employerName,
   jobId,
+  jobTitle,
 }: {
   result: TalentResult;
   employerId: string;
+  employerName: string;
   jobId: string;
+  jobTitle: string;
 }) {
   const { tt } = useTalentCopy();
   const [open, setOpen] = useState(false);
@@ -405,15 +441,13 @@ function ResultCard({
   const ev = result.evaluation;
   const facts = orderingFacts(ev);
   const contact = result.contact;
+  const reference = `${tt("talent.ui.person")} ${anonymousReference(result.ref)}`;
   return (
-    <li
-      data-talent-result={result.position}
-      className="rounded-xl border border-border bg-card p-5"
-    >
+    <li data-talent-result className="rounded-xl border border-border bg-card p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-base font-semibold text-foreground">
-            {tt("talent.ui.person")} {result.position}
+          <h2 className="text-base font-semibold text-foreground" data-talent-reference>
+            {reference}
           </h2>
           <p className="text-xs uppercase tracking-widest text-muted-foreground">
             {result.visibility === "active" ? tt("talent.card.active") : tt("talent.card.open")}
@@ -464,27 +498,31 @@ function ResultCard({
         >
           {open ? tt("talent.ui.hideProfile") : tt("talent.ui.showProfile")}
         </button>
-        {contact ? (
+        {contact && contact.status !== "withdrawn" ? (
+          // The contacts tab's own status words, so the two views agree.
           <span
             className="rounded-full border border-border px-3 py-1 text-sm text-foreground"
             data-contact-status={contact.status}
           >
-            {contact.status === "accepted"
-              ? tt("talent.ui.contactAccepted")
-              : contact.status === "declined"
-                ? tt("talent.ui.contactDeclined")
-                : tt("talent.ui.contacted")}
+            {tt("talent.ui.contactStatus")}: {tt(`talent.ui.contacts.status.${contact.status}`)}
           </span>
         ) : (
-          <button
-            type="button"
-            onClick={() => setContacting(true)}
-            className={btnPrimary}
-            data-contact-open
-          >
-            <Mail aria-hidden="true" className="h-4 w-4" />
-            {tt("talent.ui.contact")}
-          </button>
+          <>
+            {contact ? (
+              <span className="text-sm text-muted-foreground" data-contact-status="withdrawn">
+                {tt("talent.ui.contactStatus")}: {tt("talent.ui.contacts.status.withdrawn")}
+              </span>
+            ) : null}
+            <button
+              type="button"
+              onClick={() => setContacting(true)}
+              className={btnPrimary}
+              data-contact-open
+            >
+              <Mail aria-hidden="true" className="h-4 w-4" />
+              {tt("talent.ui.contact")}
+            </button>
+          </>
         )}
       </div>
 
@@ -514,8 +552,11 @@ function ResultCard({
       {contacting ? (
         <ContactDialog
           employerId={employerId}
+          employerName={employerName}
           jobId={jobId}
+          jobTitle={jobTitle}
           refValue={result.ref}
+          reference={reference}
           onClose={() => setContacting(false)}
         />
       ) : null}
@@ -525,13 +566,19 @@ function ResultCard({
 
 function ContactDialog({
   employerId,
+  employerName,
   jobId,
+  jobTitle,
   refValue,
+  reference,
   onClose,
 }: {
   employerId: string;
+  employerName: string;
   jobId: string;
+  jobTitle: string;
   refValue: string;
+  reference: string;
   onClose: () => void;
 }) {
   const { tt, lang } = useTalentCopy();
@@ -552,6 +599,17 @@ function ContactDialog({
           <DialogTitle>{tt("talent.ui.dialog.title")}</DialogTitle>
           <DialogDescription>{tt("talent.ui.dialog.lead")}</DialogDescription>
         </DialogHeader>
+        <dl
+          className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 rounded-md border border-border p-3 text-sm"
+          data-contact-context
+        >
+          <dt className="text-muted-foreground">{tt("talent.ui.dialog.company")}</dt>
+          <dd className="font-medium text-foreground">{employerName}</dd>
+          <dt className="text-muted-foreground">{tt("talent.ui.dialog.job")}</dt>
+          <dd className="font-medium text-foreground">{jobTitle}</dd>
+          <dt className="text-muted-foreground">{tt("talent.ui.dialog.to")}</dt>
+          <dd className="font-medium text-foreground">{reference}</dd>
+        </dl>
         {done ? (
           <p role="status" className="text-sm text-foreground">
             {done}
@@ -669,8 +727,6 @@ function ContactsTab({
   };
 }) {
   const { tt } = useTalentCopy();
-  const qc = useQueryClient();
-  const withdrawFn = useServerFn(withdrawTalentContact);
   if (query.isLoading) return <p className="text-sm text-muted-foreground">…</p>;
   if (query.isError) {
     const code = query.error instanceof Error ? query.error.message : "";
@@ -750,20 +806,7 @@ function ContactsTab({
             )
           ) : null}
           {c.status === "pending" ? (
-            <button
-              type="button"
-              className={`${btnSecondary} mt-3`}
-              onClick={async () => {
-                await withdrawFn({ data: { employerId, jobId, contactId: c.id } }).catch(
-                  () => undefined,
-                );
-                await qc.invalidateQueries({
-                  queryKey: ["employer", employerId, "talent-contacts", jobId],
-                });
-              }}
-            >
-              {tt("talent.ui.contacts.withdraw")}
-            </button>
+            <WithdrawContact employerId={employerId} jobId={jobId} contactId={c.id} />
           ) : null}
           {c.snapshot ? (
             <details className="mt-3 rounded-md border border-border p-3">
@@ -786,5 +829,62 @@ function ContactsTab({
         </li>
       ))}
     </ul>
+  );
+}
+
+/** Withdrawing a pending request: busy while it runs, a visible error and a
+ *  retry when it fails, and afterwards both the contact list and the result
+ *  list read again, so the two show the same status. */
+function WithdrawContact({
+  employerId,
+  jobId,
+  contactId,
+}: {
+  employerId: string;
+  jobId: string;
+  contactId: string;
+}) {
+  const { tt } = useTalentCopy();
+  const qc = useQueryClient();
+  const withdrawFn = useServerFn(withdrawTalentContact);
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
+  async function withdraw() {
+    if (busy) return;
+    setBusy(true);
+    setFailed(false);
+    try {
+      await withdrawFn({ data: { employerId, jobId, contactId } });
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["employer", employerId, "talent-contacts", jobId] }),
+        qc.invalidateQueries({ queryKey: ["employer", employerId, "talent-search", jobId] }),
+      ]);
+    } catch {
+      setFailed(true);
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <div className="mt-3">
+      <button
+        type="button"
+        className={btnSecondary}
+        disabled={busy}
+        onClick={() => void withdraw()}
+        data-contact-withdraw
+      >
+        {busy
+          ? tt("talent.ui.contacts.withdrawing")
+          : failed
+            ? tt("talent.ui.retry")
+            : tt("talent.ui.contacts.withdraw")}
+      </button>
+      {failed ? (
+        <p role="alert" className="mt-2 text-sm text-destructive">
+          {tt("talent.ui.contacts.withdrawError")}
+        </p>
+      ) : null}
+    </div>
   );
 }

@@ -2,9 +2,11 @@
 //
 // Each request says who (the organisation), about what (the vacancy, its
 // place and whether it is still open), what they wrote, and what accepting
-// means -- before the person decides. Accepting shares the person's name and
-// nothing else; applying, and any Passport sharing with the application, stays
-// the person's own act on the job page.
+// means -- before the person decides, with the advert one click away BEFORE
+// the decision (workshop 2026-10-15, package C). Accepting shares the
+// person's name and nothing else; applying, and any Passport sharing with the
+// application, stays the person's own act on the job page. Stopping a company
+// names the company: it covers every position there, not this one request.
 
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
@@ -31,9 +33,13 @@ export function ContactRequestList({
   const [busy, setBusy] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  async function respond(id: string, accept: boolean, block: boolean) {
+  async function respond(id: string, accept: boolean, block: boolean, company: string) {
     if (busy) return;
-    if (block && !window.confirm(pt("disc.contacts.declineBlockConfirm"))) return;
+    if (
+      block &&
+      !window.confirm(pt("disc.contacts.declineBlockConfirm").replace("{company}", company))
+    )
+      return;
     setBusy(id);
     setErrors((e) => ({ ...e, [id]: "" }));
     try {
@@ -105,14 +111,29 @@ export function ContactRequestList({
             ) : null}
             {c.status === "pending" ? (
               <>
-                <p className="mt-3 rounded-md bg-secondary/50 p-3 text-sm leading-relaxed text-foreground">
+                {c.job.open ? (
+                  <Link
+                    to="/jobs/$slug"
+                    params={{ slug: c.job.slug }}
+                    aria-label={`${pt("disc.contacts.readAdvert")}: ${title}`}
+                    data-contact-advert
+                    className={`${btn} mt-3 border border-input text-foreground hover:bg-secondary`}
+                  >
+                    {pt("disc.contacts.readAdvert")}
+                  </Link>
+                ) : null}
+                <p
+                  id={`contact-consequence-${c.id}`}
+                  className="mt-3 rounded-md bg-secondary/50 p-3 text-sm leading-relaxed text-foreground"
+                >
                   {pt("disc.contacts.whatAccept")}
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <button
                     type="button"
                     disabled={busy !== null || !c.job.open}
-                    onClick={() => void respond(c.id, true, false)}
+                    onClick={() => void respond(c.id, true, false, c.employer.name)}
+                    aria-describedby={`contact-consequence-${c.id}`}
                     className={`${btn} bg-primary text-primary-foreground hover:bg-primary/90`}
                   >
                     {pt("disc.contacts.accept")}
@@ -120,7 +141,7 @@ export function ContactRequestList({
                   <button
                     type="button"
                     disabled={busy !== null}
-                    onClick={() => void respond(c.id, false, false)}
+                    onClick={() => void respond(c.id, false, false, c.employer.name)}
                     className={`${btn} border border-input text-foreground hover:bg-secondary`}
                   >
                     {pt("disc.contacts.decline")}
@@ -128,18 +149,22 @@ export function ContactRequestList({
                   <button
                     type="button"
                     disabled={busy !== null}
-                    onClick={() => void respond(c.id, false, true)}
-                    className={`${btn} text-muted-foreground underline-offset-4 hover:underline`}
+                    onClick={() => void respond(c.id, false, true, c.employer.name)}
+                    aria-describedby={`contact-block-${c.id}`}
+                    className={`${btn} text-muted-foreground underline-offset-4 hover:text-foreground hover:underline`}
                   >
-                    {pt("disc.contacts.declineBlock")}
+                    {pt("disc.contacts.declineBlock").replace("{company}", c.employer.name)}
                   </button>
                 </div>
+                <p id={`contact-block-${c.id}`} className="mt-2 text-xs text-muted-foreground">
+                  {pt("disc.contacts.declineHelp").replace("{company}", c.employer.name)}
+                </p>
               </>
             ) : null}
             {c.status === "accepted" ? (
-              <div className="mt-3 flex flex-wrap items-center gap-2">
+              <div className="mt-3 space-y-2">
                 {c.applicationId ? (
-                  <>
+                  <div className="flex flex-wrap items-center gap-2">
                     <p className="text-sm text-foreground">{pt("disc.contacts.applied")}</p>
                     <Link
                       to="/my-career/applications"
@@ -147,23 +172,40 @@ export function ContactRequestList({
                     >
                       {pt("disc.contacts.openApplications")}
                     </Link>
-                  </>
+                  </div>
                 ) : c.job.open && c.job.acceptsApplications ? (
-                  <Link
-                    to="/jobs/$slug"
-                    params={{ slug: c.job.slug }}
-                    className={`${btn} bg-primary text-primary-foreground hover:bg-primary/90`}
-                  >
-                    {pt("disc.contacts.apply")}
-                  </Link>
+                  <>
+                    <p
+                      className="text-sm leading-relaxed text-foreground"
+                      data-contact-next="apply"
+                    >
+                      {pt("disc.contacts.acceptedApplyLeft")}
+                    </p>
+                    <Link
+                      to="/jobs/$slug"
+                      params={{ slug: c.job.slug }}
+                      className={`${btn} bg-primary text-primary-foreground hover:bg-primary/90`}
+                    >
+                      {pt("disc.contacts.apply")}
+                    </Link>
+                  </>
                 ) : c.job.open ? (
-                  <Link
-                    to="/jobs/$slug"
-                    params={{ slug: c.job.slug }}
-                    className={`${btn} border border-input`}
-                  >
-                    {pt("disc.contacts.noInternalApply")}
-                  </Link>
+                  <>
+                    <p
+                      className="text-sm leading-relaxed text-foreground"
+                      data-contact-next="external"
+                    >
+                      {pt("disc.contacts.acceptedExternal")}
+                    </p>
+                    <Link
+                      to="/jobs/$slug"
+                      params={{ slug: c.job.slug }}
+                      aria-label={`${pt("disc.contacts.readAdvert")}: ${title}`}
+                      className={`${btn} border border-input text-foreground hover:bg-secondary`}
+                    >
+                      {pt("disc.contacts.readAdvert")}
+                    </Link>
+                  </>
                 ) : null}
               </div>
             ) : null}

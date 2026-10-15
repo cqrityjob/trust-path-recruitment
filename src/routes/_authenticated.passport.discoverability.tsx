@@ -2,22 +2,29 @@
 //
 // A tab of the existing Passport workspace, not a second profile: the
 // person's merits are the Passport's own entries, chosen here one by one.
+// One column on a phone, in this order (workshop 2026-10-15, package B):
 //
-//   1. the choice: private (default) | open | actively looking
-//   2. exactly which merits and periods may be found
-//   3. job preferences (optional)
-//   4. consent, as its own act -- an application share is not consent
-//   5. the preview: what an authorised recruiter sees, built by the same
-//      database function the recruiter's read uses
-//   6. companies the person has stopped, and contact requests received
+//   1. what is SAVED now, and pause
+//   2. the choice: private (default) | open | actively looking
+//   3. exactly which merits and periods may be found, each with the support
+//      and validity the employer card will show
+//   4. job preferences (optional)
+//   5. a summary of the unsaved form -- never called the employer's view
+//   6. the saved preview: what an authorised recruiter sees NOW, built by the
+//      same database function the recruiter's read uses
+//   7. consent, as its own act -- an application share is not consent -- and
+//      one main action: "Make me discoverable" the first time, then "Save
+//      changes"
+//   8. contact requests received, and companies the person has stopped
 //
-// Pausing is one click and rotates the reference employers hold, so no old
-// result list can open the profile again.
+// On a wide screen the saved preview sits beside the form. Pausing is one
+// click and rotates the reference employers hold, so no old result list can
+// open the profile again.
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { EyeOff, PauseCircle, Plus } from "lucide-react";
+import { ArrowLeft, EyeOff, PauseCircle, Plus } from "lucide-react";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import type { PassportCopyKey } from "@/lib/security-passport/i18n";
 import { getMyPassport, type PassportSnapshot } from "@/lib/security-passport/passport.functions";
@@ -37,6 +44,10 @@ import {
   CONSENT_TEXT_VERSION,
   discoverabilityPayload,
   draftProblem,
+  entryTalentLevel,
+  levelKey,
+  talentValidity,
+  validityKey,
   type DiscoverabilityDraft,
   type Visibility,
 } from "@/lib/talent/model";
@@ -149,6 +160,7 @@ function DiscoverabilityRoute() {
     [passport],
   );
 
+  const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
   const settings = read.status === "ready" && read.value.installed ? read.value.settings : null;
   const preview = read.status === "ready" && read.value.installed ? read.value.preview : null;
 
@@ -160,7 +172,7 @@ function DiscoverabilityRoute() {
     return list.includes(value) ? list.filter((v) => v !== value) : [...list, value];
   }
 
-  async function onSave() {
+  async function onSave(activating: boolean) {
     if (!draft || !settings || busy) return;
     const problem = draftProblem(draft);
     if (problem) {
@@ -180,7 +192,7 @@ function DiscoverabilityRoute() {
       await save({ data: { expectedVersion: settings.version, ...payload } });
       releaseUnsaved();
       await refresh();
-      setMessage({ tone: "ok", key: "disc.saved" });
+      setMessage({ tone: "ok", key: activating ? "disc.activated" : "disc.saved" });
     } catch (cause) {
       const code = cause instanceof Error ? cause.message : "DISCOVERABILITY_FAILED";
       const known = [
@@ -221,9 +233,43 @@ function DiscoverabilityRoute() {
   const input =
     "min-h-11 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
   const check = "h-5 w-5 shrink-0 rounded border-input accent-[var(--primary)]";
+  // One column on a phone, in the order the holder works through it; on a
+  // wide screen the saved preview sits beside the form for every row of it.
+  const left = "lg:col-start-1";
+
+  const visibilityLabel = (v: Visibility) => pt(VISIBILITIES.find((x) => x.value === v)!.label);
+  const claimTitle = (c: (typeof claims)[number]) => (lang === "sv" ? c.titleSv : c.titleEn);
+  const chosenClaims = draft ? claims.filter((c) => draft.claimIds.includes(c.id)) : [];
+  const chosenPeriods = draft ? periods.filter((p) => draft.experienceIds.includes(p.id)) : [];
+  const chosenPrefs = draft
+    ? [
+        ...careerAreaLabels.filter((a) => draft.areas.includes(a.id)).map((a) => a.name[lang]),
+        ...draft.countries,
+        ...draft.cities,
+        ...draft.employmentTypes.map((e) => tt(`talent.emp.${e}`)),
+        ...draft.workplaceTypes.map((w) => tt(`talent.work.${w}`)),
+        ...(draft.availableFrom
+          ? [`${pt("disc.prefs.availableFrom")} ${draft.availableFrom}`]
+          : []),
+      ]
+    : [];
+  const firstActivation =
+    settings !== null &&
+    draft !== null &&
+    settings.visibility === "private" &&
+    draft.visibility !== "private";
+  const gridRows = settings && settings.blockedEmployers.length > 0 ? 8 : 7;
 
   return (
     <div className="mx-auto w-full max-w-5xl space-y-6">
+      <Link
+        to="/passport"
+        className="inline-flex h-11 items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        data-discoverability-back
+      >
+        <ArrowLeft aria-hidden="true" className="h-4 w-4" />
+        {pt("disc.back")}
+      </Link>
       <header>
         <h1
           className="text-2xl font-semibold tracking-tight text-foreground"
@@ -254,369 +300,383 @@ function DiscoverabilityRoute() {
       ) : !read.value.installed ? (
         <p className={`${card} text-sm text-muted-foreground`}>{pt("disc.notInstalled")}</p>
       ) : draft && settings ? (
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,24rem)]">
-          <div className="space-y-6">
-            {/* 1. The choice */}
-            <section className={card} aria-labelledby="disc-state">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <h2 id="disc-state" className={h2}>
-                  {pt("disc.state.title")}
-                </h2>
-                <p
-                  className="text-xs text-muted-foreground"
-                  data-current-visibility={settings.visibility}
-                >
-                  {pt("disc.current")}:{" "}
-                  <span className="font-semibold text-foreground">
-                    {pt(VISIBILITIES.find((v) => v.value === settings.visibility)!.label)}
-                  </span>
-                  {settings.visibilityChangedAt
-                    ? ` · ${pt("disc.since")} ${settings.visibilityChangedAt.slice(0, 10)}`
-                    : ""}
+        <div className="flex flex-col gap-6 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,24rem)]">
+          {/* 1. What is saved now, and pause */}
+          <section className={`${card} ${left}`} aria-labelledby="disc-saved-state">
+            <h2 id="disc-saved-state" className={h2}>
+              {pt("disc.savedState.title")}
+            </h2>
+            <p
+              className="mt-2 text-sm text-foreground"
+              data-current-visibility={settings.visibility}
+            >
+              <span className="font-semibold">{visibilityLabel(settings.visibility)}</span>
+              {settings.visibilityChangedAt
+                ? ` · ${pt("disc.since")} ${settings.visibilityChangedAt.slice(0, 10)}`
+                : ""}
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {settings.visibility === "private"
+                ? pt("disc.savedState.private")
+                : pt("disc.savedState.searchable")}
+            </p>
+            {settings.visibility !== "private" ? (
+              <>
+                <p className="mt-1 text-sm tabular-nums text-muted-foreground">
+                  {pt("disc.items.credentials")}: {settings.claimIds.length} ·{" "}
+                  {pt("disc.items.experience")}: {settings.experienceIds.length}
                 </p>
-              </div>
-              <fieldset className="mt-3 space-y-2">
-                <legend className="sr-only">{pt("disc.state.title")}</legend>
-                {VISIBILITIES.map((v) => (
-                  <label
-                    key={v.value}
-                    className={`flex min-h-11 cursor-pointer items-start gap-3 rounded-lg border p-3 ${draft.visibility === v.value ? "border-accent bg-accent/5" : "border-border"}`}
-                  >
-                    <input
-                      type="radio"
-                      name="visibility"
-                      value={v.value}
-                      checked={draft.visibility === v.value}
-                      onChange={() => update({ visibility: v.value })}
-                      className="mt-0.5 h-5 w-5 shrink-0"
-                    />
-                    <span>
-                      <span className="block text-sm font-medium text-foreground">
-                        {pt(v.label)}
-                      </span>
-                      <span className="block text-sm text-muted-foreground">{pt(v.help)}</span>
-                    </span>
-                  </label>
-                ))}
-              </fieldset>
-              {settings.visibility !== "private" ? (
                 <button
                   type="button"
                   onClick={() => void onPause()}
                   disabled={busy}
                   data-pause-discoverability
+                  aria-describedby="disc-pause-help"
                   className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-md border border-input px-4 text-sm font-medium text-foreground hover:bg-secondary disabled:opacity-60"
                 >
                   <PauseCircle aria-hidden="true" className="h-4 w-4" />
                   {pt("disc.pause")}
                 </button>
-              ) : null}
-            </section>
+                <p id="disc-pause-help" className="mt-2 text-sm text-muted-foreground">
+                  {pt("disc.pause.help")}
+                </p>
+              </>
+            ) : null}
+          </section>
 
-            {/* 2. Exactly what may be found */}
-            <section className={card} aria-labelledby="disc-items">
-              <h2 id="disc-items" className={h2}>
-                {pt("disc.items.title")}
-              </h2>
-              <p className="mt-1 text-sm text-muted-foreground">{pt("disc.items.help")}</p>
-              {claims.length + periods.length === 0 ? (
-                <div className="mt-3">
-                  <p className="text-sm text-muted-foreground">{pt("disc.items.none")}</p>
-                  <Link
-                    to="/passport/credentials/new"
-                    className="mt-2 inline-flex min-h-11 items-center gap-2 rounded-md border border-input px-4 text-sm font-medium"
-                  >
-                    <Plus aria-hidden="true" className="h-4 w-4" />
-                    {pt("disc.items.addMerit")}
-                  </Link>
-                </div>
-              ) : (
-                <div className="mt-3 grid gap-4 sm:grid-cols-2">
-                  <fieldset>
-                    <legend className="text-sm font-semibold text-foreground">
-                      {pt("disc.items.credentials")}
-                    </legend>
-                    <ul className="mt-2 space-y-1">
-                      {claims.map((c) => (
+          {/* 2. The choice */}
+          <section className={`${card} ${left}`} aria-labelledby="disc-state">
+            <h2 id="disc-state" className={h2}>
+              {pt("disc.state.title")}
+            </h2>
+            <fieldset className="mt-3 space-y-2">
+              <legend className="sr-only">{pt("disc.state.title")}</legend>
+              {VISIBILITIES.map((v) => (
+                <label
+                  key={v.value}
+                  className={`flex min-h-11 cursor-pointer items-start gap-3 rounded-lg border p-3 ${draft.visibility === v.value ? "border-accent bg-accent/5" : "border-border"}`}
+                >
+                  <input
+                    type="radio"
+                    name="visibility"
+                    value={v.value}
+                    checked={draft.visibility === v.value}
+                    onChange={() => update({ visibility: v.value })}
+                    className="mt-0.5 h-5 w-5 shrink-0"
+                  />
+                  <span>
+                    <span className="block text-sm font-medium text-foreground">{pt(v.label)}</span>
+                    <span className="block text-sm text-muted-foreground">{pt(v.help)}</span>
+                  </span>
+                </label>
+              ))}
+            </fieldset>
+          </section>
+
+          {/* 3. Exactly what may be found -- with the support and validity the
+              employer card will show, so nothing is chosen by name alone */}
+          <section className={`${card} ${left}`} aria-labelledby="disc-items">
+            <h2 id="disc-items" className={h2}>
+              {pt("disc.items.title")}
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">{pt("disc.items.help")}</p>
+            <p className="mt-1 text-sm text-muted-foreground">{pt("disc.items.support")}</p>
+            {claims.length + periods.length === 0 ? (
+              <div className="mt-3">
+                <p className="text-sm text-muted-foreground">{pt("disc.items.none")}</p>
+                <Link
+                  to="/passport/credentials/new"
+                  className="mt-2 inline-flex min-h-11 items-center gap-2 rounded-md border border-input px-4 text-sm font-medium"
+                >
+                  <Plus aria-hidden="true" className="h-4 w-4" />
+                  {pt("disc.items.addMerit")}
+                </Link>
+              </div>
+            ) : (
+              <div className="mt-3 grid gap-4 sm:grid-cols-2">
+                <fieldset>
+                  <legend className="text-sm font-semibold text-foreground">
+                    {pt("disc.items.credentials")}
+                  </legend>
+                  <ul className="mt-2 space-y-1">
+                    {claims.map((c) => {
+                      const level = entryTalentLevel({ ...c, subjectKind: "credential" });
+                      const validity = talentValidity(c.validFrom, c.validUntil, c.noExpiry, today);
+                      return (
                         <li key={c.id}>
-                          <label className="flex min-h-11 cursor-pointer items-center gap-3">
+                          <label className="flex min-h-11 cursor-pointer items-start gap-3 py-1">
                             <input
                               type="checkbox"
-                              className={check}
+                              className={`${check} mt-0.5`}
                               checked={draft.claimIds.includes(c.id)}
                               onChange={() => update({ claimIds: toggle(draft.claimIds, c.id) })}
                             />
-                            <span className="text-sm text-foreground">
-                              {lang === "sv" ? c.titleSv : c.titleEn}
+                            <span className="min-w-0">
+                              <span className="block text-sm font-medium text-foreground">
+                                {claimTitle(c)}
+                              </span>
+                              <span
+                                className="block text-xs leading-relaxed text-muted-foreground"
+                                data-item-support={level}
+                                data-item-validity={validity}
+                              >
+                                {tt(levelKey(level))} · {tt(validityKey(validity))}
+                                {c.validUntil ? ` (${c.validUntil.slice(0, 10)})` : ""}
+                              </span>
                             </span>
                           </label>
                         </li>
-                      ))}
-                    </ul>
-                  </fieldset>
-                  <fieldset>
-                    <legend className="text-sm font-semibold text-foreground">
-                      {pt("disc.items.experience")}
-                    </legend>
-                    <ul className="mt-2 space-y-1">
-                      {periods.map((p) => (
+                      );
+                    })}
+                  </ul>
+                </fieldset>
+                <fieldset>
+                  <legend className="text-sm font-semibold text-foreground">
+                    {pt("disc.items.experience")}
+                  </legend>
+                  <ul className="mt-2 space-y-1">
+                    {periods.map((p) => {
+                      const level = entryTalentLevel({ ...p, subjectKind: "employment" });
+                      return (
                         <li key={p.id}>
-                          <label className="flex min-h-11 cursor-pointer items-center gap-3">
+                          <label className="flex min-h-11 cursor-pointer items-start gap-3 py-1">
                             <input
                               type="checkbox"
-                              className={check}
+                              className={`${check} mt-0.5`}
                               checked={draft.experienceIds.includes(p.id)}
                               onChange={() =>
                                 update({ experienceIds: toggle(draft.experienceIds, p.id) })
                               }
                             />
-                            <span className="text-sm text-foreground">
-                              {p.roleTitle}{" "}
-                              <span className="tabular-nums text-muted-foreground">
-                                {p.startedOn.slice(0, 7)} –{" "}
-                                {p.endedOn ? p.endedOn.slice(0, 7) : "…"}
+                            <span className="min-w-0">
+                              <span className="block text-sm font-medium text-foreground">
+                                {p.roleTitle}
+                              </span>
+                              <span
+                                className="block text-xs leading-relaxed text-muted-foreground"
+                                data-item-support={level}
+                              >
+                                {tt(levelKey(level))} ·{" "}
+                                <span className="tabular-nums">
+                                  {p.startedOn.slice(0, 7)} –{" "}
+                                  {p.endedOn ? p.endedOn.slice(0, 7) : pt("disc.items.ongoing")}
+                                </span>
                               </span>
                             </span>
                           </label>
                         </li>
-                      ))}
-                    </ul>
-                  </fieldset>
-                </div>
-              )}
-            </section>
+                      );
+                    })}
+                  </ul>
+                </fieldset>
+              </div>
+            )}
+          </section>
 
-            {/* 3. Preferences */}
-            <section className={card} aria-labelledby="disc-prefs">
-              <h2 id="disc-prefs" className={h2}>
-                {pt("disc.prefs.title")}
-              </h2>
-              <p className="mt-1 text-sm text-muted-foreground">{pt("disc.prefs.help")}</p>
-              <fieldset className="mt-3">
+          {/* 4. Preferences (optional) */}
+          <section className={`${card} ${left}`} aria-labelledby="disc-prefs">
+            <h2 id="disc-prefs" className={h2}>
+              {pt("disc.prefs.title")}
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">{pt("disc.prefs.help")}</p>
+            <fieldset className="mt-3">
+              <legend className="text-sm font-semibold text-foreground">
+                {pt("disc.prefs.areas")}
+              </legend>
+              <ul className="mt-2 grid gap-1 sm:grid-cols-2">
+                {careerAreaLabels.map((a) => (
+                  <li key={a.id}>
+                    <label className="flex min-h-11 cursor-pointer items-center gap-3">
+                      <input
+                        type="checkbox"
+                        className={check}
+                        checked={draft.areas.includes(a.id)}
+                        onChange={() => update({ areas: toggle(draft.areas, a.id) })}
+                      />
+                      <span className="text-sm text-foreground">{a.name[lang]}</span>
+                    </label>
+                  </li>
+                ))}
+              </ul>
+            </fieldset>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <label className="block text-sm">
+                <span className="font-semibold text-foreground">{pt("disc.prefs.countries")}</span>
+                <input
+                  className={`${input} mt-1`}
+                  value={countriesText}
+                  placeholder="SE, GB"
+                  onChange={(e) => {
+                    setCountriesText(e.target.value);
+                    update({
+                      countries: e.target.value
+                        .split(",")
+                        .map((v) => v.trim().toUpperCase())
+                        .filter(Boolean),
+                    });
+                  }}
+                />
+              </label>
+              <label className="block text-sm">
+                <span className="font-semibold text-foreground">{pt("disc.prefs.cities")}</span>
+                <input
+                  className={`${input} mt-1`}
+                  value={citiesText}
+                  onChange={(e) => {
+                    setCitiesText(e.target.value);
+                    update({
+                      cities: e.target.value
+                        .split(",")
+                        .map((v) => v.trim())
+                        .filter(Boolean),
+                    });
+                  }}
+                />
+              </label>
+            </div>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <fieldset>
                 <legend className="text-sm font-semibold text-foreground">
-                  {pt("disc.prefs.areas")}
+                  {pt("disc.prefs.employmentTypes")}
                 </legend>
-                <ul className="mt-2 grid gap-1 sm:grid-cols-2">
-                  {careerAreaLabels.map((a) => (
-                    <li key={a.id}>
-                      <label className="flex min-h-11 cursor-pointer items-center gap-3">
-                        <input
-                          type="checkbox"
-                          className={check}
-                          checked={draft.areas.includes(a.id)}
-                          onChange={() => update({ areas: toggle(draft.areas, a.id) })}
-                        />
-                        <span className="text-sm text-foreground">{a.name[lang]}</span>
-                      </label>
-                    </li>
-                  ))}
-                </ul>
+                {EMPLOYMENT.map((e) => (
+                  <label key={e} className="flex min-h-11 cursor-pointer items-center gap-3">
+                    <input
+                      type="checkbox"
+                      className={check}
+                      checked={draft.employmentTypes.includes(e)}
+                      onChange={() => update({ employmentTypes: toggle(draft.employmentTypes, e) })}
+                    />
+                    <span className="text-sm text-foreground">{tt(`talent.emp.${e}`)}</span>
+                  </label>
+                ))}
               </fieldset>
-              <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                <label className="block text-sm">
+              <fieldset>
+                <legend className="text-sm font-semibold text-foreground">
+                  {pt("disc.prefs.workplaceTypes")}
+                </legend>
+                {WORKPLACE.map((w) => (
+                  <label key={w} className="flex min-h-11 cursor-pointer items-center gap-3">
+                    <input
+                      type="checkbox"
+                      className={check}
+                      checked={draft.workplaceTypes.includes(w)}
+                      onChange={() => update({ workplaceTypes: toggle(draft.workplaceTypes, w) })}
+                    />
+                    <span className="text-sm text-foreground">{tt(`talent.work.${w}`)}</span>
+                  </label>
+                ))}
+                <label className="mt-2 block text-sm">
                   <span className="font-semibold text-foreground">
-                    {pt("disc.prefs.countries")}
+                    {pt("disc.prefs.availableFrom")}
                   </span>
                   <input
+                    type="date"
                     className={`${input} mt-1`}
-                    value={countriesText}
-                    placeholder="SE, GB"
-                    onChange={(e) => {
-                      setCountriesText(e.target.value);
-                      update({
-                        countries: e.target.value
-                          .split(",")
-                          .map((v) => v.trim().toUpperCase())
-                          .filter(Boolean),
-                      });
-                    }}
+                    value={draft.availableFrom}
+                    onChange={(e) => update({ availableFrom: e.target.value })}
                   />
                 </label>
-                <label className="block text-sm">
-                  <span className="font-semibold text-foreground">{pt("disc.prefs.cities")}</span>
-                  <input
-                    className={`${input} mt-1`}
-                    value={citiesText}
-                    onChange={(e) => {
-                      setCitiesText(e.target.value);
-                      update({
-                        cities: e.target.value
-                          .split(",")
-                          .map((v) => v.trim())
-                          .filter(Boolean),
-                      });
-                    }}
-                  />
-                </label>
-              </div>
-              <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                <fieldset>
-                  <legend className="text-sm font-semibold text-foreground">
-                    {pt("disc.prefs.employmentTypes")}
-                  </legend>
-                  {EMPLOYMENT.map((e) => (
-                    <label key={e} className="flex min-h-11 cursor-pointer items-center gap-3">
-                      <input
-                        type="checkbox"
-                        className={check}
-                        checked={draft.employmentTypes.includes(e)}
-                        onChange={() =>
-                          update({ employmentTypes: toggle(draft.employmentTypes, e) })
-                        }
-                      />
-                      <span className="text-sm text-foreground">{tt(`talent.emp.${e}`)}</span>
-                    </label>
-                  ))}
-                </fieldset>
-                <fieldset>
-                  <legend className="text-sm font-semibold text-foreground">
-                    {pt("disc.prefs.workplaceTypes")}
-                  </legend>
-                  {WORKPLACE.map((w) => (
-                    <label key={w} className="flex min-h-11 cursor-pointer items-center gap-3">
-                      <input
-                        type="checkbox"
-                        className={check}
-                        checked={draft.workplaceTypes.includes(w)}
-                        onChange={() => update({ workplaceTypes: toggle(draft.workplaceTypes, w) })}
-                      />
-                      <span className="text-sm text-foreground">{tt(`talent.work.${w}`)}</span>
-                    </label>
-                  ))}
-                  <label className="mt-2 block text-sm">
-                    <span className="font-semibold text-foreground">
-                      {pt("disc.prefs.availableFrom")}
-                    </span>
-                    <input
-                      type="date"
-                      className={`${input} mt-1`}
-                      value={draft.availableFrom}
-                      onChange={(e) => update({ availableFrom: e.target.value })}
-                    />
-                  </label>
-                </fieldset>
-              </div>
-            </section>
+              </fieldset>
+            </div>
+          </section>
 
-            {/* 4. Consent and save */}
-            <section className={card} aria-labelledby="disc-consent">
-              <h2 id="disc-consent" className={h2}>
-                {pt("disc.consent.title")}
-              </h2>
-              <label className="mt-3 flex cursor-pointer items-start gap-3">
-                <input
-                  type="checkbox"
-                  className={`${check} mt-0.5`}
-                  checked={draft.consent}
-                  disabled={draft.visibility === "private"}
-                  onChange={(e) => update({ consent: e.target.checked })}
-                  aria-describedby="disc-consent-note"
-                />
-                <span className="text-sm leading-relaxed text-foreground">
-                  {pt("disc.consent.label")}
-                </span>
-              </label>
-              <p id="disc-consent-note" className="mt-2 text-sm text-muted-foreground">
-                {pt("disc.consent.note")}
-              </p>
-              <div className="mt-4 flex flex-wrap items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => void onSave()}
-                  disabled={busy || !dirty}
-                  data-save-discoverability
-                  className="inline-flex min-h-11 items-center rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                >
-                  {busy ? pt("disc.saving") : pt("disc.save")}
-                </button>
-                {message ? (
-                  <p
-                    role={message.tone === "error" ? "alert" : "status"}
-                    className={
-                      message.tone === "error"
-                        ? "text-sm text-destructive"
-                        : "text-sm text-foreground"
-                    }
-                  >
-                    {pt(message.key)}
-                  </p>
-                ) : null}
-              </div>
-            </section>
-
-            {/* 6. Contact requests */}
-            <section
-              id="contacts"
-              className={`${card} scroll-mt-24`}
-              aria-labelledby="disc-contacts"
-            >
-              <h2 id="disc-contacts" className={h2}>
-                {pt("disc.contacts.title")}
-              </h2>
-              <p className="mt-1 text-sm text-muted-foreground">{pt("disc.contacts.lead")}</p>
-              <div className="mt-3">
-                {contacts.status === "loading" ? (
-                  <p aria-busy="true" className="text-sm text-muted-foreground">
-                    …
-                  </p>
-                ) : contacts.status === "error" ? (
-                  <div role="alert">
-                    <p className="text-sm text-foreground">{pt("disc.contacts.loadError")}</p>
-                    <button
-                      type="button"
-                      onClick={() => void refreshContacts()}
-                      className="mt-2 inline-flex min-h-11 items-center rounded-md border border-input px-4 text-sm font-medium"
-                    >
-                      {pt("disc.retry")}
-                    </button>
+          {/* 5. The draft, summarised -- the form's own words, not the
+              employer's view, which only the saved preview shows */}
+          <section
+            className={`${card} ${left}`}
+            aria-labelledby="disc-summary"
+            data-discoverability-summary={draft.visibility}
+          >
+            <h2 id="disc-summary" className={h2}>
+              {pt("disc.summary.title")}
+            </h2>
+            {draft.visibility === "private" ? (
+              <p className="mt-2 text-sm text-foreground">{pt("disc.summary.private")}</p>
+            ) : (
+              <>
+                <p className="mt-1 text-sm text-muted-foreground">{pt("disc.summary.lead")}</p>
+                <dl className="mt-3 space-y-3 text-sm">
+                  <div>
+                    <dt className="font-semibold text-foreground">{pt("disc.summary.state")}</dt>
+                    <dd className="text-foreground">{visibilityLabel(draft.visibility)}</dd>
                   </div>
-                ) : !contacts.value.installed ? (
-                  <p className="text-sm text-muted-foreground">{pt("disc.contacts.empty")}</p>
-                ) : (
-                  <ContactRequestList
-                    items={contacts.value.items}
-                    onRespond={async (contactId, accept, block) => {
-                      await respond({ data: { contactId, accept, blockEmployer: block } });
-                      await Promise.all([refreshContacts(), block ? refresh() : Promise.resolve()]);
-                    }}
-                  />
-                )}
-              </div>
-            </section>
+                  <div>
+                    <dt className="font-semibold text-foreground">
+                      {pt("disc.items.credentials")}
+                    </dt>
+                    <dd className="text-foreground">
+                      {chosenClaims.length === 0 ? (
+                        <span className="text-muted-foreground">{pt("disc.summary.none")}</span>
+                      ) : (
+                        <ul className="space-y-0.5">
+                          {chosenClaims.map((c) => (
+                            <li key={c.id}>
+                              {claimTitle(c)}{" "}
+                              <span className="text-muted-foreground">
+                                (
+                                {tt(
+                                  levelKey(entryTalentLevel({ ...c, subjectKind: "credential" })),
+                                )}
+                                )
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="font-semibold text-foreground">{pt("disc.items.experience")}</dt>
+                    <dd className="text-foreground">
+                      {chosenPeriods.length === 0 ? (
+                        <span className="text-muted-foreground">{pt("disc.summary.none")}</span>
+                      ) : (
+                        <ul className="space-y-0.5">
+                          {chosenPeriods.map((p) => (
+                            <li key={p.id}>
+                              {p.roleTitle}{" "}
+                              <span className="text-muted-foreground">
+                                (
+                                {tt(
+                                  levelKey(entryTalentLevel({ ...p, subjectKind: "employment" })),
+                                )}
+                                )
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="font-semibold text-foreground">{pt("disc.prefs.title")}</dt>
+                    <dd className="text-foreground">
+                      {chosenPrefs.length === 0 ? (
+                        <span className="text-muted-foreground">{pt("disc.summary.noPrefs")}</span>
+                      ) : (
+                        chosenPrefs.join(" · ")
+                      )}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="font-semibold text-foreground">{pt("disc.consent.title")}</dt>
+                    <dd className="text-foreground">
+                      {draft.consent
+                        ? pt("disc.summary.consentGiven")
+                        : pt("disc.summary.consentMissing")}
+                    </dd>
+                  </div>
+                </dl>
+              </>
+            )}
+          </section>
 
-            {settings.blockedEmployers.length > 0 ? (
-              <section className={card} aria-labelledby="disc-blocked">
-                <h2 id="disc-blocked" className={h2}>
-                  {pt("disc.blocked.title")}
-                </h2>
-                <p className="mt-1 text-sm text-muted-foreground">{pt("disc.blocked.help")}</p>
-                <ul className="mt-2 divide-y divide-border">
-                  {settings.blockedEmployers.map((b) => (
-                    <li
-                      key={b.employerId}
-                      className="flex min-h-11 items-center justify-between gap-2 py-1"
-                    >
-                      <span className="text-sm text-foreground">{b.name}</span>
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          await unblock({ data: { employerId: b.employerId } });
-                          await refresh();
-                        }}
-                        className="inline-flex min-h-11 items-center rounded-md px-3 text-sm font-medium text-muted-foreground underline-offset-4 hover:underline"
-                      >
-                        {pt("disc.blocked.undo")}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            ) : null}
-          </div>
-
-          {/* 5. The preview */}
+          {/* 6. The SAVED preview: what an authorised recruiter reads now,
+              built by the same database function the recruiter's read uses */}
           <aside
-            className={`${card} h-fit lg:sticky lg:top-6`}
+            className={`${card} h-fit self-start lg:sticky lg:top-6 lg:col-start-2 lg:row-start-1`}
+            style={{ gridRowEnd: `span ${gridRows}` }}
             aria-labelledby="disc-preview"
             data-discoverability-preview
           >
@@ -625,13 +685,19 @@ function DiscoverabilityRoute() {
               {pt("disc.preview.title")}
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">{pt("disc.preview.lead")}</p>
+            {dirty ? (
+              <div
+                className="mt-3 rounded-lg border border-border bg-secondary/60 p-3"
+                data-unsaved-notice
+              >
+                <p className="text-sm font-semibold text-foreground">{pt("disc.unsaved.title")}</p>
+                <p className="mt-0.5 text-sm text-foreground">{pt("disc.unsaved.body")}</p>
+              </div>
+            ) : null}
             {!preview?.searchable ? (
               <p className="mt-2 text-sm font-medium text-foreground">
                 {pt("disc.preview.notSearchable")}
               </p>
-            ) : null}
-            {dirty ? (
-              <p className="mt-2 text-sm text-muted-foreground">{pt("disc.preview.saveFirst")}</p>
             ) : null}
             <div className="mt-4">
               {preview?.card &&
@@ -649,6 +715,126 @@ function DiscoverabilityRoute() {
               )}
             </div>
           </aside>
+
+          {/* 7. Consent, as its own act, and the one main action */}
+          <section className={`${card} ${left}`} aria-labelledby="disc-consent">
+            <h2 id="disc-consent" className={h2}>
+              {pt("disc.consent.title")}
+            </h2>
+            <label className="mt-3 flex cursor-pointer items-start gap-3">
+              <input
+                type="checkbox"
+                className={`${check} mt-0.5`}
+                checked={draft.consent}
+                disabled={draft.visibility === "private"}
+                onChange={(e) => update({ consent: e.target.checked })}
+                aria-describedby="disc-consent-note"
+              />
+              <span className="text-sm leading-relaxed text-foreground">
+                {pt("disc.consent.label")}
+              </span>
+            </label>
+            <p id="disc-consent-note" className="mt-2 text-sm text-muted-foreground">
+              {pt("disc.consent.note")}
+            </p>
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={() => void onSave(firstActivation)}
+                disabled={busy || !dirty}
+                data-save-discoverability
+                data-save-action={firstActivation ? "activate" : "save"}
+                className="inline-flex min-h-11 items-center rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              >
+                {busy
+                  ? pt("disc.saving")
+                  : firstActivation
+                    ? pt("disc.activate")
+                    : pt("disc.saveChanges")}
+              </button>
+              {message ? (
+                <p
+                  role={message.tone === "error" ? "alert" : "status"}
+                  className={
+                    message.tone === "error"
+                      ? "text-sm text-destructive"
+                      : "text-sm text-foreground"
+                  }
+                >
+                  {pt(message.key)}
+                </p>
+              ) : null}
+            </div>
+          </section>
+
+          {/* 8. Contact requests */}
+          <section
+            id="contacts"
+            className={`${card} ${left} scroll-mt-24`}
+            aria-labelledby="disc-contacts"
+          >
+            <h2 id="disc-contacts" className={h2}>
+              {pt("disc.contacts.title")}
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">{pt("disc.contacts.lead")}</p>
+            <div className="mt-3">
+              {contacts.status === "loading" ? (
+                <p aria-busy="true" className="text-sm text-muted-foreground">
+                  …
+                </p>
+              ) : contacts.status === "error" ? (
+                <div role="alert">
+                  <p className="text-sm text-foreground">{pt("disc.contacts.loadError")}</p>
+                  <button
+                    type="button"
+                    onClick={() => void refreshContacts()}
+                    className="mt-2 inline-flex min-h-11 items-center rounded-md border border-input px-4 text-sm font-medium"
+                  >
+                    {pt("disc.retry")}
+                  </button>
+                </div>
+              ) : !contacts.value.installed ? (
+                <p className="text-sm text-muted-foreground">{pt("disc.contacts.empty")}</p>
+              ) : (
+                <ContactRequestList
+                  items={contacts.value.items}
+                  onRespond={async (contactId, accept, block) => {
+                    await respond({ data: { contactId, accept, blockEmployer: block } });
+                    await Promise.all([refreshContacts(), block ? refresh() : Promise.resolve()]);
+                  }}
+                />
+              )}
+            </div>
+          </section>
+
+          {settings.blockedEmployers.length > 0 ? (
+            <section className={`${card} ${left}`} aria-labelledby="disc-blocked">
+              <h2 id="disc-blocked" className={h2}>
+                {pt("disc.blocked.title")}
+              </h2>
+              <p className="mt-1 text-sm text-muted-foreground">{pt("disc.blocked.help")}</p>
+              <ul className="mt-2 divide-y divide-border">
+                {settings.blockedEmployers.map((b) => (
+                  <li
+                    key={b.employerId}
+                    className="flex min-h-11 items-center justify-between gap-2 py-1"
+                  >
+                    <span className="text-sm text-foreground">{b.name}</span>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        await unblock({ data: { employerId: b.employerId } });
+                        await refresh();
+                      }}
+                      className="inline-flex min-h-11 items-center rounded-md px-3 text-sm font-medium text-muted-foreground underline-offset-4 hover:underline"
+                    >
+                      {pt("disc.blocked.undo")}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
         </div>
       ) : null}
     </div>

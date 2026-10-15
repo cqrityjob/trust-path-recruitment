@@ -7,6 +7,11 @@
 // minimum level), a number of months of experience, or "clarified in
 // dialogue". Confirming writes a new immutable version tied to the profile
 // version; a changed profile needs the criteria confirmed again.
+//
+// The panel keeps the confirmed version and the form apart (workshop
+// 2026-10-15, package B): it says which confirmed version the search uses,
+// that unconfirmed edits do not affect the search, and it refuses a chosen
+// binding left empty instead of letting it pass as filled in.
 
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -21,7 +26,7 @@ import {
 import {
   classKey,
   criteriaPayload,
-  criterionProblem,
+  criterionDraftProblem,
   meritDisplayName,
   type CatalogueOption,
   type CriterionDraft,
@@ -108,18 +113,26 @@ export function TalentCriteriaPanel({
       Object.fromEntries(
         Object.values(drafts).map((d) => [
           d.requirementId,
-          criterionProblem(
-            {
-              ...d,
-              credentialCodes: d.kind === "credential" ? d.credentialCodes : [],
-              experienceMonths: d.kind === "experience" ? d.experienceMonths : null,
-            },
-            options,
-          ),
+          criterionDraftProblem(d.kind, d, options),
         ]),
       ),
     [drafts, options],
   );
+  // What the confirmed version says, as the form would hold it: anything
+  // else in the form is an unconfirmed edit the search does not use.
+  const baseline = useMemo(
+    () =>
+      data?.profile
+        ? JSON.stringify(
+            draftsFrom(
+              data.profile.requirements,
+              (data.criteria?.items as Record<string, unknown>[] | undefined) ?? null,
+            ),
+          )
+        : "",
+    [data],
+  );
+  const unconfirmed = baseline !== "" && JSON.stringify(drafts) !== baseline;
 
   if (criteria.isLoading) return <p className="text-sm text-muted-foreground">…</p>;
   if (criteria.isError)
@@ -229,10 +242,32 @@ export function TalentCriteriaPanel({
               {tt("talent.crit.stale")}
             </p>
           ) : read.criteria ? (
-            <p className="mt-2 text-xs tabular-nums text-muted-foreground">
-              {tt("talent.crit.confirmedAt")} {read.criteria.confirmedAt.slice(0, 10)} ·{" "}
-              {tt("talent.crit.version")} {read.criteria.version}
+            <p
+              className="mt-2 text-sm tabular-nums text-muted-foreground"
+              data-criteria-in-use={read.criteria.version}
+            >
+              {tt("talent.crit.inUse")
+                .replace("{version}", String(read.criteria.version))
+                .replace("{date}", read.criteria.confirmedAt.slice(0, 10))}
             </p>
+          ) : (
+            <p className="mt-2 text-sm text-muted-foreground">{tt("talent.crit.noneConfirmed")}</p>
+          )}
+          {editable && unconfirmed ? (
+            <div
+              className="mt-3 rounded-md border border-border bg-secondary/60 p-3 text-sm"
+              data-criteria-unconfirmed
+            >
+              <p className="font-semibold text-foreground">{tt("talent.crit.unconfirmed.title")}</p>
+              <p className="mt-0.5 text-foreground">
+                {read.criteria?.current
+                  ? tt("talent.crit.unconfirmed.body").replace(
+                      "{version}",
+                      String(read.criteria.version),
+                    )
+                  : tt("talent.crit.unconfirmed.bodyNone")}
+              </p>
+            </div>
           ) : null}
           {!editable ? (
             <p className="mt-2 text-sm text-muted-foreground">{tt("talent.crit.readOnly")}</p>
@@ -454,7 +489,11 @@ export function TalentCriteriaPanel({
                       />
                     </label>
                   ) : null}
-                  {problem ? (
+                  {problem === "empty_credential" || problem === "empty_experience" ? (
+                    <p className="mt-2 text-sm text-foreground" data-criterion-empty={problem}>
+                      {tt(`talent.crit.problem.${problem}`)}
+                    </p>
+                  ) : problem ? (
                     <p role="alert" className="mt-2 text-sm text-destructive">
                       {tt(`talent.crit.problem.${problem}`)}
                     </p>

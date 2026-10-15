@@ -87,6 +87,7 @@ import { getMyPassport, type PassportSnapshot } from "@/lib/security-passport/pa
 import { listMyVerificationRequests } from "@/lib/security-passport/verification.functions";
 import {
   deriveVerificationAttention,
+  revokedRequestIdsOf,
   type VerificationAttention,
 } from "@/lib/professional-identity/verification-attention";
 import type { ReviewReadState } from "@/lib/security-passport/workspace";
@@ -448,7 +449,13 @@ function PassportShareInner() {
     void loadRequests({ data: undefined })
       .then((rows) => {
         if (!alive) return;
-        setAttention(deriveVerificationAttention(rows.requests, new Date()));
+        setAttention(
+          deriveVerificationAttention(
+            rows.requests,
+            new Date(),
+            revokedRequestIdsOf(rows.decisions),
+          ),
+        );
         setReviewState("available");
       })
       .catch(() => {

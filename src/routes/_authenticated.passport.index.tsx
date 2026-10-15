@@ -5,6 +5,7 @@ import { attentionFor } from "@/lib/security-passport/attention";
 import { VerificationOutcomes } from "@/components/professional-identity/VerificationOutcomes";
 import {
   deriveVerificationAttention,
+  revokedRequestIdsOf,
   VERIFICATION_ATTENTION_UNAVAILABLE,
   type VerificationAttention,
 } from "@/lib/professional-identity/verification-attention";
@@ -74,7 +75,11 @@ function PassportWorkspaceRoute() {
         currentSnapshot?.holder.claims.filter(isPassportCredential).map((c) => c.id) ?? [],
       );
       setAttention(
-        deriveVerificationAttention(r.requests.filter((r) => r.claimId && owned.has(r.claimId))),
+        deriveVerificationAttention(
+          r.requests.filter((r) => r.claimId && owned.has(r.claimId)),
+          new Date(),
+          revokedRequestIdsOf(r.decisions),
+        ),
       );
       setReviews(
         new Map(

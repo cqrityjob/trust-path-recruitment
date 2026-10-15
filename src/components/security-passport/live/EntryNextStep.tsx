@@ -16,54 +16,15 @@ import {
   ShieldAlert,
 } from "lucide-react";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
-import type { PassportCopyKey } from "@/lib/security-passport/i18n";
 import {
   entryNextStepAnchor,
+  NEXT_STEP_COPY,
   type EntryNextStep as Step,
 } from "@/lib/security-passport/entry-next-step";
 import {
   ENTRY_EVIDENCE_ANCHOR,
   ENTRY_VERIFICATION_ANCHOR,
 } from "@/lib/security-passport/credential-passport";
-
-const COPY: Record<
-  Step,
-  { title: PassportCopyKey; body: PassportCopyKey; action?: PassportCopyKey }
-> = {
-  add_evidence: {
-    title: "next.addEvidence.title",
-    body: "next.addEvidence.body",
-    action: "next.addEvidence.action",
-  },
-  request_review: {
-    title: "next.requestReview.title",
-    body: "next.requestReview.body",
-    action: "next.requestReview.action",
-  },
-  waiting: { title: "next.waiting.title", body: "next.waiting.body" },
-  clarification: {
-    title: "next.clarification.title",
-    body: "next.clarification.body",
-    action: "next.clarification.action",
-  },
-  rejected: {
-    title: "next.rejected.title",
-    body: "next.rejected.body",
-    action: "next.rejected.action",
-  },
-  revoked: {
-    title: "next.revoked.title",
-    body: "next.revoked.body",
-    action: "next.revoked.action",
-  },
-  renew: { title: "next.renew.title", body: "next.renew.body", action: "next.renew.action" },
-  done: { title: "next.done.title", body: "next.done.body" },
-  employer_or_review: {
-    title: "next.employer.title",
-    body: "next.employer.body",
-    action: "next.employer.action",
-  },
-};
 
 const ICON: Record<Step, typeof Clock> = {
   add_evidence: FileUp,
@@ -91,7 +52,7 @@ export function EntryNextStep({
   const { pt } = usePassportCopy();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const copy = COPY[step];
+  const copy = NEXT_STEP_COPY[step];
   const Icon = ICON[step];
   const anchor = entryNextStepAnchor(step);
   const anchorId =

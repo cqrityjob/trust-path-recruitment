@@ -13,7 +13,7 @@ const sv = {
   // levels -- an administrator's approval is a document review, never the issuer
   "talent.level.selfDeclared": "Egen uppgift",
   "talent.level.documentProvided": "Underlag uppladdat, ej granskat",
-  "talent.level.documentReviewed": "Dokumentgranskad av CQrityjob",
+  "talent.level.documentReviewed": "Granskad, dokumenterad uppgift",
   "talent.level.employerConfirmed": "Bekräftad av arbetsgivaren",
   "talent.level.sourceConfirmed": "Bekräftad mot utfärdarens källa",
   "talent.level.experienceConfirmed": "Bekräftad eller granskad erfarenhet",
@@ -95,7 +95,7 @@ const sv = {
   "talent.ui.find": "Hitta kandidater",
   "talent.ui.findHelp":
     "Sök bland personer som själva valt att vara sökbara, utifrån jobbets bekräftade kravprofil.",
-  "talent.ui.back": "Tillbaka till rekryteringen",
+  "talent.ui.back": "Tillbaka till tjänstens krav",
   "talent.ui.title": "Hitta kandidater",
   "talent.ui.lead":
     "Personer som själva har valt att vara sökbara och vars delade meriter berör kraven för den här tjänsten. Inget här är ett beslut om lämplighet.",
@@ -127,7 +127,9 @@ const sv = {
   "talent.ui.order.title": "Så sorteras listan",
   "talent.ui.order.body":
     "1. Antal obligatoriska krav med stöd. 2. Av dem: antal granskade. 3. Antal meriterande krav med stöd. 4. Antal jobbpreferenser som stämmer. Därefter en neutral referens. Ingen poäng, inget betyg, inget automatiskt urval.",
-  "talent.ui.person": "Kandidat",
+  "talent.ui.person": "Anonym profil",
+  "talent.ui.basis":
+    "Sökningen använder bekräftade matchningsvillkor version {criteria} för kravprofil version {profile}. Obekräftade ändringar påverkar inte sökningen.",
   "talent.ui.why": "Varför personen visas",
   "talent.ui.requirement": "Krav",
   "talent.ui.mandatory": "Obligatoriskt",
@@ -137,9 +139,7 @@ const sv = {
   "talent.ui.hideProfile": "Dölj delad profil",
   "talent.ui.profileGone": "Profilen är inte längre sökbar.",
   "talent.ui.contact": "Be om kontakt",
-  "talent.ui.contacted": "Kontaktförfrågan skickad",
-  "talent.ui.contactAccepted": "Har accepterat kontakt",
-  "talent.ui.contactDeclined": "Har avböjt",
+  "talent.ui.contactStatus": "Kontaktförfrågan",
   "talent.ui.dialog.title": "Be om kontakt",
   "talent.ui.dialog.lead":
     "Personen ser ert företagsnamn, tjänsten och ert meddelande, och väljer själv om hon eller han vill svara. Ni får se namnet först om personen accepterar.",
@@ -149,7 +149,11 @@ const sv = {
   "talent.ui.dialog.send": "Skicka förfrågan",
   "talent.ui.dialog.sending": "Skickar …",
   "talent.ui.dialog.cancel": "Avbryt",
-  "talent.ui.dialog.sent": "Förfrågan är skickad.",
+  "talent.ui.dialog.sent":
+    "Förfrågan är skickad. Personen ser den i sitt Passport och väljer själv om den ska besvaras.",
+  "talent.ui.dialog.company": "Företag",
+  "talent.ui.dialog.job": "Tjänst",
+  "talent.ui.dialog.to": "Till",
   "talent.ui.dialog.already": "Personen har redan en förfrågan om den här tjänsten.",
   "talent.ui.dialog.limits":
     "Högst 20 förfrågningar per person och dygn och 60 per företag. Masskontakt är inte tillåten.",
@@ -178,6 +182,9 @@ const sv = {
   "talent.ui.contacts.currentlyDiscoverable": "Sökbar just nu",
   "talent.ui.contacts.notDiscoverable": "Inte sökbar just nu",
   "talent.ui.contacts.withdraw": "Dra tillbaka",
+  "talent.ui.contacts.withdrawing": "Drar tillbaka …",
+  "talent.ui.contacts.withdrawError":
+    "Förfrågan kunde inte dras tillbaka. Inget har ändrats. Försök igen.",
   "talent.ui.contacts.loadError": "Förfrågningarna kunde inte hämtas. Försök igen.",
   // criteria panel
   "talent.crit.title": "Matchningsvillkor för talangsökning",
@@ -186,8 +193,6 @@ const sv = {
   "talent.crit.noProfile": "Bekräfta kravprofilen ovan först.",
   "talent.crit.stale":
     "Kravprofilen har ändrats sedan villkoren bekräftades. Bekräfta villkoren igen.",
-  "talent.crit.confirmedAt": "Bekräftade",
-  "talent.crit.version": "version",
   "talent.crit.kind": "Typ av koppling",
   "talent.crit.kind.unbound": "Klarläggs i dialog",
   "talent.crit.kind.credential": "Merit i katalogen",
@@ -202,7 +207,7 @@ const sv = {
   "talent.crit.minLevel": "Lägsta nivå",
   "talent.crit.minLevel.any": "Alla nivåer",
   "talent.crit.minLevel.document_provided": "Underlag uppladdat",
-  "talent.crit.minLevel.document_reviewed": "Dokumentgranskad",
+  "talent.crit.minLevel.document_reviewed": "Granskad, dokumenterad",
   "talent.crit.months": "Minst antal månader",
   "talent.crit.save": "Bekräfta matchningsvillkor",
   "talent.crit.saving": "Bekräftar …",
@@ -214,6 +219,18 @@ const sv = {
   "talent.crit.problem.unknown_code": "En vald merit finns inte i katalogen.",
   "talent.crit.problem.months_out_of_range": "Ange 1–480 månader.",
   "talent.crit.problem.both_kinds": "Välj antingen meriter eller erfarenhet.",
+  "talent.crit.problem.empty_credential":
+    "Välj minst en merit ur katalogen. Kan kravet inte läsas ur ett Passport väljer du Klarläggs i dialog.",
+  "talent.crit.problem.empty_experience":
+    "Ange antal månader. Kan kravet inte läsas ur ett Passport väljer du Klarläggs i dialog.",
+  "talent.crit.inUse": "Sökningen använder bekräftad version {version} från {date}.",
+  "talent.crit.noneConfirmed":
+    "Inga villkor är bekräftade ännu. Sökningen kan användas först när du har bekräftat dem.",
+  "talent.crit.unconfirmed.title": "Obekräftade ändringar",
+  "talent.crit.unconfirmed.body":
+    "Ändringarna påverkar inte sökningen. Den använder bekräftad version {version} tills du bekräftar villkoren.",
+  "talent.crit.unconfirmed.bodyNone":
+    "Ändringarna påverkar inte sökningen förrän du har bekräftat villkoren.",
   "talent.crit.err.TALENT_CRITERIA_STALE": "Villkoren ändrades av någon annan. Läs om sidan.",
   "talent.crit.err.generic": "Villkoren kunde inte bekräftas. Kontrollera och försök igen.",
   "talent.crit.jobPrefs": "Jobbets preferenser som jämförs",
@@ -226,7 +243,7 @@ export type TalentCopyKey = keyof typeof sv;
 const en: Record<TalentCopyKey, string> = {
   "talent.level.selfDeclared": "Own statement",
   "talent.level.documentProvided": "Documentation uploaded, not reviewed",
-  "talent.level.documentReviewed": "Document-reviewed by CQrityjob",
+  "talent.level.documentReviewed": "Reviewed, documented",
   "talent.level.employerConfirmed": "Confirmed by the employer",
   "talent.level.sourceConfirmed": "Confirmed against the issuer's source",
   "talent.level.experienceConfirmed": "Confirmed or reviewed experience",
@@ -299,7 +316,7 @@ const en: Record<TalentCopyKey, string> = {
   "talent.ui.find": "Find candidates",
   "talent.ui.findHelp":
     "Search people who chose to be discoverable, based on the job's confirmed requirement profile.",
-  "talent.ui.back": "Back to the recruitment",
+  "talent.ui.back": "Back to the position's requirements",
   "talent.ui.title": "Find candidates",
   "talent.ui.lead":
     "People who chose to be discoverable and whose shared credentials touch the requirements of this position. Nothing here is a decision about suitability.",
@@ -332,7 +349,9 @@ const en: Record<TalentCopyKey, string> = {
   "talent.ui.order.title": "How the list is ordered",
   "talent.ui.order.body":
     "1. Mandatory requirements supported. 2. Of those: how many are reviewed. 3. Desirable requirements supported. 4. Job preferences that match. Then a neutral reference. No score, no grade, no automatic selection.",
-  "talent.ui.person": "Candidate",
+  "talent.ui.person": "Anonymous profile",
+  "talent.ui.basis":
+    "The search uses confirmed matching criteria version {criteria} for requirement profile version {profile}. Unconfirmed changes do not affect the search.",
   "talent.ui.why": "Why this person is shown",
   "talent.ui.requirement": "Requirement",
   "talent.ui.mandatory": "Mandatory",
@@ -342,9 +361,7 @@ const en: Record<TalentCopyKey, string> = {
   "talent.ui.hideProfile": "Hide shared profile",
   "talent.ui.profileGone": "The profile is no longer discoverable.",
   "talent.ui.contact": "Ask to get in touch",
-  "talent.ui.contacted": "Contact request sent",
-  "talent.ui.contactAccepted": "Accepted contact",
-  "talent.ui.contactDeclined": "Declined",
+  "talent.ui.contactStatus": "Contact request",
   "talent.ui.dialog.title": "Ask to get in touch",
   "talent.ui.dialog.lead":
     "The person sees your company name, the position and your message, and decides whether to answer. You see the name only if the person accepts.",
@@ -354,7 +371,11 @@ const en: Record<TalentCopyKey, string> = {
   "talent.ui.dialog.send": "Send request",
   "talent.ui.dialog.sending": "Sending …",
   "talent.ui.dialog.cancel": "Cancel",
-  "talent.ui.dialog.sent": "The request has been sent.",
+  "talent.ui.dialog.sent":
+    "The request has been sent. The person sees it in their Passport and decides whether to answer.",
+  "talent.ui.dialog.company": "Company",
+  "talent.ui.dialog.job": "Position",
+  "talent.ui.dialog.to": "To",
   "talent.ui.dialog.already": "The person already has a request about this position.",
   "talent.ui.dialog.limits":
     "At most 20 requests per person per day and 60 per company. Mass contact is not allowed.",
@@ -384,6 +405,9 @@ const en: Record<TalentCopyKey, string> = {
   "talent.ui.contacts.currentlyDiscoverable": "Discoverable now",
   "talent.ui.contacts.notDiscoverable": "Not discoverable now",
   "talent.ui.contacts.withdraw": "Withdraw",
+  "talent.ui.contacts.withdrawing": "Withdrawing …",
+  "talent.ui.contacts.withdrawError":
+    "The request could not be withdrawn. Nothing has changed. Try again.",
   "talent.ui.contacts.loadError": "The requests could not be loaded. Try again.",
   "talent.crit.title": "Matching criteria for talent search",
   "talent.crit.lead":
@@ -391,8 +415,6 @@ const en: Record<TalentCopyKey, string> = {
   "talent.crit.noProfile": "Confirm the requirement profile above first.",
   "talent.crit.stale":
     "The requirement profile has changed since the criteria were confirmed. Confirm the criteria again.",
-  "talent.crit.confirmedAt": "Confirmed",
-  "talent.crit.version": "version",
   "talent.crit.kind": "Kind of link",
   "talent.crit.kind.unbound": "Clarified in dialogue",
   "talent.crit.kind.credential": "Catalogue credential",
@@ -407,7 +429,7 @@ const en: Record<TalentCopyKey, string> = {
   "talent.crit.minLevel": "Minimum level",
   "talent.crit.minLevel.any": "Any level",
   "talent.crit.minLevel.document_provided": "Documentation uploaded",
-  "talent.crit.minLevel.document_reviewed": "Document-reviewed",
+  "talent.crit.minLevel.document_reviewed": "Reviewed, documented",
   "talent.crit.months": "Minimum months",
   "talent.crit.save": "Confirm matching criteria",
   "talent.crit.saving": "Confirming …",
@@ -419,6 +441,18 @@ const en: Record<TalentCopyKey, string> = {
   "talent.crit.problem.unknown_code": "A chosen credential is not in the catalogue.",
   "talent.crit.problem.months_out_of_range": "Enter 1–480 months.",
   "talent.crit.problem.both_kinds": "Choose either credentials or experience.",
+  "talent.crit.problem.empty_credential":
+    "Choose at least one credential from the catalogue. If the requirement cannot be read from a Passport, choose Clarified in dialogue.",
+  "talent.crit.problem.empty_experience":
+    "Enter a number of months. If the requirement cannot be read from a Passport, choose Clarified in dialogue.",
+  "talent.crit.inUse": "The search uses confirmed version {version} from {date}.",
+  "talent.crit.noneConfirmed":
+    "No criteria are confirmed yet. The search can be used once you have confirmed them.",
+  "talent.crit.unconfirmed.title": "Unconfirmed changes",
+  "talent.crit.unconfirmed.body":
+    "The changes do not affect the search. It uses confirmed version {version} until you confirm the criteria.",
+  "talent.crit.unconfirmed.bodyNone":
+    "The changes do not affect the search until you have confirmed the criteria.",
   "talent.crit.err.TALENT_CRITERIA_STALE": "Someone else changed the criteria. Reload the page.",
   "talent.crit.err.generic": "The criteria could not be confirmed. Check and try again.",
   "talent.crit.jobPrefs": "Job preferences compared",

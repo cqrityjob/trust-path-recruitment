@@ -760,7 +760,7 @@ test.describe("Security Passport", () => {
       // The side column is a next step and the sharing status.
       await expect(page.locator("[data-passport-next-step]")).toHaveAttribute(
         "data-passport-next-step",
-        "evidence",
+        "add_evidence",
       );
       await expect(page.locator("[data-passport-privacy-summary]")).toBeVisible();
       expect(await overflow(page)).toBeLessThanOrEqual(1);

@@ -12,6 +12,8 @@
 //     wording that says the issuer confirmed anything unless the database
 //     says `source_confirmed`, which no path can produce today.
 
+import { effectiveTrust, type ProvenanceBearing } from "../security-passport/provenance";
+
 export type Visibility = "private" | "open" | "active";
 export type RequirementClass =
   | "education"
@@ -255,6 +257,57 @@ export function validityKey(v: Validity | string | null | undefined): string {
   }
 }
 
+/** The support level the employer card gives one Passport entry, read in the
+ *  holder's own picker before anything is saved (workshop 2026-10-15,
+ *  package B). It is `effectiveTrust` -- the rule `sp_decision_trust` mirrors
+ *  in `sp_talent_entry_level` -- in the card's words: a review is documented,
+ *  and only an employment the employer itself confirmed is employer-confirmed.
+ *  Nothing here promotes an entry the card would not. */
+export function entryTalentLevel(entry: ProvenanceBearing): EntryLevel {
+  switch (effectiveTrust(entry)) {
+    case "source_confirmed":
+      return entry.subjectKind === "employment" ? "employer_confirmed" : "document_reviewed";
+    case "documented":
+      return "document_reviewed";
+    case "document_provided":
+      return "document_provided";
+    default:
+      return "self_declared";
+  }
+}
+
+function epochDay(date: string): number {
+  return Math.floor(Date.parse(`${date.slice(0, 10)}T00:00:00Z`) / 86_400_000);
+}
+
+/** `sp_talent_validity`, in the application: the validity the card shows for
+ *  a merit, from the same dates on the same day. */
+export function talentValidity(
+  validFrom: string | null,
+  validUntil: string | null,
+  noExpiry: boolean | null | undefined,
+  today: string,
+): Validity {
+  const now = epochDay(today);
+  if (validFrom && epochDay(validFrom) > now) return "not_yet_valid";
+  if (noExpiry === true && !validUntil) return "no_expiry";
+  if (!validUntil) return "not_stated";
+  const until = epochDay(validUntil);
+  if (until < now) return "expired";
+  if (until <= now + 60) return "expiring_soon";
+  return "valid";
+}
+
+/** The neutral name an employer reads for a result: the first characters of
+ *  the reference the person's profile carries, never a place in the list.
+ *  The reference rotates when the person pauses, and so does this. */
+export function anonymousReference(ref: string): string {
+  return ref
+    .replace(/[^0-9a-z]/gi, "")
+    .slice(0, 6)
+    .toUpperCase();
+}
+
 export function classKey(c: RequirementClass | string): string {
   switch (c) {
     case "education":
@@ -291,6 +344,29 @@ export function criterionProblem(
     classes.add(option.requirementClass);
   }
   return classes.size > 1 ? "mixed_classes" : null;
+}
+
+/** The form's own check of one requirement, with the kind of binding the
+ *  recruiter chose. A chosen catalogue binding without a merit, or an
+ *  experience binding without months, is not filled in: it would be sent as
+ *  "clarified in dialogue" while the form looked bound, so it is refused here
+ *  and the recruiter either completes it or picks "clarified in dialogue"
+ *  (workshop 2026-10-15, package B). */
+export function criterionDraftProblem(
+  kind: "unbound" | "credential" | "experience",
+  draft: CriterionDraft,
+  catalogue: readonly CatalogueOption[],
+): ReturnType<typeof criterionProblem> | "empty_credential" | "empty_experience" {
+  if (kind === "credential" && draft.credentialCodes.length === 0) return "empty_credential";
+  if (kind === "experience" && draft.experienceMonths === null) return "empty_experience";
+  return criterionProblem(
+    {
+      ...draft,
+      credentialCodes: kind === "credential" ? draft.credentialCodes : [],
+      experienceMonths: kind === "experience" ? draft.experienceMonths : null,
+    },
+    catalogue,
+  );
 }
 
 /** The payload rec_talent_confirm_criteria expects. */

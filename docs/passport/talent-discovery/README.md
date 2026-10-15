@@ -11,6 +11,33 @@ Tråden: **registrera → styrk → välj synlighet → bli hittad → kontakt �
 | Webbläsartest mot riktig databas               | `e2e/talent-discovery-local.spec.ts` + `scripts/fixtures/talent-discovery-fixture.sql`                                      |
 | Bilder och mätvärden                           | [evidence/](evidence/)                                                                                                      |
 
+## Workshop 2026-10-15: tre slutpaket
+
+Bara de delar som saknades i appen, i en samlad ändring. Schemat är oförändrat.
+
+- **A. Samma uppgift och nästa steg.** Översikten räknar varje merits steg med
+  `entryNextStep`, samma funktion som meritsidan, och väljer det mest angelägna i en
+  dokumenterad ordning (`OVERVIEW_STEP_PRIORITY`). Båda använder samma ord
+  (`NEXT_STEP_COPY`), samma ankare och meritens katalognamn. En återkallad granskning
+  annonseras inte längre som "Nyligen verifierat". Kortets nivå för en granskning heter
+  "Granskad, dokumenterad uppgift", eftersom kortet inte kan skilja en granskning av CQrityjob
+  från en äldre nedgraderad post.
+- **B. Utkast och sparat läge.** Jobbmöjligheter visar sparat läge och paus först, stöd och
+  giltighet vid varje val (samma regel som arbetsgivarkortet, `entryTalentLevel` och
+  `talentValidity`), en sammanfattning av formuläret, "Så visas dina sparade uppgifter" med
+  "Osparade ändringar", samtycket och en huvudhandling: "Gör mig sökbar" första gången, sedan
+  "Spara ändringar". Matchningsvillkoren säger vilken bekräftad version sökningen använder,
+  att obekräftade ändringar inte påverkar den, och en vald men tom koppling stoppas.
+- **C. Kontakt och separat ansökan.** Resultaten har en neutral anonym referens.
+  Kontaktfönstret visar företag, tjänst och mottagande profil. Kandidaten kan läsa annonsen
+  före beslutet, får den gemensamma konsekvenstexten och knappen "Acceptera och dela mitt
+  namn", och stoppet namnger företaget. Efter accept står det att ansökan återstår, och en
+  extern ansökan förklaras. En misslyckad återtagning visar fel och "Försök igen"; resultat och
+  kontakter visar sedan samma status.
+
+Kontrollerna finns i `talent-discovery:check` (N12–N16, D10–D15, X12–X17, K1–K4) och i
+scenario 5–8 och 13 i webbläsarsviten.
+
 ## Oberoende granskning 2026-10-15
 
 Nio fynd, alla rättade vid sin grundorsak. Varje fynd har ett regressionstest som föll före
@@ -23,7 +50,8 @@ Två fel till hittades i CI efter granskningen och är rättade:
 - **RF8 på meritsidan.** Ärendehistoriken och aktuell status kallade varje godkännande
   "Dokumentgranskad", även en arbetsgivarbekräftelse, och innehavaren såg aldrig "Godkänd".
   Nu läses varje godkännande "Godkänd", och vad verifieringen styrker står separat (se
-  provenansen nedan). "Nästa steg" säger "Meriten är godkänd".
+  provenansen nedan). "Nästa steg" säger "Granskningen är godkänd" och att beslutet gäller
+  underlaget som granskades.
   Utfall: [`app-rf8-entry-before.txt`](review-2026-10-15/app-rf8-entry-before.txt) och
   [`app-rf8-entry-after.txt`](review-2026-10-15/app-rf8-entry-after.txt).
 - **CV-bucketen saknades på den riktiga stacken.** Ingen migration skapar `job-application-cvs`,
