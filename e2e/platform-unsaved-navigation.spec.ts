@@ -64,6 +64,29 @@ for (const lang of ["sv", "en"] as const) {
       .click();
     await expect(page).toHaveURL(new RegExp(`/jobs/${JOB_UPPSALA}/edit`));
     expect(unexpectedPrompt).toBe(false);
+    page.removeAllListeners("dialog");
+    // Start another editable draft; the fixture destination is a published job.
+    await page.goto(`/employer/${SLUG}/jobs/new`);
+    await expect(field).toBeVisible();
+    // A later dirty edit can also be explicitly discarded.
+    await field.fill("Explicitly abandoned draft");
+    const menuAgain = page.getByRole("button", {
+      name: /Öppna menyn|Open menu|Öppna meny|Open navigation/,
+    });
+    if (await menuAgain.isVisible()) await menuAgain.click();
+    let discarded = false;
+    page.once("dialog", async (dialog) => {
+      expect(dialog.type()).toBe("confirm");
+      discarded = true;
+      await dialog.accept();
+    });
+    await page
+      .locator('a[href="/employer/' + SLUG + '/jobs"]')
+      .filter({ visible: true })
+      .first()
+      .click();
+    await expect(page).toHaveURL(new RegExp("/employer/" + SLUG + "/jobs$"));
+    expect(discarded).toBe(true);
     assertNoRefusals(refusals);
   });
 }

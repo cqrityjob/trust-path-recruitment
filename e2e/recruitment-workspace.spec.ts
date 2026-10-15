@@ -555,7 +555,7 @@ test.describe("recruitment case", () => {
     await rowCheckboxes(page).nth(5).check();
     await rowCheckboxes(page).nth(6).check();
     await actionBar(page).getByRole("button", { name: "Intervju" }).click();
-    const dialog = page.getByRole("dialog");
+    const dialog = page.getByRole("dialog", { name: "Boka intervjutid", exact: true });
     await expect(dialog).toContainText("2 separata bokningar");
     await expect(dialog).not.toContainText(/Skicka inbjudan/);
     const slots = dialog.locator("fieldset input[type=time]");
@@ -566,7 +566,12 @@ test.describe("recruitment case", () => {
     await dialog.getByRole("button", { name: /Spara 2 tider/ }).click();
     await expect(dialog).toContainText("2 av 2 tider sparade");
     await expect(dialog).toContainText("Planerad – inte skickad");
-    await dialog.getByRole("button", { name: "Stäng" }).click();
+    // Close the saved-bookings footer, independently of the header close control.
+    await dialog
+      .locator('[data-slot="dialog-footer"]')
+      .getByRole("button", { name: "Stäng", exact: true })
+      .click();
+    await expect(dialog).toBeHidden();
     await expect(page.locator("table tbody tr").nth(5)).toContainText("Planerad – inte skickad");
   });
 

@@ -130,9 +130,9 @@ export function DangerZone({
         {actions.map((a) => (
           <li
             key={a.key}
-            className="flex flex-wrap items-start justify-between gap-3 rounded-md border border-border bg-background p-3"
+            className="flex flex-col items-start justify-between gap-3 rounded-md border border-border bg-background p-3 sm:flex-row"
           >
-            <div className="min-w-0 flex-1">
+            <div className="min-w-0 w-full sm:flex-1">
               <p className="text-sm font-medium text-foreground">{a.label}</p>
               <p className="mt-0.5 text-sm text-muted-foreground">{a.consequence}</p>
               {a.blockedReason && (
@@ -141,6 +141,7 @@ export function DangerZone({
             </div>
             <Button
               type="button"
+              className="max-w-full whitespace-normal text-left"
               variant={a.variant ?? "destructive"}
               disabled={Boolean(a.blockedReason) || pending}
               onClick={() => start(a)}

@@ -158,7 +158,11 @@ test("batch partial failure, retry, no interview, selection retained", async ({ 
     /inte konfigurerad|inte aktiverad|inte konfigurerat/,
   );
   await shot(page, "batch-complete");
-  await page.getByRole("button", { name: /^Stäng$/ }).click();
+  await page
+    .getByTestId("send-test-dialog")
+    .locator('[data-slot="dialog-footer"]')
+    .getByRole("button", { name: "Stäng", exact: true })
+    .click();
   expect(await page.locator('tr input[type="checkbox"]:checked').count()).toBe(2);
   expect(sql("SELECT count(*) FROM scp_interview_cases")).toBe(before);
   await page.reload();

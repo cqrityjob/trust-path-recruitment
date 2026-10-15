@@ -218,7 +218,11 @@ test.describe("Skicka test — both levels, end to end", () => {
     state.attemptId = attemptId!;
 
     // The list row now says the test is assigned.
-    await page.getByRole("button", { name: /^Stäng$/ }).click();
+    await page
+      .getByTestId("send-test-dialog")
+      .locator('[data-slot="dialog-footer"]')
+      .getByRole("button", { name: "Stäng", exact: true })
+      .click();
     await expect(
       page.locator("li", { has: page.locator(`a[href*="${APPLICATION}"]`) }).first(),
     ).toContainText(/Tilldelad/, { timeout: 60_000 });

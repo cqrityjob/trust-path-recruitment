@@ -39,6 +39,8 @@ jobs:
           e2e/platform-ui-foundation.spec.ts
           e2e/platform-public-audit.spec.ts
           e2e/platform-unsaved-navigation.spec.ts
+          e2e/platform-profile-save.spec.ts
+          e2e/platform-dense-controls.spec.ts
           --project=chromium --project=mobile-375 --project=mobile-390
       - uses: actions/upload-artifact@v4
         if: always()

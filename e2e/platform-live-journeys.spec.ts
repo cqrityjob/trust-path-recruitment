@@ -297,4 +297,66 @@ test("real profile preserves an unsaved edit when navigation is cancelled", asyn
   await page.locator('header a[href="/passport"]').filter({ visible: true }).first().click();
   await expect.poll(() => warned).toBe(true);
   await expect(field).toHaveValue(title);
+  let left = false;
+  page.once("dialog", async (dialog) => {
+    expect(dialog.type()).toBe("confirm");
+    left = true;
+    await dialog.accept();
+  });
+  if (await menu.isVisible()) await menu.click();
+  await page.locator('header a[href="/passport"]').filter({ visible: true }).first().click();
+  await expect(page).toHaveURL(/\/passport$/);
+  expect(left).toBe(true);
+});
+
+test("real admin member table keeps compact actions inside rows on desktop and mobile", async ({
+  page,
+}, info) => {
+  await signIn(page, "admin", "en", "/admin/employers/9e000000-0000-4000-8000-00000000000a");
+  const rows = page.getByTestId("admin-membership-row");
+  await expect(rows).not.toHaveCount(0);
+  const controls = rows.locator("button");
+  expect(await controls.count()).toBeGreaterThan(0);
+  const geometry = await controls.evaluateAll((buttons) =>
+    buttons.map((b) => {
+      const r = b.getBoundingClientRect(),
+        c = b.closest("td")!.getBoundingClientRect();
+      return { height: r.height, contained: r.top >= c.top - 1 && r.bottom <= c.bottom + 1 };
+    }),
+  );
+  for (const control of geometry) {
+    expect(control.contained).toBe(true);
+    expect(control.height).toBeGreaterThanOrEqual(info.project.name === "chromium" ? 36 : 44);
+  }
+  const colleague = rows.filter({
+    has: page.getByRole("cell", { name: "UX colleague", exact: true }),
+  });
+  await colleague.locator('button[data-action="role"]').click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toBeVisible();
+  await dialog
+    .locator('[data-slot="dialog-footer"]')
+    .getByRole("button", { name: "Cancel", exact: true })
+    .click();
+  await expect(dialog).toBeHidden();
+  const danger = page
+    .locator("section")
+    .filter({ has: page.getByRole("heading", { name: "Account management", exact: true }) });
+  const action = danger.getByRole("button", {
+    name: "Delete this employer permanently",
+    exact: true,
+  });
+  const actionBox = await action.boundingBox();
+  const sectionBox = await danger.boundingBox();
+  expect(actionBox!.width).toBeLessThanOrEqual(sectionBox!.width);
+  const textWidth = await danger
+    .locator("li > div")
+    .evaluate((el) => el.getBoundingClientRect().width);
+  expect(textWidth).toBeGreaterThan(150);
+  await danger.screenshot({ path: `${evidence}/admin-account-actions-${info.project.name}.png` });
+  expect(await horizontalOverflow(page)).toBe(0);
+  await page.screenshot({
+    path: `${evidence}/admin-member-actions-${info.project.name}.png`,
+    fullPage: true,
+  });
 });
