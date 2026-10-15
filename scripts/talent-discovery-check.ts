@@ -339,16 +339,44 @@ for (const language of ["sv", "en"] as const) {
       /arbetsgivar|employer/i.test(employer.text),
     `E3b RF8 an employer confirmation is never called a CQrityjob document review (${language})`,
   );
-  const unknown = renderProductNotice({
-    ...hostile,
-    kind: "passport_decision_approved",
-    language,
-    subjectType: "claim",
-    verificationMethod: null,
-  });
+  // A legacy payload without provenance fields (no method), for a credential
+  // and for an employment: the mail claims neither a CQrityjob review nor an
+  // employer's confirmation, and says the decision without a basis.
+  for (const subjectType of ["claim", "experience"] as const) {
+    const unknown = renderProductNotice({
+      ...hostile,
+      kind: "passport_decision_approved",
+      language,
+      subjectType,
+      verificationMethod: null,
+    });
+    const words = `${unknown.subject}\n${unknown.text}`;
+    check(
+      !/CQrityjob (har granskat|has reviewed|reviewed)/.test(words) &&
+        !/arbetsgivar|employer/i.test(words) &&
+        /godkänd|approved/i.test(unknown.subject),
+      `E3c RF8 without a known method the mail claims no CQrityjob review and no employer confirmation (${language}, ${subjectType})`,
+    );
+  }
+}
+
+// The same legacy decision in the current status and the history: "Approved",
+// and no basis or note is invented for it.
+{
+  const missing = [
+    approvalPresentation({ method: null, organisation: null, subjectKind: "credential" }),
+    approvalPresentation({ method: undefined, organisation: undefined, subjectKind: "employment" }),
+    approvalPresentation({
+      method: "",
+      organisation: "TS Bevakning AB",
+      subjectKind: "employment",
+    }),
+  ];
   check(
-    !/CQrityjob (har granskat|has reviewed|reviewed)/.test(unknown.text),
-    `E3c RF8 without a known method the mail claims no CQrityjob review (${language})`,
+    missing.every(
+      (p) => p.decision === "ver.status.approved" && p.basis === null && p.note === null,
+    ),
+    "PA0 a decision without a recorded method reads Approved, with no basis and no note",
   );
 }
 // RF9 (review 2026-10-15): a missing or empty list is a closed door outside
