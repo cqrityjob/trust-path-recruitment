@@ -6,6 +6,9 @@ export type Lang = "sv" | "en";
 
 export const dictionaries = {
   sv: {
+    "ui.skipToContent": "Hoppa till innehållet",
+    "ui.close": "Stäng",
+    "ui.unsaved.leave": "Du har osparade ändringar. Vill du lämna sidan utan att spara?",
     "nav.careers": "Säkerhetskarriärcenter",
     // ── THE PUBLIC HEADER AND FOOTER (MVP text specification, 2026-09-27) ─
     //
@@ -9312,6 +9315,9 @@ export const dictionaries = {
     ...securityWorkSv,
   },
   en: {
+    "ui.skipToContent": "Skip to content",
+    "ui.close": "Close",
+    "ui.unsaved.leave": "You have unsaved changes. Leave this page without saving?",
     "nav.careers": "Security Career Center",
     "nav.securityWorkPublic": "Security work",
     "nav.passportPublic": "Security Passport",

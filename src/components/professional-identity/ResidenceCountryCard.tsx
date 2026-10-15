@@ -27,7 +27,7 @@
 // names (Intl.DisplayNames), the same list the India setup offers -- one
 // source, so the two surfaces cannot disagree about which countries exist.
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Home } from "lucide-react";
 import { c, L, type Lang } from "./copy";
 import { countryName, residenceOptions } from "@/lib/india-entry/destinations";
@@ -57,6 +57,7 @@ export interface ResidenceCountryCardProps {
   readonly locality: string | null;
   /** The section owns the server call; this card is kept clear of the
    *  server tier like every other profile card. */
+  readonly onDirtyChange?: (dirty: boolean) => void;
   readonly onSave: (value: { countryCode: string; locality: string | undefined }) => Promise<void>;
 }
 
@@ -65,6 +66,7 @@ export function ResidenceCountryCard({
   countryCode,
   locality,
   onSave,
+  onDirtyChange,
 }: ResidenceCountryCardProps) {
   const [choice, setChoice] = useState<string>(countryCode ?? "");
   const [place, setPlace] = useState<string>(locality ?? "");
@@ -73,6 +75,10 @@ export function ResidenceCountryCard({
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const options = residenceOptions(lang);
   const unchanged = choice === (countryCode ?? "") && place.trim() === (locality ?? "");
+
+  useEffect(() => {
+    onDirtyChange?.(!unchanged);
+  }, [unchanged, onDirtyChange]);
 
   async function submit() {
     if (!choice) return;
@@ -110,7 +116,10 @@ export function ResidenceCountryCard({
 
       <div className="mt-4 grid max-w-md gap-4">
         <div>
-          <label htmlFor="profile-residence-country" className="block text-sm font-medium text-foreground">
+          <label
+            htmlFor="profile-residence-country"
+            className="block text-sm font-medium text-foreground"
+          >
             {L(COPY.field, lang)}
           </label>
           <select
@@ -128,7 +137,10 @@ export function ResidenceCountryCard({
           </select>
         </div>
         <div>
-          <label htmlFor="profile-residence-locality" className="block text-sm font-medium text-foreground">
+          <label
+            htmlFor="profile-residence-locality"
+            className="block text-sm font-medium text-foreground"
+          >
             {L(COPY.locality, lang)}
           </label>
           <input

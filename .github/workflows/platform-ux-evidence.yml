@@ -1,0 +1,50 @@
+name: Platform UX browser checks
+on:
+  pull_request:
+    paths:
+      - "src/components/**"
+      - "src/hooks/use-unsaved-changes.ts"
+      - "src/routes/**"
+      - "src/i18n/**"
+      - "e2e/platform-*.spec.ts"
+      - "e2e/support/platform-ui-fixture.tsx"
+      - ".github/workflows/platform-ux-evidence.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+      - run: bun install --frozen-lockfile
+      - run: bunx playwright install --with-deps chromium
+      - name: Start app
+        run: |
+          bun run dev -- --host 127.0.0.1 --port 3100 --strictPort > /tmp/platform-ux-app.log 2>&1 &
+          for i in $(seq 1 60); do
+            if curl -sf http://127.0.0.1:3100/ >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          exit 1
+      - name: Shared components, public pages and unsaved forms
+        env:
+          E2E_BASE_URL: http://127.0.0.1:3100
+        run: >-
+          bunx playwright test
+          e2e/platform-ui-foundation.spec.ts
+          e2e/platform-public-audit.spec.ts
+          e2e/platform-unsaved-navigation.spec.ts
+          --project=chromium --project=mobile-375 --project=mobile-390
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: platform-ux-browser-evidence
+          path: |
+            artifacts/platform-ux
+            test-results
+          retention-days: 14

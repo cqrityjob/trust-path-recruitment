@@ -45,7 +45,7 @@
 // The route owns every server call, as every Passport component does and as
 // `passport-separation-check` enforces.
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ClipboardList, Info, PenLine } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
@@ -137,6 +137,7 @@ export function ProfileBasicsCard({
   displayAnswers,
   declaredAccurateAt,
   onSave,
+  onDirtyChange,
   onEditProfession,
   onEditWorkCountry,
   onEditCurrentRole,
@@ -152,6 +153,7 @@ export function ProfileBasicsCard({
    *  always computed from `answers`, never from these. */
   readonly displayAnswers?: Readonly<Record<string, string>>;
   readonly declaredAccurateAt: string | null;
+  readonly onDirtyChange?: (dirty: boolean) => void;
   readonly onSave: (patch: ProfileBasicsPatch) => Promise<void>;
   /** Sends the holder to the canonical Professional Profile editor. The
    *  card never writes the profession itself. */
@@ -202,6 +204,10 @@ export function ProfileBasicsCard({
     displayName !== (answers[keyOf("identity", "displayName")] ?? "") ||
     headline !== (answers[keyOf("identity", "headline")] ?? "") ||
     (declared && declaredAccurateAt === null);
+
+  useEffect(() => {
+    onDirtyChange?.(dirty);
+  }, [dirty, onDirtyChange]);
 
   async function submit(force?: ProfileBasicsPatch) {
     setBusy(true);

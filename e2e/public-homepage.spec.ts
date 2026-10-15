@@ -441,6 +441,8 @@ test.describe("the public homepage", () => {
       .first()
       .click();
     await page.waitForURL("**/about");
+    // Route navigation closes the compact menu; reopen it to use its language control.
+    if (await menu.isVisible()) await menu.click();
     await page
       .locator("header")
       .getByRole("button", { name: /^en$|Switch to English/i })

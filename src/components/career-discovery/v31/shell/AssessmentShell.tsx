@@ -1,3 +1,4 @@
+import { SkipToContent } from "@/components/site/SkipToContent";
 // The assessment shell.
 //
 // Presentation only. It frames the v3.1 public assessment in a distraction-free
@@ -70,6 +71,7 @@ export function AssessmentShell({
   const { t } = useT();
   return (
     <div className="flex min-h-dvh flex-col bg-[color:var(--surface-subtle)]">
+      <SkipToContent />
       <header className="relative z-30 border-b border-border bg-background/95 backdrop-blur">
         <div className="mx-auto grid w-full max-w-[1040px] grid-cols-[auto_minmax(0,1fr)] items-center gap-4 px-5 py-3 sm:px-8">
           <Link
@@ -114,7 +116,7 @@ export function AssessmentShell({
         </div>
       </header>
 
-      <main className="flex-1 px-5 py-8 sm:px-8 sm:py-12">
+      <main id="main-content" tabIndex={-1} className="flex-1 px-5 py-8 sm:px-8 sm:py-12">
         <div className={cn("mx-auto w-full", wide ? "max-w-[1040px]" : "max-w-[880px]")}>
           {notice && (
             <div

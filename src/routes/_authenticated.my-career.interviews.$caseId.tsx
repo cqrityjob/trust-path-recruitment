@@ -192,7 +192,7 @@ function Page() {
           </p>
           <Link
             to="/my-career"
-            className="mt-4 inline-flex h-10 items-center rounded-md border border-input px-3.5 text-sm font-medium text-foreground hover:bg-accent"
+            className="mt-4 inline-flex h-10 items-center rounded-md border border-input px-3.5 text-sm font-medium text-foreground hover:bg-muted"
           >
             {L(c("Till Min karriär", "Back to My Career"), lang)}
           </Link>
@@ -574,13 +574,13 @@ function Page() {
           <div className="mt-4 flex flex-wrap gap-2">
             <Link
               to="/passport/privacy"
-              className="inline-flex h-10 items-center rounded-md border border-input px-3.5 text-sm font-medium text-foreground hover:bg-accent"
+              className="inline-flex h-10 items-center rounded-md border border-input px-3.5 text-sm font-medium text-foreground hover:bg-muted"
             >
               {L(c("Integritet och delning", "Privacy and sharing"), lang)}
             </Link>
             <Link
               to="/contact"
-              className="inline-flex h-10 items-center rounded-md border border-input px-3.5 text-sm font-medium text-foreground hover:bg-accent"
+              className="inline-flex h-10 items-center rounded-md border border-input px-3.5 text-sm font-medium text-foreground hover:bg-muted"
             >
               {L(c("Kontakta oss", "Contact us"), lang)}
             </Link>

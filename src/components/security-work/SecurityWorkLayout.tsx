@@ -1,3 +1,4 @@
+import { SkipToContent } from "@/components/site/SkipToContent";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { useEffect, useState, type ReactNode } from "react";
 import { Link, Outlet, useLocation } from "@tanstack/react-router";
@@ -27,6 +28,7 @@ export function SecurityWorkRoot() {
   return (
     <SecurityIdentityProvider>
       <div className="min-h-screen bg-background" data-security-work>
+        <SkipToContent />
         <SiteHeader />
         <Outlet />
       </div>
@@ -178,7 +180,7 @@ export function SecurityWorkLayout({ children }: { children?: ReactNode }) {
             {lang === "sv" ? "Till CQrityjob" : "Back to CQrityjob"}
           </Link>
         </aside>
-        <main className="min-w-0 px-4 py-6 sm:px-6 lg:px-9 lg:py-9">
+        <main id="main-content" tabIndex={-1} className="min-w-0 px-4 py-6 sm:px-6 lg:px-9 lg:py-9">
           <div className="mx-auto max-w-6xl space-y-7">
             {!canEdit && (
               <p role="status" className="rounded-lg border border-border bg-secondary p-4 text-sm">

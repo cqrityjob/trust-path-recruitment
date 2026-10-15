@@ -26,7 +26,7 @@
 // not open offers nothing to record, and the note below says who can register
 // where before they go looking, rather than letting them discover an absence.
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Globe } from "lucide-react";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import { ONBOARDING_STEPS } from "@/lib/security-passport/onboarding";
@@ -42,7 +42,9 @@ export function WorkCountryCard({
   subJurisdictionCode,
   confirmed,
   onSave,
+  onDirtyChange,
 }: {
+  readonly onDirtyChange?: (dirty: boolean) => void;
   readonly jurisdictionCode: string | null;
   readonly subJurisdictionCode: string | null;
   /** False for a new Passport AND for a legacy row still carrying the old
@@ -64,6 +66,10 @@ export function WorkCountryCard({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [savedAt, setSavedAt] = useState<string | null>(null);
+
+  useEffect(() => {
+    onDirtyChange?.(choice !== stored);
+  }, [choice, stored, onDirtyChange]);
 
   async function submit() {
     if (!choice) return;

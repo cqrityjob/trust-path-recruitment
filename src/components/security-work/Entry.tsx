@@ -55,12 +55,17 @@ export function SecurityWorkEntry() {
   }, [target, navigate, navigationError]);
   if (!loadError && !navigationError && (!fresh || !preference || target))
     return (
-      <main className="mx-auto max-w-4xl px-4 py-8">
+      <main id="main-content" tabIndex={-1} className="mx-auto max-w-4xl px-4 py-8">
         <LoadingState />
       </main>
     );
   return (
-    <main className="mx-auto max-w-3xl space-y-6 px-4 py-8 sm:px-6" data-testid="sw-entry">
+    <main
+      id="main-content"
+      tabIndex={-1}
+      className="mx-auto max-w-3xl space-y-6 px-4 py-8 sm:px-6"
+      data-testid="sw-entry"
+    >
       <div className="max-w-2xl">
         <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-accent">
           {t("sw.product")}

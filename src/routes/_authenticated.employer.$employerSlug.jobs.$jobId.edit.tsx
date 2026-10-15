@@ -1,3 +1,4 @@
+import { useUnsavedChanges } from "@/hooks/use-unsaved-changes";
 // Phase H3 — /employer/$employerSlug/jobs/$jobId/edit: edit a draft or
 // rejected job. Non-editable statuses (pending_review/published/
 // archived/expired) show a read-only view with duplicate/close actions.
@@ -57,6 +58,8 @@ function EmployerJobEditPage() {
   const { t, lang } = useT();
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const [formDirty, setFormDirty] = useState(false);
+  const releaseNavigation = useUnsavedChanges(formDirty);
 
   const listWorkspaces = useServerFn(listMyEmployerWorkspaces);
   const getFn = useServerFn(getEmployerJob);
@@ -111,6 +114,8 @@ function EmployerJobEditPage() {
     },
     onSuccess: () => {
       if (!workspace) return;
+      releaseNavigation();
+      setFormDirty(false);
       setLastSavedAt(new Date().toISOString());
       qc.invalidateQueries({ queryKey: ["employer", workspace.employerId, "recruitment", jobId] });
       qc.invalidateQueries({ queryKey: ["employer", workspace.employerId, "job", jobId] });
@@ -139,6 +144,8 @@ function EmployerJobEditPage() {
     },
     onSuccess: (result) => {
       if (!workspace) return;
+      releaseNavigation();
+      setFormDirty(false);
       setLastSavedAt(new Date().toISOString());
       qc.invalidateQueries({ queryKey: ["employer", workspace.employerId, "jobs"] });
       qc.invalidateQueries({ queryKey: ["employer", workspace.employerId, "dashboard-stats"] });
@@ -319,6 +326,7 @@ function EmployerJobEditPage() {
             </div>
           )}
           <EmployerJobForm
+            onDirtyChange={setFormDirty}
             key={recruitmentQuery.dataUpdatedAt ? "loaded" : "pending"}
             initial={fromJobRow(job)}
             employerId={workspace.employerId}

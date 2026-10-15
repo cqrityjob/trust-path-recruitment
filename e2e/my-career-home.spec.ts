@@ -26,6 +26,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import {
   FIXTURES,
+  FIXTURE_NOW,
   work,
   history,
 } from "../src/lib/professional-identity/fixtures/career-home-fixtures";
@@ -306,6 +307,8 @@ test.describe("/my-career — the real route", () => {
   test("12 · an approval on a merit since archived is said so, and the counts stay current", async ({
     page,
   }) => {
+    // The fixture approvals are recent relative to its clock, not the wall clock.
+    await page.clock.setFixedTime(FIXTURE_NOW);
     await mount(page, "established");
     const passport = page.locator("[data-passport-summary]");
     // ── A STALE EXPECTATION, RED ON main BEFORE #211 ──────────────────
@@ -679,9 +682,9 @@ test.describe("/my-career — the real route", () => {
     const focusClass = await page.evaluate(() => document.activeElement?.className ?? "");
     expect(focusClass).toMatch(/focus-visible:ring-2/);
 
-    // And the rest of the owner's five follow, in the sketch order, on
+    // The remaining current navigation destinations follow in order on
     // plain Tab.
-    for (const key of ["passport", "cv", "jobs", "career", "assessments"]) {
+    for (const key of ["passport", "security-work", "cv", "jobs", "career", "assessments"]) {
       await page.keyboard.press("Tab");
       await expect
         .poll(() => page.evaluate(() => document.activeElement?.getAttribute("data-nav-key")))

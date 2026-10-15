@@ -1,3 +1,4 @@
+import { useUnsavedChanges } from "@/hooks/use-unsaved-changes";
 // Basic information and work country, EDITED on the canonical profile.
 //
 // ── THE OWNER'S CORRECTION ─────────────────────────────────────────────
@@ -71,6 +72,10 @@ type Country = {
 };
 
 export function ProfileBasicsSection({ className = "" }: { className?: string }) {
+  const [basicsDirty, setBasicsDirty] = useState(false);
+  const [residenceDirty, setResidenceDirty] = useState(false);
+  const [workCountryDirty, setWorkCountryDirty] = useState(false);
+  useUnsavedChanges(basicsDirty || residenceDirty || workCountryDirty);
   const { pt } = usePassportCopy();
   const { lang } = useT();
   const navigate = useNavigate();
@@ -250,6 +255,7 @@ export function ProfileBasicsSection({ className = "" }: { className?: string })
           role, which is an employment record). */}
       <div className="rounded-xl border border-border bg-card p-5 md:p-6">
         <ProfileBasicsCard
+          onDirtyChange={setBasicsDirty}
           variant="compact"
           answers={answers}
           displayAnswers={displayAnswers}
@@ -282,15 +288,24 @@ export function ProfileBasicsSection({ className = "" }: { className?: string })
           said, never shown as "not stated". */}
       <div id="profile-residence" className="mt-6 scroll-mt-24" data-profile-residence>
         {residenceRead === "failed" ? (
-          <p role="alert" className="text-sm text-destructive" data-profile-residence-state="failed">
+          <p
+            role="alert"
+            className="text-sm text-destructive"
+            data-profile-residence-state="failed"
+          >
             {pt("common.error")}
           </p>
         ) : residenceRead === "loading" ? (
-          <p role="status" className="text-sm text-muted-foreground" data-profile-residence-state="loading">
+          <p
+            role="status"
+            className="text-sm text-muted-foreground"
+            data-profile-residence-state="loading"
+          >
             {pt("common.loading")}
           </p>
         ) : (
           <ResidenceCountryCard
+            onDirtyChange={setResidenceDirty}
             key={`${residence?.countryCode ?? ""}|${residence?.locality ?? ""}`}
             lang={lang as "sv" | "en"}
             countryCode={residence?.countryCode ?? null}
@@ -317,6 +332,7 @@ export function ProfileBasicsSection({ className = "" }: { className?: string })
           </p>
         )}
         <WorkCountryCard
+          onDirtyChange={setWorkCountryDirty}
           jurisdictionCode={country.jurisdictionCode}
           subJurisdictionCode={country.subJurisdictionCode}
           confirmed={country.confirmed}

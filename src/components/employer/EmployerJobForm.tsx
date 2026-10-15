@@ -130,6 +130,7 @@ type Props = {
   draftStorageKey?: string;
   /** Set by the page after every successful save. */
   lastSavedAt?: string | null;
+  onDirtyChange?: (dirty: boolean) => void;
   /** The step to open on, when the case page links straight to one. */
   initialStep?: StepId;
 };
@@ -226,6 +227,7 @@ export function EmployerJobForm({
   structureLocked = false,
   draftStorageKey,
   lastSavedAt = null,
+  onDirtyChange,
   initialStep = "job",
 }: Props) {
   const { t, lang } = useT();
@@ -234,6 +236,9 @@ export function EmployerJobForm({
     initialStructure ?? emptyStructure,
   );
   const [dirty, setDirty] = useState(false);
+  useEffect(() => {
+    onDirtyChange?.(dirty);
+  }, [dirty, onDirtyChange]);
   const [backup, setBackup] = useState<{
     values: EmployerJobFormValues;
     structure: VacancyStructureDraft;
@@ -279,8 +284,9 @@ export function EmployerJobForm({
     return () => window.clearTimeout(id);
   }, [values, structure, dirty, draftStorageKey]);
   useEffect(() => {
-    if (!lastSavedAt || !draftStorageKey) return;
+    if (!lastSavedAt) return;
     setDirty(false);
+    if (!draftStorageKey) return;
     try {
       window.localStorage.removeItem(draftStorageKey);
     } catch {

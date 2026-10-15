@@ -1,3 +1,4 @@
+import { SkipToContent } from "@/components/site/SkipToContent";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
@@ -301,6 +302,7 @@ export function EmployerAppShell(props: EmployerAppShellProps) {
 
   return (
     <div className="flex min-h-screen bg-muted/10">
+      <SkipToContent />
       {/* Desktop sidebar */}
       <aside className="no-print hidden w-64 shrink-0 flex-col border-r border-border bg-background md:flex">
         <SidebarHeader employerName={employerName} status={status} role={role} t={t} />
@@ -321,7 +323,7 @@ export function EmployerAppShell(props: EmployerAppShellProps) {
               <button
                 type="button"
                 aria-label={t("employer.nav.openMenu")}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border text-foreground"
+                className="inline-flex h-11 w-11 items-center justify-center rounded-md border border-border text-foreground"
               >
                 <Menu className="h-4 w-4" aria-hidden="true" />
               </button>
@@ -356,6 +358,8 @@ export function EmployerAppShell(props: EmployerAppShellProps) {
         </header>
 
         <main
+          id="main-content"
+          tabIndex={-1}
           className={
             wide
               ? "mx-auto w-full max-w-[96rem] flex-1 px-4 py-6 sm:px-6 sm:py-8"
