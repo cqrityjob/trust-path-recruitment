@@ -476,6 +476,7 @@ export function VerificationPanel({
       {/* ── The open request ─────────────────────────────────────────── */}
       {openRequest ? (
         <div
+          data-open-request={openRequest.status}
           role={openRequest.status === "clarification_requested" ? "status" : undefined}
           className={
             openRequest.status === "clarification_requested"

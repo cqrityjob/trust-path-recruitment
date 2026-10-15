@@ -1,0 +1,79 @@
+# bun run talent-discovery:check AFTER the application fix
+1 · the entry's next step
+  ok N1 registered, nothing uploaded -> upload documentation
+  ok N2 after an upload the next step is the review, not sharing
+  ok N3 review in progress -> wait
+  ok N4 more information requested -> read and reply
+  ok N5 rejected -> read the decision
+  ok N6 revoked wins over a verified level
+  ok N7 an expired reviewed merit -> renew
+  ok N8 reviewed and current -> done (share or visibility)
+  ok N9 an employment with no document -> employer confirmation or review
+  ok N10 approval after revocation: the newest decision is the current state
+  ok N11 sharing is offered only once reviewed, next to visibility
+2 · clarification reply and the case thread
+  ok R1 the internal note renders only for a reviewer
+  ok R2 a failed history read is said as a failure
+  ok R3 the reply text is cleared only after it was recorded
+  ok R4 a revocation is shown only while it is the current state
+  ok R5 the reply is bound to the version the clarification was asked on
+  ok R6 the reviewer reads the holder's reply in the case
+3 · product notices
+  ok E1 passport_review_requested/sv: single-line subject, escaped HTML, link on the site's own origin
+  ok E1 passport_review_requested/en: single-line subject, escaped HTML, link on the site's own origin
+  ok E1 passport_clarification_answered/sv: single-line subject, escaped HTML, link on the site's own origin
+  ok E1 passport_clarification_answered/en: single-line subject, escaped HTML, link on the site's own origin
+  ok E1 passport_clarification_requested/sv: single-line subject, escaped HTML, link on the site's own origin
+  ok E1 passport_clarification_requested/en: single-line subject, escaped HTML, link on the site's own origin
+  ok E1 passport_decision_approved/sv: single-line subject, escaped HTML, link on the site's own origin
+  ok E1 passport_decision_approved/en: single-line subject, escaped HTML, link on the site's own origin
+  ok E1 passport_decision_rejected/sv: single-line subject, escaped HTML, link on the site's own origin
+  ok E1 passport_decision_rejected/en: single-line subject, escaped HTML, link on the site's own origin
+  ok E1 passport_verification_revoked/sv: single-line subject, escaped HTML, link on the site's own origin
+  ok E1 passport_verification_revoked/en: single-line subject, escaped HTML, link on the site's own origin
+  ok E1 talent_contact_received/sv: single-line subject, escaped HTML, link on the site's own origin
+  ok E1 talent_contact_received/en: single-line subject, escaped HTML, link on the site's own origin
+  ok E1 talent_contact_accepted/sv: single-line subject, escaped HTML, link on the site's own origin
+  ok E1 talent_contact_accepted/en: single-line subject, escaped HTML, link on the site's own origin
+  ok E1 talent_contact_declined/sv: single-line subject, escaped HTML, link on the site's own origin
+  ok E1 talent_contact_declined/en: single-line subject, escaped HTML, link on the site's own origin
+  ok E2 a slug of an unexpected shape falls back to the front door
+  ok E3 an approval mail says the review is not an issuer confirmation
+  ok E3d RF8 the inbox names an employer confirmation as one, never as a document review
+  ok E3b RF8 an employer confirmation is never called a CQrityjob document review (sv)
+  ok E3c RF8 without a known method the mail claims no CQrityjob review (sv)
+  ok E3b RF8 an employer confirmation is never called a CQrityjob document review (en)
+  ok E3c RF8 without a known method the mail claims no CQrityjob review (en)
+  ok E4 RF9 no allowlist and no production declaration: nobody is mailed
+  ok E4b RF9 production is explicit; a list, when set, still applies
+  ok E5 a test allowlist blocks addresses outside it
+  ok E6 the transport knows product_notice: one caller, no Reply-To
+  ok E7 a product notice never carries an organisation sender name
+4 · discoverability
+  ok D1 becoming discoverable needs the consent box
+  ok D2 and at least one item
+  ok D3 private needs neither
+  ok D4 consent version sent; duplicates removed
+  ok D5 countries normalised, at most five places
+  ok D6 private sends no consent
+  ok D7 the page guards unsaved input and offers pause
+  ok D8 the setting never reads an application share as consent
+  ok D9 a tab of the Passport workspace, not a second profile
+5 · explaining a result
+  ok X1 sv: no state says a person lacks something
+  ok X1 en: no state says a person lacks something
+  ok X2 an administrator's approval is worded as a document review, not as the issuer
+  ok X3 full name with abbreviation, never doubled
+  ok X4 unknown reasons are dropped, known ones explained
+  ok X5 the documented order
+  ok X6 an international certification cannot stand in for an authorisation
+  ok X7 months in range
+  ok X8 an unbound requirement is sent as clarified-in-dialogue
+  ok X9 the search page shows no score, percentage or verdict
+  ok X10 the order is explained, with each result's counts
+  ok X11 one idempotency key per contact dialog
+6 · copy parity
+  ok C1 every talent key has English
+  ok C2 every new Passport key has English
+
+talent-discovery:check: 70 assertions passed

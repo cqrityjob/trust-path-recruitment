@@ -50,6 +50,8 @@ export type ProductNoticeParams = {
   jobTitle?: string | null;
   jobId?: string | null;
   employerSlug?: string | null;
+  /** Decision notices: how the decision was reached (review 2026-10-15, RF8). */
+  verificationMethod?: string | null;
 };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -126,6 +128,16 @@ const COPY = {
       lead: "CQrityjob har granskat underlaget för en av dina meriter. Granskningen avser dokumentet, inte en bekräftelse från utfärdaren.",
       cta: "Visa meriten",
     },
+    passport_decision_employer_confirmed: {
+      subject: "En arbetsgivare har bekräftat en anställning i ditt Passport",
+      lead: "En arbetsgivare har bekräftat en av dina anställningsperioder utifrån sin egen kännedom. Det är arbetsgivarens bekräftelse; CQrityjob har inte granskat något dokument.",
+      cta: "Visa anställningen",
+    },
+    passport_decision_approved_other: {
+      subject: "En granskning i ditt Passport är godkänd",
+      lead: "En granskning av en av dina meriter är godkänd. Öppna meriten för att se vem som bekräftade den och hur.",
+      cta: "Visa meriten",
+    },
     passport_decision_rejected: {
       subject: "Granskningen av en merit kunde inte godkännas",
       lead: "Underlaget räckte inte för att godkänna granskningen. Läs motiveringen och vad du kan göra.",
@@ -173,6 +185,16 @@ const COPY = {
     passport_decision_approved: {
       subject: "Your credential has been document-reviewed",
       lead: "CQrityjob has reviewed the documentation for one of your credentials. The review concerns the document, not a confirmation from the issuer.",
+      cta: "View the credential",
+    },
+    passport_decision_employer_confirmed: {
+      subject: "An employer has confirmed employment in your Passport",
+      lead: "An employer has confirmed one of your employment periods from their own knowledge. It is the employer's confirmation; CQrityjob has not reviewed any document.",
+      cta: "View the employment",
+    },
+    passport_decision_approved_other: {
+      subject: "A review in your Passport has been approved",
+      lead: "A review of one of your credentials has been approved. Open the credential to see who confirmed it and how.",
       cta: "View the credential",
     },
     passport_decision_rejected: {
@@ -234,6 +256,19 @@ export function renderProductNotice(p: ProductNoticeParams): {
       lead = copy[p.kind].lead(job);
       cta = copy[p.kind].cta;
       break;
+    case "passport_decision_approved": {
+      // Only a CQrityjob document review may be described as one (RF8).
+      const variant =
+        p.verificationMethod === "document_review"
+          ? copy.passport_decision_approved
+          : p.verificationMethod === "employer_confirmation"
+            ? copy.passport_decision_employer_confirmed
+            : copy.passport_decision_approved_other;
+      subject = variant.subject;
+      lead = variant.lead;
+      cta = variant.cta;
+      break;
+    }
     default:
       subject = copy[p.kind].subject;
       lead = copy[p.kind].lead;
@@ -252,15 +287,20 @@ export function renderProductNotice(p: ProductNoticeParams): {
 }
 
 /**
- * Test environments: when PRODUCT_EMAIL_RECIPIENT_ALLOWLIST is set (comma
- * separated; exact addresses or `@domain` suffixes), a recipient outside it is
- * NOT sent to. Unset in production means no restriction. Exported for the guard.
+ * Who may receive product mail (review 2026-10-15, RF9):
+ *  - PRODUCT_EMAIL_RECIPIENT_ALLOWLIST set (comma separated; exact addresses
+ *    or `@domain` suffixes): only those recipients, in every environment;
+ *  - no list: NOBODY, unless the environment explicitly declares itself
+ *    production with PRODUCT_EMAIL_MODE=production.
+ * A missing or empty configuration therefore never opens mail to everyone.
+ * Exported for the guard.
  */
 export function recipientAllowed(
   email: string,
   allowlist = process.env.PRODUCT_EMAIL_RECIPIENT_ALLOWLIST,
+  mode = process.env.PRODUCT_EMAIL_MODE,
 ): boolean {
-  if (!allowlist || allowlist.trim() === "") return true;
+  if (!allowlist || allowlist.trim() === "") return mode === "production";
   const address = email.trim().toLowerCase();
   return allowlist
     .split(",")

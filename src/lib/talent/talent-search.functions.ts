@@ -125,6 +125,10 @@ export const confirmTalentCriteria = createServerFn({ method: "POST" })
     jobInput
       .extend({
         expectedVersion: z.number().int().min(0),
+        // The requirement-profile version the editor showed; a newer one is
+        // refused (TALENT_CRITERIA_STALE) so criteria never bind to an
+        // unseen profile.
+        profileId: z.string().uuid(),
         criteria: z.array(z.record(z.unknown())).max(30),
       })
       .parse(d),
@@ -134,6 +138,7 @@ export const confirmTalentCriteria = createServerFn({ method: "POST" })
     const result = await ctx.supabase.rpc("rec_talent_confirm_criteria", {
       _job_id: data.jobId,
       _expected_version: data.expectedVersion,
+      _profile_id: data.profileId,
       _criteria: data.criteria,
     });
     if (result.error) throw fail(result.error, "criteria confirm");

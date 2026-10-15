@@ -3,6 +3,7 @@
 // the person acts. A failed read says so, with a retry -- never "no updates".
 
 import { useCallback, useEffect, useState } from "react";
+import { noticeLabelKey } from "@/lib/notices/notice-label";
 import { Bell, RotateCw } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
@@ -126,7 +127,7 @@ export function NoticesPanel({
                         {pt("notices.new")}
                       </span>
                     ) : null}
-                    {pt(`notices.kind.${n.kind}` as PassportCopyKey)}
+                    {pt(noticeLabelKey(n) as PassportCopyKey)}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {what ? <span>{what} · </span> : null}

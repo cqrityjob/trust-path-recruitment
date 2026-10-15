@@ -65,6 +65,7 @@ type Claimed = {
   employerName?: string | null;
   jobTitleSv?: string | null;
   jobTitleEn?: string | null;
+  verificationMethod?: string | null;
   jobId?: string | null;
   employerSlug?: string | null;
 };
@@ -131,6 +132,7 @@ export async function dispatchUserNotices(
               : (row.jobTitleSv ?? row.jobTitleEn)) ?? null,
           jobId: row.jobId ?? null,
           employerSlug: row.employerSlug ?? null,
+          verificationMethod: row.verificationMethod ?? null,
           recipientEmail: row.email,
           idempotencyKey: `user-notice:${row.id}`,
           timeoutMs: Math.max(1000, Math.min(remaining - 200, 10_000)),

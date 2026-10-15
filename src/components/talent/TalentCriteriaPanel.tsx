@@ -167,6 +167,7 @@ export function TalentCriteriaPanel({
           employerId,
           jobId,
           expectedVersion: read.criteria?.version ?? 0,
+          profileId: read.profile?.id ?? "",
           criteria: payload as Record<string, unknown>[],
         },
       });
@@ -174,6 +175,8 @@ export function TalentCriteriaPanel({
       setMessage({ tone: "ok", text: tt("talent.crit.saved") });
     } catch (cause) {
       const code = cause instanceof Error ? cause.message : "";
+      // Someone confirmed a newer profile or criteria meanwhile: show it.
+      if (code === "TALENT_CRITERIA_STALE") await qc.invalidateQueries({ queryKey: key });
       setMessage({
         tone: "error",
         text:

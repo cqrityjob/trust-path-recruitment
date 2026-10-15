@@ -41,6 +41,7 @@ export interface UserNotice {
   readonly jobTitleSv: string | null;
   readonly jobTitleEn: string | null;
   readonly jobId: string | null;
+  readonly verificationMethod?: string | null;
 }
 
 export type Inbox =

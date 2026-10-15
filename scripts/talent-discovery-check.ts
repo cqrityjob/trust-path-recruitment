@@ -10,6 +10,7 @@
 //
 // Run: bun run talent-discovery:check
 
+import { noticeLabelKey } from "../src/lib/notices/notice-label";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -203,12 +204,63 @@ check(
     kind: "passport_decision_approved",
     language: "sv",
     subjectType: "claim",
+    verificationMethod: "document_review",
   }).text.includes("inte en bekräftelse från utfärdaren"),
   "E3 an approval mail says the review is not an issuer confirmation",
 );
 check(
-  recipientAllowed("anyone@example.com", undefined),
-  "E4 no allowlist (production): every recipient",
+  noticeLabelKey({
+    kind: "passport_decision_approved",
+    verificationMethod: "employer_confirmation",
+  }) === "notices.kind.passport_decision_employer_confirmed" &&
+    noticeLabelKey({ kind: "passport_decision_approved", verificationMethod: null }) ===
+      "notices.kind.passport_decision_approved_other" &&
+    noticeLabelKey({
+      kind: "passport_decision_approved",
+      verificationMethod: "document_review",
+    }) === "notices.kind.passport_decision_approved",
+  "E3d RF8 the inbox names an employer confirmation as one, never as a document review",
+);
+// RF8 (review 2026-10-15): the mail follows the verification method.
+for (const language of ["sv", "en"] as const) {
+  const employer = renderProductNotice({
+    ...hostile,
+    kind: "passport_decision_approved",
+    language,
+    subjectType: "experience",
+    verificationMethod: "employer_confirmation",
+  });
+  check(
+    !/CQrityjob (har granskat|has reviewed|reviewed)/.test(employer.text + employer.subject) &&
+      !/dokumentgranskad|document-reviewed|document reviewed/i.test(employer.subject) &&
+      /arbetsgivar|employer/i.test(employer.text),
+    `E3b RF8 an employer confirmation is never called a CQrityjob document review (${language})`,
+  );
+  const unknown = renderProductNotice({
+    ...hostile,
+    kind: "passport_decision_approved",
+    language,
+    subjectType: "claim",
+    verificationMethod: null,
+  });
+  check(
+    !/CQrityjob (har granskat|has reviewed|reviewed)/.test(unknown.text),
+    `E3c RF8 without a known method the mail claims no CQrityjob review (${language})`,
+  );
+}
+// RF9 (review 2026-10-15): a missing or empty list is a closed door outside
+// an explicitly declared production environment.
+check(
+  // Explicit arguments: a default would read this machine's own environment.
+  !recipientAllowed("external@example.org", "", "") &&
+    !recipientAllowed("external@example.org", "", "test") &&
+    !recipientAllowed("external@example.org", "  ", "preview"),
+  "E4 RF9 no allowlist and no production declaration: nobody is mailed",
+);
+check(
+  recipientAllowed("external@example.org", "", "production") &&
+    !recipientAllowed("external@example.org", "@cqrityjob.test", "production"),
+  "E4b RF9 production is explicit; a list, when set, still applies",
 );
 check(
   recipientAllowed("qa@cqrityjob.test", "@cqrityjob.test, owner@example.com") &&

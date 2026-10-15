@@ -25,7 +25,13 @@ export type EntryLevel =
   | "document_reviewed"
   | "employer_confirmed"
   | "source_confirmed";
-export type Validity = "valid" | "expiring_soon" | "expired" | "no_expiry" | "not_stated";
+export type Validity =
+  | "valid"
+  | "expiring_soon"
+  | "expired"
+  | "not_yet_valid"
+  | "no_expiry"
+  | "not_stated";
 export type RequirementState = "evidenced" | "needs_clarification" | "not_shared" | "to_clarify";
 export type PreferenceState = "match" | "differs" | "not_stated";
 
@@ -194,6 +200,7 @@ export function requirementStateKey(state: RequirementState): string {
 
 const REASON_KEYS: Record<string, string> = {
   expired: "talent.reason.expired",
+  not_yet_valid: "talent.reason.notYetValid",
   expiring_soon: "talent.reason.expiringSoon",
   validity_not_stated: "talent.reason.validityNotStated",
   other_jurisdiction: "talent.reason.otherJurisdiction",
@@ -239,6 +246,8 @@ export function validityKey(v: Validity | string | null | undefined): string {
       return "talent.validity.expiringSoon";
     case "expired":
       return "talent.validity.expired";
+    case "not_yet_valid":
+      return "talent.validity.notYetValid";
     case "no_expiry":
       return "talent.validity.noExpiry";
     default:

@@ -2725,6 +2725,9 @@ const sv = {
   "notices.kind.passport_clarification_answered": "Svar på komplettering väntar på granskning",
   "notices.kind.passport_clarification_requested": "Komplettering begärd för en merit",
   "notices.kind.passport_decision_approved": "En merit är dokumentgranskad",
+  "notices.kind.passport_decision_employer_confirmed":
+    "En arbetsgivare har bekräftat en anställning",
+  "notices.kind.passport_decision_approved_other": "En granskning är godkänd",
   "notices.kind.passport_decision_rejected": "En granskning kunde inte godkännas",
   "notices.kind.passport_verification_revoked": "En granskning har återkallats",
   "notices.kind.talent_contact_received": "Ny kontaktförfrågan från en arbetsgivare",
@@ -5181,6 +5184,8 @@ const en: Record<PassportCopyKey, string> = {
     "An answer to a clarification is waiting for review",
   "notices.kind.passport_clarification_requested": "More information requested for a credential",
   "notices.kind.passport_decision_approved": "A credential has been document-reviewed",
+  "notices.kind.passport_decision_employer_confirmed": "An employer has confirmed employment",
+  "notices.kind.passport_decision_approved_other": "A review has been approved",
   "notices.kind.passport_decision_rejected": "A review could not be approved",
   "notices.kind.passport_verification_revoked": "A review has been revoked",
   "notices.kind.talent_contact_received": "New contact request from an employer",

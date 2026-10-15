@@ -168,6 +168,9 @@ SUPABASE_SERVICE_ROLE_KEY=${SERVICE_KEY}
 VITE_EMPLOYER_PORTAL_ENABLED=true
 VITE_JOBS_ENABLED=true
 VITE_CIG_LIFECYCLE_ENFORCED=true
+# Product mail goes only to the synthetic local addresses, and only to the
+# gateway's mail catcher (an empty list would send nothing at all).
+PRODUCT_EMAIL_RECIPIENT_ALLOWLIST=@local.test
 ENV
 
 grep -q 'wrygicdfxwjnrugduxnt' .env.local && fail "the owner project ref reached .env.local"
