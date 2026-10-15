@@ -387,7 +387,7 @@ td_suite talent_provenance_test "Talent provenance" 151 \
   "PV5.1 a legacy employer decision with CQrityjob as the deciding organisation: the talent level is document_reviewed" \
   "PV6.1 a legitimate employer confirmation of an employment period keeps its level: the talent level is employer_confirmed" \
   "PV5.2 the decision notice names what the decision supports" \
-  "PV5.3 the decision row keeps the recorded method employer_confirmation as history" \
+  "PV5.3 the decision row keeps the recorded method employer_confirmation and organisation as history" \
   "PV10 the merits the card shows carry the same levels" \
   "PV11 and so does the experience" \
   "PV13.1 a legacy decision CQrityjob recorded, with a trailing tab" \
