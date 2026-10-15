@@ -101,9 +101,11 @@ REVOKE ALL ON FUNCTION public.rec_talent_assert_may_search(uuid) FROM PUBLIC, an
 
 -- What the UI should offer on a job page: may this caller search? Never says why not.
 CREATE FUNCTION public.rec_talent_access(_job_id uuid)
-RETURNS jsonb LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS $$
-  SELECT jsonb_build_object('maySearch', public.rec_talent_user_may_search(auth.uid(), _job_id));
-$$;
+RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS $$
+BEGIN
+  PERFORM public.sp_assert_passport_session();
+  RETURN jsonb_build_object('maySearch', public.rec_talent_user_may_search(auth.uid(), _job_id));
+END $$;
 REVOKE ALL ON FUNCTION public.rec_talent_access(uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.rec_talent_access(uuid) TO authenticated;
 
@@ -156,6 +158,7 @@ CREATE FUNCTION public.rec_talent_get_criteria(_job_id uuid)
 RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS $$
 DECLARE j public.jobs%ROWTYPE; p public.rec_requirement_profiles%ROWTYPE; c public.rec_requirement_criteria_sets%ROWTYPE;
 BEGIN
+  PERFORM public.sp_assert_passport_session();
   SELECT * INTO j FROM public.jobs WHERE id = _job_id;
   IF NOT FOUND OR NOT public.rec_is_member(j.employer_id) THEN
     RAISE EXCEPTION 'TALENT_SEARCH_NOT_AVAILABLE' USING ERRCODE = 'insufficient_privilege';
@@ -198,18 +201,25 @@ $$;
 REVOKE ALL ON FUNCTION public.rec_talent_catalogue_options() FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.rec_talent_catalogue_options() TO authenticated;
 
-CREATE FUNCTION public.rec_talent_confirm_criteria(_job_id uuid, _expected_version integer, _criteria jsonb)
+-- _profile_id: the requirement-profile version the editor was showing. A
+-- profile confirmed in another session since then is refused, so criteria are
+-- never bound to a profile the user has not seen (review 2026-10-15, RF7).
+CREATE FUNCTION public.rec_talent_confirm_criteria(_job_id uuid, _expected_version integer, _profile_id uuid, _criteria jsonb)
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 DECLARE j public.jobs%ROWTYPE; p public.rec_requirement_profiles%ROWTYPE; cur public.rec_requirement_criteria_sets%ROWTYPE;
         c jsonb; rule jsonb; out jsonb := '[]'; codes text[]; cls text; klass text; months integer;
         jur text; min_level text; v integer;
 BEGIN
+  PERFORM public.sp_assert_passport_session();
   SELECT * INTO j FROM public.jobs WHERE id = _job_id FOR UPDATE;
   IF NOT FOUND OR NOT public.rec_can_manage(_job_id) THEN
     RAISE EXCEPTION 'TALENT_SEARCH_NOT_AVAILABLE' USING ERRCODE = 'insufficient_privilege';
   END IF;
   p := public.rec_talent_latest_profile(_job_id);
   IF p.id IS NULL THEN RAISE EXCEPTION 'TALENT_PROFILE_REQUIRED' USING ERRCODE = 'check_violation'; END IF;
+  IF p.id IS DISTINCT FROM _profile_id THEN
+    RAISE EXCEPTION 'TALENT_CRITERIA_STALE' USING ERRCODE = 'check_violation';
+  END IF;
   cur := public.rec_talent_latest_criteria(_job_id);
   v := coalesce(cur.version, 0);
   IF v <> coalesce(_expected_version, -1) THEN
@@ -275,8 +285,8 @@ BEGIN
   VALUES (j.id, j.employer_id, p.id, v + 1, out, auth.uid());
   RETURN public.rec_talent_get_criteria(_job_id);
 END $$;
-REVOKE ALL ON FUNCTION public.rec_talent_confirm_criteria(uuid, integer, jsonb) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.rec_talent_confirm_criteria(uuid, integer, jsonb) TO authenticated;
+REVOKE ALL ON FUNCTION public.rec_talent_confirm_criteria(uuid, integer, uuid, jsonb) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.rec_talent_confirm_criteria(uuid, integer, uuid, jsonb) TO authenticated;
 
 -- ---------------------------------------------------------------------------
 -- 2. Deterministic evaluation of one holder against one job.
@@ -335,10 +345,15 @@ BEGIN
            AND best->>'validityJurisdiction' IS DISTINCT FROM cr->>'jurisdiction' THEN
           reasons := array_append(reasons, 'other_jurisdiction');
         END IF;
-        IF best->>'validity' = 'expired' THEN reasons := array_append(reasons, 'expired');
-        -- A date the catalogue requires but the person did not give is unknown, not valid.
-        ELSIF best->>'validity' = 'not_stated' AND coalesce((cr->>'mustBeValid')::boolean, true)
-              AND coalesce((best->>'validityRequired')::boolean, false) THEN reasons := array_append(reasons, 'validity_not_stated');
+        -- Validity only changes the state when the employer asked for a valid
+        -- merit; otherwise expiry is a note (review 2026-10-15, RF6).
+        IF coalesce((cr->>'mustBeValid')::boolean, true) THEN
+          IF best->>'validity' = 'expired' THEN reasons := array_append(reasons, 'expired');
+          ELSIF best->>'validity' = 'not_yet_valid' THEN reasons := array_append(reasons, 'not_yet_valid');
+          -- A date the catalogue requires but the person did not give is unknown, not valid.
+          ELSIF best->>'validity' = 'not_stated' AND coalesce((best->>'validityRequired')::boolean, false) THEN
+            reasons := array_append(reasons, 'validity_not_stated');
+          END IF;
         END IF;
         IF cr->>'minLevel' = 'document_reviewed' AND public.rec_talent_level_rank(best->>'level') < 3 THEN
           reasons := array_append(reasons, 'level_below_requested');
@@ -347,6 +362,11 @@ BEGIN
         END IF;
         state := CASE WHEN cardinality(reasons) = 0 THEN 'evidenced' ELSE 'needs_clarification' END;
         -- Notes that do not change the state.
+        IF NOT coalesce((cr->>'mustBeValid')::boolean, true) THEN
+          IF best->>'validity' = 'expired' THEN reasons := array_append(reasons, 'expired');
+          ELSIF best->>'validity' = 'not_yet_valid' THEN reasons := array_append(reasons, 'not_yet_valid');
+          END IF;
+        END IF;
         IF best->>'validity' = 'expiring_soon' THEN reasons := array_append(reasons, 'expiring_soon'); END IF;
         IF (best->>'hasScopeLimitation')::boolean THEN reasons := array_append(reasons, 'scope_limited'); END IF;
         IF best->>'level' = 'self_declared' THEN reasons := array_append(reasons, 'self_declared'); END IF;
@@ -427,6 +447,7 @@ RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_tem
 DECLARE j public.jobs%ROWTYPE; p public.rec_requirement_profiles%ROWTYPE; c public.rec_requirement_criteria_sets%ROWTYPE;
         _rows jsonb; _total integer; _f jsonb := coalesce(_filters, '{}'::jsonb);
 BEGIN
+  PERFORM public.sp_assert_passport_session();
   j := public.rec_talent_assert_may_search(_job_id);
   IF (SELECT count(*) FROM public.rec_talent_search_log
        WHERE actor_id = auth.uid() AND created_at > now() - interval '1 hour') >= 120 THEN
@@ -538,6 +559,7 @@ RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_tem
 DECLARE j public.jobs%ROWTYPE; p public.rec_requirement_profiles%ROWTYPE; c public.rec_requirement_criteria_sets%ROWTYPE;
         _holder uuid; _card jsonb;
 BEGIN
+  PERFORM public.sp_assert_passport_session();
   j := public.rec_talent_assert_may_search(_job_id);
   SELECT tp.holder_user_id INTO _holder FROM public.sp_talent_profiles tp
    WHERE tp.search_ref = _ref AND tp.holder_user_id IN (SELECT public.rec_talent_pool(j.employer_id));
@@ -563,6 +585,7 @@ DECLARE j public.jobs%ROWTYPE; p public.rec_requirement_profiles%ROWTYPE; c publ
         _holder uuid; _card jsonb; _existing public.rec_talent_contact_requests%ROWTYPE; _id uuid;
         _text text := btrim(coalesce(_message, ''));
 BEGIN
+  PERFORM public.sp_assert_passport_session();
   j := public.rec_talent_assert_may_search(_job_id);
   IF _idempotency_key IS NULL OR char_length(_text) NOT BETWEEN 20 AND 2000 OR coalesce(_locale, '') NOT IN ('sv', 'en') THEN
     RAISE EXCEPTION 'TALENT_CONTACT_INVALID' USING ERRCODE = 'check_violation';
@@ -631,6 +654,7 @@ CREATE FUNCTION public.rec_talent_contacts(_job_id uuid)
 RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS $$
 DECLARE j public.jobs%ROWTYPE;
 BEGIN
+  PERFORM public.sp_assert_passport_session();
   SELECT * INTO j FROM public.jobs WHERE id = _job_id;
   IF NOT FOUND OR NOT public.rec_can_manage(_job_id) THEN
     RAISE EXCEPTION 'TALENT_SEARCH_NOT_AVAILABLE' USING ERRCODE = 'insufficient_privilege';
@@ -642,7 +666,9 @@ BEGIN
       'applicationId', r.application_id,
       'currentlyDiscoverable', EXISTS (SELECT 1 FROM public.sp_talent_profiles tp
                                         WHERE tp.holder_user_id = r.holder_user_id AND tp.search_ref = r.search_ref
-                                          AND tp.visibility <> 'private'),
+                                          AND tp.visibility <> 'private')
+                                 AND NOT EXISTS (SELECT 1 FROM public.sp_talent_blocks b
+                                                  WHERE b.holder_user_id = r.holder_user_id AND b.employer_id = r.employer_id),
       'snapshot', CASE WHEN r.snapshot IS NOT NULL THEN r.snapshot || jsonb_build_object('takenAt', r.snapshot_at) END)
       ORDER BY r.created_at DESC)
     FROM public.rec_talent_contact_requests r
@@ -656,6 +682,7 @@ CREATE FUNCTION public.rec_talent_withdraw_contact(_contact_id uuid)
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 DECLARE r public.rec_talent_contact_requests%ROWTYPE;
 BEGIN
+  PERFORM public.sp_assert_passport_session();
   SELECT * INTO r FROM public.rec_talent_contact_requests WHERE id = _contact_id FOR UPDATE;
   IF NOT FOUND OR NOT public.rec_can_manage(r.job_id) THEN
     RAISE EXCEPTION 'TALENT_SEARCH_NOT_AVAILABLE' USING ERRCODE = 'insufficient_privilege';
@@ -674,6 +701,7 @@ GRANT EXECUTE ON FUNCTION public.rec_talent_withdraw_contact(uuid) TO authentica
 CREATE FUNCTION public.sp_talent_my_contacts()
 RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS $$
 BEGIN
+  PERFORM public.sp_assert_passport_session();
   IF auth.uid() IS NULL THEN RAISE EXCEPTION 'SP_NOT_AUTHENTICATED' USING ERRCODE = 'insufficient_privilege'; END IF;
   RETURN coalesce((SELECT jsonb_agg(jsonb_build_object(
       'id', r.id, 'status', r.status, 'createdAt', r.created_at, 'respondedAt', r.responded_at, 'message', r.message,
@@ -693,10 +721,27 @@ END $$;
 REVOKE ALL ON FUNCTION public.sp_talent_my_contacts() FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.sp_talent_my_contacts() TO authenticated;
 
+-- Blocking an organisation is one act wherever it is chosen: the block, every
+-- open request from that organisation declined with its snapshot cleared, and
+-- the answered request marked (review 2026-10-15, RF5).
+CREATE FUNCTION public.sp_talent_block_employer(_holder uuid, _employer_id uuid)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+BEGIN
+  INSERT INTO public.sp_talent_blocks (holder_user_id, employer_id) VALUES (_holder, _employer_id) ON CONFLICT DO NOTHING;
+  UPDATE public.rec_talent_contact_requests
+     SET status = 'declined', responded_at = now(), blocked_employer = true, snapshot = NULL, snapshot_at = NULL
+   WHERE holder_user_id = _holder AND employer_id = _employer_id AND status = 'pending';
+  UPDATE public.rec_talent_contact_requests
+     SET blocked_employer = true, snapshot = NULL, snapshot_at = NULL
+   WHERE holder_user_id = _holder AND employer_id = _employer_id AND status = 'declined' AND NOT blocked_employer;
+END $$;
+REVOKE ALL ON FUNCTION public.sp_talent_block_employer(uuid, uuid) FROM PUBLIC, anon, authenticated;
+
 CREATE FUNCTION public.sp_talent_respond_contact(_contact_id uuid, _accept boolean, _block_employer boolean DEFAULT false)
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 DECLARE r public.rec_talent_contact_requests%ROWTYPE; j public.jobs%ROWTYPE; _kind text; _recipient uuid;
 BEGIN
+  PERFORM public.sp_assert_passport_session();
   IF auth.uid() IS NULL THEN RAISE EXCEPTION 'SP_NOT_AUTHENTICATED' USING ERRCODE = 'insufficient_privilege'; END IF;
   SELECT * INTO r FROM public.rec_talent_contact_requests WHERE id = _contact_id FOR UPDATE;
   IF NOT FOUND OR r.holder_user_id <> auth.uid() THEN
@@ -708,8 +753,8 @@ BEGIN
   -- Answering twice the same way is a repeat, not an error (double click).
   IF r.status <> 'pending' THEN
     IF (r.status = 'accepted' AND _accept) OR (r.status = 'declined' AND NOT _accept) THEN
-      IF coalesce(_block_employer, false) THEN
-        INSERT INTO public.sp_talent_blocks (holder_user_id, employer_id) VALUES (auth.uid(), r.employer_id) ON CONFLICT DO NOTHING;
+      IF coalesce(_block_employer, false) AND r.status = 'declined' THEN
+        PERFORM public.sp_talent_block_employer(auth.uid(), r.employer_id);
       END IF;
       RETURN jsonb_build_object('status', r.status, 'repeat', true);
     END IF;
@@ -736,11 +781,7 @@ BEGIN
      WHERE id = r.id;
     _kind := 'talent_contact_declined';
     IF coalesce(_block_employer, false) THEN
-      INSERT INTO public.sp_talent_blocks (holder_user_id, employer_id) VALUES (auth.uid(), r.employer_id) ON CONFLICT DO NOTHING;
-      -- Every other open request from that organisation is declined with it.
-      UPDATE public.rec_talent_contact_requests
-         SET status = 'declined', responded_at = now(), blocked_employer = true, snapshot = NULL, snapshot_at = NULL
-       WHERE holder_user_id = auth.uid() AND employer_id = r.employer_id AND status = 'pending' AND id <> r.id;
+      PERFORM public.sp_talent_block_employer(auth.uid(), r.employer_id);
     END IF;
   END IF;
 
@@ -787,22 +828,40 @@ RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, p
 $$;
 REVOKE ALL ON FUNCTION public.user_notices_still_allowed(public.user_notices) FROM PUBLIC, anon, authenticated;
 
+-- Read-time access: a recruiter notice needs the right to that job's search now.
+CREATE OR REPLACE FUNCTION public.user_notices_visible(_n public.user_notices)
+RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS $$
+  SELECT CASE
+    WHEN _n.audience = 'holder' THEN true
+    WHEN _n.audience = 'reviewer' THEN EXISTS (SELECT 1 FROM public.user_roles ur
+                                  WHERE ur.user_id = _n.recipient_user_id AND ur.role = 'passport_verifier'::public.app_role)
+    WHEN _n.audience = 'recruiter' THEN EXISTS (
+      SELECT 1 FROM public.rec_talent_contact_requests r
+       WHERE r.id = _n.subject_id AND public.rec_talent_user_may_search(_n.recipient_user_id, r.job_id))
+    ELSE false
+  END;
+$$;
+REVOKE ALL ON FUNCTION public.user_notices_visible(public.user_notices) FROM PUBLIC, anon, authenticated;
+
 CREATE OR REPLACE FUNCTION public.user_notices_inbox(_limit integer DEFAULT 30)
 RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS $$
 BEGIN
+  PERFORM public.sp_assert_passport_session();
   IF auth.uid() IS NULL THEN RAISE EXCEPTION 'NOT_AUTHENTICATED' USING ERRCODE = 'insufficient_privilege'; END IF;
   RETURN jsonb_build_object(
-    'unread', (SELECT count(*) FROM public.user_notices WHERE recipient_user_id = auth.uid() AND read_at IS NULL),
+    'unread', (SELECT count(*) FROM public.user_notices un
+                WHERE un.recipient_user_id = auth.uid() AND un.read_at IS NULL AND public.user_notices_visible(un)),
     'items', coalesce((
       SELECT jsonb_agg(jsonb_build_object(
                'id', n.id, 'audience', n.audience, 'kind', n.kind, 'subjectType', n.subject_type,
                'subjectId', n.subject_id, 'requestId', n.request_id, 'createdAt', n.created_at, 'readAt', n.read_at,
+               'verificationMethod', n.verification_method,
                'credentialCode', c.credential_code,
                'title', CASE WHEN n.audience = 'holder' THEN coalesce(c.title, p.role_title) END,
                'employerName', e.name, 'employerSlug', e.slug,
                'jobTitleSv', j.title_sv, 'jobTitleEn', j.title_en, 'jobId', j.id)
              ORDER BY n.created_at DESC)
-        FROM (SELECT * FROM public.user_notices WHERE recipient_user_id = auth.uid()
+        FROM (SELECT * FROM public.user_notices un WHERE un.recipient_user_id = auth.uid() AND public.user_notices_visible(un)
                ORDER BY created_at DESC LIMIT greatest(1, least(coalesce(_limit, 30), 100))) n
         LEFT JOIN public.sp_claims c ON n.subject_type = 'claim' AND c.id = n.subject_id
         LEFT JOIN public.sp_experience_periods p ON n.subject_type = 'experience' AND p.id = n.subject_id
@@ -817,8 +876,12 @@ CREATE OR REPLACE FUNCTION public.user_notices_claim_emails(_limit integer DEFAU
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 DECLARE _token uuid := gen_random_uuid(); _out jsonb;
 BEGIN
+  -- Re-check everything that could be handed out, an expired claim included
+  -- (review 2026-10-15, RF3); the due set repeats the check.
   UPDATE public.user_notices n SET email_status = 'skipped', email_error_code = 'recipient_not_allowed'
-   WHERE n.email_status IN ('pending', 'failed') AND NOT public.user_notices_still_allowed(n);
+   WHERE (n.email_status IN ('pending', 'failed')
+          OR (n.email_status = 'claimed' AND n.email_claimed_at < now() - interval '3 minutes'))
+     AND NOT public.user_notices_still_allowed(n);
 
   WITH due AS (
     SELECT n.id FROM public.user_notices n
@@ -827,6 +890,7 @@ BEGIN
              AND n.email_claimed_at < now() - make_interval(mins => 5 * n.email_attempts))
          OR (n.email_status = 'claimed' AND n.email_claimed_at < now() - interval '3 minutes'))
        AND n.created_at > now() - interval '7 days'
+       AND public.user_notices_still_allowed(n)
      ORDER BY n.created_at
      LIMIT greatest(1, least(coalesce(_limit, 20), 50))
      FOR UPDATE SKIP LOCKED),
@@ -840,6 +904,7 @@ BEGIN
            'id', c.id, 'claimToken', c.email_claim_token, 'kind', c.kind, 'audience', c.audience,
            'subjectType', c.subject_type, 'subjectId', c.subject_id, 'requestId', c.request_id,
            'email', u.email, 'locale', coalesce(pr.locale, 'sv'),
+           'verificationMethod', c.verification_method,
            'credentialCode', cl.credential_code,
            'employerName', e.name, 'jobTitleSv', j.title_sv, 'jobTitleEn', j.title_en, 'jobId', j.id,
            'employerSlug', e.slug)), '[]'::jsonb)
@@ -863,7 +928,7 @@ BEGIN
   FOREACH f IN ARRAY ARRAY['public.rec_talent_search(uuid,jsonb)', 'public.rec_talent_profile(uuid,uuid)',
     'public.rec_talent_send_contact(uuid,uuid,text,uuid,text)', 'public.rec_talent_contacts(uuid)',
     'public.rec_talent_withdraw_contact(uuid)', 'public.rec_talent_get_criteria(uuid)',
-    'public.rec_talent_confirm_criteria(uuid,integer,jsonb)', 'public.rec_talent_catalogue_options()',
+    'public.rec_talent_confirm_criteria(uuid,integer,uuid,jsonb)', 'public.rec_talent_catalogue_options()',
     'public.rec_talent_access(uuid)', 'public.sp_talent_my_contacts()',
     'public.sp_talent_respond_contact(uuid,boolean,boolean)'] LOOP
     IF has_function_privilege('anon', f, 'EXECUTE') THEN RAISE EXCEPTION 'TALENT_SEARCH_PROOF: anon may execute %', f; END IF;
@@ -876,6 +941,16 @@ BEGIN
      OR has_table_privilege('authenticated', 'public.rec_requirement_criteria_sets', 'SELECT') THEN
     RAISE EXCEPTION 'TALENT_SEARCH_PROOF: a talent table is directly readable';
   END IF;
+  FOREACH f IN ARRAY ARRAY['public.rec_talent_search(uuid,jsonb)', 'public.rec_talent_profile(uuid,uuid)',
+    'public.rec_talent_send_contact(uuid,uuid,text,uuid,text)', 'public.rec_talent_contacts(uuid)',
+    'public.rec_talent_withdraw_contact(uuid)', 'public.rec_talent_get_criteria(uuid)',
+    'public.rec_talent_confirm_criteria(uuid,integer,uuid,jsonb)', 'public.rec_talent_access(uuid)',
+    'public.sp_talent_my_contacts()', 'public.sp_talent_respond_contact(uuid,boolean,boolean)',
+    'public.user_notices_inbox(integer)'] LOOP
+    IF position('sp_assert_passport_session()' IN (SELECT prosrc FROM pg_proc WHERE oid = f::regprocedure)) = 0 THEN
+      RAISE EXCEPTION 'TALENT_SEARCH_PROOF: % does not assert the Passport session', f;
+    END IF;
+  END LOOP;
   RAISE NOTICE 'TALENT_SEARCH_PROOF ok';
 END $$;
 

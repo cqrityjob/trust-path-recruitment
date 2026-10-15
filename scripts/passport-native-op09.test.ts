@@ -83,7 +83,7 @@ test("native service target/key roles and exact397 history fail closed", () => {
     assert.throws(() => validateStatus({ ...status, ...patch }));
   const files = fs.readdirSync(path.join(root, "supabase/migrations"));
   assert.equal(APP_SHA, "53659419a1c243c27a59540eb849569140b71365");
-  assert.equal(SCHEMA_SHA, "e4f89abece123824ace0fe75261a19dcf563b9a1");
+  assert.equal(SCHEMA_SHA, "c340a00cc58c86d70c49338cd0e88854147fc675");
   assert.equal(history(files).length, 397);
   assert.throws(() =>
     history(
