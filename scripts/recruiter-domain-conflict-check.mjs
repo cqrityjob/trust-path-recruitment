@@ -7,7 +7,7 @@ import path from "node:path";
 import cp from "node:child_process";
 import crypto from "node:crypto";
 import net from "node:net";
-import { ensureRegistryImage } from "./registry-image-retry.mjs";
+import { ensurePinnedImage, POSTGREST_14_IMAGE } from "./registry-image-retry.mjs";
 const base = process.env.TEST_DB;
 if (
   !base ||
@@ -23,6 +23,7 @@ const rollback =
 const env = { ...process.env, PGDATABASE: db };
 const container = `ri-domain-conflict-${crypto.randomBytes(6).toString("hex")}`;
 let dockerStarted = false;
+let postgrestEvidence = null;
 const checks = [];
 function ok(condition, label) {
   if (!condition) throw Error(`ASSERTION FAILED: ${label}`);
@@ -287,7 +288,20 @@ try {
     `PGRST_DB_URI=postgresql://${user}:${password}@host.docker.internal:${process.env.PGPORT ?? 5432}/${db}\nPGRST_DB_SCHEMAS=public\nPGRST_DB_ANON_ROLE=anon\nPGRST_DB_PRE_REQUEST=public.ri_conflict_request\nPGRST_JWT_SECRET=${secret}\nPGRST_SERVER_PORT=3000\nPGRST_LOG_LEVEL=error\n`,
     { mode: 0o600 },
   );
-  await ensureRegistryImage("public.ecr.aws/supabase/postgrest:v14.15");
+  // The verified, immutable reference (repo@sha256:…) is what runs; never a tag.
+  const postgrest = await ensurePinnedImage(POSTGREST_14_IMAGE);
+  postgrestEvidence = {
+    tag: POSTGREST_14_IMAGE.tag,
+    ref: postgrest.ref,
+    source: postgrest.source,
+    obtainedVia: postgrest.via,
+    platform: postgrest.platform,
+    digest: postgrest.digest,
+    imageId: postgrest.imageId,
+  };
+  console.log(
+    `    ok  PostgREST ${POSTGREST_14_IMAGE.tag} verified: source ${postgrest.source} (${postgrest.via}), ${postgrest.platform}, ${postgrest.digest}, image ${postgrest.imageId}`,
+  );
   cp.execFileSync(
     "docker",
     [
@@ -302,7 +316,7 @@ try {
       "host.docker.internal:host-gateway",
       "-p",
       `127.0.0.1:${port}:3000`,
-      "public.ecr.aws/supabase/postgrest:v14.15",
+      postgrest.ref,
     ],
     { stdio: ["ignore", "pipe", "pipe"] },
   );
@@ -514,7 +528,7 @@ try {
         {
           sourceCommit: cp.execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(),
           postgresVersion: sql("SHOW server_version"),
-          postgrestImage: "public.ecr.aws/supabase/postgrest:v14.15",
+          postgrestImage: postgrestEvidence,
           migrationSha256: crypto
             .createHash("sha256")
             .update(fs.readFileSync(migration))
