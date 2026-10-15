@@ -216,7 +216,8 @@ const MUTATIONS: Mutation[] = [
   },
   {
     id: "TE-NC-PRODUCT-NOTICE-KIND-NOT-IN-TRANSPORT",
-    defect: "the app's transport does not know the product-notice kind, so passport and talent notices cannot be sent",
+    defect:
+      "the app's transport does not know the product-notice kind, so passport and talent notices cannot be sent",
     file: "src/lib/email/transport.server.ts",
     find: '  | "employer_new_application"\n  | "product_notice";',
     replace: '  | "employer_new_application";',
