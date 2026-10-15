@@ -452,14 +452,18 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // docs/release/2026-10-09-lifecycle-v03-hosted-verification.json. The hosted
 // ledger holds 391 identities ending 20270312100000.
 //
-// Slutuppdrag 2026-10-11 (PR 1): three forward slots are genuinely WAITING on
-// the owner's release decision and the official integration:
-//   20270313100000_requirement_profile_change_reason    (reason131)
-//   20270314100000_candidate_supplement_reply           (reply141)
-//   20270315100000_interview_composition_beskt_items    (beskt151)
+// Slutuppdrag 2026-10-15 (schema PR): three forward slots are genuinely
+// WAITING on the owner's release decision and the official integration:
+//   20270316090000_sp_review_reply_history_and_notices
+//   20270317090000_sp_talent_discovery
+//   20270318090000_rec_talent_search_and_contact
 // They come OFF this list in the same change that records their hosted
 // installation with evidence, as every earlier name did.
-const expectedPending: string[] = [];
+const expectedPending: string[] = [
+  "20270316090000_sp_review_reply_history_and_notices.sql",
+  "20270317090000_sp_talent_discovery.sql",
+  "20270318090000_rec_talent_search_and_contact.sql",
+];
 
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",

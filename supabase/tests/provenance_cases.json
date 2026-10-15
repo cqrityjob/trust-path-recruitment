@@ -1,0 +1,191 @@
+[
+  {
+    "id": "PV1",
+    "subject": "claim",
+    "requestKind": "cqrityjob_review",
+    "method": "document_review",
+    "organisation": "CQrityjob",
+    "expected": "document_reviewed",
+    "why": "a CQrityjob document review of a credential"
+  },
+  {
+    "id": "PV2",
+    "subject": "claim",
+    "requestKind": "cqrityjob_review",
+    "method": "issuer_confirmation",
+    "organisation": "Utfärdarinstitutet AB",
+    "expected": "document_reviewed",
+    "why": "an issuer confirmation with no structural issuer: documented, never source-confirmed"
+  },
+  {
+    "id": "PV3",
+    "subject": "claim",
+    "requestKind": "cqrityjob_review",
+    "method": "issuer_confirmation",
+    "organisation": "CQrityjob",
+    "expected": "document_reviewed",
+    "why": "a legacy issuer method CQrityjob recorded about itself"
+  },
+  {
+    "id": "PV4",
+    "subject": "claim",
+    "requestKind": "cqrityjob_review",
+    "method": "employer_confirmation",
+    "organisation": "TS Bevakning AB",
+    "expected": "document_reviewed",
+    "why": "an employer confirmation of a credential: outside an employer's standing"
+  },
+  {
+    "id": "PV5",
+    "subject": "period",
+    "requestKind": "cqrityjob_review",
+    "method": "employer_confirmation",
+    "organisation": "CQrityjob",
+    "expected": "document_reviewed",
+    "why": "a legacy employer decision with CQrityjob as the deciding organisation"
+  },
+  {
+    "id": "PV6",
+    "subject": "period",
+    "requestKind": "employer_attestation",
+    "method": "employer_confirmation",
+    "organisation": "TS Bevakning AB",
+    "expected": "employer_confirmed",
+    "why": "a legitimate employer confirmation of an employment period keeps its level"
+  },
+  {
+    "id": "PV7",
+    "subject": "period",
+    "requestKind": "cqrityjob_review",
+    "method": "issuer_confirmation",
+    "organisation": "Utfärdarinstitutet AB",
+    "expected": "document_reviewed",
+    "why": "an issuer confirmation of a period: documented"
+  },
+  {
+    "id": "PV8",
+    "subject": "period",
+    "requestKind": "cqrityjob_review",
+    "method": "document_review",
+    "organisation": "CQrityjob",
+    "expected": "document_reviewed",
+    "why": "a CQrityjob document review of a period"
+  },
+  {
+    "id": "PV9",
+    "subject": "period",
+    "requestKind": "employer_attestation",
+    "method": "employer_confirmation",
+    "organisation": "  ",
+    "expected": "document_reviewed",
+    "why": "an employer method with no named organisation: fail closed"
+  },
+  {
+    "id": "PV13",
+    "subject": "period",
+    "requestKind": "employer_attestation",
+    "method": "employer_confirmation",
+    "organisation": "CQrityjob\t",
+    "expected": "document_reviewed",
+    "why": "a legacy decision CQrityjob recorded, with a trailing tab: the name is trimmed as the application trims it"
+  },
+  {
+    "id": "PV14",
+    "subject": "period",
+    "requestKind": "employer_attestation",
+    "method": "employer_confirmation",
+    "organisation": "\t\n",
+    "expected": "document_reviewed",
+    "why": "an employer method whose organisation is only a tab and a newline: no named organisation, fail closed"
+  },
+  {
+    "id": "PV15",
+    "subject": "period",
+    "requestKind": "employer_attestation",
+    "method": "employer_confirmation",
+    "organisation": "\u00a0cqRITYjob\u3000\ufeff",
+    "expected": "document_reviewed",
+    "why": "CQrityjob in another letter case between a no-break space, an ideographic space and a BOM: still CQrityjob"
+  },
+  {
+    "id": "PV16",
+    "subject": "period",
+    "requestKind": "employer_attestation",
+    "method": "employer_confirmation",
+    "organisation": "CQR\u0130TYJOB",
+    "expected": "employer_confirmed",
+    "why": "a name with a dotted capital I is not CQrityjob in the application, so not here either: letter case is folded for ASCII only, whatever the database collation"
+  },
+  {
+    "id": "PV17",
+    "subject": "period",
+    "requestKind": "employer_attestation",
+    "method": "employer_confirmation",
+    "organisation": "\nCQrityjob\r\n",
+    "expected": "document_reviewed",
+    "why": "CQrityjob between newlines (LF, CR LF): still CQrityjob"
+  },
+  {
+    "id": "PV18",
+    "subject": "period",
+    "requestKind": "employer_attestation",
+    "method": "employer_confirmation",
+    "organisation": " \t\r\n\u000b\fCQrityjob \u2028\u2029",
+    "expected": "document_reviewed",
+    "why": "CQrityjob between mixed whitespace (space, tab, CR, LF, VT, FF, line and paragraph separators): still CQrityjob"
+  },
+  {
+    "id": "PV19",
+    "subject": "period",
+    "requestKind": "employer_attestation",
+    "method": "employer_confirmation",
+    "organisation": "\u1680\u2000\u2005\u200aCQRITYJOB\u202f\u205f",
+    "expected": "document_reviewed",
+    "why": "CQRITYJOB between Unicode spaces trim() removes (ogham, en quad, four-per-em, hair, narrow no-break, medium mathematical): still CQrityjob"
+  },
+  {
+    "id": "PV20",
+    "subject": "period",
+    "requestKind": "employer_attestation",
+    "method": "employer_confirmation",
+    "organisation": "",
+    "expected": "document_reviewed",
+    "why": "an employer method with an empty organisation: no named organisation, fail closed"
+  },
+  {
+    "id": "PV21",
+    "subject": "period",
+    "requestKind": "employer_attestation",
+    "method": "employer_confirmation",
+    "organisation": "\u00a0\u2003\u3000\ufeff",
+    "expected": "document_reviewed",
+    "why": "an employer method whose organisation is only Unicode spaces trim() removes: empty after normalisation, fail closed"
+  },
+  {
+    "id": "PV22",
+    "subject": "period",
+    "requestKind": "employer_attestation",
+    "method": "employer_confirmation",
+    "organisation": "  TS  Bevakning\tAB\n",
+    "expected": "employer_confirmed",
+    "why": "a legitimate employer whose name has ordinary inner whitespace and outer whitespace: the employer confirmation keeps its level"
+  },
+  {
+    "id": "PV23",
+    "subject": "period",
+    "requestKind": "employer_attestation",
+    "method": "employer_confirmation",
+    "organisation": "CQrityjob\u200b",
+    "expected": "employer_confirmed",
+    "why": "a zero-width space is not whitespace to trim(), so this name is not CQrityjob in the application, and not here"
+  },
+  {
+    "id": "PV24",
+    "subject": "period",
+    "requestKind": "employer_attestation",
+    "method": "employer_confirmation",
+    "organisation": "\u0085CQrityjob",
+    "expected": "employer_confirmed",
+    "why": "NEL (U+0085) is not whitespace to trim(), so this name is not CQrityjob in the application, and not here"
+  }
+]

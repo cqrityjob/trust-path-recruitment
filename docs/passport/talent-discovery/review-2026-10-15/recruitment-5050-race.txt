@@ -1,0 +1,56 @@
+# recruitment-workspace.spec.ts:275 ("5 050 applications") on #472 -- root cause
+#
+# CI: run 38733159776, both attempts (jobs 116415697595, 116426503951): the header
+# locator `main header` getByText("5050 ansökningar", exact) timed out after 5 s;
+# Astra read the failure screenshot: it shows 5 050 applications.
+#
+# Targeted reproduction on the #472 tree (a6a0c8de = main 415cb7b + the schema
+# slots), local stack (PostgreSQL 16, PostgREST 12.2.3, the repo gateway), the
+# CI fixture (scripts/fixtures/recruitment-workspace-fixture.sql: 5050 + 32).
+
+## 1. What the page does after load (main header, sampled every 100 ms)
+  692ms mains=0 headers=0 tabular= text=""
+  24647ms mains=1 headers=0 tabular= text=""
+  24755ms mains=0 headers=0 tabular= text=""
+  25132ms mains=1 headers=0 tabular= text=""
+  26630ms mains=1 headers=1 tabular= text="Väktare, Norrköping Visa annons Referens: uatjob0005 · ​ … · Status: Publicerad · Ansvarig: Ingen utsedd · Sista ansökningsdag: 9 nov. 2026 Team och inställningar Aktiviteter"
+  29871ms mains=1 headers=1 tabular="5050 ansökningar" text="Väktare, Norrköping Visa annons Referens: uatjob0005 · ​ 5050 ansökningar · Status: Publicerad · Ansvarig: Ingen utsedd · Sista ansökningsdag: 9 nov. 2026 Tea
+
+## 2. The read the count comes from (browser network log, same run)
+  25080ms -> listRecruitmentCandidatesPage
+  29499ms <- listRecruitmentCandidatesPage
+
+## 3. Why that read is slow: rec_ri_candidate_view for a page of 25 of 5050
+##    (owner session, warm cache; track_functions = all)
+  rec_ri_candidate_view(employer, BIG, {"stage":"all"}, 'requirements', NULL, 1, 25)
+    1.8 s, 2.2 s, 2.4 s on three calls
+         funcname          | calls | total_ms | self_ms
+    has_employer_role         | 10101 |    583.2 |   583.2
+    application_state         |  5050 |    684.0 |   445.2
+    rec_is_member             |  5051 |    732.5 |   304.7
+    source_version            | 10100 |    238.9 |   238.9
+    employer_is_active_status |  5051 |    120.9 |   120.9
+    rec_ri_candidate_view     |     1 |   1875.9 |   110.5
+    rec_can_manage            |  5050 |   1079.8 |    72.5
+  No function of the 2027-03-16..18 talent slots is on the path: the slow read
+  is main's (20270308090000), unchanged by #472.
+
+## 4. The race, reproduced: the candidate read delayed as on a loaded runner
+  candidate read delayed by 6000 ms (a loaded runner)
+  original: FAIL (element(s) not found within 5000 ms) after 6861 ms
+    header when the 5 s ended: "Väktare, Norrköping Visa annons Referens: uatjob0005 · ​ … · Status: Publicerad · Ansvarig: Ingen utsedd · Sista ansökningsdag: 9 nov. 2026 Team och inställning"
+    header 1.5 s later:        "Väktare, Norrköping Visa annons Referens: uatjob0005 · ​ … · Status: Publicerad · Ansvarig: Ingen utsedd · Sista ansökningsdag: 9 nov. 2026 Team och inställning"
+  fixed: PASS after 13713 ms
+    header when the 5 s ended: "Väktare, Norrköping Visa annons Referens: uatjob0005 · ​ 5050 ansökningar · Status: Publicerad · Ansvarig: Ingen utsedd · Sista ansökningsdag: 9 nov. 2026 Team "
+    header 1.5 s later:        "Väktare, Norrköping Visa annons Referens: uatjob0005 · ​ 5050 ansökningar · Status: Publicerad · Ansvarig: Ingen utsedd · Sista ansökningsdag: 9 nov. 2026 Team "
+
+## Root cause and fix
+The header count, step chip, pager and rows come from ONE response
+(listRecruitmentCandidatesPage), which on this case evaluates every
+application (section 3). The spec asserted at page load with the default 5 s,
+racing that read; on the loaded CI runner the read finished just after the 5 s
+(the screenshot shows the count), on #473 and 6264485 just before.
+The spec now waits for that response before asserting (openCaseRead /
+candidateRead) -- the event the assertion is about -- and asserts at once; no
+assertion timeout is raised. The read's cost is a separate product finding
+(per-row permission checks in rec_ri_candidate_view), not changed here.

@@ -251,6 +251,193 @@ RI_UPLOAD_PASSED="$(echo "$RI_UPLOAD_OUT" | command grep -c 'NOTICE:  ok ' || tr
 [ "$RI_UPLOAD_PASSED" -ge 41 ] || { echo "$RI_UPLOAD_OUT"; echo "FAIL:41 upload assertions required" >&2; exit 1; }
 echo "    ok  ${RI_UPLOAD_PASSED} durable upload SQL assertions"
 
+# Slutuppdrag 2026-10-15 (slots 20270316, 20270317, 20270318): the Passport's
+# case-bound clarification reply, decision history and notices; voluntary
+# discoverability; catalogue-bound job criteria, talent search and contact.
+# Run against the full current schema, then stood down newest first -- before
+# the v0.4 standdown below, whose requirement-profile bodies 20270318 reads.
+# Each suite rolls back its own fixture.
+TD_M1=supabase/migrations/20270316090000_sp_review_reply_history_and_notices.sql
+TD_M2=supabase/migrations/20270317090000_sp_talent_discovery.sql
+TD_M3=supabase/migrations/20270318090000_rec_talent_search_and_contact.sql
+td_run() { psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f "supabase/tests/$1.sql" 2>&1; }
+td_suite() {
+  local file="$1" label="$2" floor="$3"; shift 3
+  set +e
+  local out; out="$(td_run "$file")"; local rc=$?
+  set -e
+  local passed; passed="$(echo "$out" | grep -c "NOTICE:  ok  " || true)"
+  if [ "$rc" -ne 0 ]; then
+    echo "$out" | grep -E "ASSERTION FAILED|ERROR" | head -5 >&2 || true
+    suite_failed "$label"; return 0
+  fi
+  if [ "$passed" -lt "$floor" ]; then
+    suite_failed "$label (assertion shortfall: $passed, floor $floor)"; return 0
+  fi
+  local req
+  for req in "$@"; do
+    echo "$out" | grep -qF "ok  $req" || { suite_failed "$label (missing: $req)"; return 0; }
+  done
+  echo "    ok  $passed $label assertions"
+}
+# A planted defect MUST make the named assertion fail.
+td_nc() {
+  local file="$1" label="$2" expect="$3"
+  set +e
+  local out; out="$(td_run "$file")"; local rc=$?
+  set -e
+  if [ "$rc" -eq 0 ] || ! echo "$out" | grep -q "ASSERTION FAILED: $expect"; then
+    echo "$out" | grep -E "ASSERTION FAILED|ERROR" | head -3 >&2 || true
+    echo "FAIL: negative control '${label}' did not fail on ${expect} -- the suite proves nothing" >&2
+    exit 1
+  fi
+  echo "    ok  NC ${label}: the suite fails on ${expect}"
+}
+td_fn() { sed -n "/^$2/,/$3/p" "$1" | sed '1s/^CREATE FUNCTION/CREATE OR REPLACE FUNCTION/'; }
+td_plant() { psql_q -d "$TEST_DB" -c "$(td_fn "$1" "$2" "$3" | sed "$4")" >/dev/null; }
+td_restore() { psql_q -d "$TEST_DB" -c "$(td_fn "$1" "$2" "$3")" >/dev/null; }
+
+echo "==> Running Passport clarification reply, decision history and notices"
+td_suite sp_review_reply_history_and_notices_test "Passport reply/history/notices" 53 \
+  "RH3.2 the request is back in review with a new version" \
+  "RH5.1 approval from the page opened before the reply is refused" \
+  "RH6.7 after the new approval the entry is active and verified: no contradiction left" \
+  "RH8.2 the holder never receives the internal note" \
+  "RH9.5 a recipient who may no longer receive the notice is skipped at claim time"
+echo "==> Running Passport voluntary discoverability"
+td_suite sp_talent_discovery_test "Passport discoverability" 33 \
+  "TD1.1 no profile row for an existing account" \
+  "TD2.2 enabling without consent is refused" \
+  "TD4.2 no credential number, scope text, employer name, person name, address or document" \
+  "TD6.2 the reference is rotated; the selection is kept"
+echo "==> Running talent search, explanation and contact"
+td_suite rec_talent_search_and_contact_test "Talent search and contact" 75 \
+  "TS1.2 a plain member may not: membership is not a recruiting right" \
+  "TS3.3 the private person and the person blocking this organisation are absent" \
+  "TS4.6 C3: international certifications are never read as the local authorisation" \
+  "TS7.1 private, blocking and unknown references all read the same" \
+  "TS8.13 no application and no Passport disclosure without the person's own act" \
+  "TS11.1 the old reference stops resolving at once" \
+  "TS13.3 hiring creates no Passport access of any kind"
+
+# Negative controls: each planted defect is caught by the assertion named.
+TD_DECIDE='CREATE OR REPLACE FUNCTION public.sp_verifier_decide('
+td_plant "$TD_M1" "$TD_DECIDE" '^END; \$function\$;' "s/lifecycle_state = CASE WHEN lifecycle_state = 'revoked' THEN 'active' ELSE lifecycle_state END/lifecycle_state = lifecycle_state/"
+td_nc sp_review_reply_history_and_notices_test "TD NC1 re-approval leaves the entry revoked" "RH6.7"
+td_restore "$TD_M1" "$TD_DECIDE" '^END; \$function\$;'
+td_plant "$TD_M2" 'CREATE FUNCTION public.sp_talent_pause()' '^END \$\$;' "s/search_ref = gen_random_uuid(), //"
+td_nc sp_talent_discovery_test "TD NC2 pause keeps the old reference" "TD6.2"
+td_restore "$TD_M2" 'CREATE FUNCTION public.sp_talent_pause()' '^END \$\$;'
+td_plant "$TD_M3" 'CREATE FUNCTION public.rec_talent_pool(' '^\$\$;' "s/WHERE p.visibility IN ('open', 'active')/WHERE true/"
+td_nc rec_talent_search_and_contact_test "TD NC3 private people enter the pool" "TS3.1"
+td_restore "$TD_M3" 'CREATE FUNCTION public.rec_talent_pool(' '^\$\$;'
+td_plant "$TD_M3" 'CREATE FUNCTION public.rec_talent_user_may_search(' '^\$\$;' "s/AND (public.has_employer_role(_user, j.employer_id, ARRAY\['owner', 'admin'\])/AND (true/"
+td_nc rec_talent_search_and_contact_test "TD NC4 any member may search" "TS1.2"
+td_restore "$TD_M3" 'CREATE FUNCTION public.rec_talent_user_may_search(' '^\$\$;'
+td_plant "$TD_M3" 'CREATE FUNCTION public.rec_talent_evaluate(' '^END \$\$;' "s/AND EXISTS (SELECT 1 FROM jsonb_array_elements(_card->'merits') x WHERE x->>'requirementClass' = 'certification') THEN/AND false THEN/"
+td_nc rec_talent_search_and_contact_test "TD NC5 no warning that a certification is not an authorisation" "TS4.6"
+td_restore "$TD_M3" 'CREATE FUNCTION public.rec_talent_evaluate(' '^END \$\$;'
+td_suite rec_talent_search_and_contact_test "Talent search and contact (after controls)" 75
+
+# The independent review of 2026-10-15: nine reproduced findings, one group
+# each (RF9 is application code, scripts/talent-discovery-check.ts). The suite
+# failed group by group on the unfixed slots
+# (docs/passport/talent-discovery/review-2026-10-15/before-fix.txt).
+echo "==> Running the review findings of 2026-10-15 (RF1-RF8)"
+td_suite talent_review_findings_test "Review findings 2026-10-15" 28 \
+  "RF1.3 every new read refuses a revoked session: holder, recruiter and reviewer" \
+  "RF2.2 with its own case the verifier reads neither the attestation nor its internal note" \
+  "RF3.2 an expired lease is re-checked: no mail to a former reviewer, the rows settle as skipped" \
+  "RF3.3 the inbox drops them at once" \
+  "RF4.2 saving the selection the page read back succeeds" \
+  "RF5.2 the other open request is declined with it, its snapshot cleared, both marked blocked" \
+  "RF6.1 a merit that starts in 100 days is not yet valid" \
+  "RF6.3 an expired merit is evidence with a note when validity was not asked for" \
+  "RF7.1 the form opened on version 1 cannot confirm criteria onto version 2" \
+  "RF8.2 and so does the mail payload"
+td_plant "$TD_M2" 'CREATE FUNCTION public.sp_talent_preview()' '^END \$\$;' "/PERFORM public.sp_assert_passport_session();/d"
+td_nc talent_review_findings_test "RF NC1 the preview forgets the session rule" "RF1.3"
+td_restore "$TD_M2" 'CREATE FUNCTION public.sp_talent_preview()' '^END \$\$;'
+td_plant "$TD_M1" 'CREATE FUNCTION public.sp_review_reader(' '^END \$\$;' "s/WHERE r.request_kind = 'cqrityjob_review'/WHERE true/"
+td_nc talent_review_findings_test "RF NC2 any verifier reads any entry" "RF2.1"
+td_restore "$TD_M1" 'CREATE FUNCTION public.sp_review_reader(' '^END \$\$;'
+td_plant "$TD_M3" 'CREATE OR REPLACE FUNCTION public.user_notices_claim_emails(' '^END \$\$;' "s/AND NOT public.user_notices_still_allowed(n);/AND false;/; /^       AND public.user_notices_still_allowed(n)\$/d"
+td_nc talent_review_findings_test "RF NC3 an expired claim is handed out unchecked" "RF3.2"
+td_restore "$TD_M3" 'CREATE OR REPLACE FUNCTION public.user_notices_claim_emails(' '^END \$\$;'
+td_plant "$TD_M2" 'CREATE FUNCTION public.sp_talent_follow_correction()' '^END \$\$;' "/DELETE FROM public.sp_talent_items WHERE claim_id = NEW.supersedes_id;/d"
+td_nc talent_review_findings_test "RF NC4 a correction keeps the superseded version selected" "RF4.1"
+td_restore "$TD_M2" 'CREATE FUNCTION public.sp_talent_follow_correction()' '^END \$\$;'
+td_plant "$TD_M3" 'CREATE FUNCTION public.rec_talent_confirm_criteria(' '^END \$\$;' "s/IF p.id IS DISTINCT FROM _profile_id THEN/IF false THEN/"
+td_nc talent_review_findings_test "RF NC5 criteria bind to an unseen profile" "RF7.1"
+td_restore "$TD_M3" 'CREATE FUNCTION public.rec_talent_confirm_criteria(' '^END \$\$;'
+td_suite talent_review_findings_test "Review findings 2026-10-15 (after controls)" 28
+
+# Astra's recheck (2026-10-15): the talent level and the decision notice say
+# what a decision SUPPORTS, by the application's provenance model -- an issuer
+# confirmation is documented, an employer confirmation counts only for an
+# employment period decided by the employer, history keeps the recorded
+# method. The cases (supabase/tests/provenance_cases.json) are shared with
+# scripts/provenance-parity-check.ts, which compares the database's answers
+# with effectiveTrust() directly. Both failed on the unfixed slots
+# (docs/passport/talent-discovery/review-2026-10-15/provenance-before.txt).
+echo "==> Running talent provenance, against the application's provenance model"
+td_suite talent_provenance_test "Talent provenance" 151 \
+  "PV2.1 an issuer confirmation with no structural issuer: documented, never source-confirmed: the talent level is document_reviewed" \
+  "PV4.1 an employer confirmation of a credential: outside an employer's standing: the talent level is document_reviewed" \
+  "PV5.1 a legacy employer decision with CQrityjob as the deciding organisation: the talent level is document_reviewed" \
+  "PV6.1 a legitimate employer confirmation of an employment period keeps its level: the talent level is employer_confirmed" \
+  "PV5.2 the decision notice names what the decision supports" \
+  "PV5.3 the decision row keeps the recorded method employer_confirmation and organisation as history" \
+  "PV10 the merits the card shows carry the same levels" \
+  "PV11 and so does the experience" \
+  "PV13.1 a legacy decision CQrityjob recorded, with a trailing tab" \
+  "PV14.1 an employer method whose organisation is only a tab and a newline" \
+  "PV15.1 CQrityjob in another letter case" \
+  "PV16.1 a name with a dotted capital I"
+td_plant "$TD_M2" 'CREATE FUNCTION public.sp_talent_entry_level(' '^\$\$;' "s/public.sp_decision_trust(d.verification_method, d.decider_organisation, r.period_id IS NOT NULL)/CASE d.verification_method WHEN 'employer_confirmation' THEN 'employer_confirmed' WHEN 'issuer_confirmation' THEN 'source_confirmed' ELSE 'document_reviewed' END/"
+td_nc talent_provenance_test "PV NC1 the raw method upgrades the talent level again" "PV2.1"
+td_restore "$TD_M2" 'CREATE FUNCTION public.sp_talent_entry_level(' '^\$\$;'
+td_plant "$TD_M1" 'CREATE FUNCTION public.sp_decision_trust(' '^\$\$;' "/<> 'cqrityjob'\$/d"
+td_nc talent_provenance_test "PV NC2 a decision CQrityjob recorded counts as the employer's" "PV5.1"
+td_restore "$TD_M1" 'CREATE FUNCTION public.sp_decision_trust(' '^\$\$;'
+td_plant "$TD_M1" 'CREATE FUNCTION public.sp_decision_trust(' '^\$\$;' "s/AND n.org <> ''/AND btrim(coalesce(_organisation, '')) <> ''/; s/AND translate(n.org, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz') <> 'cqrityjob'/AND lower(btrim(_organisation)) <> 'cqrityjob'/"
+td_nc talent_provenance_test "PV NC3 the organisation trimmed of spaces only, as before Astra's P2" "PV13.1"
+td_restore "$TD_M1" 'CREATE FUNCTION public.sp_decision_trust(' '^\$\$;'
+td_suite talent_provenance_test "Talent provenance (after controls)" 151
+set +e
+pv_parity="$(TEST_DB="$TEST_DB" bun run scripts/provenance-parity-check.ts 2>&1)"; pv_rc=$?
+set -e
+if [ "$pv_rc" -ne 0 ]; then
+  echo "$pv_parity" | grep -E "FAIL" | head -10 >&2 || true
+  suite_failed "Provenance parity: the database and the application disagree"
+else
+  echo "    ok  $(echo "$pv_parity" | tail -1)"
+fi
+
+# The data-bearing rollbacks refuse recorded data before changing anything:
+# each suite's own fixture, with the rollback in place of its ROLLBACK.
+TD_PROBE="$(mktemp)"
+for td_pair in "rec_talent_search_and_contact_test:20270318090000_rec_talent_search_and_contact" \
+               "sp_talent_discovery_test:20270317090000_sp_talent_discovery" \
+               "sp_review_reply_history_and_notices_test:20270316090000_sp_review_reply_history_and_notices"; do
+  sed '$d' "supabase/tests/${td_pair%%:*}.sql" > "$TD_PROBE"
+  printf 'RESET ROLE;\n\\i supabase/rollback/%s_rollback.sql\nROLLBACK;\n' "${td_pair##*:}" >> "$TD_PROBE"
+  set +e
+  TD_REFUSED="$(psql -X -d "$TEST_DB" -f "$TD_PROBE" 2>&1)"
+  set -e
+  echo "$TD_REFUSED" | grep -q 'SP_ROLLBACK_REQUIRES_PRESERVED_DATA' || { echo "$TD_REFUSED" | tail -5 >&2; echo "FAIL: ${td_pair##*:} rollback must refuse recorded data" >&2; exit 1; }
+done
+rm -f "$TD_PROBE"
+echo "    ok  the three data-bearing rollbacks refuse recorded data; probe fixtures rolled back"
+# Stand the three empty slots down, newest first. Each rollback proves its own
+# postflight (sp_verifier_decide is the 20270125090000 body again).
+psql_q -d "$TEST_DB" -f supabase/rollback/20270318090000_rec_talent_search_and_contact_rollback.sql >/dev/null
+psql_q -d "$TEST_DB" -f supabase/rollback/20270317090000_sp_talent_discovery_rollback.sql >/dev/null
+psql_q -d "$TEST_DB" -f supabase/rollback/20270316090000_sp_review_reply_history_and_notices_rollback.sql >/dev/null
+TD_STOOD_DOWN="$(psql_q -d "$TEST_DB" -Atc "SELECT (to_regclass('public.user_notices') IS NULL AND to_regclass('public.sp_talent_profiles') IS NULL AND to_regclass('public.rec_talent_contact_requests') IS NULL AND to_regclass('public.product_metric_events') IS NULL AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'sp_verification_decisions' AND column_name IN ('holder_message', 'recorded_at')) AND position('lifecycle_state = CASE' IN (SELECT prosrc FROM pg_proc WHERE oid = 'public.sp_verifier_decide(uuid,text,text,text,text,date,date)'::regprocedure)) = 0)::text")"
+[ "$TD_STOOD_DOWN" = "true" ] || { echo "FAIL: the 2026-10-15 rollbacks left an object behind." >&2; exit 1; }
+echo "    ok  2026-10-15 slots stood down to the 20270315 schema before historical consumers"
+
 # Slutuppdrag 2026-10-11 (slots 131, 141, 151): the motivated profile change on
 # every write path, the candidate's in-app supplement answer and BESKT items in
 # the composition, against the full current schema. The suite rolls back.

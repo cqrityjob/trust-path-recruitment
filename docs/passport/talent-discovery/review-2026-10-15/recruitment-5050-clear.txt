@@ -1,0 +1,42 @@
+# recruitment-workspace.spec.ts:348 ("Rensa filter", 5 050 applications) -- second step
+#
+# CI: #473 at 8b5c85cd, run 38770985809 (job 116546411232): after "Rensa
+# filter" the pager stayed "Visar 1–25 av 2525 – filter: Aktiva (ej avgjorda)
+# · Visa alla (5050)" for 8 polls (~5 s); the test then hit its 30 s budget.
+# The same suite took 16.9 s for this test on #472 c0401017 (green); on the
+# #473 runner every test ran about 1.5x slower (test 1 19.5 s vs 12.9 s,
+# test 4 17.1 s vs 9.9 s).
+#
+# Cause (code): the list's query key is the view
+#   ["employer", id, "candidates", "job", jobId, "page", candidateView]
+#   (src/routes/_authenticated.employer.$employerSlug.jobs.$jobId.index.tsx:249,
+#    placeholderData: previous page);
+# the test opened the list with stage=all, and "Rensa filter" calls
+# onViewChange({}) (CandidateTable.tsx), which clears the stage too: the
+# default view is stage "open" ("Aktiva (ej avgjorda)"), a key this page had
+# never read. So the clear started a fresh 5 050-row read, and while it ran
+# the placeholder showed the previous 2 525 rows under the new label. The
+# spec's comment ("a view the page has already read") was wrong, and the
+# 1f3a3fb8 fix left this step unsynchronised on that wrong premise.
+#
+# Fix: open the list at its default view before filtering; "Rensa filter"
+# then returns to that key, which is cached, and the step asserts at once.
+# No timeout raised, product code unchanged, the same assertions kept (plus
+# "av 5050" on the default view). One slow read fewer in the test.
+
+## Targeted reproduction (local stack: PostgreSQL 16, PostgREST 12.2.3, the
+## repo gateway; the CI fixture with 5 050 open applications; app at #473
+## 8b5c85cd; listRecruitmentCandidatesPage delayed as on a loaded runner)
+  candidate read delayed by 4000 ms (a loaded runner)
+  original: opened ?step=applications&stage=all
+    pager after open:    "Visar 1–25 av 5050 Föregående Sida 1 av 202 Nästa"
+    pager after filter:  "Visar 1–25 av 2525 – filter: urvalssvar · Visa alla (5050) Föregående Sida 1 av 101 Nästa"
+    "Rensa filter": FAIL, not "av 5050" within 5000 ms
+    pager then:          "Visar 1–25 av 2525 – filter: Aktiva (ej avgjorda) · Visa alla (5050) Föregående Sida 1 av 101 Nästa"
+    candidate reads started by the clear: 1
+  fixed: opened ?step=applications
+    pager after open:    "Visar 1–25 av 5050 – filter: Aktiva (ej avgjorda) Föregående Sida 1 av 202 Nästa"
+    pager after filter:  "Visar 1–25 av 2525 – filter: Aktiva (ej avgjorda), urvalssvar · Visa alla (5050) Föregåend"
+    "Rensa filter": PASS, "av 5050" after 517 ms
+    pager then:          "Visar 1–25 av 5050 – filter: Aktiva (ej avgjorda) Föregående Sida 1 av 202 Nästa"
+    candidate reads started by the clear: 1

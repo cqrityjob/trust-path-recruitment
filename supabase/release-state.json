@@ -3817,6 +3817,173 @@
       "rollback": "supabase/rollback/20270315100000_interview_composition_beskt_items_rollback.sql",
       "verify": "Full-history replay plus supabase/tests/recruitment_lifecycle_v04_test.sql group B (catalogue filter over a published recruitment method, a published vetting method and a draft; group, sensitivity, phase, vetting and unpublished refusals; core still required; read-back; session seeding and report blockers unchanged). Rollback refuses while a confirmed composition selects a BESKT item and restores both bodies verbatim.",
       "introduces": []
+    },
+    {
+      "file": "20270316090000_sp_review_reply_history_and_notices.sql",
+      "hostedState": "pending",
+      "note": "Slutuppdrag 2026-10-15. Passport: case-bound text reply to a clarification (sp_verification_replies, sp_reply_to_clarification, moves submitted_at so the reviewed-content guard applies), holder_message and recorded_at per decision, sp_verifier_decide (same signature) records the message and returns a revoked entry to active on a new approval, one current review state and the ordered history (sp_entry_review_state, sp_review_thread), the in-app inbox and e-mail outbox user_notices (trigger-written, service-role claim/settle with claim-time recipient re-check), and product_metric_events (no person, no content). Install after 20270315100000.",
+      "rollback": "supabase/rollback/20270316090000_sp_review_reply_history_and_notices_rollback.sql",
+      "verify": "Full-history replay plus supabase/tests/sp_review_reply_history_and_notices_test.sql (RH1-RH11) and negative control TD NC1 in scripts/db-test.sh. Rollback refuses recorded replies, messages or notices and restores sp_verifier_decide to the 20270125090000 body.",
+      "introduces": [
+        {
+          "kind": "table",
+          "object": "sp_verification_replies"
+        },
+        {
+          "kind": "table",
+          "object": "user_notices"
+        },
+        {
+          "kind": "table",
+          "object": "product_metric_events"
+        },
+        {
+          "kind": "function",
+          "object": "sp_reply_to_clarification"
+        },
+        {
+          "kind": "function",
+          "object": "sp_entry_review_state"
+        },
+        {
+          "kind": "function",
+          "object": "sp_review_thread"
+        },
+        {
+          "kind": "function",
+          "object": "user_notices_inbox"
+        },
+        {
+          "kind": "function",
+          "object": "user_notices_mark_read"
+        },
+        {
+          "kind": "function",
+          "object": "user_notices_claim_emails"
+        },
+        {
+          "kind": "function",
+          "object": "user_notices_settle_email"
+        },
+        {
+          "kind": "function",
+          "object": "product_metric_counts"
+        }
+      ]
+    },
+    {
+      "file": "20270317090000_sp_talent_discovery.sql",
+      "hostedState": "pending",
+      "note": "Slutuppdrag 2026-10-15. Voluntary discoverability, off by default and never enabled by the migration: sp_talent_profiles (private | open | active, consent version, preferences, rotating search_ref), sp_talent_items (the exact searchable merits), sp_talent_blocks, append-only sp_talent_consent_events; the one employer card builder sp_talent_card (no numbers, documents, notes, scope text, employer names, names or contact details) used by the holder preview and by employer reads. Install after 20270316090000.",
+      "rollback": "supabase/rollback/20270317090000_sp_talent_discovery_rollback.sql",
+      "verify": "Full-history replay plus supabase/tests/sp_talent_discovery_test.sql (TD1-TD8) and negative control TD NC2. Rollback refuses while anyone has opened the setting.",
+      "introduces": [
+        {
+          "kind": "table",
+          "object": "sp_talent_profiles"
+        },
+        {
+          "kind": "table",
+          "object": "sp_talent_items"
+        },
+        {
+          "kind": "table",
+          "object": "sp_talent_blocks"
+        },
+        {
+          "kind": "table",
+          "object": "sp_talent_consent_events"
+        },
+        {
+          "kind": "function",
+          "object": "sp_talent_get_settings"
+        },
+        {
+          "kind": "function",
+          "object": "sp_talent_preview"
+        },
+        {
+          "kind": "function",
+          "object": "sp_talent_save_settings"
+        },
+        {
+          "kind": "function",
+          "object": "sp_talent_pause"
+        },
+        {
+          "kind": "function",
+          "object": "sp_talent_unblock_employer"
+        },
+        {
+          "kind": "function",
+          "object": "sp_catalogue_requirement_class"
+        }
+      ]
+    },
+    {
+      "file": "20270318090000_rec_talent_search_and_contact.sql",
+      "hostedState": "pending",
+      "note": "Slutuppdrag 2026-10-15. Catalogue-bound criteria for the confirmed requirement profile (rec_requirement_criteria_sets, versioned, immutable, one class per requirement), deterministic explainable search for an active organisation's owner/admin or the job's responsible recruiter on a published job (rec_talent_search, rec_talent_profile; plain members refused), and job-bound contact requests (rec_talent_contact_requests: idempotent, one open per job and person, mass-contact caps, decline and stop contact, dated snapshot cleared on decline, linked to the person's own later application). Application-disclosure contracts unchanged. Install after 20270317090000.",
+      "rollback": "supabase/rollback/20270318090000_rec_talent_search_and_contact_rollback.sql",
+      "verify": "Full-history replay plus supabase/tests/rec_talent_search_and_contact_test.sql (TS1-TS15) and negative controls TD NC3-NC5. Rollback refuses recorded contacts or criteria and restores the notice functions to their 20270316090000 bodies.",
+      "introduces": [
+        {
+          "kind": "table",
+          "object": "rec_requirement_criteria_sets"
+        },
+        {
+          "kind": "table",
+          "object": "rec_talent_contact_requests"
+        },
+        {
+          "kind": "table",
+          "object": "rec_talent_search_log"
+        },
+        {
+          "kind": "function",
+          "object": "rec_talent_access"
+        },
+        {
+          "kind": "function",
+          "object": "rec_talent_get_criteria"
+        },
+        {
+          "kind": "function",
+          "object": "rec_talent_catalogue_options"
+        },
+        {
+          "kind": "function",
+          "object": "rec_talent_confirm_criteria"
+        },
+        {
+          "kind": "function",
+          "object": "rec_talent_search"
+        },
+        {
+          "kind": "function",
+          "object": "rec_talent_profile"
+        },
+        {
+          "kind": "function",
+          "object": "rec_talent_send_contact"
+        },
+        {
+          "kind": "function",
+          "object": "rec_talent_contacts"
+        },
+        {
+          "kind": "function",
+          "object": "rec_talent_withdraw_contact"
+        },
+        {
+          "kind": "function",
+          "object": "sp_talent_my_contacts"
+        },
+        {
+          "kind": "function",
+          "object": "sp_talent_respond_contact"
+        }
+      ]
     }
   ],
   "policyVersion": 2, 

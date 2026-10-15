@@ -1,0 +1,47 @@
+# Talent provenance -- AFTER the fix
+# Same cases, fresh strict replay of the fixed slots.
+
+## psql -f supabase/tests/talent_provenance_test.sql
+  ok  PV0 nine shared cases loaded
+  ok  PV1.1 a CQrityjob document review of a credential: the talent level is document_reviewed (got document_reviewed)
+  ok  PV1.2 the decision notice names what the decision supports (got document_review)
+  ok  PV1.3 the decision row keeps the recorded method document_review as history
+  ok  PV2.1 an issuer confirmation with no structural issuer: documented, never source-confirmed: the talent level is document_reviewed (got document_reviewed)
+  ok  PV2.2 the decision notice names what the decision supports (got document_review)
+  ok  PV2.3 the decision row keeps the recorded method issuer_confirmation as history
+  ok  PV3.1 a legacy issuer method CQrityjob recorded about itself: the talent level is document_reviewed (got document_reviewed)
+  ok  PV3.2 the decision notice names what the decision supports (got document_review)
+  ok  PV3.3 the decision row keeps the recorded method issuer_confirmation as history
+  ok  PV4.1 an employer confirmation of a credential: outside an employer's standing: the talent level is document_reviewed (got document_reviewed)
+  ok  PV4.2 the decision notice names what the decision supports (got document_review)
+  ok  PV4.3 the decision row keeps the recorded method employer_confirmation as history
+  ok  PV5.1 a legacy employer decision with CQrityjob as the deciding organisation: the talent level is document_reviewed (got document_reviewed)
+  ok  PV5.2 the decision notice names what the decision supports (got document_review)
+  ok  PV5.3 the decision row keeps the recorded method employer_confirmation as history
+  ok  PV6.1 a legitimate employer confirmation of an employment period keeps its level: the talent level is employer_confirmed (got employer_confirmed)
+  ok  PV6.2 the decision notice names what the decision supports (got employer_confirmation)
+  ok  PV6.3 the decision row keeps the recorded method employer_confirmation as history
+  ok  PV7.1 an issuer confirmation of a period: documented: the talent level is document_reviewed (got document_reviewed)
+  ok  PV7.2 the decision notice names what the decision supports (got document_review)
+  ok  PV7.3 the decision row keeps the recorded method issuer_confirmation as history
+  ok  PV8.1 a CQrityjob document review of a period: the talent level is document_reviewed (got document_reviewed)
+  ok  PV8.2 the decision notice names what the decision supports (got document_review)
+  ok  PV8.3 the decision row keeps the recorded method document_review as history
+  ok  PV9.1 an employer method with no named organisation: fail closed: the talent level is document_reviewed (got document_reviewed)
+  ok  PV9.2 the decision notice names what the decision supports (got document_review)
+  ok  PV9.3 the decision row keeps the recorded method employer_confirmation as history
+  ok  PV10 the merits the card shows carry the same levels
+  ok  PV11 and so does the experience
+  ok  PV12 no card says a source confirmed anything
+
+## bun run scripts/provenance-parity-check.ts
+  ok PV1 a CQrityjob document review of a credential: database document_reviewed / notice document_review, application document_reviewed, expected document_reviewed
+  ok PV2 an issuer confirmation with no structural issuer: documented, never source-confirmed: database document_reviewed / notice document_review, application document_reviewed, expected document_reviewed
+  ok PV3 a legacy issuer method CQrityjob recorded about itself: database document_reviewed / notice document_review, application document_reviewed, expected document_reviewed
+  ok PV4 an employer confirmation of a credential: outside an employer's standing: database document_reviewed / notice document_review, application document_reviewed, expected document_reviewed
+  ok PV5 a legacy employer decision with CQrityjob as the deciding organisation: database document_reviewed / notice document_review, application document_reviewed, expected document_reviewed
+  ok PV6 a legitimate employer confirmation of an employment period keeps its level: database employer_confirmed / notice employer_confirmation, application employer_confirmed, expected employer_confirmed
+  ok PV7 an issuer confirmation of a period: documented: database document_reviewed / notice document_review, application document_reviewed, expected document_reviewed
+  ok PV8 a CQrityjob document review of a period: database document_reviewed / notice document_review, application document_reviewed, expected document_reviewed
+  ok PV9 an employer method with no named organisation: fail closed: database document_reviewed / notice document_review, application document_reviewed, expected document_reviewed
+provenance-parity: the database and the application agree on all 9 cases

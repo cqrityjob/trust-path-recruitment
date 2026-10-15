@@ -325,10 +325,13 @@ function pdf(label: string): Buffer {
  *  served, otherwise attached through sp_attach_evidence as its holder. */
 async function attachDocument(page: Page, uid: string, claimId: string, name: string) {
   if (STORAGE) {
-    await page
-      .locator('input[type="file"]')
-      .first()
-      .setInputFiles({ name, mimeType: "application/pdf", buffer: pdf(name) });
+    // The picker is disabled until the page has read the holder's interrupted
+    // uploads (uploadRecoveryPending), and a file chosen before that is
+    // dropped without a word -- a person cannot pick then, so neither does
+    // the walk. setInputFiles does not wait for enabled on its own.
+    const picker = page.locator("#sp-evidence-file");
+    await expect(picker).toBeEnabled({ timeout: 60_000 });
+    await picker.setInputFiles({ name, mimeType: "application/pdf", buffer: pdf(name) });
     await expect(page.locator("[data-evidence-saved-file]")).toHaveText(name, {
       timeout: 60_000,
     });

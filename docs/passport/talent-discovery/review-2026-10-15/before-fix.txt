@@ -1,0 +1,38 @@
+# supabase/tests/talent_review_findings_test.sql against the UNFIXED schema (e4f89ab migrations), psql -v report_only=1
+# replayed 397 migrations on PostgreSQL 16 + supabase/tests/00_bootstrap.sql, 2026-10-15T12:05:35Z
+ok  RF-F criteria confirmed for the job
+GROUP RF1 — a revoked session reads nothing through the new functions
+ok  RF1.1 control: with a live session every read answers
+ok  RF1.2 reference: the ordinary table read already returns nothing
+not ok  RF1.3 every new read refuses a revoked session: holder, recruiter and reviewer
+ok  RF1.4 and every new write
+ok  RF1.5 nothing changed
+GROUP RF2 — an employer attestation is never a Passport reviewer's to read
+not ok  RF2.1 a verifier with no CQrityjob case for the period reads nothing
+not ok  RF2.2 with its own case the verifier reads neither the attestation nor its internal note
+ok  RF2.3 and the current state is the CQrityjob case's, not the employer's approval
+ok  RF2.4 the holder never reads an internal note either
+GROUP RF8 — a decision notice says how it was decided
+not ok  RF8.1 the inbox tells an employer confirmation from a CQrityjob document review
+not ok  RF8.2 and so does the mail payload
+GROUP RF3 — lost access ends the notice: mail retry and inbox
+ok  RF3.1 control: the reviewer's notices were claimed and are in the inbox
+not ok  RF3.2 an expired lease is re-checked: no mail to a former reviewer, the rows settle as skipped
+not ok  RF3.3 the inbox drops them at once
+not ok  RF3.4 and the table is not readable around the inbox
+GROUP RF4 — a correction replaces the searchable version
+not ok  RF4.1 the new version is selected in place of the old one
+not ok  RF4.2 saving the selection the page read back succeeds
+not ok  RF4.3 no superseded entry is ever selected
+GROUP RF5 — declined, then the same answer with block
+ok  RF5.1 declined, then the same answer again with block
+not ok  RF5.2 the other open request is declined with it, its snapshot cleared, both marked blocked
+not ok  RF5.3 the organisation no longer reads the person as discoverable
+GROUP RF6 — validity
+not ok  RF6.1 a merit that starts in 100 days is not yet valid
+not ok  RF6.2 the search says so instead of "evidenced"
+not ok  RF6.3 an expired merit is evidence with a note when validity was not asked for
+ok  RF6.4 and needs clarifying when it was
+GROUP RF7 — criteria are bound to the profile version the user saw
+not ok  RF7.1 the form opened on version 1 cannot confirm criteria onto version 2
+not ok  RF7.2 after reading version 2 it can

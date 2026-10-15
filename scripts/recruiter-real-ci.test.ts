@@ -198,7 +198,40 @@ describe("native mobile preset validation", () => {
 describe("official real Supabase CI target", () => {
   test("the revised application pin is exact and old native evidence cannot stand in for it", () => {
     expect(APP_SHA).toBe("53659419a1c243c27a59540eb849569140b71365");
-    expect(SCHEMA_SHA).toBe("53659419a1c243c27a59540eb849569140b71365");
+    // The schema witness moved to the talent-discovery release (397 files);
+    // the application under this regression stays the reviewed 53659419.
+    expect(SCHEMA_SHA).toBe("ed882e955f7019036aad8fa4404cb023d2c9fced");
+    expect(() =>
+      validateTarget(
+        { ...env, RI_REAL_RELEASE_SCHEMA_SHA: "53659419a1c243c27a59540eb849569140b71365" },
+        env.RI_REAL_SCHEMA_SHA,
+        APP_SHA,
+      ),
+    ).toThrow("REAL_CI_UNREVIEWED_RELEASE_SCHEMA");
+    // The talent slots before the 2026-10-15 review fixes are not the release.
+    expect(() =>
+      validateTarget(
+        { ...env, RI_REAL_RELEASE_SCHEMA_SHA: "e4f89abece123824ace0fe75261a19dcf563b9a1" },
+        env.RI_REAL_SCHEMA_SHA,
+        APP_SHA,
+      ),
+    ).toThrow("REAL_CI_UNREVIEWED_RELEASE_SCHEMA");
+    // Nor the reviewed fixes before Astra's provenance recheck (c340a00c).
+    expect(() =>
+      validateTarget(
+        { ...env, RI_REAL_RELEASE_SCHEMA_SHA: "c340a00cc58c86d70c49338cd0e88854147fc675" },
+        env.RI_REAL_SCHEMA_SHA,
+        APP_SHA,
+      ),
+    ).toThrow("REAL_CI_UNREVIEWED_RELEASE_SCHEMA");
+    // Nor the provenance fix before Astra's normalisation finding (22adab15).
+    expect(() =>
+      validateTarget(
+        { ...env, RI_REAL_RELEASE_SCHEMA_SHA: "22adab15baf99f09ccbf8cfdaee449bdf1c054c2" },
+        env.RI_REAL_SCHEMA_SHA,
+        APP_SHA,
+      ),
+    ).toThrow("REAL_CI_UNREVIEWED_RELEASE_SCHEMA");
     expect(() =>
       validateTarget(env, env.RI_REAL_SCHEMA_SHA, "40e5775de5195050571421827434ec2872a61506"),
     ).toThrow("REAL_CI_UNREVIEWED_APP_HEAD");
@@ -235,7 +268,7 @@ describe("official real Supabase CI target", () => {
     ).toThrow("UNREVIEWED_APP_HEAD");
   });
   test("release schema binding is separate from test code and requires a full SHA", () => {
-    const release = "53659419a1c243c27a59540eb849569140b71365";
+    const release = "ed882e955f7019036aad8fa4404cb023d2c9fced";
     const context = validateTarget(
       { ...env, RI_REAL_RELEASE_SCHEMA_SHA: release },
       env.RI_REAL_SCHEMA_SHA,
@@ -390,7 +423,7 @@ describe("real CI execution and publication cannot silently narrow", () => {
     expect(job["runs-on"]).toBe("ubuntu-latest");
     expect(job.if).toBeUndefined();
     expect(job["continue-on-error"]).toBeUndefined();
-    expect(job.env.RI_REAL_RELEASE_SCHEMA_SHA).toBe("53659419a1c243c27a59540eb849569140b71365");
+    expect(job.env.RI_REAL_RELEASE_SCHEMA_SHA).toBe("ed882e955f7019036aad8fa4404cb023d2c9fced");
     expect(job.steps[0].with["fetch-depth"]).toBe(0);
     expect(job.steps.every((step: { [key: string]: unknown }) => !step["continue-on-error"])).toBe(
       true,
@@ -478,8 +511,11 @@ describe("real CI execution and publication cannot silently narrow", () => {
       "20270313100000_change_reason.sql",
       "20270314100000_candidate_reply.sql",
       "20270315100000_beskt_items.sql",
+      "20270316090000_review_reply_history.sql",
+      "20270317090000_talent_discovery.sql",
+      "20270318090000_talent_search_contact.sql",
     );
-    expect(requireCompleteHistory(files)).toHaveLength(394);
+    expect(requireCompleteHistory(files)).toHaveLength(397);
     expect(() => requireCompleteHistory(files.slice(0, -2))).toThrow(
       "COMPLETE_CANONICAL_HISTORY_REQUIRED",
     );
@@ -509,6 +545,13 @@ describe("real CI execution and publication cannot silently narrow", () => {
       expect(() => requireCompleteHistory(omitted)).toThrow("COMPLETE_CANONICAL_HISTORY_REQUIRED");
       expect(() => requireCompleteHistory([...omitted, "20270316100000_other.sql"])).toThrow(
         "LIFECYCLE_V04_FORWARD_REQUIRED",
+      );
+    }
+    for (const version of ["20270316090000_", "20270317090000_", "20270318090000_"]) {
+      const omitted = files.filter((name) => !name.startsWith(version));
+      expect(() => requireCompleteHistory(omitted)).toThrow("COMPLETE_CANONICAL_HISTORY_REQUIRED");
+      expect(() => requireCompleteHistory([...omitted, "20270319100000_other.sql"])).toThrow(
+        "TALENT_DISCOVERY_FORWARD_REQUIRED",
       );
     }
     expect(() => requireCompleteHistory(files.slice(0, -1))).toThrow();
