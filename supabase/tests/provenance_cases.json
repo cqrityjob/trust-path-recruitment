@@ -1,0 +1,83 @@
+[
+  {
+    "id": "PV1",
+    "subject": "claim",
+    "requestKind": "cqrityjob_review",
+    "method": "document_review",
+    "organisation": "CQrityjob",
+    "expected": "document_reviewed",
+    "why": "a CQrityjob document review of a credential"
+  },
+  {
+    "id": "PV2",
+    "subject": "claim",
+    "requestKind": "cqrityjob_review",
+    "method": "issuer_confirmation",
+    "organisation": "Utfärdarinstitutet AB",
+    "expected": "document_reviewed",
+    "why": "an issuer confirmation with no structural issuer: documented, never source-confirmed"
+  },
+  {
+    "id": "PV3",
+    "subject": "claim",
+    "requestKind": "cqrityjob_review",
+    "method": "issuer_confirmation",
+    "organisation": "CQrityjob",
+    "expected": "document_reviewed",
+    "why": "a legacy issuer method CQrityjob recorded about itself"
+  },
+  {
+    "id": "PV4",
+    "subject": "claim",
+    "requestKind": "cqrityjob_review",
+    "method": "employer_confirmation",
+    "organisation": "TS Bevakning AB",
+    "expected": "document_reviewed",
+    "why": "an employer confirmation of a credential: outside an employer's standing"
+  },
+  {
+    "id": "PV5",
+    "subject": "period",
+    "requestKind": "cqrityjob_review",
+    "method": "employer_confirmation",
+    "organisation": "CQrityjob",
+    "expected": "document_reviewed",
+    "why": "a legacy employer decision with CQrityjob as the deciding organisation"
+  },
+  {
+    "id": "PV6",
+    "subject": "period",
+    "requestKind": "employer_attestation",
+    "method": "employer_confirmation",
+    "organisation": "TS Bevakning AB",
+    "expected": "employer_confirmed",
+    "why": "a legitimate employer confirmation of an employment period keeps its level"
+  },
+  {
+    "id": "PV7",
+    "subject": "period",
+    "requestKind": "cqrityjob_review",
+    "method": "issuer_confirmation",
+    "organisation": "Utfärdarinstitutet AB",
+    "expected": "document_reviewed",
+    "why": "an issuer confirmation of a period: documented"
+  },
+  {
+    "id": "PV8",
+    "subject": "period",
+    "requestKind": "cqrityjob_review",
+    "method": "document_review",
+    "organisation": "CQrityjob",
+    "expected": "document_reviewed",
+    "why": "a CQrityjob document review of a period"
+  },
+  {
+    "id": "PV9",
+    "subject": "period",
+    "requestKind": "employer_attestation",
+    "method": "employer_confirmation",
+    "organisation": "  ",
+    "expected": "document_reviewed",
+    "why": "an employer method with no named organisation: fail closed"
+  }
+]

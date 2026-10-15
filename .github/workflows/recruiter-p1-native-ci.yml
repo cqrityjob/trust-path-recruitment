@@ -38,7 +38,7 @@ jobs:
       - name: Exact reviewed schema including native hash fix
         uses: actions/checkout@v4
         with:
-          ref: c340a00cc58c86d70c49338cd0e88854147fc675
+          ref: 22adab15baf99f09ccbf8cfdaee449bdf1c054c2
           path: schema
           persist-credentials: false
           sparse-checkout: |
