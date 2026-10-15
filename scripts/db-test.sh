@@ -339,6 +339,39 @@ td_nc rec_talent_search_and_contact_test "TD NC5 no warning that a certification
 td_restore "$TD_M3" 'CREATE FUNCTION public.rec_talent_evaluate(' '^END \$\$;'
 td_suite rec_talent_search_and_contact_test "Talent search and contact (after controls)" 75
 
+# The independent review of 2026-10-15: nine reproduced findings, one group
+# each (RF9 is application code, scripts/talent-discovery-check.ts). The suite
+# failed group by group on the unfixed slots
+# (docs/passport/talent-discovery/review-2026-10-15/before-fix.log).
+echo "==> Running the review findings of 2026-10-15 (RF1-RF8)"
+td_suite talent_review_findings_test "Review findings 2026-10-15" 28 \
+  "RF1.3 every new read refuses a revoked session: holder, recruiter and reviewer" \
+  "RF2.2 with its own case the verifier reads neither the attestation nor its internal note" \
+  "RF3.2 an expired lease is re-checked: no mail to a former reviewer, the rows settle as skipped" \
+  "RF3.3 the inbox drops them at once" \
+  "RF4.2 saving the selection the page read back succeeds" \
+  "RF5.2 the other open request is declined with it, its snapshot cleared, both marked blocked" \
+  "RF6.1 a merit that starts in 100 days is not yet valid" \
+  "RF6.3 an expired merit is evidence with a note when validity was not asked for" \
+  "RF7.1 the form opened on version 1 cannot confirm criteria onto version 2" \
+  "RF8.2 and so does the mail payload"
+td_plant "$TD_M2" 'CREATE FUNCTION public.sp_talent_preview()' '^END \$\$;' "/PERFORM public.sp_assert_passport_session();/d"
+td_nc talent_review_findings_test "RF NC1 the preview forgets the session rule" "RF1.3"
+td_restore "$TD_M2" 'CREATE FUNCTION public.sp_talent_preview()' '^END \$\$;'
+td_plant "$TD_M1" 'CREATE FUNCTION public.sp_review_reader(' '^END \$\$;' "s/WHERE r.request_kind = 'cqrityjob_review'/WHERE true/"
+td_nc talent_review_findings_test "RF NC2 any verifier reads any entry" "RF2.1"
+td_restore "$TD_M1" 'CREATE FUNCTION public.sp_review_reader(' '^END \$\$;'
+td_plant "$TD_M3" 'CREATE OR REPLACE FUNCTION public.user_notices_claim_emails(' '^END \$\$;' "s/AND NOT public.user_notices_still_allowed(n);/AND false;/; /^       AND public.user_notices_still_allowed(n)\$/d"
+td_nc talent_review_findings_test "RF NC3 an expired claim is handed out unchecked" "RF3.2"
+td_restore "$TD_M3" 'CREATE OR REPLACE FUNCTION public.user_notices_claim_emails(' '^END \$\$;'
+td_plant "$TD_M2" 'CREATE FUNCTION public.sp_talent_follow_correction()' '^END \$\$;' "/DELETE FROM public.sp_talent_items WHERE claim_id = NEW.supersedes_id;/d"
+td_nc talent_review_findings_test "RF NC4 a correction keeps the superseded version selected" "RF4.1"
+td_restore "$TD_M2" 'CREATE FUNCTION public.sp_talent_follow_correction()' '^END \$\$;'
+td_plant "$TD_M3" 'CREATE FUNCTION public.rec_talent_confirm_criteria(' '^END \$\$;' "s/IF p.id IS DISTINCT FROM _profile_id THEN/IF false THEN/"
+td_nc talent_review_findings_test "RF NC5 criteria bind to an unseen profile" "RF7.1"
+td_restore "$TD_M3" 'CREATE FUNCTION public.rec_talent_confirm_criteria(' '^END \$\$;'
+td_suite talent_review_findings_test "Review findings 2026-10-15 (after controls)" 28
+
 # The data-bearing rollbacks refuse recorded data before changing anything:
 # each suite's own fixture, with the rollback in place of its ROLLBACK.
 TD_PROBE="$(mktemp)"

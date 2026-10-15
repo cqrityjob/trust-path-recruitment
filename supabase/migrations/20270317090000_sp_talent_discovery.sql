@@ -109,6 +109,11 @@ CREATE POLICY sp_talent_profiles_own ON public.sp_talent_profiles FOR SELECT TO 
 CREATE POLICY sp_talent_items_own ON public.sp_talent_items FOR SELECT TO authenticated USING (holder_user_id = auth.uid());
 CREATE POLICY sp_talent_blocks_own ON public.sp_talent_blocks FOR SELECT TO authenticated USING (holder_user_id = auth.uid());
 CREATE POLICY sp_talent_consent_events_own ON public.sp_talent_consent_events FOR SELECT TO authenticated USING (holder_user_id = auth.uid());
+-- The same session rule as every private Passport table (RF1).
+CREATE POLICY sp_private_session_read ON public.sp_talent_profiles AS RESTRICTIVE FOR ALL TO authenticated USING (public.sp_passport_session_active());
+CREATE POLICY sp_private_session_read ON public.sp_talent_items AS RESTRICTIVE FOR ALL TO authenticated USING (public.sp_passport_session_active());
+CREATE POLICY sp_private_session_read ON public.sp_talent_blocks AS RESTRICTIVE FOR ALL TO authenticated USING (public.sp_passport_session_active());
+CREATE POLICY sp_private_session_read ON public.sp_talent_consent_events AS RESTRICTIVE FOR ALL TO authenticated USING (public.sp_passport_session_active());
 
 CREATE TRIGGER sp_private_session_write BEFORE INSERT OR UPDATE OR DELETE ON public.sp_talent_profiles
   FOR EACH ROW EXECUTE FUNCTION public.sp_passport_session_write_guard();
@@ -166,17 +171,20 @@ RETURNS text LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, pg_t
 $$;
 REVOKE ALL ON FUNCTION public.sp_talent_entry_level(text, uuid, uuid) FROM PUBLIC, anon, authenticated;
 
-CREATE FUNCTION public.sp_talent_validity(_valid_until date, _no_expiry boolean)
+-- A merit that has not started yet is not valid yet, whatever its end date
+-- says (review 2026-10-15, RF6).
+CREATE FUNCTION public.sp_talent_validity(_valid_from date, _valid_until date, _no_expiry boolean)
 RETURNS text LANGUAGE sql STABLE SET search_path = public, pg_temp AS $$
   SELECT CASE
+    WHEN _valid_from IS NOT NULL AND _valid_from > current_date THEN 'not_yet_valid'
     WHEN coalesce(_no_expiry, false) AND _valid_until IS NULL THEN 'no_expiry'
     WHEN _valid_until IS NULL THEN 'not_stated'
     WHEN _valid_until < current_date THEN 'expired'
     WHEN _valid_until <= current_date + 60 THEN 'expiring_soon'
     ELSE 'valid' END;
 $$;
-REVOKE ALL ON FUNCTION public.sp_talent_validity(date, boolean) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.sp_talent_validity(date, boolean) TO authenticated;
+REVOKE ALL ON FUNCTION public.sp_talent_validity(date, date, boolean) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.sp_talent_validity(date, date, boolean) TO authenticated;
 
 -- The searchable merits, read live. Revoked, withdrawn, superseded and draft
 -- entries never appear; an expired one appears as expired.
@@ -190,7 +198,7 @@ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS $$
          public.sp_catalogue_requirement_class(c.credential_code),
          c.jurisdiction_code, c.sub_jurisdiction_code, d.validity_jurisdiction_code,
          extract(year FROM c.issued_on)::integer, c.valid_until,
-         public.sp_talent_validity(c.valid_until, d.no_expiry), t.requires_valid_until,
+         public.sp_talent_validity(c.valid_from, c.valid_until, d.no_expiry), t.requires_valid_until,
          public.sp_talent_entry_level(c.assertion_level, c.id, NULL),
          c.authorisation_scope IS NOT NULL
     FROM public.sp_talent_items i
@@ -262,6 +270,7 @@ RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public,
 DECLARE p public.sp_talent_profiles%ROWTYPE;
 BEGIN
   IF auth.uid() IS NULL THEN RAISE EXCEPTION 'SP_NOT_AUTHENTICATED' USING ERRCODE = 'insufficient_privilege'; END IF;
+  PERFORM public.sp_assert_passport_session();
   SELECT * INTO p FROM public.sp_talent_profiles WHERE holder_user_id = auth.uid();
   RETURN jsonb_build_object(
     'visibility', coalesce(p.visibility, 'private'),
@@ -273,8 +282,10 @@ BEGIN
       'cities', to_jsonb(coalesce(p.cities, '{}')), 'employmentTypes', to_jsonb(coalesce(p.employment_types, '{}')),
       'workplaceTypes', to_jsonb(coalesce(p.workplace_types, '{}')), 'availableFrom', p.available_from),
     'items', jsonb_build_object(
-      'claims', coalesce((SELECT jsonb_agg(claim_id) FROM public.sp_talent_items WHERE holder_user_id = auth.uid() AND claim_id IS NOT NULL), '[]'::jsonb),
-      'experiences', coalesce((SELECT jsonb_agg(experience_id) FROM public.sp_talent_items WHERE holder_user_id = auth.uid() AND experience_id IS NOT NULL), '[]'::jsonb)),
+      'claims', coalesce((SELECT jsonb_agg(i.claim_id) FROM public.sp_talent_items i JOIN public.sp_claims c ON c.id = i.claim_id
+                          WHERE i.holder_user_id = auth.uid() AND c.lifecycle_state IN ('active', 'expired')), '[]'::jsonb),
+      'experiences', coalesce((SELECT jsonb_agg(i.experience_id) FROM public.sp_talent_items i JOIN public.sp_experience_periods ep ON ep.id = i.experience_id
+                          WHERE i.holder_user_id = auth.uid() AND ep.lifecycle_state = 'active'), '[]'::jsonb)),
     'blockedEmployers', coalesce((SELECT jsonb_agg(jsonb_build_object('employerId', b.employer_id, 'name', e.name, 'since', b.created_at) ORDER BY b.created_at DESC)
                                     FROM public.sp_talent_blocks b JOIN public.employers e ON e.id = b.employer_id
                                    WHERE b.holder_user_id = auth.uid()), '[]'::jsonb));
@@ -288,6 +299,7 @@ RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public,
 DECLARE _card jsonb;
 BEGIN
   IF auth.uid() IS NULL THEN RAISE EXCEPTION 'SP_NOT_AUTHENTICATED' USING ERRCODE = 'insufficient_privilege'; END IF;
+  PERFORM public.sp_assert_passport_session();
   _card := public.sp_talent_card(auth.uid());
   IF _card IS NULL THEN
     -- Never opened: the empty card that private would show (nothing).
@@ -308,6 +320,7 @@ DECLARE p public.sp_talent_profiles%ROWTYPE; _holder uuid := auth.uid(); _from t
         _areas text[]; _countries text[]; _cities text[]; _emp text[]; _work text[]; _avail date; _x text;
 BEGIN
   IF _holder IS NULL THEN RAISE EXCEPTION 'SP_NOT_AUTHENTICATED' USING ERRCODE = 'insufficient_privilege'; END IF;
+  PERFORM public.sp_assert_passport_session();
   IF _visibility NOT IN ('private', 'open', 'active') THEN
     RAISE EXCEPTION 'SP_TALENT_INVALID: visibility' USING ERRCODE = 'check_violation';
   END IF;
@@ -411,6 +424,7 @@ RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_tem
 DECLARE _from text; _count integer;
 BEGIN
   IF auth.uid() IS NULL THEN RAISE EXCEPTION 'SP_NOT_AUTHENTICATED' USING ERRCODE = 'insufficient_privilege'; END IF;
+  PERFORM public.sp_assert_passport_session();
   SELECT visibility INTO _from FROM public.sp_talent_profiles WHERE holder_user_id = auth.uid() FOR UPDATE;
   IF _from IS NOT NULL AND _from <> 'private' THEN
     UPDATE public.sp_talent_profiles
@@ -430,28 +444,41 @@ CREATE FUNCTION public.sp_talent_unblock_employer(_employer_id uuid)
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 BEGIN
   IF auth.uid() IS NULL THEN RAISE EXCEPTION 'SP_NOT_AUTHENTICATED' USING ERRCODE = 'insufficient_privilege'; END IF;
+  PERFORM public.sp_assert_passport_session();
   DELETE FROM public.sp_talent_blocks WHERE holder_user_id = auth.uid() AND employer_id = _employer_id;
   RETURN public.sp_talent_get_settings();
 END $$;
 REVOKE ALL ON FUNCTION public.sp_talent_unblock_employer(uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.sp_talent_unblock_employer(uuid) TO authenticated;
 
--- A correction creates a new claim version (sp_correct_claim). If the old
--- version was searchable, the new one is -- the holder chose to share that
--- merit -- but it carries its OWN level: a material change starts again as
--- self-declared (sp_correct_claim), so no earlier approval is inherited.
+-- A correction creates a new version (sp_correct_claim, and the same for an
+-- experience period). If the old version was searchable, the new one REPLACES
+-- it in the selection -- the holder chose to share that merit -- and the
+-- superseded version leaves it, so a saved selection never holds an entry the
+-- holder can no longer select (review 2026-10-15, RF4). The new version
+-- carries its OWN level: a material change starts again as self-declared, so
+-- no earlier approval is inherited.
 CREATE FUNCTION public.sp_talent_follow_correction() RETURNS trigger
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 BEGIN
-  IF NEW.supersedes_id IS NOT NULL
-     AND EXISTS (SELECT 1 FROM public.sp_talent_items WHERE claim_id = NEW.supersedes_id) THEN
-    INSERT INTO public.sp_talent_items (holder_user_id, claim_id) VALUES (NEW.holder_user_id, NEW.id)
+  IF NEW.supersedes_id IS NULL THEN RETURN NEW; END IF;
+  IF TG_TABLE_NAME = 'sp_claims' THEN
+    IF EXISTS (SELECT 1 FROM public.sp_talent_items WHERE claim_id = NEW.supersedes_id) THEN
+      DELETE FROM public.sp_talent_items WHERE claim_id = NEW.supersedes_id;
+      INSERT INTO public.sp_talent_items (holder_user_id, claim_id) VALUES (NEW.holder_user_id, NEW.id)
+      ON CONFLICT DO NOTHING;
+    END IF;
+  ELSIF EXISTS (SELECT 1 FROM public.sp_talent_items WHERE experience_id = NEW.supersedes_id) THEN
+    DELETE FROM public.sp_talent_items WHERE experience_id = NEW.supersedes_id;
+    INSERT INTO public.sp_talent_items (holder_user_id, experience_id) VALUES (NEW.holder_user_id, NEW.id)
     ON CONFLICT DO NOTHING;
   END IF;
   RETURN NEW;
 END $$;
 REVOKE ALL ON FUNCTION public.sp_talent_follow_correction() FROM PUBLIC, anon, authenticated;
 CREATE TRIGGER sp_talent_follow_correction AFTER INSERT ON public.sp_claims
+  FOR EACH ROW EXECUTE FUNCTION public.sp_talent_follow_correction();
+CREATE TRIGGER sp_talent_follow_correction AFTER INSERT ON public.sp_experience_periods
   FOR EACH ROW EXECUTE FUNCTION public.sp_talent_follow_correction();
 
 -- Postflight.
@@ -472,6 +499,12 @@ BEGIN
   IF has_column_privilege('authenticated', 'public.sp_talent_profiles', 'search_ref', 'SELECT') THEN
     RAISE EXCEPTION 'SP_TALENT_PROOF: search_ref is readable';
   END IF;
+  FOREACH f IN ARRAY ARRAY['public.sp_talent_get_settings()', 'public.sp_talent_preview()', 'public.sp_talent_pause()',
+    'public.sp_talent_save_settings(integer,text,text,uuid[],uuid[],jsonb)', 'public.sp_talent_unblock_employer(uuid)'] LOOP
+    IF position('sp_assert_passport_session()' IN (SELECT prosrc FROM pg_proc WHERE oid = f::regprocedure)) = 0 THEN
+      RAISE EXCEPTION 'SP_TALENT_PROOF: % does not assert the Passport session', f;
+    END IF;
+  END LOOP;
   RAISE NOTICE 'SP_TALENT_PROOF ok';
 END $$;
 

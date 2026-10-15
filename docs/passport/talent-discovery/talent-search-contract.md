@@ -94,12 +94,12 @@ innan sökning (`criteria_required`).
 
 Per krav ett av fyra lägen:
 
-| Läge                  | Betyder                                                                                                                                    |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `evidenced`           | En vald merit/erfarenhet stödjer kravet                                                                                                    |
-| `needs_clarification` | Något finns men behöver klarläggas: `expired`, `validity_not_stated`, `other_jurisdiction`, `level_below_requested`, `fewer_months_shared` |
-| `not_shared`          | Inget bland de uppgifter personen gjort sökbara. **Betyder inte att personen saknar det.**                                                 |
-| `to_clarify`          | Kravet kan inte läsas ur ett Passport                                                                                                      |
+| Läge                  | Betyder                                                                                                                                                                                                                                                      |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `evidenced`           | En vald merit/erfarenhet stödjer kravet                                                                                                                                                                                                                      |
+| `needs_clarification` | Något finns men behöver klarläggas: `expired`, `not_yet_valid` och `validity_not_stated` (bara när arbetsgivaren kräver giltig merit; annars är `expired`/`not_yet_valid` en notering), `other_jurisdiction`, `level_below_requested`, `fewer_months_shared` |
+| `not_shared`          | Inget bland de uppgifter personen gjort sökbara. **Betyder inte att personen saknar det.**                                                                                                                                                                   |
+| `to_clarify`          | Kravet kan inte läsas ur ett Passport                                                                                                                                                                                                                        |
 
 Noteringar som inte ändrar läget: `expiring_soon`, `scope_limited`, `self_declared`,
 `experience_declared`, `international_certification_is_not_authorisation`.
@@ -168,3 +168,20 @@ paus kan arbetsgivaren inte läsa den levande profilen, inte heller efter anstä
 `product_metric_events` har bara händelsenamn och tidpunkt: första sparade merit, begärd
 granskning, aktiverad sökbarhet, kontaktförfrågan, accepterad kontakt. Ingen person, inget
 innehåll. Läses aggregerat av plattformsadministratör (`product_metric_counts`).
+
+## Rättningar efter oberoende granskning 2026-10-15
+
+Regressionssviten är `supabase/tests/talent_review_findings_test.sql`. Utfall före och efter rättningen
+finns i [review-2026-10-15/](review-2026-10-15/).
+
+| Fynd | Regel som nu gäller                                                                                                                                                                                                                                                                                                                                   |
+| ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| RF1  | Varje `SECURITY DEFINER`-funktion som en inloggad klient kan anropa kör `sp_assert_passport_session()` först. Det är samma regel som den restriktiva RLS-policyn på privata Passport-tabeller. En återkallad session får `SP_SESSION_REVOKED` från innehavarens, granskarens och rekryterarens sida. Talangtabellerna har samma restriktiva lässkydd. |
+| RF2  | En Passport-granskare läser bara poster som har ett CQrityjob-granskningsärende, och bara det ärendet. Arbetsgivarintyg, deras beslut och interna anteckningar syns aldrig för granskaren. Innehavaren läser aldrig en intern anteckning.                                                                                                             |
+| RF3  | En notis som delas ut på nytt efter låsets utgång kontrolleras mot mottagarens behörighet, precis som `pending` och `failed`. Inkorgen visar bara notiser som mottagaren fortfarande har rätt att se, och tabellen går inte att läsa direkt.                                                                                                          |
+| RF4  | En korrigering ersätter den sökbara versionen, både för meriter och anställningsperioder. Urvalet innehåller aldrig en ersatt version.                                                                                                                                                                                                                |
+| RF5  | Att blockera en organisation är en enda handling, även när det sker som ett upprepat svar. Alla öppna förfrågningar från organisationen avböjs och deras snapshots rensas. Organisationen ser inte längre personen som sökbar.                                                                                                                        |
+| RF6  | Giltigheten tar hänsyn till `valid_from` (`not_yet_valid`). Utgången eller ännu inte giltig merit ändrar läget bara när arbetsgivaren kräver en giltig merit.                                                                                                                                                                                         |
+| RF7  | `rec_talent_confirm_criteria(job, expectedVersion, profileId, criteria)`: kriterier binds till den kravprofilversion som användaren har sett. En profil som ändrats under tiden nekas med `TALENT_CRITERIA_STALE`.                                                                                                                                    |
+| RF8  | En beslutsnotis bär sin `verificationMethod`. Mejl och inkorg skiljer arbetsgivarbekräftelse från CQrityjobs dokumentgranskning.                                                                                                                                                                                                                      |
+| RF9  | Appen: produktmejl skickas bara när miljön uttryckligen säger något annat. Utan mottagarlista nekas utskick, utom med `PRODUCT_EMAIL_MODE=production`. Se app-PR:en.                                                                                                                                                                                  |

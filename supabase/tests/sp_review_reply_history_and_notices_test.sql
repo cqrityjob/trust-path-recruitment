@@ -296,7 +296,7 @@ DO $$ BEGIN RAISE NOTICE 'GROUP RH11 — grants'; END $$;
 SELECT pg_temp.ok(NOT has_function_privilege('anon', 'public.sp_reply_to_clarification(uuid,timestamptz,text)', 'EXECUTE')
                   AND NOT has_function_privilege('anon', 'public.sp_review_thread(uuid,uuid)', 'EXECUTE')
                   AND NOT has_function_privilege('anon', 'public.user_notices_inbox(integer)', 'EXECUTE')
-                  AND NOT has_function_privilege('authenticated', 'public.user_notices_enqueue(uuid,text,text,text,uuid,uuid,text)', 'EXECUTE')
+                  AND NOT has_function_privilege('authenticated', 'public.user_notices_enqueue(uuid,text,text,text,uuid,uuid,text,text)', 'EXECUTE')
                   AND NOT has_function_privilege('authenticated', 'public.product_metric_record(text)', 'EXECUTE')
                   AND NOT has_table_privilege('authenticated', 'public.product_metric_events', 'SELECT'),
                   'RH11.1 anon executes nothing; writers and metrics are not client-reachable');

@@ -205,24 +205,24 @@ CREATE TEMP TABLE crit AS SELECT jsonb_build_array(
 GRANT SELECT ON crit TO PUBLIC;
 
 DO $$ BEGIN RAISE NOTICE 'GROUP TS2 — catalogue-bound criteria'; END $$;
-SELECT pg_temp.ok(pg_temp.try_as((SELECT o::text FROM f), format('SELECT public.rec_talent_confirm_criteria(%L, 0, %L::jsonb)', (SELECT j1 FROM f),
+SELECT pg_temp.ok(pg_temp.try_as((SELECT o::text FROM f), format('SELECT public.rec_talent_confirm_criteria(%L, 0, %L, %L::jsonb)', (SELECT j1 FROM f), (SELECT id FROM public.rec_requirement_profiles WHERE job_id = (SELECT j1 FROM f) AND version = 1),
                     '[{"requirementId":"a7180000-5555-4000-8000-000000000001","credentialCodes":["OV","INTL_ASIS_CPP"]}]')) = 'err:TALENT_CRITERIA_MIXED_CLASSES',
                   'TS2.1 a regulated authorisation and an international certification cannot satisfy one requirement');
-SELECT pg_temp.ok(pg_temp.try_as((SELECT o::text FROM f), format('SELECT public.rec_talent_confirm_criteria(%L, 0, %L::jsonb)', (SELECT j1 FROM f),
+SELECT pg_temp.ok(pg_temp.try_as((SELECT o::text FROM f), format('SELECT public.rec_talent_confirm_criteria(%L, 0, %L, %L::jsonb)', (SELECT j1 FROM f), (SELECT id FROM public.rec_requirement_profiles WHERE job_id = (SELECT j1 FROM f) AND version = 1),
                     '[{"requirementId":"a7180000-5555-4000-8000-000000000001","credentialCodes":["NOT_A_CODE"]}]')) = 'err:TALENT_CRITERIA_UNKNOWN_CREDENTIAL',
                   'TS2.2 only published catalogue definitions');
-SELECT pg_temp.ok(pg_temp.try_as((SELECT m::text FROM f), format('SELECT public.rec_talent_confirm_criteria(%L, 0, %L::jsonb)', (SELECT j1 FROM f), (SELECT j FROM crit)))
+SELECT pg_temp.ok(pg_temp.try_as((SELECT m::text FROM f), format('SELECT public.rec_talent_confirm_criteria(%L, 0, %L, %L::jsonb)', (SELECT j1 FROM f), (SELECT id FROM public.rec_requirement_profiles WHERE job_id = (SELECT j1 FROM f) AND version = 1), (SELECT j FROM crit)))
                     = 'err:TALENT_SEARCH_NOT_AVAILABLE', 'TS2.3 a plain member cannot set criteria');
-SELECT pg_temp.ok(pg_temp.try_as((SELECT o::text FROM f), format('SELECT public.rec_talent_confirm_criteria(%L, 0, %L::jsonb)', (SELECT j1 FROM f), (SELECT j FROM crit))) = 'ok',
+SELECT pg_temp.ok(pg_temp.try_as((SELECT o::text FROM f), format('SELECT public.rec_talent_confirm_criteria(%L, 0, %L, %L::jsonb)', (SELECT j1 FROM f), (SELECT id FROM public.rec_requirement_profiles WHERE job_id = (SELECT j1 FROM f) AND version = 1), (SELECT j FROM crit))) = 'ok',
                   'TS2.4 the owner confirms the criteria');
-SELECT pg_temp.ok(pg_temp.try_as((SELECT o::text FROM f), format('SELECT public.rec_talent_confirm_criteria(%L, 0, %L::jsonb)', (SELECT j1 FROM f), (SELECT j FROM crit)))
+SELECT pg_temp.ok(pg_temp.try_as((SELECT o::text FROM f), format('SELECT public.rec_talent_confirm_criteria(%L, 0, %L, %L::jsonb)', (SELECT j1 FROM f), (SELECT id FROM public.rec_requirement_profiles WHERE job_id = (SELECT j1 FROM f) AND version = 1), (SELECT j FROM crit)))
                     = 'err:TALENT_CRITERIA_STALE', 'TS2.5 a second confirm from the same old page is refused');
 SELECT pg_temp.ok((SELECT criteria FROM public.rec_requirement_criteria_sets WHERE job_id = (SELECT j1 FROM f))
                     @> '[{"requirementClass":"regulated_authorisation","jurisdiction":"SE","mustBeValid":true},{"requirementClass":"education"},{"requirementClass":"certification","minLevel":"document_reviewed"},{"requirementClass":"experience","experienceMonths":24},{"requirementClass":"unbound"}]',
                   'TS2.6 each requirement carries its class, jurisdiction, validity rule and level');
 SELECT pg_temp.ok(pg_temp.try_as((SELECT o::text FROM f), 'UPDATE public.rec_requirement_criteria_sets SET version = 9') LIKE 'err:permission denied%',
                   'TS2.7 a confirmed set cannot be edited directly');
-SELECT pg_temp.ok(pg_temp.try_as((SELECT o2::text FROM f), format('SELECT public.rec_talent_confirm_criteria(%L, 0, %L::jsonb)', (SELECT j_e2 FROM f),
+SELECT pg_temp.ok(pg_temp.try_as((SELECT o2::text FROM f), format('SELECT public.rec_talent_confirm_criteria(%L, 0, %L, %L::jsonb)', (SELECT j_e2 FROM f), (SELECT id FROM public.rec_requirement_profiles WHERE job_id = (SELECT j_e2 FROM f) AND version = 1),
                     '[{"requirementId":"a7180000-5555-4000-8000-000000000009","credentialCodes":["OV"]}]')) = 'ok',
                   'TS2.8 the second organisation confirms its own job');
 
@@ -430,7 +430,7 @@ SELECT job_id, employer_id, 2, rules, confirmed_by FROM public.rec_requirement_p
 SELECT pg_temp.ok(pg_temp.j_as((SELECT o::text FROM f), format('SELECT public.rec_talent_search(%L)', (SELECT j1 FROM f))) = '{"status":"criteria_required"}'
                   AND pg_temp.j_as((SELECT o::text FROM f), format('SELECT public.rec_talent_get_criteria(%L)', (SELECT j1 FROM f))) @> '{"criteria":{"current":false}}',
                   'TS12.5 after a profile change the old criteria are not used');
-SELECT pg_temp.ok(pg_temp.try_as((SELECT o::text FROM f), format('SELECT public.rec_talent_confirm_criteria(%L, 1, %L::jsonb)', (SELECT j1 FROM f), (SELECT j FROM crit))) = 'ok'
+SELECT pg_temp.ok(pg_temp.try_as((SELECT o::text FROM f), format('SELECT public.rec_talent_confirm_criteria(%L, 1, %L, %L::jsonb)', (SELECT j1 FROM f), (SELECT id FROM public.rec_requirement_profiles WHERE job_id = (SELECT j1 FROM f) AND version = 2), (SELECT j FROM crit))) = 'ok'
                   AND (pg_temp.j_as((SELECT o::text FROM f), format('SELECT public.rec_talent_search(%L)', (SELECT j1 FROM f)))->>'status') = 'ok',
                   'TS12.6 confirming them again restores search');
 

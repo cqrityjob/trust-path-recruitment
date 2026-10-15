@@ -60,6 +60,21 @@ COMMENT ON COLUMN public.sp_verification_decisions.holder_message IS
   'sp_verification_requests.holder_message it is never overwritten.';
 
 -- ---------------------------------------------------------------------------
+-- 0. One session rule for every entry point below. The private Passport
+--    tables are guarded by a RESTRICTIVE policy on sp_passport_session_active();
+--    a SECURITY DEFINER function bypasses RLS, so each one that a signed-in
+--    client can call asserts the same rule itself (review 2026-10-15, RF1).
+-- ---------------------------------------------------------------------------
+CREATE FUNCTION public.sp_assert_passport_session()
+RETURNS void LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS $$
+BEGIN
+  IF NOT public.sp_passport_session_active() THEN
+    RAISE EXCEPTION 'SP_SESSION_REVOKED' USING ERRCODE = '42501';
+  END IF;
+END $$;
+REVOKE ALL ON FUNCTION public.sp_assert_passport_session() FROM PUBLIC, anon, authenticated, service_role;
+
+-- ---------------------------------------------------------------------------
 -- 1. The case-bound text reply.
 -- ---------------------------------------------------------------------------
 CREATE TABLE public.sp_verification_replies (
@@ -122,6 +137,7 @@ DECLARE _r public.sp_verification_requests%ROWTYPE; _existing public.sp_verifica
         _now timestamptz; _text text := btrim(coalesce(_body, ''));
 BEGIN
   IF auth.uid() IS NULL THEN RAISE EXCEPTION 'SP_NOT_AUTHENTICATED' USING ERRCODE = 'insufficient_privilege'; END IF;
+  PERFORM public.sp_assert_passport_session();
   IF char_length(_text) NOT BETWEEN 1 AND 2000 THEN
     RAISE EXCEPTION 'SP_REPLY_INVALID: 1-2000 characters' USING ERRCODE = 'check_violation';
   END IF;
@@ -189,6 +205,7 @@ CREATE OR REPLACE FUNCTION public.sp_verifier_decide(_request_id uuid, _decision
 AS $function$
 DECLARE _r public.sp_verification_requests%ROWTYPE; _org text; _seen text;
 BEGIN
+  PERFORM public.sp_assert_passport_session();
   SELECT * INTO _r FROM public.sp_verification_requests WHERE id = _request_id FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'SP_REQUEST_NOT_FOUND' USING ERRCODE='no_data_found'; END IF;
 
@@ -298,8 +315,10 @@ GRANT EXECUTE ON FUNCTION public.sp_verifier_decide(uuid,text,text,text,text,dat
 -- ---------------------------------------------------------------------------
 -- 4. One current state, and the history behind it.
 -- ---------------------------------------------------------------------------
--- Who may read an entry's review: its holder, or a verifier (CQrityjob
--- reviews). The employer-attestation side keeps its own queue.
+-- Who may read an entry's review: its holder, or a Passport verifier -- and a
+-- verifier only for an entry that has a CQrityjob review case, and then only
+-- that case (sp_review_thread). An employer attestation, its decision and its
+-- internal note belong to the employer's own queue (review 2026-10-15, RF2).
 CREATE FUNCTION public.sp_review_reader(_claim_id uuid, _period_id uuid)
 RETURNS text LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS $$
 DECLARE _holder uuid;
@@ -309,7 +328,13 @@ BEGIN
   ELSE SELECT holder_user_id INTO _holder FROM public.sp_experience_periods WHERE id = _period_id; END IF;
   IF _holder IS NULL THEN RETURN NULL; END IF;
   IF _holder = auth.uid() THEN RETURN 'holder'; END IF;
-  IF public.sp_is_verifier(auth.uid()) THEN RETURN 'verifier'; END IF;
+  IF public.sp_is_verifier(auth.uid())
+     AND EXISTS (SELECT 1 FROM public.sp_verification_requests r
+                  WHERE r.request_kind = 'cqrityjob_review'
+                    AND ((_claim_id IS NOT NULL AND r.claim_id = _claim_id)
+                      OR (_period_id IS NOT NULL AND r.period_id = _period_id))) THEN
+    RETURN 'verifier';
+  END IF;
   RETURN NULL;
 END $$;
 REVOKE ALL ON FUNCTION public.sp_review_reader(uuid, uuid) FROM PUBLIC, anon, authenticated;
@@ -317,12 +342,14 @@ REVOKE ALL ON FUNCTION public.sp_review_reader(uuid, uuid) FROM PUBLIC, anon, au
 -- The current state is the open request if there is one, otherwise the
 -- latest decision on any request for this entry. Values:
 --   none | pending | clarification_requested | approved | rejected | revoked | withdrawn
-CREATE FUNCTION public.sp_entry_review_state_core(_claim_id uuid, _period_id uuid)
+-- _cqrityjob_only: the verifier's view -- CQrityjob review cases only.
+CREATE FUNCTION public.sp_entry_review_state_core(_claim_id uuid, _period_id uuid, _cqrityjob_only boolean DEFAULT false)
 RETURNS jsonb LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS $$
   WITH reqs AS (
     SELECT * FROM public.sp_verification_requests r
-     WHERE (_claim_id IS NOT NULL AND r.claim_id = _claim_id)
-        OR (_period_id IS NOT NULL AND r.period_id = _period_id)),
+     WHERE ((_claim_id IS NOT NULL AND r.claim_id = _claim_id)
+         OR (_period_id IS NOT NULL AND r.period_id = _period_id))
+       AND (NOT _cqrityjob_only OR r.request_kind = 'cqrityjob_review')),
   open_req AS (
     SELECT * FROM reqs WHERE status IN ('pending','clarification_requested')
      ORDER BY submitted_at DESC LIMIT 1),
@@ -349,44 +376,52 @@ RETURNS jsonb LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, pg_
     ELSE jsonb_build_object('state', 'none')
   END;
 $$;
-REVOKE ALL ON FUNCTION public.sp_entry_review_state_core(uuid, uuid) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.sp_entry_review_state_core(uuid, uuid, boolean) FROM PUBLIC, anon, authenticated;
 
 CREATE FUNCTION public.sp_entry_review_state(_claim_id uuid, _period_id uuid)
 RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS $$
+DECLARE _reader text;
 BEGIN
-  IF public.sp_review_reader(_claim_id, _period_id) IS NULL THEN
+  PERFORM public.sp_assert_passport_session();
+  _reader := public.sp_review_reader(_claim_id, _period_id);
+  IF _reader IS NULL THEN
     RAISE EXCEPTION 'SP_TARGET_NOT_FOUND' USING ERRCODE = 'no_data_found';
   END IF;
-  RETURN public.sp_entry_review_state_core(_claim_id, _period_id);
+  RETURN public.sp_entry_review_state_core(_claim_id, _period_id, _reader = 'verifier');
 END $$;
 REVOKE ALL ON FUNCTION public.sp_entry_review_state(uuid, uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.sp_entry_review_state(uuid, uuid) TO authenticated;
 
--- Ordered history: requests submitted, decisions (with the holder message;
--- the internal note only for a verifier), clarification replies.
+-- Ordered history: decisions (with the holder message) and clarification
+-- replies. A verifier reads the CQrityjob review cases only, and the internal
+-- note only of a CQrityjob review decision; the holder never reads a note.
 CREATE FUNCTION public.sp_review_thread(_claim_id uuid, _period_id uuid)
 RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS $$
-DECLARE _reader text := public.sp_review_reader(_claim_id, _period_id);
+DECLARE _reader text;
 BEGIN
+  PERFORM public.sp_assert_passport_session();
+  _reader := public.sp_review_reader(_claim_id, _period_id);
   IF _reader IS NULL THEN RAISE EXCEPTION 'SP_TARGET_NOT_FOUND' USING ERRCODE = 'no_data_found'; END IF;
   RETURN jsonb_build_object(
-    'current', public.sp_entry_review_state_core(_claim_id, _period_id),
+    'current', public.sp_entry_review_state_core(_claim_id, _period_id, _reader = 'verifier'),
     'events', coalesce((
       SELECT jsonb_agg(e - 'seq' ORDER BY (e->>'seq')::timestamptz)
         FROM (
           SELECT jsonb_build_object('type', 'decision', 'at', d.decided_at, 'seq', d.recorded_at, 'requestId', d.request_id,
                    'decision', d.decision, 'method', d.verification_method, 'organisation', d.decider_organisation,
                    'validFrom', d.valid_from, 'validUntil', d.valid_until, 'holderMessage', d.holder_message,
-                   'internalNote', CASE WHEN _reader = 'verifier' THEN d.decision_note END) AS e
+                   'internalNote', CASE WHEN _reader = 'verifier' AND r.request_kind = 'cqrityjob_review' THEN d.decision_note END) AS e
             FROM public.sp_verification_decisions d
             JOIN public.sp_verification_requests r ON r.id = d.request_id
-           WHERE (_claim_id IS NOT NULL AND r.claim_id = _claim_id) OR (_period_id IS NOT NULL AND r.period_id = _period_id)
+           WHERE ((_claim_id IS NOT NULL AND r.claim_id = _claim_id) OR (_period_id IS NOT NULL AND r.period_id = _period_id))
+             AND (_reader = 'holder' OR r.request_kind = 'cqrityjob_review')
           UNION ALL
           SELECT jsonb_build_object('type', 'reply', 'at', p.created_at, 'seq', p.created_at, 'requestId', p.request_id,
                    'body', p.body, 'answersSubmittedAt', p.answers_submitted_at)
             FROM public.sp_verification_replies p
             JOIN public.sp_verification_requests r ON r.id = p.request_id
-           WHERE (_claim_id IS NOT NULL AND r.claim_id = _claim_id) OR (_period_id IS NOT NULL AND r.period_id = _period_id)
+           WHERE ((_claim_id IS NOT NULL AND r.claim_id = _claim_id) OR (_period_id IS NOT NULL AND r.period_id = _period_id))
+             AND (_reader = 'holder' OR r.request_kind = 'cqrityjob_review')
         ) x), '[]'::jsonb));
 END $$;
 REVOKE ALL ON FUNCTION public.sp_review_thread(uuid, uuid) FROM PUBLIC, anon;
@@ -407,6 +442,10 @@ CREATE TABLE public.user_notices (
   subject_type       text NOT NULL CHECK (subject_type IN ('claim', 'experience', 'request')),
   subject_id         uuid NOT NULL,
   request_id         uuid,
+  -- How a decision was reached, so no notice calls an employer confirmation
+  -- a CQrityjob document review (review 2026-10-15, RF8).
+  verification_method text CHECK (verification_method IS NULL OR verification_method IN
+                       ('document_review', 'employer_confirmation', 'issuer_confirmation')),
   dedupe_key         text NOT NULL CHECK (char_length(dedupe_key) BETWEEN 1 AND 200),
   created_at         timestamptz NOT NULL DEFAULT now(),
   read_at            timestamptz,
@@ -422,29 +461,43 @@ CREATE TABLE public.user_notices (
 CREATE INDEX user_notices_recipient_idx ON public.user_notices (recipient_user_id, created_at DESC);
 CREATE INDEX user_notices_email_due_idx ON public.user_notices (created_at) WHERE email_status IN ('pending', 'claimed', 'failed');
 
+-- Read only through user_notices_inbox, which re-checks the recipient's access
+-- on every read; no direct table access (review 2026-10-15, RF3).
 ALTER TABLE public.user_notices ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.user_notices FROM PUBLIC, anon, authenticated;
-GRANT SELECT (id, recipient_user_id, audience, kind, subject_type, subject_id, request_id, created_at, read_at)
-  ON public.user_notices TO authenticated;
-CREATE POLICY user_notices_own_read ON public.user_notices
-  FOR SELECT TO authenticated USING (recipient_user_id = auth.uid());
+
+-- May the recipient still see this notice? Holder notices are the holder's
+-- own; a reviewer notice needs the reviewer role now, not when it was sent.
+CREATE FUNCTION public.user_notices_visible(_n public.user_notices)
+RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS $$
+  SELECT CASE _n.audience
+    WHEN 'holder' THEN true
+    WHEN 'reviewer' THEN EXISTS (SELECT 1 FROM public.user_roles ur
+                                  WHERE ur.user_id = _n.recipient_user_id AND ur.role = 'passport_verifier'::public.app_role)
+    ELSE false
+  END;
+$$;
+REVOKE ALL ON FUNCTION public.user_notices_visible(public.user_notices) FROM PUBLIC, anon, authenticated;
 
 -- Inbox read for the signed-in user, newest first, with the facts each kind needs.
 CREATE FUNCTION public.user_notices_inbox(_limit integer DEFAULT 30)
 RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS $$
 BEGIN
   IF auth.uid() IS NULL THEN RAISE EXCEPTION 'NOT_AUTHENTICATED' USING ERRCODE = 'insufficient_privilege'; END IF;
+  PERFORM public.sp_assert_passport_session();
   RETURN jsonb_build_object(
-    'unread', (SELECT count(*) FROM public.user_notices WHERE recipient_user_id = auth.uid() AND read_at IS NULL),
+    'unread', (SELECT count(*) FROM public.user_notices n
+                WHERE n.recipient_user_id = auth.uid() AND n.read_at IS NULL AND public.user_notices_visible(n)),
     'items', coalesce((
       SELECT jsonb_agg(jsonb_build_object(
                'id', n.id, 'audience', n.audience, 'kind', n.kind, 'subjectType', n.subject_type,
                'subjectId', n.subject_id, 'requestId', n.request_id, 'createdAt', n.created_at, 'readAt', n.read_at,
+               'verificationMethod', n.verification_method,
                -- For the holder: the merit's own name. For a reviewer: the catalogue name only.
                'credentialCode', c.credential_code,
                'title', CASE WHEN n.audience = 'holder' THEN coalesce(c.title, p.role_title) END)
              ORDER BY n.created_at DESC)
-        FROM (SELECT * FROM public.user_notices WHERE recipient_user_id = auth.uid()
+        FROM (SELECT * FROM public.user_notices un WHERE un.recipient_user_id = auth.uid() AND public.user_notices_visible(un)
                ORDER BY created_at DESC LIMIT greatest(1, least(coalesce(_limit, 30), 100))) n
         LEFT JOIN public.sp_claims c ON n.subject_type = 'claim' AND c.id = n.subject_id
         LEFT JOIN public.sp_experience_periods p ON n.subject_type = 'experience' AND p.id = n.subject_id), '[]'::jsonb));
@@ -457,6 +510,7 @@ RETURNS integer LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_t
 DECLARE _n integer;
 BEGIN
   IF auth.uid() IS NULL THEN RAISE EXCEPTION 'NOT_AUTHENTICATED' USING ERRCODE = 'insufficient_privilege'; END IF;
+  PERFORM public.sp_assert_passport_session();
   UPDATE public.user_notices SET read_at = now()
    WHERE recipient_user_id = auth.uid() AND read_at IS NULL
      AND (_ids IS NULL OR id = ANY (_ids));
@@ -469,14 +523,15 @@ GRANT EXECUTE ON FUNCTION public.user_notices_mark_read(uuid[]) TO authenticated
 -- Writer used by the triggers below. Never callable by a client.
 CREATE FUNCTION public.user_notices_enqueue(
   _recipient uuid, _audience text, _kind text, _subject_type text, _subject_id uuid,
-  _request_id uuid, _dedupe_key text)
+  _request_id uuid, _dedupe_key text, _verification_method text DEFAULT NULL)
 RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path = public, pg_temp AS $$
-  INSERT INTO public.user_notices (recipient_user_id, audience, kind, subject_type, subject_id, request_id, dedupe_key)
-  SELECT _recipient, _audience, _kind, _subject_type, _subject_id, _request_id, _dedupe_key
+  INSERT INTO public.user_notices (recipient_user_id, audience, kind, subject_type, subject_id, request_id, dedupe_key,
+                                   verification_method)
+  SELECT _recipient, _audience, _kind, _subject_type, _subject_id, _request_id, _dedupe_key, _verification_method
    WHERE _recipient IS NOT NULL
   ON CONFLICT (recipient_user_id, dedupe_key) DO NOTHING;
 $$;
-REVOKE ALL ON FUNCTION public.user_notices_enqueue(uuid, text, text, text, uuid, uuid, text) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.user_notices_enqueue(uuid, text, text, text, uuid, uuid, text, text) FROM PUBLIC, anon, authenticated;
 
 -- Reviewers who receive passport notices: explicit passport_verifier holders.
 -- Platform administrators are not mailed by default; they see the queue.
@@ -523,7 +578,8 @@ BEGIN
   IF _kind IS NULL THEN RETURN NEW; END IF;
   PERFORM public.user_notices_enqueue(NEW.holder_user_id, 'holder', _kind,
             CASE WHEN _r.claim_id IS NOT NULL THEN 'claim' ELSE 'experience' END,
-            coalesce(_r.claim_id, _r.period_id), _r.id, 'decision:' || NEW.id);
+            coalesce(_r.claim_id, _r.period_id), _r.id, 'decision:' || NEW.id,
+            CASE WHEN NEW.decision = 'approved' THEN NEW.verification_method END);
   RETURN NEW;
 END $$;
 REVOKE ALL ON FUNCTION public.sp_notice_on_decision() FROM PUBLIC, anon, authenticated;
@@ -549,8 +605,13 @@ CREATE FUNCTION public.user_notices_claim_emails(_limit integer DEFAULT 20)
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 DECLARE _token uuid := gen_random_uuid(); _out jsonb;
 BEGIN
+  -- Every row that could be handed out -- including a claim whose lease ran
+  -- out -- is re-checked first (review 2026-10-15, RF3), and the due set
+  -- below repeats the check so nothing slips between the two statements.
   UPDATE public.user_notices n SET email_status = 'skipped', email_error_code = 'recipient_not_allowed'
-   WHERE n.email_status IN ('pending', 'failed') AND NOT public.user_notices_still_allowed(n);
+   WHERE (n.email_status IN ('pending', 'failed')
+          OR (n.email_status = 'claimed' AND n.email_claimed_at < now() - interval '3 minutes'))
+     AND NOT public.user_notices_still_allowed(n);
 
   WITH due AS (
     SELECT n.id FROM public.user_notices n
@@ -559,6 +620,7 @@ BEGIN
              AND n.email_claimed_at < now() - make_interval(mins => 5 * n.email_attempts))
          OR (n.email_status = 'claimed' AND n.email_claimed_at < now() - interval '3 minutes'))
        AND n.created_at > now() - interval '7 days'
+       AND public.user_notices_still_allowed(n)
      ORDER BY n.created_at
      LIMIT greatest(1, least(coalesce(_limit, 20), 50))
      FOR UPDATE SKIP LOCKED),
@@ -572,6 +634,7 @@ BEGIN
            'id', c.id, 'claimToken', c.email_claim_token, 'kind', c.kind, 'audience', c.audience,
            'subjectType', c.subject_type, 'subjectId', c.subject_id, 'requestId', c.request_id,
            'email', u.email, 'locale', coalesce(pr.locale, 'sv'),
+           'verificationMethod', c.verification_method,
            'credentialCode', cl.credential_code)), '[]'::jsonb)
     INTO _out
     FROM claimed c
@@ -624,6 +687,7 @@ REVOKE ALL ON FUNCTION public.product_metric_record(text) FROM PUBLIC, anon, aut
 CREATE FUNCTION public.product_metric_counts(_from date, _to date)
 RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS $$
 BEGIN
+  PERFORM public.sp_assert_passport_session();
   IF NOT public.is_platform_admin(auth.uid()) THEN
     RAISE EXCEPTION 'NOT_AUTHORISED' USING ERRCODE = 'insufficient_privilege';
   END IF;
@@ -675,18 +739,30 @@ BEGIN
     'public.sp_entry_review_state(uuid,uuid)', 'public.sp_review_thread(uuid,uuid)',
     'public.user_notices_inbox(integer)', 'public.user_notices_mark_read(uuid[])',
     'public.user_notices_claim_emails(integer)', 'public.user_notices_settle_email(uuid,uuid,text,text)',
-    'public.product_metric_counts(date,date)', 'public.user_notices_enqueue(uuid,text,text,text,uuid,uuid,text)',
+    'public.product_metric_counts(date,date)', 'public.user_notices_enqueue(uuid,text,text,text,uuid,uuid,text,text)',
     'public.product_metric_record(text)'] LOOP
     IF has_function_privilege('anon', f, 'EXECUTE') THEN
       RAISE EXCEPTION 'SP_REPLY_HISTORY_PROOF: anon may execute %', f;
     END IF;
   END LOOP;
   FOREACH f IN ARRAY ARRAY['public.user_notices_claim_emails(integer)', 'public.user_notices_settle_email(uuid,uuid,text,text)',
-                           'public.user_notices_enqueue(uuid,text,text,text,uuid,uuid,text)', 'public.product_metric_record(text)'] LOOP
+                           'public.user_notices_enqueue(uuid,text,text,text,uuid,uuid,text,text)', 'public.product_metric_record(text)'] LOOP
     IF has_function_privilege('authenticated', f, 'EXECUTE') THEN
       RAISE EXCEPTION 'SP_REPLY_HISTORY_PROOF: authenticated may execute %', f;
     END IF;
   END LOOP;
+  FOREACH f IN ARRAY ARRAY[
+    'public.sp_reply_to_clarification(uuid,timestamptz,text)', 'public.sp_verifier_decide(uuid,text,text,text,text,date,date)',
+    'public.sp_entry_review_state(uuid,uuid)', 'public.sp_review_thread(uuid,uuid)',
+    'public.user_notices_inbox(integer)', 'public.user_notices_mark_read(uuid[])', 'public.product_metric_counts(date,date)'] LOOP
+    IF position('sp_assert_passport_session()' IN (SELECT prosrc FROM pg_proc WHERE oid = f::regprocedure)) = 0 THEN
+      RAISE EXCEPTION 'SP_REPLY_HISTORY_PROOF: % does not assert the Passport session', f;
+    END IF;
+  END LOOP;
+  IF has_table_privilege('authenticated', 'public.user_notices', 'SELECT')
+     OR has_any_column_privilege('authenticated', 'public.user_notices', 'SELECT') THEN
+    RAISE EXCEPTION 'SP_REPLY_HISTORY_PROOF: notices are readable around the inbox';
+  END IF;
   RAISE NOTICE 'SP_REPLY_HISTORY_PROOF ok';
 END $$;
 

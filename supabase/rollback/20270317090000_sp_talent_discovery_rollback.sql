@@ -13,6 +13,7 @@ DO $$ BEGIN
   END IF;
 END $$;
 DROP TRIGGER IF EXISTS sp_talent_follow_correction ON public.sp_claims;
+DROP TRIGGER IF EXISTS sp_talent_follow_correction ON public.sp_experience_periods;
 DROP FUNCTION IF EXISTS public.sp_talent_follow_correction();
 DROP FUNCTION IF EXISTS public.sp_talent_unblock_employer(uuid);
 DROP FUNCTION IF EXISTS public.sp_talent_pause();
@@ -22,7 +23,7 @@ DROP FUNCTION IF EXISTS public.sp_talent_get_settings();
 DROP FUNCTION IF EXISTS public.sp_talent_card(uuid);
 DROP FUNCTION IF EXISTS public.sp_talent_experience(uuid);
 DROP FUNCTION IF EXISTS public.sp_talent_merits(uuid);
-DROP FUNCTION IF EXISTS public.sp_talent_validity(date, boolean);
+DROP FUNCTION IF EXISTS public.sp_talent_validity(date, date, boolean);
 DROP FUNCTION IF EXISTS public.sp_talent_entry_level(text, uuid, uuid);
 DROP FUNCTION IF EXISTS public.sp_catalogue_requirement_class(text);
 DROP TABLE IF EXISTS public.sp_talent_consent_events;

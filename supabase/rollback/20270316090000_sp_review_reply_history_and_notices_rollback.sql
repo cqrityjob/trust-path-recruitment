@@ -30,17 +30,19 @@ DROP FUNCTION IF EXISTS public.user_notices_still_allowed(public.user_notices);
 DROP FUNCTION IF EXISTS public.sp_notice_on_decision();
 DROP FUNCTION IF EXISTS public.sp_notice_on_request();
 DROP FUNCTION IF EXISTS public.sp_notice_reviewers();
-DROP FUNCTION IF EXISTS public.user_notices_enqueue(uuid, text, text, text, uuid, uuid, text);
+DROP FUNCTION IF EXISTS public.user_notices_enqueue(uuid, text, text, text, uuid, uuid, text, text);
 DROP FUNCTION IF EXISTS public.user_notices_mark_read(uuid[]);
 DROP FUNCTION IF EXISTS public.user_notices_inbox(integer);
+DROP FUNCTION IF EXISTS public.user_notices_visible(public.user_notices);
 DROP TABLE IF EXISTS public.user_notices;
 DROP FUNCTION IF EXISTS public.sp_review_thread(uuid, uuid);
 DROP FUNCTION IF EXISTS public.sp_entry_review_state(uuid, uuid);
-DROP FUNCTION IF EXISTS public.sp_entry_review_state_core(uuid, uuid);
+DROP FUNCTION IF EXISTS public.sp_entry_review_state_core(uuid, uuid, boolean);
 DROP FUNCTION IF EXISTS public.sp_review_reader(uuid, uuid);
 DROP FUNCTION IF EXISTS public.sp_reply_to_clarification(uuid, timestamptz, text);
 DROP TABLE IF EXISTS public.sp_verification_replies;
 DROP FUNCTION IF EXISTS public.sp_verification_replies_guard();
+DROP FUNCTION IF EXISTS public.sp_assert_passport_session();
 
 -- sp_verifier_decide, verbatim from 20270125090000.
 CREATE OR REPLACE FUNCTION public.sp_verifier_decide(_request_id uuid, _decision text, _method text, _decision_note text, _holder_message text, _valid_from date, _valid_until date)
