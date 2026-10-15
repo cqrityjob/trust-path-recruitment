@@ -572,7 +572,9 @@ function DiscoverabilityRoute() {
                   </span>
                   <input
                     type="date"
-                    className={`${input} mt-1`}
+                    // Chromium focuses the date segment inside the field, so
+                    // the field itself never matches :focus-visible.
+                    className={`${input} mt-1 focus:outline-2 focus:outline-offset-2 focus:outline-ring`}
                     value={draft.availableFrom}
                     onChange={(e) => update({ availableFrom: e.target.value })}
                   />

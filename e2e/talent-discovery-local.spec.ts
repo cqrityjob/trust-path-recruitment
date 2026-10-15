@@ -1019,18 +1019,6 @@ test("13 · a corrected credential and a corrected employment: the employer read
   // never the replaced one.
   expect(sql(`select count(*) from sp_talent_items where claim_id='${current}'`)).toBe("1");
   expect(sql(`select count(*) from sp_talent_items where claim_id='${replaced}'`)).toBe("0");
-  // Her own choice list says the same: the new version is her own statement.
-  await a.goto(`${BASE}/passport/discoverability`);
-  const cppChoice = a
-    .locator("label")
-    .filter({ hasText: "Certified Protection Professional (CPP)" });
-  await expect(cppChoice.locator("[data-item-support]")).toHaveAttribute(
-    "data-item-support",
-    "self_declared",
-    { timeout: 60_000 },
-  );
-  await expect(cppChoice).toContainText("Egen uppgift");
-
   // She corrects her own employment on the CV page; it is read live.
   await a.goto(`${BASE}/my-career/cv`);
   const employment = a.locator("[aria-labelledby='cv-employment-heading']");
@@ -1046,6 +1034,50 @@ test("13 · a corrected credential and a corrected employment: the employer read
       { timeout: 30_000 },
     )
     .toBe("Väktare och skyddsvakt");
+
+  // After both corrections she saves her settings again through the app
+  // (Astra 2026-10-15: a save after the correction, not only before it).
+  // The choice list shows the current versions, already chosen; the save is
+  // accepted; after a reload the saved preview reads them.
+  await a.goto(`${BASE}/passport/discoverability`);
+  const cppChoice = a
+    .locator("label")
+    .filter({ hasText: "Certified Protection Professional (CPP)" });
+  await expect(cppChoice.locator("[data-item-support]")).toHaveAttribute(
+    "data-item-support",
+    "self_declared",
+    { timeout: 60_000 },
+  );
+  await expect(cppChoice).toContainText("Egen uppgift");
+  await expect(cppChoice.locator('input[type="checkbox"]')).toBeChecked();
+  const roleChoice = a.locator("label").filter({ hasText: "Väktare och skyddsvakt" });
+  await expect(roleChoice.locator('input[type="checkbox"]')).toBeChecked();
+  // Something real to save: a place she would work in.
+  await a.getByLabel(/^Orter/).fill("Uppsala");
+  const save = a.locator("[data-save-discoverability]");
+  await expect(save).toHaveText("Spara ändringar");
+  await save.click();
+  await expect(a.getByRole("status").filter({ hasText: "Sparat." })).toBeVisible({
+    timeout: 30_000,
+  });
+  expect(sql(`select count(*) from sp_talent_items where claim_id='${current}'`)).toBe("1");
+  expect(sql(`select count(*) from sp_talent_items where claim_id='${replaced}'`)).toBe("0");
+  expect(
+    sql(`select cities::text from sp_talent_profiles where holder_user_id='${A_ID}'`),
+  ).toContain("Uppsala");
+  await a.reload();
+  await expect(a.locator("[data-current-visibility]")).toHaveAttribute(
+    "data-current-visibility",
+    "open",
+    { timeout: 60_000 },
+  );
+  const savedPreview = a.locator("[data-discoverability-preview]");
+  await expect(savedPreview).toContainText("Certified Protection Professional (CPP)");
+  await expect(savedPreview).toContainText("Väktare och skyddsvakt");
+  await expect(savedPreview).toContainText("Uppsala");
+  await expect(savedPreview).not.toContainText("Granskad, dokumenterad");
+  await expect(savedPreview.locator("[data-unsaved-notice]")).toHaveCount(0);
+  await shot(a, "after-discoverability-saved-after-correction-sv-1440");
   await a.context().close();
 
   // The employer reads the current versions, at what they now are: the

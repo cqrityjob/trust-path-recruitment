@@ -36,7 +36,10 @@ Bara de delar som saknades i appen, i en samlad ändring. Schemat är oförändr
   kontakter visar sedan samma status.
 
 Kontrollerna finns i `talent-discovery:check` (N12–N16, D10–D15, X12–X17, K1–K4) och i
-scenario 5–8 och 13 i webbläsarsviten.
+scenario 5–8 och 13 i webbläsarsviten. Scenario 13 sparar nu sökbarheten igen genom appen efter
+rättad merit och ändrad anställning, laddar om och kontrollerar sedan arbetsgivarens vy. Aktuella
+bilder på svenska och engelska, för desktop och mobil:
+[evidence/workshop-2026-10-15/](evidence/workshop-2026-10-15/README.md).
 
 ## Oberoende granskning 2026-10-15
 
