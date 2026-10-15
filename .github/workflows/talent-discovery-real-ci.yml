@@ -58,7 +58,7 @@ jobs:
         run: bunx playwright install --with-deps chromium
       - name: Isolation and contract guards
         run: bun test ./scripts/talent-discovery-real-ci.test.ts
-      - name: Fresh real Supabase, 397-file strict replay, GoTrue accounts, fixture and all 12 browser scenarios (none skipped)
+      - name: Fresh real Supabase, 397-file strict replay, GoTrue accounts, fixture and all 13 browser scenarios (none skipped)
         run: node scripts/talent-discovery-real-ci-run.mjs
       - name: Public manifest and synthetic screenshots
         if: always()

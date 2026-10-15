@@ -814,3 +814,90 @@ test("12 · a signed-out session reads nothing; a removed reviewer role ends inb
   ).toBeGreaterThanOrEqual(400);
   expect((await rpc("sp_talent_preview", {}, null)).status).toBeGreaterThanOrEqual(400);
 });
+
+test("13 · a corrected credential and a corrected employment: the employer reads the current version, never the replaced one", async ({
+  browser,
+}) => {
+  // Cecilia opens again after the pause in 10; her selection is kept.
+  const a = await signIn(browser, A, "/passport/discoverability");
+  await expect(a.locator("[data-current-visibility]")).toHaveAttribute(
+    "data-current-visibility",
+    "private",
+    { timeout: 30_000 },
+  );
+  await a.getByLabel(/Öppen för relevanta möjligheter/).check();
+  const consent = a.getByLabel(/Jag samtycker/);
+  if (!(await consent.isChecked())) await consent.check();
+  await a.locator("[data-save-discoverability]").click();
+  await expect(a.locator("[data-current-visibility]")).toHaveAttribute(
+    "data-current-visibility",
+    "open",
+    { timeout: 30_000 },
+  );
+
+  // She corrects the reviewed CPP through its entry page. A correction is a
+  // new version, and nobody has reviewed it.
+  const replaced = cppClaim();
+  await a.goto(`${BASE}/passport/entry/claim/${replaced}`);
+  await a.getByRole("button", { name: "Rätta uppgift", exact: true }).click({ timeout: 60_000 });
+  await a.getByLabel("Certifikats- eller licensnummer (valfritt)").fill("CPP-RATTAD-2");
+  await a.getByRole("button", { name: "Fortsätt", exact: true }).click();
+  await a.getByRole("button", { name: "Spara merit", exact: true }).click();
+  await expect.poll(() => cppClaim(), { timeout: 60_000 }).not.toBe(replaced);
+  const current = cppClaim();
+  await expect(a).toHaveURL(new RegExp(current), { timeout: 60_000 });
+  expect(sql(`select assertion_level from sp_claims where id='${current}'`)).toBe("self_declared");
+  // The searchable selection follows the correction (RF4): the new version,
+  // never the replaced one.
+  expect(sql(`select count(*) from sp_talent_items where claim_id='${current}'`)).toBe("1");
+  expect(sql(`select count(*) from sp_talent_items where claim_id='${replaced}'`)).toBe("0");
+
+  // She corrects her own employment on the CV page; it is read live.
+  await a.goto(`${BASE}/my-career/cv`);
+  const employment = a.locator("[aria-labelledby='cv-employment-heading']");
+  await employment.getByRole("button", { name: "Ändra" }).first().click({ timeout: 60_000 });
+  await employment.getByLabel("Roll").fill("Väktare och skyddsvakt");
+  await employment.getByRole("button", { name: "Spara", exact: true }).click();
+  await expect
+    .poll(
+      () =>
+        sql(
+          `select role_title from sp_experience_periods where holder_user_id='${A_ID}' and lifecycle_state='active'`,
+        ),
+      { timeout: 30_000 },
+    )
+    .toBe("Väktare och skyddsvakt");
+  await a.context().close();
+
+  // The employer reads the current versions, at what they now are: the
+  // corrected CPP as her own statement, the employment under its new title,
+  // and nothing of the replaced, reviewed version. (The owner searches: 11
+  // removed the recruiter's permission.)
+  const page = await signIn(browser, OWNER, `${JOB_PATH}/talent`);
+  await expect(page.locator("[data-talent-total]")).toHaveAttribute("data-talent-total", "2", {
+    timeout: 60_000,
+  });
+  // The results carry no names: Cecilia is the one open for opportunities
+  // (she chose it above); Bo is actively looking.
+  const cecilia = page.locator("[data-talent-result]").filter({ hasText: "Öppen för möjligheter" });
+  await expect(cecilia).toHaveCount(1);
+  // Why she is shown: the CPP is now her own statement, below the reviewed
+  // level the job asks for. The reviewed level of the replaced version is gone.
+  await expect(cecilia).toContainText(/Certified Protection Professional \(CPP\)\s*Egen uppgift/);
+  await expect(cecilia).toContainText("Lägre granskningsnivå än ni angett");
+  await expect(cecilia).not.toContainText("Dokumentgranskad");
+  // Her shared profile: the corrected CPP and the employment under its new title.
+  await cecilia.getByRole("button", { name: "Visa delad profil" }).click();
+  const card = cecilia.locator("[data-talent-card]");
+  await expect(card).toBeVisible({ timeout: 60_000 });
+  await expect(card.locator('[data-talent-merit="INTL_ASIS_CPP"]')).toHaveCount(1);
+  await expect(card.locator('[data-talent-merit="INTL_ASIS_CPP"] [data-level]')).toHaveAttribute(
+    "data-level",
+    "self_declared",
+  );
+  await expect(card).toContainText("Väktare och skyddsvakt");
+  await expect(card).not.toContainText("Dokumentgranskad");
+  await expect(page.locator("main")).not.toContainText("Cecilia");
+  await shot(page, "after-talent-corrected-sv-1440");
+  await page.context().close();
+});
