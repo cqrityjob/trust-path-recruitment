@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import cp from "node:child_process";
 
-export const SCHEMA_SHA = "22adab15baf99f09ccbf8cfdaee449bdf1c054c2";
+export const SCHEMA_SHA = "ed882e955f7019036aad8fa4404cb023d2c9fced";
 export const APP_SHA = "53659419a1c243c27a59540eb849569140b71365";
 export const PROJECT = "cqj-ri-real-20261008b";
 export const API = "http://127.0.0.1:55690";
