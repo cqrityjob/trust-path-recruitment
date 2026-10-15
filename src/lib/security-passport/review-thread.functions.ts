@@ -27,7 +27,8 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 type Loose = any;
 type Ctx = { supabase: Loose; userId: string };
 
-export const REPLY_MAX_LENGTH = 2000;
+import { REPLY_ERROR_CODES, REPLY_MAX_LENGTH, type ReplyErrorCode } from "./review-reply";
+export { REPLY_ERROR_CODES, REPLY_MAX_LENGTH, type ReplyErrorCode };
 
 export type ReviewState =
   | "none"
@@ -155,17 +156,6 @@ export const getReviewThread = createServerFn({ method: "GET" })
         .filter((e): e is ReviewThreadEvent => e !== null),
     };
   });
-
-export const REPLY_ERROR_CODES = [
-  "SP_REVIEW_STALE",
-  "SP_REQUEST_NOT_AWAITING_REPLY",
-  "SP_REQUEST_NOT_FOUND",
-  "SP_REPLY_INVALID",
-] as const;
-export type ReplyErrorCode =
-  | (typeof REPLY_ERROR_CODES)[number]
-  | "REPLY_NOT_INSTALLED"
-  | "REPLY_FAILED";
 
 const replyInput = z.object({
   requestId: z.string().uuid(),
