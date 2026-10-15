@@ -11,11 +11,11 @@ inte slå på sökbarhet.
 
 ## 1. Personens val
 
-| Läge | Betydelse | Sökbar? |
-|---|---|---|
-| `private` (förvalt) | Passport används privat | Nej |
-| `open` | Öppen för relevanta möjligheter | Ja |
-| `active` | Aktivt jobbsökande | Ja (arbetsgivaren kan filtrera på det) |
+| Läge                | Betydelse                       | Sökbar?                                |
+| ------------------- | ------------------------------- | -------------------------------------- |
+| `private` (förvalt) | Passport används privat         | Nej                                    |
+| `open`              | Öppen för relevanta möjligheter | Ja                                     |
+| `active`            | Aktivt jobbsökande              | Ja (arbetsgivaren kan filtrera på det) |
 
 - **Avstängt från början.** Ingen rad = privat. Migrationen skapar inga rader; postflight
   stoppar den om en rad finns.
@@ -48,13 +48,13 @@ arbetsgivarnamn i erfarenheten · granskningsanteckningar · användar-id · åt
 
 **Nivåer, i ord:**
 
-| Nivå | Betyder | Betyder **inte** |
-|---|---|---|
-| `self_declared` | Personens egen uppgift | — |
-| `document_provided` | Underlag uppladdat, inte granskat | Granskat |
-| `document_reviewed` | CQrityjob har granskat dokumentet | Bekräftat av utfärdaren |
-| `employer_confirmed` | Arbetsgivaren har bekräftat anställningen | — |
-| `source_confirmed` | Bekräftat mot utfärdarens källa | *Ingen sådan väg är aktiverad.* |
+| Nivå                 | Betyder                                   | Betyder **inte**                |
+| -------------------- | ----------------------------------------- | ------------------------------- |
+| `self_declared`      | Personens egen uppgift                    | —                               |
+| `document_provided`  | Underlag uppladdat, inte granskat         | Granskat                        |
+| `document_reviewed`  | CQrityjob har granskat dokumentet         | Bekräftat av utfärdaren         |
+| `employer_confirmed` | Arbetsgivaren har bekräftat anställningen | —                               |
+| `source_confirmed`   | Bekräftat mot utfärdarens källa           | _Ingen sådan väg är aktiverad._ |
 
 En ändrad merit (ny version via `sp_correct_claim`) följer med i urvalet men **ärver inte** ett
 tidigare godkännande: en materiell ändring börjar som egen uppgift.
@@ -75,13 +75,13 @@ företag) ger samma svar: `TALENT_SEARCH_NOT_AVAILABLE`.
 
 `rec_requirement_criteria_sets` binder varje krav i jobbets **bekräftade** kravprofil:
 
-| Klass | Bindning | Utvärderas mot |
-|---|---|---|
-| `regulated_authorisation` | 1–5 katalogkoder av typen licens, ev. jurisdiktion | Bara exakt dessa koder |
-| `certification` | 1–5 katalogkoder (internationella certifieringar m.m.) | Bara dessa koder |
-| `education` | 1–5 katalogkoder (utbildningar, nationella kvalifikationer) | Bara dessa koder |
-| `experience` | Minsta antal säkerhetsrelevanta månader | Valda erfarenhetsperioder |
-| `unbound` | Ingen | Alltid ”klarläggs i dialog” |
+| Klass                     | Bindning                                                    | Utvärderas mot              |
+| ------------------------- | ----------------------------------------------------------- | --------------------------- |
+| `regulated_authorisation` | 1–5 katalogkoder av typen licens, ev. jurisdiktion          | Bara exakt dessa koder      |
+| `certification`           | 1–5 katalogkoder (internationella certifieringar m.m.)      | Bara dessa koder            |
+| `education`               | 1–5 katalogkoder (utbildningar, nationella kvalifikationer) | Bara dessa koder            |
+| `experience`              | Minsta antal säkerhetsrelevanta månader                     | Valda erfarenhetsperioder   |
+| `unbound`                 | Ingen                                                       | Alltid ”klarläggs i dialog” |
 
 Koder av olika klasser kan inte blandas i ett krav (`TALENT_CRITERIA_MIXED_CLASSES`). En
 internationell certifiering kan därför aldrig uppfylla ett krav på lokal behörighet.
@@ -94,12 +94,12 @@ innan sökning (`criteria_required`).
 
 Per krav ett av fyra lägen:
 
-| Läge | Betyder |
-|---|---|
-| `evidenced` | En vald merit/erfarenhet stödjer kravet |
+| Läge                  | Betyder                                                                                                                                    |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `evidenced`           | En vald merit/erfarenhet stödjer kravet                                                                                                    |
 | `needs_clarification` | Något finns men behöver klarläggas: `expired`, `validity_not_stated`, `other_jurisdiction`, `level_below_requested`, `fewer_months_shared` |
-| `not_shared` | Inget bland de uppgifter personen gjort sökbara. **Betyder inte att personen saknar det.** |
-| `to_clarify` | Kravet kan inte läsas ur ett Passport |
+| `not_shared`          | Inget bland de uppgifter personen gjort sökbara. **Betyder inte att personen saknar det.**                                                 |
+| `to_clarify`          | Kravet kan inte läsas ur ett Passport                                                                                                      |
 
 Noteringar som inte ändrar läget: `expiring_soon`, `scope_limited`, `self_declared`,
 `experience_declared`, `international_certification_is_not_authorisation`.
@@ -120,6 +120,11 @@ personer.
 
 **Filter:** alla obligatoriska med stöd · minst ett granskat obligatoriskt · inga utgångna
 obligatoriska · aktivt jobbsökande · jobbpreferens uppfylld.
+
+"Obligatoriska krav" i räkningen och i filtren är de krav som kan läsas ur ett Passport.
+Ett krav i läget `to_clarify` (t.ex. körkort när det inte finns i katalogen) räknas varken
+som uppfyllt eller ouppfyllt; det visas separat som "klarläggs i dialog" och redovisas i
+`summary.toClarify`.
 
 ## 6. Kontakt
 
