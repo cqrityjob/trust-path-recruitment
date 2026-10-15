@@ -342,7 +342,7 @@ td_suite rec_talent_search_and_contact_test "Talent search and contact (after co
 # The independent review of 2026-10-15: nine reproduced findings, one group
 # each (RF9 is application code, scripts/talent-discovery-check.ts). The suite
 # failed group by group on the unfixed slots
-# (docs/passport/talent-discovery/review-2026-10-15/before-fix.log).
+# (docs/passport/talent-discovery/review-2026-10-15/before-fix.txt).
 echo "==> Running the review findings of 2026-10-15 (RF1-RF8)"
 td_suite talent_review_findings_test "Review findings 2026-10-15" 28 \
   "RF1.3 every new read refuses a revoked session: holder, recruiter and reviewer" \
