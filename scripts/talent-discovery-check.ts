@@ -10,8 +10,10 @@
 //
 // Run: bun run talent-discovery:check
 
-import { approvalLabelKey, noticeLabelKey } from "../src/lib/notices/notice-label";
-import { passportT } from "../src/lib/security-passport/i18n";
+import { noticeLabelKey } from "../src/lib/notices/notice-label";
+import { approvalPresentation } from "../src/lib/security-passport/approval-presentation";
+import { effectiveTrust } from "../src/lib/security-passport/provenance";
+import { passportT, type PassportCopyKey } from "../src/lib/security-passport/i18n";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -213,7 +215,14 @@ check(
   noticeLabelKey({
     kind: "passport_decision_approved",
     verificationMethod: "employer_confirmation",
+    subjectType: "experience",
   }) === "notices.kind.passport_decision_employer_confirmed" &&
+    // An employer confirms an employment, never a credential.
+    noticeLabelKey({
+      kind: "passport_decision_approved",
+      verificationMethod: "employer_confirmation",
+      subjectType: "claim",
+    }) === "notices.kind.passport_decision_approved_other" &&
     noticeLabelKey({ kind: "passport_decision_approved", verificationMethod: null }) ===
       "notices.kind.passport_decision_approved_other" &&
     noticeLabelKey({
@@ -222,46 +231,97 @@ check(
     }) === "notices.kind.passport_decision_approved",
   "E3d RF8 the inbox names an employer confirmation as one, never as a document review",
 );
-// RF8, the same rule on the entry page: an approval's current state and its
-// line in the case history follow the verification method, and every approval
-// reads "Approved". Found by the public pilot: the history called every
-// approval "Document-reviewed", employer confirmations included.
-check(
-  approvalLabelKey("document_review") === "ver.approved.document_review" &&
-    approvalLabelKey("employer_confirmation") === "ver.approved.employer_confirmation" &&
-    approvalLabelKey("issuer_confirmation") === "ver.approved.issuer_confirmation" &&
-    approvalLabelKey(null) === "ver.status.approved" &&
-    approvalLabelKey("something_else") === "ver.status.approved",
-  "E3e RF8 the entry page names an approval by its verification method",
-);
-for (const lang of ["sv", "en"] as const) {
-  const approved = passportT("ver.status.approved", lang);
-  const keys = [
-    "ver.approved.document_review",
-    "ver.approved.employer_confirmation",
-    "ver.approved.issuer_confirmation",
-  ] as const;
-  check(
-    keys.every((k) => passportT(k, lang).startsWith(approved)) &&
-      !/dokumentgransk|document-review/i.test(
-        passportT("ver.approved.employer_confirmation", lang),
-      ) &&
-      !/dokumentgransk|document-review/i.test(
-        passportT("ver.approved.issuer_confirmation", lang),
-      ) &&
-      !/dokumentgransk|document-review/i.test(passportT("next.done.title", lang)),
-    `E3f RF8 (${lang}) every approval reads "${approved}"; only a document review says so`,
-  );
-}
+// Astra's recheck (2026-10-15): every surface says what a decision SUPPORTS,
+// by the existing provenance model, and the decision word "Approved" is kept
+// apart from it. The cases are the database's (supabase/tests/
+// provenance_cases.json, also read by talent_provenance_test.sql and compared
+// with effectiveTrust by scripts/provenance-parity-check.ts).
 {
+  type Case = {
+    id: string;
+    subject: "claim" | "period";
+    method: string;
+    organisation: string;
+    expected: string;
+    why: string;
+  };
+  const cases = JSON.parse(
+    readFileSync(join(ROOT, "supabase/tests/provenance_cases.json"), "utf8"),
+  ) as Case[];
+  const employerWords = /arbetsgivare|employer/i;
+  const issuerWords = /bekräftad av utfärdaren|confirmed by the issuer|bekräftat av utfärdaren/i;
+  for (const c of cases) {
+    const subjectKind = c.subject === "period" ? ("employment" as const) : ("credential" as const);
+    const subjectType = c.subject === "period" ? ("experience" as const) : ("claim" as const);
+    const wantEmployer = c.expected === "employer_confirmed";
+    const trust = effectiveTrust({
+      assertionLevel: "verified",
+      verificationMethod: c.method,
+      verifierName: c.organisation,
+      subjectKind,
+    });
+    const a = approvalPresentation({ method: c.method, organisation: c.organisation, subjectKind });
+    // The method the database writes on the notice (sp_decision_trust).
+    const noticeMethod = wantEmployer ? "employer_confirmation" : "document_review";
+    for (const lang of ["sv", "en"] as const) {
+      const basis = a.basis ? passportT(a.basis, lang) : "";
+      const note = a.note ? passportT(a.note, lang) : "";
+      const inbox = passportT(
+        noticeLabelKey({
+          kind: "passport_decision_approved",
+          verificationMethod: noticeMethod,
+          subjectType,
+        }) as PassportCopyKey,
+        lang,
+      );
+      // The raw method too: the application refuses the stronger words on its own.
+      const inboxRaw = passportT(
+        noticeLabelKey({
+          kind: "passport_decision_approved",
+          verificationMethod: c.method,
+          subjectType,
+        }) as PassportCopyKey,
+        lang,
+      );
+      const mail = renderProductNotice({
+        ...hostile,
+        kind: "passport_decision_approved",
+        language: lang,
+        subjectType,
+        verificationMethod: noticeMethod,
+      });
+      const mailRaw = renderProductNotice({
+        ...hostile,
+        kind: "passport_decision_approved",
+        language: lang,
+        subjectType,
+        verificationMethod: c.method,
+      });
+      check(
+        a.decision === "ver.status.approved" &&
+          (trust === "source_confirmed") === wantEmployer &&
+          employerWords.test(basis) === wantEmployer &&
+          !issuerWords.test(basis) &&
+          !issuerWords.test(note) &&
+          employerWords.test(inbox) === wantEmployer &&
+          employerWords.test(mail.subject) === wantEmployer &&
+          (wantEmployer || !employerWords.test(inboxRaw) || subjectType === "experience") &&
+          !issuerWords.test(inboxRaw) &&
+          !issuerWords.test(mailRaw.subject) &&
+          (subjectType === "experience" || !employerWords.test(mailRaw.subject)),
+        `PA ${c.id} (${lang}) ${c.why}: "${passportT("ver.status.approved", lang)}" and ${wantEmployer ? "employer-confirmed" : "documented"}, everywhere`,
+      );
+    }
+  }
   const thread = readFileSync(
     join(ROOT, "src/components/security-passport/live/ReviewThread.tsx"),
     "utf8",
   );
   check(
-    (thread.match(/approvalLabelKey\(/g) ?? []).length === 2 &&
-      thread.includes('current.state === "approved" && current.method === "document_review"'),
-    "E3g RF8 the current state and the history both use it; the not-the-issuer note only for a document review",
+    (thread.match(/<ApprovalBasis/g) ?? []).length === 2 &&
+      !/approvalLabelKey|ver\.approved\./.test(thread) &&
+      (thread.match(/subjectKind=\{subjectKind\}/g) ?? []).length >= 2,
+    "PA the current state and the history both name the decision and its basis apart, for the entry's subject",
   );
 }
 // RF8 (review 2026-10-15): the mail follows the verification method.

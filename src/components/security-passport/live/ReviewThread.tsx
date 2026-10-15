@@ -7,11 +7,12 @@
 //
 // A failed read is said as a failure with a retry, never as an empty history.
 
-import { approvalLabelKey } from "@/lib/notices/notice-label";
 import { useState } from "react";
 import { MessageSquare, RotateCw } from "lucide-react";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import type { PassportCopyKey } from "@/lib/security-passport/i18n";
+import { approvalPresentation } from "@/lib/security-passport/approval-presentation";
+import type { ProvenanceSubjectKind } from "@/lib/security-passport/provenance";
 import type {
   ReviewCurrent,
   ReviewThread as Thread,
@@ -26,7 +27,8 @@ export type ThreadLoad =
   | { readonly status: "error" }
   | { readonly status: "ready"; readonly thread: Thread };
 
-// An approval is named by approvalLabelKey (its verification method).
+// An approval is the DECISION "Approved"; what it supports is said apart, by
+// approvalPresentation (the provenance model), never folded into the word.
 const CURRENT_KEY: Record<Exclude<ReviewCurrent["state"], "approved">, PassportCopyKey> = {
   none: "ver.current.none",
   pending: "ver.current.pending",
@@ -49,7 +51,45 @@ function day(iso: string): string {
   return iso.slice(0, 10);
 }
 
-export function ReviewCurrentState({ current }: { readonly current: ReviewCurrent }) {
+/** What an approval supports, beside the decision: the basis by the
+ *  provenance model, and the one sentence a reader needs with it. */
+function ApprovalBasis({
+  method,
+  organisation,
+  subjectKind,
+  withNote,
+}: {
+  readonly method: string | null;
+  readonly organisation: string | null;
+  readonly subjectKind: ProvenanceSubjectKind | undefined;
+  readonly withNote: boolean;
+}) {
+  const { pt } = usePassportCopy();
+  const a = approvalPresentation({ method, organisation, subjectKind });
+  return (
+    <>
+      {a.basis ? (
+        <p data-approval-basis className="mt-1 text-xs text-foreground">
+          <span className="text-muted-foreground">{pt("ver.basis.label")}:</span> {pt(a.basis)}
+        </p>
+      ) : null}
+      {withNote && a.note ? (
+        <p data-approval-note className="mt-1 text-xs leading-relaxed text-muted-foreground">
+          {pt(a.note)}
+        </p>
+      ) : null}
+    </>
+  );
+}
+
+export function ReviewCurrentState({
+  current,
+  subjectKind,
+}: {
+  readonly current: ReviewCurrent;
+  /** What the entry is: an employer confirms an employment, nothing else. */
+  readonly subjectKind: ProvenanceSubjectKind | undefined;
+}) {
   const { pt } = usePassportCopy();
   return (
     <div
@@ -60,21 +100,20 @@ export function ReviewCurrentState({ current }: { readonly current: ReviewCurren
         {pt("ver.current.label")}
       </p>
       <p className="mt-0.5 text-sm font-semibold text-foreground">
-        {pt(
-          current.state === "approved"
-            ? approvalLabelKey(current.method)
-            : CURRENT_KEY[current.state],
-        )}
+        {pt(current.state === "approved" ? "ver.status.approved" : CURRENT_KEY[current.state])}
         {current.since ? (
           <span className="ml-2 font-normal tabular-nums text-muted-foreground">
             {day(current.since)}
           </span>
         ) : null}
       </p>
-      {current.state === "approved" && current.method === "document_review" ? (
-        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-          {pt("ver.current.reviewNotIssuer")}
-        </p>
+      {current.state === "approved" ? (
+        <ApprovalBasis
+          method={current.method}
+          organisation={current.organisation}
+          subjectKind={subjectKind}
+          withNote
+        />
       ) : null}
     </div>
   );
@@ -83,10 +122,12 @@ export function ReviewCurrentState({ current }: { readonly current: ReviewCurren
 export function ReviewThreadHistory({
   load,
   audience,
+  subjectKind,
   onRetry,
 }: {
   readonly load: ThreadLoad;
   readonly audience: "holder" | "reviewer";
+  readonly subjectKind: ProvenanceSubjectKind | undefined;
   readonly onRetry: () => void;
 }) {
   const { pt } = usePassportCopy();
@@ -144,9 +185,7 @@ export function ReviewThreadHistory({
           >
             <p className="flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
               <span className="font-semibold text-foreground">
-                {pt(
-                  e.decision === "approved" ? approvalLabelKey(e.method) : DECISION_KEY[e.decision],
-                )}
+                {pt(e.decision === "approved" ? "ver.status.approved" : DECISION_KEY[e.decision])}
               </span>
               <span className="tabular-nums">{day(e.at)}</span>
               {e.organisation ? (
@@ -155,6 +194,17 @@ export function ReviewThreadHistory({
                 </span>
               ) : null}
             </p>
+            {/* What the approval supports, by the provenance model: a
+                historical method is kept and named, never as a stronger
+                verification than it supports. */}
+            {e.decision === "approved" ? (
+              <ApprovalBasis
+                method={e.method}
+                organisation={e.organisation}
+                subjectKind={subjectKind}
+                withNote={false}
+              />
+            ) : null}
             {e.holderMessage ? (
               <div className="mt-1">
                 <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">

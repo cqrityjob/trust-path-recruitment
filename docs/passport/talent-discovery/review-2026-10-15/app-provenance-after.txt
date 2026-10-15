@@ -1,0 +1,23 @@
+# Provenance in the application -- AFTER the fix (bun run scripts/talent-discovery-check.ts "" "")
+
+  ok E3d RF8 the inbox names an employer confirmation as one, never as a document review
+  ok PA PV1 (sv) a CQrityjob document review of a credential: "Godkänd" and documented, everywhere
+  ok PA PV1 (en) a CQrityjob document review of a credential: "Approved" and documented, everywhere
+  ok PA PV2 (sv) an issuer confirmation with no structural issuer: documented, never source-confirmed: "Godkänd" and documented, everywhere
+  ok PA PV2 (en) an issuer confirmation with no structural issuer: documented, never source-confirmed: "Approved" and documented, everywhere
+  ok PA PV3 (sv) a legacy issuer method CQrityjob recorded about itself: "Godkänd" and documented, everywhere
+  ok PA PV3 (en) a legacy issuer method CQrityjob recorded about itself: "Approved" and documented, everywhere
+  ok PA PV4 (sv) an employer confirmation of a credential: outside an employer's standing: "Godkänd" and documented, everywhere
+  ok PA PV4 (en) an employer confirmation of a credential: outside an employer's standing: "Approved" and documented, everywhere
+  ok PA PV5 (sv) a legacy employer decision with CQrityjob as the deciding organisation: "Godkänd" and documented, everywhere
+  ok PA PV5 (en) a legacy employer decision with CQrityjob as the deciding organisation: "Approved" and documented, everywhere
+  ok PA PV6 (sv) a legitimate employer confirmation of an employment period keeps its level: "Godkänd" and employer-confirmed, everywhere
+  ok PA PV6 (en) a legitimate employer confirmation of an employment period keeps its level: "Approved" and employer-confirmed, everywhere
+  ok PA PV7 (sv) an issuer confirmation of a period: documented: "Godkänd" and documented, everywhere
+  ok PA PV7 (en) an issuer confirmation of a period: documented: "Approved" and documented, everywhere
+  ok PA PV8 (sv) a CQrityjob document review of a period: "Godkänd" and documented, everywhere
+  ok PA PV8 (en) a CQrityjob document review of a period: "Approved" and documented, everywhere
+  ok PA PV9 (sv) an employer method with no named organisation: fail closed: "Godkänd" and documented, everywhere
+  ok PA PV9 (en) an employer method with no named organisation: fail closed: "Approved" and documented, everywhere
+  ok PA the current state and the history both name the decision and its basis apart, for the entry's subject
+talent-discovery:check: 89 assertions passed

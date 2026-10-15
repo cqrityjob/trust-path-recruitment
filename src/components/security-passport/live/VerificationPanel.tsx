@@ -742,10 +742,13 @@ export function VerificationPanel({
         </h4>
         {thread && (thread.status !== "ready" || threadInstalled) ? (
           <div className="mt-2 space-y-2">
-            {currentState ? <ReviewCurrentState current={currentState} /> : null}
+            {currentState ? (
+              <ReviewCurrentState current={currentState} subjectKind={subjectKind} />
+            ) : null}
             <ReviewThreadHistory
               load={thread}
               audience="holder"
+              subjectKind={subjectKind}
               onRetry={() => onThreadRetry?.()}
             />
           </div>

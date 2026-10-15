@@ -1,0 +1,25 @@
+# Provenance in the application -- BEFORE the fix (app 5ab6ffed)
+# The shared cases (supabase/tests/provenance_cases.json) through the functions the surfaces
+# call: the entry's status/history label (approvalLabelKey), the inbox (noticeLabelKey) and the
+# mail subject (renderProductNotice), Swedish. A case fails when any of them says more than the
+# decision supports (employer words without an employer-confirmed employment, or issuer words).
+
+ok     PV1 a CQrityjob document review of a credential
+         status "Godkänd – dokumentgranskad" | inbox "En merit är dokumentgranskad" | mail "Din merit är dokumentgranskad"
+not ok PV2 an issuer confirmation with no structural issuer: documented, never source-confirmed
+         status "Godkänd – bekräftad av utfärdaren" | inbox "En granskning är godkänd" | mail "En granskning i ditt Passport är godkänd"
+not ok PV3 a legacy issuer method CQrityjob recorded about itself
+         status "Godkänd – bekräftad av utfärdaren" | inbox "En granskning är godkänd" | mail "En granskning i ditt Passport är godkänd"
+not ok PV4 an employer confirmation of a credential: outside an employer's standing
+         status "Godkänd – bekräftad av arbetsgivaren" | inbox "En arbetsgivare har bekräftat en anställning" | mail "En arbetsgivare har bekräftat en anställning i ditt Passport"
+not ok PV5 a legacy employer decision with CQrityjob as the deciding organisation
+         status "Godkänd – bekräftad av arbetsgivaren" | inbox "En arbetsgivare har bekräftat en anställning" | mail "En arbetsgivare har bekräftat en anställning i ditt Passport"
+ok     PV6 a legitimate employer confirmation of an employment period keeps its level
+         status "Godkänd – bekräftad av arbetsgivaren" | inbox "En arbetsgivare har bekräftat en anställning" | mail "En arbetsgivare har bekräftat en anställning i ditt Passport"
+not ok PV7 an issuer confirmation of a period: documented
+         status "Godkänd – bekräftad av utfärdaren" | inbox "En granskning är godkänd" | mail "En granskning i ditt Passport är godkänd"
+ok     PV8 a CQrityjob document review of a period
+         status "Godkänd – dokumentgranskad" | inbox "En merit är dokumentgranskad" | mail "Din merit är dokumentgranskad"
+not ok PV9 an employer method with no named organisation: fail closed
+         status "Godkänd – bekräftad av arbetsgivaren" | inbox "En arbetsgivare har bekräftat en anställning" | mail "En arbetsgivare har bekräftat en anställning i ditt Passport"
+6 of 9 cases say more than the decision supports

@@ -827,6 +827,9 @@ export function PassportReviewWorkspace() {
                       <ReviewThreadHistory
                         load={thread}
                         audience="reviewer"
+                        subjectKind={
+                          detail?.subjectType === "experience" ? "employment" : "credential"
+                        }
                         onRetry={() => setThreadAttempt((n) => n + 1)}
                       />
                     </div>

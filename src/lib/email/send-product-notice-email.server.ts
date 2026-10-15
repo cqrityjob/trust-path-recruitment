@@ -19,6 +19,7 @@
 // ids of an unexpected shape fall back to the product's front door.
 
 import { sendTransactionalEmail } from "@/lib/email/transport.server";
+import { noticeDecisionBasis } from "@/lib/notices/notice-label";
 import { classifyProviderResponse } from "@/lib/email/send-recruitment-message-email.server";
 
 export const PRODUCT_NOTICE_KINDS = [
@@ -257,11 +258,13 @@ export function renderProductNotice(p: ProductNoticeParams): {
       cta = copy[p.kind].cta;
       break;
     case "passport_decision_approved": {
-      // Only a CQrityjob document review may be described as one (RF8).
+      // What the decision supports, never more (RF8, Astra's recheck): the
+      // same rule as the inbox.
+      const basis = noticeDecisionBasis(p);
       const variant =
-        p.verificationMethod === "document_review"
+        basis === "document_reviewed"
           ? copy.passport_decision_approved
-          : p.verificationMethod === "employer_confirmation"
+          : basis === "employer_confirmed"
             ? copy.passport_decision_employer_confirmed
             : copy.passport_decision_approved_other;
       subject = variant.subject;
