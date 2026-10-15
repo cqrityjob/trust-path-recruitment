@@ -28,6 +28,7 @@ DROP FUNCTION IF EXISTS public.user_notices_settle_email(uuid, uuid, text, text)
 DROP FUNCTION IF EXISTS public.user_notices_claim_emails(integer);
 DROP FUNCTION IF EXISTS public.user_notices_still_allowed(public.user_notices);
 DROP FUNCTION IF EXISTS public.sp_notice_on_decision();
+DROP FUNCTION IF EXISTS public.sp_decision_trust(text, text, boolean);
 DROP FUNCTION IF EXISTS public.sp_notice_on_request();
 DROP FUNCTION IF EXISTS public.sp_notice_reviewers();
 DROP FUNCTION IF EXISTS public.user_notices_enqueue(uuid, text, text, text, uuid, uuid, text, text);

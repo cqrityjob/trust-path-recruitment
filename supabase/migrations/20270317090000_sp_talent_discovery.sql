@@ -151,16 +151,16 @@ $$;
 REVOKE ALL ON FUNCTION public.sp_catalogue_requirement_class(text) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.sp_catalogue_requirement_class(text) TO authenticated;
 
--- How an entry is backed, in words the employer view may use. An approval by
--- CQrityjob is a document review, not a confirmation from the issuer.
+-- How an entry is backed, in words the employer view may use: what its latest
+-- approval SUPPORTS (sp_decision_trust, the application's provenance rule),
+-- never the raw method. An issuer confirmation is documented, an employer
+-- confirmation only counts for an employment period decided by the employer,
+-- and nothing here can say a source confirmed a credential.
 CREATE FUNCTION public.sp_talent_entry_level(_assertion text, _claim_id uuid, _period_id uuid)
 RETURNS text LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS $$
   SELECT CASE _assertion
     WHEN 'verified' THEN coalesce((
-      SELECT CASE d.verification_method
-               WHEN 'employer_confirmation' THEN 'employer_confirmed'
-               WHEN 'issuer_confirmation' THEN 'source_confirmed'
-               ELSE 'document_reviewed' END
+      SELECT public.sp_decision_trust(d.verification_method, d.decider_organisation, r.period_id IS NOT NULL)
         FROM public.sp_verification_decisions d
         JOIN public.sp_verification_requests r ON r.id = d.request_id
        WHERE d.decision = 'approved'

@@ -564,6 +564,30 @@ REVOKE ALL ON FUNCTION public.sp_notice_on_request() FROM PUBLIC, anon, authenti
 CREATE TRIGGER sp_notice_on_request AFTER INSERT OR UPDATE OF status, submitted_at ON public.sp_verification_requests
   FOR EACH ROW EXECUTE FUNCTION public.sp_notice_on_request();
 
+-- What a decision SUPPORTS, by the same rule as the application's provenance
+-- model (effectiveTrust in src/lib/security-passport/provenance.ts), so the
+-- database and the interface never disagree about one decision:
+--   employer_confirmed  an employer confirming an EMPLOYMENT PERIOD, decided by
+--                       a named organisation that is not CQrityjob;
+--   document_reviewed   everything else that was approved -- a CQrityjob
+--                       document review, any issuer confirmation (the product
+--                       has no structural issuer: no issuer identity, receipt
+--                       or signature), an employer confirmation of a
+--                       credential, a legacy source method CQrityjob recorded
+--                       about itself, and an approval with no method.
+-- The decision rows keep the method as recorded; this only decides what the
+-- decision may be called today (Astra's recheck, 2026-10-15).
+CREATE FUNCTION public.sp_decision_trust(_method text, _organisation text, _is_employment boolean)
+RETURNS text LANGUAGE sql IMMUTABLE SET search_path = public, pg_temp AS $$
+  SELECT CASE
+    WHEN _method = 'employer_confirmation' AND coalesce(_is_employment, false)
+         AND btrim(coalesce(_organisation, '')) <> ''
+         AND lower(btrim(_organisation)) <> 'cqrityjob'
+      THEN 'employer_confirmed'
+    ELSE 'document_reviewed' END;
+$$;
+REVOKE ALL ON FUNCTION public.sp_decision_trust(text, text, boolean) FROM PUBLIC, anon, authenticated;
+
 CREATE FUNCTION public.sp_notice_on_decision() RETURNS trigger
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 DECLARE _r public.sp_verification_requests%ROWTYPE; _kind text;
@@ -579,7 +603,13 @@ BEGIN
   PERFORM public.user_notices_enqueue(NEW.holder_user_id, 'holder', _kind,
             CASE WHEN _r.claim_id IS NOT NULL THEN 'claim' ELSE 'experience' END,
             coalesce(_r.claim_id, _r.period_id), _r.id, 'decision:' || NEW.id,
-            CASE WHEN NEW.decision = 'approved' THEN NEW.verification_method END);
+            -- The notice names what the decision supports, never a stronger
+            -- method than the provenance model allows (the decision row keeps
+            -- the recorded one).
+            CASE WHEN NEW.decision = 'approved' THEN
+              CASE public.sp_decision_trust(NEW.verification_method, NEW.decider_organisation, _r.period_id IS NOT NULL)
+                WHEN 'employer_confirmed' THEN 'employer_confirmation' ELSE 'document_review' END
+            END);
   RETURN NEW;
 END $$;
 REVOKE ALL ON FUNCTION public.sp_notice_on_decision() FROM PUBLIC, anon, authenticated;

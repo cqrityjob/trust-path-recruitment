@@ -372,6 +372,41 @@ td_nc talent_review_findings_test "RF NC5 criteria bind to an unseen profile" "R
 td_restore "$TD_M3" 'CREATE FUNCTION public.rec_talent_confirm_criteria(' '^END \$\$;'
 td_suite talent_review_findings_test "Review findings 2026-10-15 (after controls)" 28
 
+# Astra's recheck (2026-10-15): the talent level and the decision notice say
+# what a decision SUPPORTS, by the application's provenance model -- an issuer
+# confirmation is documented, an employer confirmation counts only for an
+# employment period decided by the employer, history keeps the recorded
+# method. The cases (supabase/tests/provenance_cases.json) are shared with
+# scripts/provenance-parity-check.ts, which compares the database's answers
+# with effectiveTrust() directly. Both failed on the unfixed slots
+# (docs/passport/talent-discovery/review-2026-10-15/provenance-before.txt).
+echo "==> Running talent provenance, against the application's provenance model"
+td_suite talent_provenance_test "Talent provenance" 31 \
+  "PV2.1 an issuer confirmation with no structural issuer: documented, never source-confirmed: the talent level is document_reviewed" \
+  "PV4.1 an employer confirmation of a credential: outside an employer's standing: the talent level is document_reviewed" \
+  "PV5.1 a legacy employer decision with CQrityjob as the deciding organisation: the talent level is document_reviewed" \
+  "PV6.1 a legitimate employer confirmation of an employment period keeps its level: the talent level is employer_confirmed" \
+  "PV5.2 the decision notice names what the decision supports" \
+  "PV5.3 the decision row keeps the recorded method employer_confirmation as history" \
+  "PV10 the merits the card shows carry the same levels" \
+  "PV11 and so does the experience"
+td_plant "$TD_M2" 'CREATE FUNCTION public.sp_talent_entry_level(' '^\$\$;' "s/public.sp_decision_trust(d.verification_method, d.decider_organisation, r.period_id IS NOT NULL)/CASE d.verification_method WHEN 'employer_confirmation' THEN 'employer_confirmed' WHEN 'issuer_confirmation' THEN 'source_confirmed' ELSE 'document_reviewed' END/"
+td_nc talent_provenance_test "PV NC1 the raw method upgrades the talent level again" "PV2.1"
+td_restore "$TD_M2" 'CREATE FUNCTION public.sp_talent_entry_level(' '^\$\$;'
+td_plant "$TD_M1" 'CREATE FUNCTION public.sp_decision_trust(' '^\$\$;' "s/AND lower(btrim(_organisation)) <> 'cqrityjob'//"
+td_nc talent_provenance_test "PV NC2 a decision CQrityjob recorded counts as the employer's" "PV5.1"
+td_restore "$TD_M1" 'CREATE FUNCTION public.sp_decision_trust(' '^\$\$;'
+td_suite talent_provenance_test "Talent provenance (after controls)" 31
+set +e
+pv_parity="$(TEST_DB="$TEST_DB" bun run scripts/provenance-parity-check.ts 2>&1)"; pv_rc=$?
+set -e
+if [ "$pv_rc" -ne 0 ]; then
+  echo "$pv_parity" | grep -E "FAIL" | head -10 >&2 || true
+  suite_failed "Provenance parity: the database and the application disagree"
+else
+  echo "    ok  $(echo "$pv_parity" | tail -1)"
+fi
+
 # The data-bearing rollbacks refuse recorded data before changing anything:
 # each suite's own fixture, with the rollback in place of its ROLLBACK.
 TD_PROBE="$(mktemp)"
