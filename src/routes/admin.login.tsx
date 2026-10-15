@@ -170,7 +170,7 @@ function AdminLoginPage() {
       <Section>
         <div className="mx-auto max-w-md">
           <h1
-            className="text-3xl font-semibold tracking-tight text-foreground md:text-4xl"
+            className="break-words text-2xl font-semibold leading-tight tracking-tight text-foreground [hyphens:auto] sm:text-3xl md:text-4xl"
             style={{ fontFamily: "var(--font-display)" }}
           >
             {t("admin.auth.login.title")}
@@ -189,7 +189,7 @@ function AdminLoginPage() {
               <button
                 type="button"
                 onClick={onSignOutAndRetry}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-input bg-background px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-input bg-background px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
               >
                 {t("admin.auth.login.signOutAndTryAgain")}
               </button>
@@ -206,7 +206,7 @@ function AdminLoginPage() {
                 type="button"
                 onClick={onGoogle}
                 disabled={busy}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-input bg-background px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-accent disabled:opacity-60"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-input bg-background px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-60"
               >
                 {t("auth.google")}
               </button>

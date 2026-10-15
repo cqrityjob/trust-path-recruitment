@@ -1,3 +1,4 @@
+import { useUnsavedChanges } from "@/hooks/use-unsaved-changes";
 // Phase H3 — /employer/$employerSlug/jobs/new: create a new draft.
 
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
@@ -41,6 +42,8 @@ function EmployerJobNewPage() {
   const { t } = useT();
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const [formDirty, setFormDirty] = useState(false);
+  const releaseNavigation = useUnsavedChanges(formDirty);
   const listWorkspaces = useServerFn(listMyEmployerWorkspaces);
   const saveFn = useServerFn(saveEmployerJobDraft);
   const submitFn = useServerFn(submitEmployerJob);
@@ -102,6 +105,8 @@ function EmployerJobNewPage() {
     },
     onSuccess: (result) => {
       if (!workspace) return;
+      releaseNavigation();
+      setFormDirty(false);
       try {
         window.localStorage.removeItem(NEW_DRAFT_KEY);
       } catch {
@@ -139,6 +144,8 @@ function EmployerJobNewPage() {
     },
     onSuccess: (result) => {
       if (!workspace) return;
+      releaseNavigation();
+      setFormDirty(false);
       try {
         window.localStorage.removeItem(NEW_DRAFT_KEY);
       } catch {
@@ -197,6 +204,7 @@ function EmployerJobNewPage() {
           </div>
 
           <EmployerJobForm
+            onDirtyChange={setFormDirty}
             initial={emptyValues}
             employerId={workspace.employerId}
             draftStorageKey={NEW_DRAFT_KEY}

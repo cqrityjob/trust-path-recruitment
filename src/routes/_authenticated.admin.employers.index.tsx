@@ -94,7 +94,7 @@ function AdminEmployersPage() {
             ))}
           </div>
           <form
-            className="ml-auto flex gap-2"
+            className="ml-auto flex w-full min-w-0 gap-2 sm:w-auto"
             onSubmit={(e) => {
               e.preventDefault();
               setAppliedSearch(search.trim());
@@ -104,7 +104,8 @@ function AdminEmployersPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={t("admin.employers.list.search.placeholder")}
-              className="w-72"
+              aria-label={t("admin.employers.list.search.placeholder")}
+              className="min-w-0 flex-1 sm:w-72"
             />
             <Button type="submit" variant="outline" size="sm">
               {t("admin.employers.list.searchButton")}

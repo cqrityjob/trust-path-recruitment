@@ -133,9 +133,9 @@ test.describe("H3.4A candidate-to-employer application flow", () => {
 
     await expect(page.getByText("Application submitted")).toBeVisible({ timeout: 15_000 });
     await page
-      .getByRole("dialog")
+      .getByRole("dialog", { name: "Application submitted", exact: true })
+      .locator('[data-slot="dialog-footer"]')
       .getByRole("button", { name: "Close", exact: true })
-      .first()
       .click();
 
     // ---- 2. Candidate sees it in their own history ----
@@ -383,9 +383,9 @@ test.describe("Applying with a CQrityjob CV", () => {
     // The confirmation reports what the SERVER recorded, not what was ticked.
     await expect(page.getByText("Your CQrityjob CV was sent with your application.")).toBeVisible();
     await page
-      .getByRole("dialog")
+      .getByRole("dialog", { name: "Application submitted", exact: true })
+      .locator('[data-slot="dialog-footer"]')
       .getByRole("button", { name: "Close", exact: true })
-      .first()
       .click();
 
     // ---- 3. The candidate's own history says which CV went ----

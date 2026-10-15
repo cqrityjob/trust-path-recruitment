@@ -108,6 +108,13 @@ test.describe("admin verification queue — failures stay where they happen", ()
       passportVerifierWhoAmI: { isVerifier: true },
       listVerifierQueue: [review],
       getVerifierRequestDetail: detail,
+      getDefinitionFacts: {
+        versions: [],
+        regulator: null,
+        issuerStatedOnDocument: false,
+        scopeCode: null,
+        source: null,
+      },
       listDisputeQueue: [],
       passportReviewCounts: { open: 1, clarification: 0, total: 1 },
       countMyAcademyWork: { total: 0, actionable: 0 },

@@ -245,7 +245,7 @@ export function SecurityCareerProfileCard({
           setLoaded(false);
           setLoadAttempt((n) => n + 1);
         }}
-        className="mt-4 inline-flex min-h-11 items-center gap-1.5 rounded-md border border-input px-3.5 text-sm font-medium text-foreground transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        className="mt-4 inline-flex min-h-11 items-center gap-1.5 rounded-md border border-input px-3.5 text-sm font-medium text-foreground transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
       >
         {t("sca.scp.retry")}
       </button>
@@ -309,7 +309,7 @@ export function SecurityCareerProfileCard({
               <a
                 id="scp-return-passport"
                 href="/passport/information"
-                className="mt-3 inline-flex h-10 items-center rounded-md border border-input px-3.5 text-sm font-medium text-foreground no-underline transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                className="mt-3 inline-flex h-10 items-center rounded-md border border-input px-3.5 text-sm font-medium text-foreground no-underline transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
               >
                 {lang === "sv" ? "Tillbaka till Security Passport" : "Back to Security Passport"}
               </a>
@@ -319,7 +319,7 @@ export function SecurityCareerProfileCard({
           <button
             type="button"
             onClick={openEditor}
-            className="mt-4 inline-flex min-h-11 items-center gap-1.5 rounded-md border border-input px-3.5 text-sm font-medium text-foreground transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            className="mt-4 inline-flex min-h-11 items-center gap-1.5 rounded-md border border-input px-3.5 text-sm font-medium text-foreground transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           >
             <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
             {rows.length > 0
@@ -353,7 +353,7 @@ export function SecurityCareerProfileCard({
                 <button
                   type="button"
                   onClick={() => setOpen(false)}
-                  className="inline-flex h-10 items-center justify-center rounded-md border border-input px-4 text-sm font-medium text-foreground hover:bg-accent"
+                  className="inline-flex h-10 items-center justify-center rounded-md border border-input px-4 text-sm font-medium text-foreground hover:bg-muted"
                 >
                   {t("sca.scp.summary.cancel")}
                 </button>

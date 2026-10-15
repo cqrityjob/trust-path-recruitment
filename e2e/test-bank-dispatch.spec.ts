@@ -158,7 +158,14 @@ test("batch partial failure, retry, no interview, selection retained", async ({ 
     /inte konfigurerad|inte aktiverad|inte konfigurerat/,
   );
   await shot(page, "batch-complete");
-  await page.getByRole("button", { name: /^Stäng$/ }).click();
+  // Batch results have a live results region, unlike the single-send footer.
+  // Scope to its completion control, never the dialog's header close icon.
+  await page
+    .getByTestId("send-test-dialog")
+    .locator('[aria-live="polite"]')
+    .getByRole("button", { name: "Stäng", exact: true })
+    .click();
+  await expect(page.getByTestId("send-test-dialog")).toBeHidden();
   expect(await page.locator('tr input[type="checkbox"]:checked').count()).toBe(2);
   expect(sql("SELECT count(*) FROM scp_interview_cases")).toBe(before);
   await page.reload();

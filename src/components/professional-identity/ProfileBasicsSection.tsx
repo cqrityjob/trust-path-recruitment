@@ -1,3 +1,4 @@
+import { useUnsavedChanges } from "@/hooks/use-unsaved-changes";
 // Basic information and work country, EDITED on the canonical profile.
 //
 // ── THE OWNER'S CORRECTION ─────────────────────────────────────────────
@@ -51,6 +52,7 @@ import {
   listCurrentProfessionOptions,
   type CurrentProfessionOption,
 } from "@/lib/security-career-profile/profession-options";
+import { splitWorkCountry } from "@/lib/security-passport/onboarding";
 import { formatWorkLocation } from "@/lib/security-passport/format";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import { useT } from "@/i18n/context";
@@ -71,6 +73,10 @@ type Country = {
 };
 
 export function ProfileBasicsSection({ className = "" }: { className?: string }) {
+  const [basicsDirty, setBasicsDirty] = useState(false);
+  const [residenceDirty, setResidenceDirty] = useState(false);
+  const [workCountryDirty, setWorkCountryDirty] = useState(false);
+  useUnsavedChanges(basicsDirty || residenceDirty || workCountryDirty);
   const { pt } = usePassportCopy();
   const { lang } = useT();
   const navigate = useNavigate();
@@ -102,30 +108,35 @@ export function ProfileBasicsSection({ className = "" }: { className?: string })
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  /** Read back before any success is reported. "Sparat" is a claim about
-   *  persistence, and it is the same rule this write followed on the
-   *  Passport. */
-  const refresh = useCallback(async (): Promise<boolean> => {
-    try {
-      const snap = await loadProfile({ data: undefined });
-      setBasics({
-        displayName: snap.profile?.displayName ?? "",
-        headline: snap.profile?.headline ?? "",
-        professionSlug: snap.profile?.cigProfessionSlug ?? "",
-        declaredAccurateAt: snap.profile?.declaredAccurateAt ?? null,
-      });
-      setCountry({
-        jurisdictionCode: snap.profile?.jurisdictionCode ?? null,
-        subJurisdictionCode: snap.profile?.subJurisdictionCode ?? null,
-        confirmed: Boolean(snap.profile?.workLocationConfirmedAt),
-      });
-      return true;
-    } catch (err) {
-      console.error("[profile] basics read failed", err);
-      setError(pt("common.error"));
-      return false;
-    }
-  }, [loadProfile, pt]);
+  /** Refresh the displayed record. A read failure must not undo an acknowledged write. */
+  const reloadError =
+    lang === "sv"
+      ? "Ändringarna är sparade, men uppgifterna kunde inte läsas in igen. Ladda om sidan för att försöka igen."
+      : "Your changes are saved, but the information could not be reloaded. Reload the page to try again.";
+  const refresh = useCallback(
+    async (afterSave = false): Promise<boolean> => {
+      try {
+        const snap = await loadProfile({ data: undefined });
+        setBasics({
+          displayName: snap.profile?.displayName ?? "",
+          headline: snap.profile?.headline ?? "",
+          professionSlug: snap.profile?.cigProfessionSlug ?? "",
+          declaredAccurateAt: snap.profile?.declaredAccurateAt ?? null,
+        });
+        setCountry({
+          jurisdictionCode: snap.profile?.jurisdictionCode ?? null,
+          subJurisdictionCode: snap.profile?.subJurisdictionCode ?? null,
+          confirmed: Boolean(snap.profile?.workLocationConfirmedAt),
+        });
+        return true;
+      } catch (err) {
+        console.error("[profile] basics read failed", err);
+        setError(afterSave ? reloadError : pt("common.error"));
+        return false;
+      }
+    },
+    [loadProfile, pt, reloadError],
+  );
 
   useEffect(() => {
     void refresh();
@@ -250,6 +261,7 @@ export function ProfileBasicsSection({ className = "" }: { className?: string })
           role, which is an employment record). */}
       <div className="rounded-xl border border-border bg-card p-5 md:p-6">
         <ProfileBasicsCard
+          onDirtyChange={setBasicsDirty}
           variant="compact"
           answers={answers}
           displayAnswers={displayAnswers}
@@ -257,11 +269,19 @@ export function ProfileBasicsSection({ className = "" }: { className?: string })
           onSave={async (patch: ProfileBasicsPatch) => {
             setNotice(null);
             setError(null);
-            await saveBasics({ data: patch });
-            // Read back before the card reports success, and tell every
-            // surface that prints the name or the title -- the Profile
-            // header above, My Career, the Passport -- that it changed.
-            if (!(await refresh())) throw new Error("basics read-back failed");
+            const saved = await saveBasics({ data: patch });
+            // Advance only the submitted baseline after the server accepts it.
+            // Edits made while saving still differ from this baseline.
+            setBasics(
+              (previous) =>
+                previous && {
+                  ...previous,
+                  ...(patch.displayName !== undefined ? { displayName: patch.displayName } : {}),
+                  ...(patch.headline !== undefined ? { headline: patch.headline } : {}),
+                  declaredAccurateAt: saved.declaredAt,
+                },
+            );
+            await refresh(true);
             void queryClient.invalidateQueries({ queryKey: ["professional-identity"] });
           }}
           // The profession's canonical editor is the career profile on this
@@ -282,16 +302,24 @@ export function ProfileBasicsSection({ className = "" }: { className?: string })
           said, never shown as "not stated". */}
       <div id="profile-residence" className="mt-6 scroll-mt-24" data-profile-residence>
         {residenceRead === "failed" ? (
-          <p role="alert" className="text-sm text-destructive" data-profile-residence-state="failed">
+          <p
+            role="alert"
+            className="text-sm text-destructive"
+            data-profile-residence-state="failed"
+          >
             {pt("common.error")}
           </p>
         ) : residenceRead === "loading" ? (
-          <p role="status" className="text-sm text-muted-foreground" data-profile-residence-state="loading">
+          <p
+            role="status"
+            className="text-sm text-muted-foreground"
+            data-profile-residence-state="loading"
+          >
             {pt("common.loading")}
           </p>
         ) : (
           <ResidenceCountryCard
-            key={`${residence?.countryCode ?? ""}|${residence?.locality ?? ""}`}
+            onDirtyChange={setResidenceDirty}
             lang={lang as "sv" | "en"}
             countryCode={residence?.countryCode ?? null}
             locality={residence?.locality ?? null}
@@ -299,9 +327,12 @@ export function ProfileBasicsSection({ className = "" }: { className?: string })
               setNotice(null);
               setError(null);
               await saveResidence({ data: value });
-              // Read back before the card reports success.
-              const row = await loadResidence({ data: undefined });
-              setResidence(row);
+              setResidence({ countryCode: value.countryCode, locality: value.locality ?? null });
+              try {
+                setResidence(await loadResidence({ data: undefined }));
+              } catch {
+                setError(reloadError);
+              }
               setNotice(pt("basics.savedNotice"));
             }}
           />
@@ -317,6 +348,7 @@ export function ProfileBasicsSection({ className = "" }: { className?: string })
           </p>
         )}
         <WorkCountryCard
+          onDirtyChange={setWorkCountryDirty}
           jurisdictionCode={country.jurisdictionCode}
           subJurisdictionCode={country.subJurisdictionCode}
           confirmed={country.confirmed}
@@ -324,7 +356,8 @@ export function ProfileBasicsSection({ className = "" }: { className?: string })
             setNotice(null);
             setError(null);
             await saveCountry({ data: { workCountry: value } });
-            if (await refresh()) {
+            setCountry({ ...splitWorkCountry(value), confirmed: true });
+            if (await refresh(true)) {
               setNotice(pt("basics.savedNotice"));
               void queryClient.invalidateQueries({ queryKey: ["professional-identity"] });
             }
