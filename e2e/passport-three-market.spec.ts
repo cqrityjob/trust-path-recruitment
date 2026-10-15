@@ -506,6 +506,13 @@ async function mount(
         savedPayloads.push(data);
         return ok(route, { id: "approved-saved" });
       }
+      // The Passport's updates and an entry's review history (2026-10-15)
+      // are not what these scenarios look at: answered as not installed, so
+      // the page renders exactly as before; the real reads are proven by
+      // the Passport and talent suites against a database.
+      case "listMyNotices":
+      case "getReviewThread":
+        return ok(route, { installed: false });
       case "getMyPassport":
         return ok(route, {
           profile: {

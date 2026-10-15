@@ -703,6 +703,12 @@ function passportOverrides() {
       types: [],
     }),
     listPassportMarketOverview: ok({ markets: [], current: null }),
+    // The Passport's updates and an entry's review history (2026-10-15)
+    // are not what these scenarios look at: answered as not installed, so
+    // the page renders exactly as before; the real reads are proven by
+    // the Passport and talent suites against a database.
+    listMyNotices: ok({ installed: false }),
+    getReviewThread: ok({ installed: false }),
   };
 }
 
