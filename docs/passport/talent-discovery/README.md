@@ -18,6 +18,18 @@ rättelsen och går igenom efter. Utfallen finns i [review-2026-10-15/](review-2
 Fynd, commit och test redovisas i PR cqrityjob/trust-path-recruitment#472 (RF1–RF8, schema) och
 cqrityjob/trust-path-recruitment#473 (RF6–RF9, appen).
 
+Två fel till hittades i CI efter granskningen och är rättade:
+
+- **RF8 på meritsidan.** Ärendehistoriken och aktuell status kallade varje godkännande
+  "Dokumentgranskad", även en arbetsgivarbekräftelse, och innehavaren såg aldrig "Godkänd".
+  Nu läses varje godkännande "Godkänd", följt av metoden: dokumentgranskad, bekräftad av
+  arbetsgivaren eller bekräftad av utfärdaren. "Nästa steg" säger "Meriten är godkänd".
+  Utfall: [`app-rf8-entry-before.txt`](review-2026-10-15/app-rf8-entry-before.txt) och
+  [`app-rf8-entry-after.txt`](review-2026-10-15/app-rf8-entry-after.txt).
+- **CV-bucketen saknades på den riktiga stacken.** Ingen migration skapar `job-application-cvs`,
+  så ansökan med CV föll. Körningen skapar den nu via Storage-API:t med samma inställningar
+  som i drift: privat, 5 MiB, bara PDF.
+
 Scenario 12 i webbläsarsviten kör riktig sessionsåterkallelse (utloggning via `/auth/v1/logout`)
 och borttagen granskarroll. Det visar också att en arbetsgivares interna anteckning aldrig når
 granskaren. Sviten körs inte längre seriellt, så ett tidigt fel lämnar inga scenarier överhoppade.
@@ -40,7 +52,7 @@ Merge, driftsättning och publicering samordnas med releaseansvarig. Astra grans
 | Miljö                                                          | Verifierat                                                                                                                                                                                                                                                                                                                                                      |
 | -------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | SQL (riktig Postgres 16, strikt replay)                        | Alla migrationer i ordning; sviterna RH1–RH11 (53), TD (33), TS1–TS15 (75); fem planterade negativa kontroller; rollback av alla tre slots inklusive vägran när data finns; `db-test.sh` grönt.                                                                                                                                                                 |
-| Lokal stack: Postgres 16 + PostgREST 12.2.3 + appen i Chromium | 11 seriella scenarier, alla gröna (se nedan).                                                                                                                                                                                                                                                                                                                   |
+| Lokal stack: Postgres 16 + PostgREST 12.2.3 + appen i Chromium | 12 scenarier, inte seriella, alla gröna (se nedan).                                                                                                                                                                                                                                                                                                             |
 | **Substitut** i den lokala stacken                             | Auth (GoTrue) och Storage ersätts av repots `scripts/local-stack/auth-gateway.mjs`: riktiga JWT, riktig RLS och riktiga `storage.objects`-rader, men inte GoTrue- eller Storage-binärerna. Docker-registren var blockerade i arbetsmiljön. Mejl går till en mejlfångare i gatewayen; inget lämnar processen. CI-jobben med riktig GoTrue/Storage körs i GitHub. |
 | Produktion (`wrygicdfxwjnrugduxnt`)                            | **Inte rörd.** Ingen migration, ingen data, inget mejl.                                                                                                                                                                                                                                                                                                         |
 

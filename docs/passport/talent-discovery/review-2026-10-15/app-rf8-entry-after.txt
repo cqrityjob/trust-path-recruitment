@@ -1,0 +1,8 @@
+# RF8 on the entry page -- AFTER the fix (bun run scripts/talent-discovery-check.ts "" "")
+
+  ok E3d RF8 the inbox names an employer confirmation as one, never as a document review
+  ok E3e RF8 the entry page names an approval by its verification method
+  ok E3f RF8 (sv) every approval reads "Godkänd"; only a document review says so
+  ok E3f RF8 (en) every approval reads "Approved"; only a document review says so
+  ok E3g RF8 the current state and the history both use it; the not-the-issuer note only for a document review
+talent-discovery:check: 74 assertions passed
