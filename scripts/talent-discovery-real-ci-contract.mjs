@@ -52,6 +52,17 @@ export const PEOPLE = Object.freeze([
   },
 ]);
 
+/** The application CV bucket as the hosted project has it (the same
+ * settings passport-regression-application.mjs creates). No migration
+ * creates it, so the run creates it through the Storage API. */
+export const CV_BUCKET = Object.freeze({
+  id: "job-application-cvs",
+  name: "job-application-cvs",
+  public: false,
+  file_size_limit: 5242880,
+  allowed_mime_types: Object.freeze(["application/pdf"]),
+});
+
 /** Product mail may go only to approved test addresses. None of the
  * synthetic people is approved, and the stack has no Edge runtime anyway. */
 export const MAIL_ALLOWLIST = "@approved-test-recipient.invalid";

@@ -26,6 +26,7 @@ import {
   APP,
   API,
   CONFIG,
+  CV_BUCKET,
   EXCLUDED,
   PEOPLE,
   PASSWORD,
@@ -194,6 +195,35 @@ async function main() {
       if (login.status !== 200) throw Error(`TD_REAL_AUTH_LOGIN_FAILED_${login.status}`);
     }
     report.accounts = PEOPLE.length;
+  });
+
+  // The application CV bucket is not created by any migration (the hosted
+  // project has it); like the other real-stack runners
+  // (passport-regression-application.mjs), it is created here through the
+  // Storage API with the hosted settings: private, 5 MiB, PDF only. Its
+  // object policies stay exactly as the replayed migrations left them.
+  await stage("storage_buckets", async () => {
+    const headers = {
+      apikey: status.SERVICE_ROLE_KEY,
+      Authorization: `Bearer ${status.SERVICE_ROLE_KEY}`,
+      "Content-Type": "application/json",
+    };
+    const create = await fetch(`${API}/storage/v1/bucket`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(CV_BUCKET),
+    });
+    if (create.status !== 200) throw Error(`TD_REAL_CV_BUCKET_CREATE_FAILED_${create.status}`);
+    const read = await fetch(`${API}/storage/v1/bucket/${CV_BUCKET.id}`, { headers });
+    const bucket = read.status === 200 ? await read.json() : null;
+    if (
+      !bucket ||
+      bucket.public !== false ||
+      bucket.file_size_limit !== CV_BUCKET.file_size_limit ||
+      JSON.stringify(bucket.allowed_mime_types) !== JSON.stringify(CV_BUCKET.allowed_mime_types)
+    )
+      throw Error("TD_REAL_CV_BUCKET_SETTINGS_MISMATCH");
+    report.buckets = [CV_BUCKET.id];
   });
 
   await stage("fixture", async () => {

@@ -5,6 +5,7 @@ import {
   APP,
   CONFIG,
   CLI_VERSION,
+  CV_BUCKET,
   MAIL_ALLOWLIST,
   PEOPLE,
   appEnvironment,
@@ -112,6 +113,21 @@ test("the accounts are the fixture's, created through GoTrue, never by SQL", () 
     /INSERT INTO auth\.|request\.jwt\.claim|SET (?:LOCAL )?ROLE|auth-gateway|00_bootstrap/,
   );
   expect(run).toContain("TD_REAL_STACK");
+});
+
+test("the CV bucket is created through the Storage API, private, as hosted", () => {
+  expect(CV_BUCKET).toEqual({
+    id: "job-application-cvs",
+    name: "job-application-cvs",
+    public: false,
+    file_size_limit: 5242880,
+    allowed_mime_types: ["application/pdf"],
+  });
+  const run = read("scripts/talent-discovery-real-ci-run.mjs");
+  expect(run).toContain("/storage/v1/bucket");
+  expect(run).toContain("TD_REAL_CV_BUCKET_SETTINGS_MISMATCH");
+  // Never by SQL, and no object policy is added or loosened here.
+  expect(run).not.toMatch(/storage\.(buckets|objects)|CREATE POLICY/);
 });
 
 test("the spec proves notices without mail on the real stack, and the workflow is pinned", () => {
