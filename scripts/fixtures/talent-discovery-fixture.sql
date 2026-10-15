@@ -50,6 +50,17 @@ INSERT INTO td_people VALUES
   ('7d000000-0000-4000-8000-0000000000e3', 'td-colleague@local.test', 'Kim Kollega'),
   ('7d000000-0000-4000-8000-0000000000e4', 'td-owner2@local.test',    'Anna Annanfirma');
 
+-- With -v real_auth=1 the accounts already exist: created through GoTrue's
+-- admin API by scripts/talent-discovery-real-ci-run.mjs with these same ids,
+-- so nothing here writes to auth.*.
+\if :{?real_auth}
+DO $$
+BEGIN
+  IF (SELECT count(*) FROM auth.users u JOIN td_people p ON p.id = u.id AND lower(p.email) = lower(u.email)) <> 8 THEN
+    RAISE EXCEPTION 'TD_FIXTURE_REAL_AUTH_ACCOUNTS_MISSING';
+  END IF;
+END $$;
+\else
 INSERT INTO auth.users (
   instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
   raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
@@ -66,6 +77,7 @@ SELECT p.id::text, p.id, jsonb_build_object('sub', p.id::text, 'email', p.email,
        'email', now(), now(), now()
   FROM td_people p
 ON CONFLICT (provider, provider_id) DO NOTHING;
+\endif
 INSERT INTO public.profiles (id, display_name)
 SELECT id, name FROM td_people ON CONFLICT (id) DO UPDATE SET display_name = EXCLUDED.display_name;
 INSERT INTO public.sp_passport_profiles (holder_user_id, display_name, jurisdiction_code, work_location_confirmed_at)

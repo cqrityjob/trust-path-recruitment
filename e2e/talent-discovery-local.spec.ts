@@ -111,6 +111,33 @@ async function rpc(fn: string, args: Record<string, unknown>, token: string | nu
   return { status: res.status, body: await res.text() };
 }
 
+// TD_REAL_STACK=1: real GoTrue, Storage and PostgREST (the CLI stack in
+// .github/workflows/talent-discovery-real-ci.yml). That stack runs no Edge
+// runtime, so product mail cannot leave it: the proof there is the notice row
+// and that its mail was never recorded as sent.
+const REAL = process.env.TD_REAL_STACK === "1";
+
+async function expectProductNotice(
+  to: string,
+  kind: string,
+): Promise<{ subject?: string; text?: string } | null> {
+  if (REAL) {
+    const rows = () =>
+      sql(
+        `select coalesce(string_agg(n.email_status, ','), '') from user_notices n join auth.users u on u.id = n.recipient_user_id where lower(u.email) = lower('${to}') and n.kind = '${kind}'`,
+      );
+    await expect.poll(rows, { timeout: 30_000 }).not.toBe("");
+    expect(rows().split(",")).not.toContain("sent");
+    return null;
+  }
+  await expect
+    .poll(async () => (await inbox(to)).filter((m) => m.type === "product:product_notice").length, {
+      timeout: 30_000,
+    })
+    .toBeGreaterThan(0);
+  return (await inbox(to)).reverse().find((m) => m.type === "product:product_notice") ?? null;
+}
+
 async function inbox(to: string): Promise<{ type: string; subject?: string; text?: string }[]> {
   const res = await fetch(`${API}/__local/inbox?to=${encodeURIComponent(to)}`);
   return (await res.json()) as { type: string; subject?: string; text?: string }[];
@@ -203,14 +230,11 @@ test("2 · the reviewer asks for more information; the holder is told in the app
   // The reviewer opens the case again and leaves this page open: it is the
   // "old review view" step 4 uses after the holder has answered.
   await reviewerPage.reload();
-  await expect
-    .poll(async () => (await inbox(A)).filter((m) => m.type === "product:product_notice").length, {
-      timeout: 30_000,
-    })
-    .toBeGreaterThan(0);
-  const mail = (await inbox(A)).find((m) => m.type === "product:product_notice")!;
-  expect(mail.subject).toContain("Komplettering");
-  expect(mail.text).not.toContain("Vilket år");
+  const mail = await expectProductNotice(A, "passport_clarification_requested");
+  if (mail) {
+    expect(mail.subject).toContain("Komplettering");
+    expect(mail.text).not.toContain("Vilket år");
+  }
 });
 
 test("3 · the holder answers in text, bound to the version", async ({ browser }) => {
@@ -460,12 +484,16 @@ test("7 · the recruiter finds the discoverable people and reads why; the privat
 test("8 · Cecilia reads who, about what and what accepting means, accepts, and applies with her own Passport choice", async ({
   browser,
 }) => {
-  await expect
-    .poll(
-      async () => (await inbox(A)).filter((m) => m.subject?.includes("TD Bevakning AB")).length,
-      { timeout: 30_000 },
-    )
-    .toBe(1);
+  if (REAL) {
+    await expectProductNotice(A, "talent_contact_received");
+  } else {
+    await expect
+      .poll(
+        async () => (await inbox(A)).filter((m) => m.subject?.includes("TD Bevakning AB")).length,
+        { timeout: 30_000 },
+      )
+      .toBe(1);
+  }
   const page = await signIn(browser, A, "/passport/discoverability");
   const request = page.locator('[data-contact-request="pending"]');
   await expect(request).toContainText("TD Bevakning AB", { timeout: 60_000 });
@@ -617,11 +645,7 @@ test("11 · a rejection reaches the holder in the reviewer's words; a removed pe
   );
   expect(thread.body).not.toContain("INTERN-ANTECKNING");
   await shot(c, "after-rejected-sv-1440");
-  await expect
-    .poll(async () => (await inbox(C)).filter((m) => m.type === "product:product_notice").length, {
-      timeout: 30_000,
-    })
-    .toBeGreaterThan(0);
+  await expectProductNotice(C, "passport_decision_rejected");
   // A rejection changes nothing about discoverability: Petra stays private.
   expect(sql(`select count(*) from sp_talent_profiles where holder_user_id='${C_ID}'`)).toBe("0");
   await c.context().close();
