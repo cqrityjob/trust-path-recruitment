@@ -381,22 +381,29 @@ td_suite talent_review_findings_test "Review findings 2026-10-15 (after controls
 # with effectiveTrust() directly. Both failed on the unfixed slots
 # (docs/passport/talent-discovery/review-2026-10-15/provenance-before.txt).
 echo "==> Running talent provenance, against the application's provenance model"
-td_suite talent_provenance_test "Talent provenance" 31 \
+td_suite talent_provenance_test "Talent provenance" 151 \
   "PV2.1 an issuer confirmation with no structural issuer: documented, never source-confirmed: the talent level is document_reviewed" \
   "PV4.1 an employer confirmation of a credential: outside an employer's standing: the talent level is document_reviewed" \
   "PV5.1 a legacy employer decision with CQrityjob as the deciding organisation: the talent level is document_reviewed" \
   "PV6.1 a legitimate employer confirmation of an employment period keeps its level: the talent level is employer_confirmed" \
   "PV5.2 the decision notice names what the decision supports" \
-  "PV5.3 the decision row keeps the recorded method employer_confirmation as history" \
+  "PV5.3 the decision row keeps the recorded method employer_confirmation and organisation as history" \
   "PV10 the merits the card shows carry the same levels" \
-  "PV11 and so does the experience"
+  "PV11 and so does the experience" \
+  "PV13.1 a legacy decision CQrityjob recorded, with a trailing tab" \
+  "PV14.1 an employer method whose organisation is only a tab and a newline" \
+  "PV15.1 CQrityjob in another letter case" \
+  "PV16.1 a name with a dotted capital I"
 td_plant "$TD_M2" 'CREATE FUNCTION public.sp_talent_entry_level(' '^\$\$;' "s/public.sp_decision_trust(d.verification_method, d.decider_organisation, r.period_id IS NOT NULL)/CASE d.verification_method WHEN 'employer_confirmation' THEN 'employer_confirmed' WHEN 'issuer_confirmation' THEN 'source_confirmed' ELSE 'document_reviewed' END/"
 td_nc talent_provenance_test "PV NC1 the raw method upgrades the talent level again" "PV2.1"
 td_restore "$TD_M2" 'CREATE FUNCTION public.sp_talent_entry_level(' '^\$\$;'
-td_plant "$TD_M1" 'CREATE FUNCTION public.sp_decision_trust(' '^\$\$;' "s/AND lower(btrim(_organisation)) <> 'cqrityjob'//"
+td_plant "$TD_M1" 'CREATE FUNCTION public.sp_decision_trust(' '^\$\$;' "/<> 'cqrityjob'\$/d"
 td_nc talent_provenance_test "PV NC2 a decision CQrityjob recorded counts as the employer's" "PV5.1"
 td_restore "$TD_M1" 'CREATE FUNCTION public.sp_decision_trust(' '^\$\$;'
-td_suite talent_provenance_test "Talent provenance (after controls)" 31
+td_plant "$TD_M1" 'CREATE FUNCTION public.sp_decision_trust(' '^\$\$;' "s/AND n.org <> ''/AND btrim(coalesce(_organisation, '')) <> ''/; s/AND translate(n.org, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz') <> 'cqrityjob'/AND lower(btrim(_organisation)) <> 'cqrityjob'/"
+td_nc talent_provenance_test "PV NC3 the organisation trimmed of spaces only, as before Astra's P2" "PV13.1"
+td_restore "$TD_M1" 'CREATE FUNCTION public.sp_decision_trust(' '^\$\$;'
+td_suite talent_provenance_test "Talent provenance (after controls)" 151
 set +e
 pv_parity="$(TEST_DB="$TEST_DB" bun run scripts/provenance-parity-check.ts 2>&1)"; pv_rc=$?
 set -e

@@ -577,14 +577,29 @@ CREATE TRIGGER sp_notice_on_request AFTER INSERT OR UPDATE OF status, submitted_
 --                       about itself, and an approval with no method.
 -- The decision rows keep the method as recorded; this only decides what the
 -- decision may be called today (Astra's recheck, 2026-10-15).
+--
+-- The organisation is read exactly as the application reads it:
+--   trim     the characters JavaScript's String.prototype.trim removes
+--            (WhiteSpace and LineTerminator: TAB, LF, VT, FF, CR, SPACE,
+--            NBSP, U+1680, U+2000-U+200A, U+2028, U+2029, U+202F, U+205F,
+--            U+3000, U+FEFF), not btrim's default of spaces only;
+--   compare  ASCII letters folded to lower case, nothing else: toLowerCase()
+--            gives the letters of "cqrityjob" only from ASCII letters, while
+--            lower() follows the database collation (C.UTF-8 and glibc fold
+--            U+0130 to "i"; JavaScript does not).
 CREATE FUNCTION public.sp_decision_trust(_method text, _organisation text, _is_employment boolean)
 RETURNS text LANGUAGE sql IMMUTABLE SET search_path = public, pg_temp AS $$
   SELECT CASE
     WHEN _method = 'employer_confirmation' AND coalesce(_is_employment, false)
-         AND btrim(coalesce(_organisation, '')) <> ''
-         AND lower(btrim(_organisation)) <> 'cqrityjob'
+         AND n.org <> ''
+         AND translate(n.org, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz') <> 'cqrityjob'
       THEN 'employer_confirmed'
-    ELSE 'document_reviewed' END;
+    ELSE 'document_reviewed' END
+  FROM (SELECT btrim(coalesce(_organisation, ''),
+                     chr(9) || chr(10) || chr(11) || chr(12) || chr(13) || chr(32) || chr(160) || chr(5760)
+                     || chr(8192) || chr(8193) || chr(8194) || chr(8195) || chr(8196) || chr(8197) || chr(8198)
+                     || chr(8199) || chr(8200) || chr(8201) || chr(8202) || chr(8232) || chr(8233) || chr(8239)
+                     || chr(8287) || chr(12288) || chr(65279)) AS org) n;
 $$;
 REVOKE ALL ON FUNCTION public.sp_decision_trust(text, text, boolean) FROM PUBLIC, anon, authenticated;
 

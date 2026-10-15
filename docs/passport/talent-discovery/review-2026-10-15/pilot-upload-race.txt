@@ -1,12 +1,18 @@
 # passport-public-pilot-local.spec.ts F, attachDocument -- root cause
 #
-# CI: run 38743864633 attempt 1 on 5ab6ffed (job 116452244561), both projects:
-#   locator('[data-evidence-saved-file]') toHaveText("sira-kort-framsida.pdf")
-#   -> element(s) not found within 60000 ms (spec.ts:332, from F at :753).
-# Attempt 2 on the same commit passed. The failure artifact (screenshot,
-# error context) could not be fetched from this environment (blob host
-# refused by the proxy), so the cause was established from the code and a
-# targeted reproduction.
+# CI, the same symptom twice, each time:
+#   locator('[data-evidence-saved-file]') toHaveText(<file>)
+#   -> element(s) not found within 60000 ms (spec.ts:332)
+#   - #473 at 5ab6ffed, run 38743864633 attempt 1 (job 116452244561), both
+#     projects, at the first document (F, :753); attempt 2 passed.
+#   - #472 at 382d4993, run 38763848214 (job 116521810432), chromium, at the
+#     clarification answer (F, :795); mobile-390 passed in the same run.
+# The picker and the recovery read are main's code, unchanged by #472 and
+# #473 (EvidencePanel.tsx, EvidenceUploadRecoveryPanel.tsx, and the
+# useState(true) in the entry route). The failure artifacts (screenshot, error
+# context) could not be fetched from this environment (blob host refused by
+# the proxy), so the cause was established from the code and a targeted
+# reproduction.
 
 ## 1. The code path
   src/routes/_authenticated.passport.entry.$kind.$entryId.tsx:
@@ -22,12 +28,13 @@
   The spec picked at once after page.goto. The talent suite and
   platform-live-journeys.spec.ts already wait:
     await expect(page.locator("#sp-evidence-file")).toBeEnabled();
-  This branch adds a second read at mount on the same page (getReviewThread),
-  which can put listMyUploadAttempts later on a loaded runner.
+  #473 adds a second read at mount on the same page (getReviewThread), which
+  can put listMyUploadAttempts later on a loaded runner; the race itself is
+  main's and shows on #472 too.
 
 ## 2. The race, reproduced (local stack: PostgreSQL 16, PostgREST 12.2.3,
-##    the repo gateway; app at the #473 head; listMyUploadAttempts delayed
-##    as on a loaded runner)
+##    the repo gateway; app at the #473 head, whose picker and recovery
+##    read are main's; listMyUploadAttempts delayed as on a loaded runner)
   claim 8fbecab2-8653-4766-8505-83fbabfc88e2 (td-cand-b), read delay 4000 ms
   original: FAIL (marker never showed); listMyUploadAttempts delayed 2x by 4000 ms; picker disabled at the pick: true; evidence rows for the file: 0; error shown: (none)
   fixed: PASS; listMyUploadAttempts delayed 3x by 4000 ms; evidence rows for the file: 1; error shown: (none)

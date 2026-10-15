@@ -1,0 +1,412 @@
+# Talent provenance -- Astra's P2 (2026-10-15): the decider organisation read
+# exactly as the application reads it
+#
+# Finding (Astra, on f5b54f10): sp_decision_trust() trimmed with btrim(text),
+# which removes U+0020 only, and folded case with lower(), which follows the
+# database collation. effectiveTrust() uses JavaScript's trim() and
+# toLowerCase(). So E'CQrityjob\t' and E'\t\n' were employer_confirmed in the
+# database and documented in the application.
+#
+# Fix (one normalised value for both checks): trim exactly the characters
+# String.prototype.trim removes, fold ASCII letters only. Not argued from a
+# list: scripts/provenance-parity-check.ts tries every code point against the
+# application's real effectiveTrust() (the "exhaustive" lines below).
+#
+# Same database (fresh strict replay of 397 migrations, PostgreSQL 16,
+# C.UTF-8, synthetic data); first with the reviewed function (22adab15), then
+# with the fix. 21 shared cases (supabase/tests/provenance_cases.json), each
+# read through the talent level, the decision notice, the decision history,
+# the candidate's preview (sp_talent_preview), the employer's profile
+# (rec_talent_profile), the inbox payload (user_notices_inbox) and the claimed
+# mail payload (user_notices_claim_emails). New cases:
+#   PV13 "CQrityjob<TAB>"                                   document_reviewed
+#   PV14 "<TAB><LF>"                                        document_reviewed (empty)
+#   PV15 "<NBSP>cqRITYjob<U+3000><U+FEFF>"                  document_reviewed
+#   PV16 "CQR<U+0130>TYJOB"                                 employer_confirmed (as the app)
+#   PV17 "<LF>CQrityjob<CR><LF>"                            document_reviewed
+#   PV18 " <TAB><CR><LF><VT><FF>CQrityjob <U+2028><U+2029>" document_reviewed
+#   PV19 "<U+1680><U+2000><U+2005><U+200A>CQRITYJOB<U+202F><U+205F>"  document_reviewed
+#   PV20 ""                                                 document_reviewed (empty)
+#   PV21 "<NBSP><U+2003><U+3000><U+FEFF>"                   document_reviewed (empty)
+#   PV22 "  TS  Bevakning<TAB>AB<LF>"                       employer_confirmed (inner whitespace kept)
+#   PV23 "CQrityjob<U+200B>"                                employer_confirmed (trim() keeps U+200B)
+#   PV24 "<U+0085>CQrityjob"                                employer_confirmed (trim() keeps NEL)
+# Positive controls (PV6, PV22, PV23, PV24) hold before and after.
+
+## BEFORE -- psql -v report_only=1 -f supabase/tests/talent_provenance_test.sql
+##   102 ok, 49 not ok
+  ok  PV0 twenty-one shared cases loaded
+  ok  PV1.1 a CQrityjob document review of a credential: the talent level is document_reviewed (got document_reviewed)
+  ok  PV1.2 the decision notice names what the decision supports (got document_review)
+  ok  PV1.3 the decision row keeps the recorded method document_review and organisation as history
+  ok  PV2.1 an issuer confirmation with no structural issuer: documented, never source-confirmed: the talent level is document_reviewed (got document_reviewed)
+  ok  PV2.2 the decision notice names what the decision supports (got document_review)
+  ok  PV2.3 the decision row keeps the recorded method issuer_confirmation and organisation as history
+  ok  PV3.1 a legacy issuer method CQrityjob recorded about itself: the talent level is document_reviewed (got document_reviewed)
+  ok  PV3.2 the decision notice names what the decision supports (got document_review)
+  ok  PV3.3 the decision row keeps the recorded method issuer_confirmation and organisation as history
+  ok  PV4.1 an employer confirmation of a credential: outside an employer's standing: the talent level is document_reviewed (got document_reviewed)
+  ok  PV4.2 the decision notice names what the decision supports (got document_review)
+  ok  PV4.3 the decision row keeps the recorded method employer_confirmation and organisation as history
+  ok  PV5.1 a legacy employer decision with CQrityjob as the deciding organisation: the talent level is document_reviewed (got document_reviewed)
+  ok  PV5.2 the decision notice names what the decision supports (got document_review)
+  ok  PV5.3 the decision row keeps the recorded method employer_confirmation and organisation as history
+  ok  PV6.1 a legitimate employer confirmation of an employment period keeps its level: the talent level is employer_confirmed (got employer_confirmed)
+  ok  PV6.2 the decision notice names what the decision supports (got employer_confirmation)
+  ok  PV6.3 the decision row keeps the recorded method employer_confirmation and organisation as history
+  ok  PV7.1 an issuer confirmation of a period: documented: the talent level is document_reviewed (got document_reviewed)
+  ok  PV7.2 the decision notice names what the decision supports (got document_review)
+  ok  PV7.3 the decision row keeps the recorded method issuer_confirmation and organisation as history
+  ok  PV8.1 a CQrityjob document review of a period: the talent level is document_reviewed (got document_reviewed)
+  ok  PV8.2 the decision notice names what the decision supports (got document_review)
+  ok  PV8.3 the decision row keeps the recorded method document_review and organisation as history
+  ok  PV9.1 an employer method with no named organisation: fail closed: the talent level is document_reviewed (got document_reviewed)
+  ok  PV9.2 the decision notice names what the decision supports (got document_review)
+  ok  PV9.3 the decision row keeps the recorded method employer_confirmation and organisation as history
+  not ok  PV13.1 a legacy decision CQrityjob recorded, with a trailing tab: the name is trimmed as the application trims it: the talent level is document_reviewed (got employer_confirmed)
+  not ok  PV13.2 the decision notice names what the decision supports (got employer_confirmation)
+  ok  PV13.3 the decision row keeps the recorded method employer_confirmation and organisation as history
+  not ok  PV14.1 an employer method whose organisation is only a tab and a newline: no named organisation, fail closed: the talent level is document_reviewed (got employer_confirmed)
+  not ok  PV14.2 the decision notice names what the decision supports (got employer_confirmation)
+  ok  PV14.3 the decision row keeps the recorded method employer_confirmation and organisation as history
+  not ok  PV15.1 CQrityjob in another letter case between a no-break space, an ideographic space and a BOM: still CQrityjob: the talent level is document_reviewed (got employer_confirmed)
+  not ok  PV15.2 the decision notice names what the decision supports (got employer_confirmation)
+  ok  PV15.3 the decision row keeps the recorded method employer_confirmation and organisation as history
+  not ok  PV16.1 a name with a dotted capital I is not CQrityjob in the application, so not here either: letter case is folded for ASCII only, whatever the database collation: the talent level is employer_confirmed (got document_reviewed)
+  not ok  PV16.2 the decision notice names what the decision supports (got document_review)
+  ok  PV16.3 the decision row keeps the recorded method employer_confirmation and organisation as history
+  not ok  PV17.1 CQrityjob between newlines (LF, CR LF): still CQrityjob: the talent level is document_reviewed (got employer_confirmed)
+  not ok  PV17.2 the decision notice names what the decision supports (got employer_confirmation)
+  ok  PV17.3 the decision row keeps the recorded method employer_confirmation and organisation as history
+  not ok  PV18.1 CQrityjob between mixed whitespace (space, tab, CR, LF, VT, FF, line and paragraph separators): still CQrityjob: the talent level is document_reviewed (got employer_confirmed)
+  not ok  PV18.2 the decision notice names what the decision supports (got employer_confirmation)
+  ok  PV18.3 the decision row keeps the recorded method employer_confirmation and organisation as history
+  not ok  PV19.1 CQRITYJOB between Unicode spaces trim() removes (ogham, en quad, four-per-em, hair, narrow no-break, medium mathematical): still CQrityjob: the talent level is document_reviewed (got employer_confirmed)
+  not ok  PV19.2 the decision notice names what the decision supports (got employer_confirmation)
+  ok  PV19.3 the decision row keeps the recorded method employer_confirmation and organisation as history
+  ok  PV20.1 an employer method with an empty organisation: no named organisation, fail closed: the talent level is document_reviewed (got document_reviewed)
+  ok  PV20.2 the decision notice names what the decision supports (got document_review)
+  ok  PV20.3 the decision row keeps the recorded method employer_confirmation and organisation as history
+  not ok  PV21.1 an employer method whose organisation is only Unicode spaces trim() removes: empty after normalisation, fail closed: the talent level is document_reviewed (got employer_confirmed)
+  not ok  PV21.2 the decision notice names what the decision supports (got employer_confirmation)
+  ok  PV21.3 the decision row keeps the recorded method employer_confirmation and organisation as history
+  ok  PV22.1 a legitimate employer whose name has ordinary inner whitespace and outer whitespace: the employer confirmation keeps its level: the talent level is employer_confirmed (got employer_confirmed)
+  ok  PV22.2 the decision notice names what the decision supports (got employer_confirmation)
+  ok  PV22.3 the decision row keeps the recorded method employer_confirmation and organisation as history
+  ok  PV23.1 a zero-width space is not whitespace to trim(), so this name is not CQrityjob in the application, and not here: the talent level is employer_confirmed (got employer_confirmed)
+  ok  PV23.2 the decision notice names what the decision supports (got employer_confirmation)
+  ok  PV23.3 the decision row keeps the recorded method employer_confirmation and organisation as history
+  ok  PV24.1 NEL (U+0085) is not whitespace to trim(), so this name is not CQrityjob in the application, and not here: the talent level is employer_confirmed (got employer_confirmed)
+  ok  PV24.2 the decision notice names what the decision supports (got employer_confirmation)
+  ok  PV24.3 the decision row keeps the recorded method employer_confirmation and organisation as history
+  ok  PV1.4 the candidate's own preview shows document_reviewed (got document_reviewed)
+  ok  PV1.5 the employer's profile of the person shows document_reviewed (got document_reviewed)
+  ok  PV1.6 the inbox payload names document_review
+  ok  PV1.7 the claimed mail payload names document_review (got document_review)
+  ok  PV2.4 the candidate's own preview shows document_reviewed (got document_reviewed)
+  ok  PV2.5 the employer's profile of the person shows document_reviewed (got document_reviewed)
+  ok  PV2.6 the inbox payload names document_review
+  ok  PV2.7 the claimed mail payload names document_review (got document_review)
+  ok  PV3.4 the candidate's own preview shows document_reviewed (got document_reviewed)
+  ok  PV3.5 the employer's profile of the person shows document_reviewed (got document_reviewed)
+  ok  PV3.6 the inbox payload names document_review
+  ok  PV3.7 the claimed mail payload names document_review (got document_review)
+  ok  PV4.4 the candidate's own preview shows document_reviewed (got document_reviewed)
+  ok  PV4.5 the employer's profile of the person shows document_reviewed (got document_reviewed)
+  ok  PV4.6 the inbox payload names document_review
+  ok  PV4.7 the claimed mail payload names document_review (got document_review)
+  ok  PV5.4 the candidate's own preview shows document_reviewed (got document_reviewed)
+  ok  PV5.5 the employer's profile of the person shows document_reviewed (got document_reviewed)
+  ok  PV5.6 the inbox payload names document_review
+  ok  PV5.7 the claimed mail payload names document_review (got document_review)
+  ok  PV6.4 the candidate's own preview shows employer_confirmed (got employer_confirmed)
+  ok  PV6.5 the employer's profile of the person shows employer_confirmed (got employer_confirmed)
+  ok  PV6.6 the inbox payload names employer_confirmation
+  ok  PV6.7 the claimed mail payload names employer_confirmation (got employer_confirmation)
+  ok  PV7.4 the candidate's own preview shows document_reviewed (got document_reviewed)
+  ok  PV7.5 the employer's profile of the person shows document_reviewed (got document_reviewed)
+  ok  PV7.6 the inbox payload names document_review
+  ok  PV7.7 the claimed mail payload names document_review (got document_review)
+  ok  PV8.4 the candidate's own preview shows document_reviewed (got document_reviewed)
+  ok  PV8.5 the employer's profile of the person shows document_reviewed (got document_reviewed)
+  ok  PV8.6 the inbox payload names document_review
+  ok  PV8.7 the claimed mail payload names document_review (got document_review)
+  ok  PV9.4 the candidate's own preview shows document_reviewed (got document_reviewed)
+  ok  PV9.5 the employer's profile of the person shows document_reviewed (got document_reviewed)
+  ok  PV9.6 the inbox payload names document_review
+  ok  PV9.7 the claimed mail payload names document_review (got document_review)
+  not ok  PV13.4 the candidate's own preview shows document_reviewed (got employer_confirmed)
+  not ok  PV13.5 the employer's profile of the person shows document_reviewed (got employer_confirmed)
+  not ok  PV13.6 the inbox payload names document_review
+  not ok  PV13.7 the claimed mail payload names document_review (got employer_confirmation)
+  not ok  PV14.4 the candidate's own preview shows document_reviewed (got employer_confirmed)
+  not ok  PV14.5 the employer's profile of the person shows document_reviewed (got employer_confirmed)
+  not ok  PV14.6 the inbox payload names document_review
+  not ok  PV14.7 the claimed mail payload names document_review (got employer_confirmation)
+  not ok  PV15.4 the candidate's own preview shows document_reviewed (got employer_confirmed)
+  not ok  PV15.5 the employer's profile of the person shows document_reviewed (got employer_confirmed)
+  not ok  PV15.6 the inbox payload names document_review
+  not ok  PV15.7 the claimed mail payload names document_review (got employer_confirmation)
+  not ok  PV16.4 the candidate's own preview shows employer_confirmed (got document_reviewed)
+  not ok  PV16.5 the employer's profile of the person shows employer_confirmed (got document_reviewed)
+  not ok  PV16.6 the inbox payload names employer_confirmation
+  not ok  PV16.7 the claimed mail payload names employer_confirmation (got document_review)
+  not ok  PV17.4 the candidate's own preview shows document_reviewed (got employer_confirmed)
+  not ok  PV17.5 the employer's profile of the person shows document_reviewed (got employer_confirmed)
+  not ok  PV17.6 the inbox payload names document_review
+  not ok  PV17.7 the claimed mail payload names document_review (got employer_confirmation)
+  not ok  PV18.4 the candidate's own preview shows document_reviewed (got employer_confirmed)
+  not ok  PV18.5 the employer's profile of the person shows document_reviewed (got employer_confirmed)
+  not ok  PV18.6 the inbox payload names document_review
+  not ok  PV18.7 the claimed mail payload names document_review (got employer_confirmation)
+  not ok  PV19.4 the candidate's own preview shows document_reviewed (got employer_confirmed)
+  not ok  PV19.5 the employer's profile of the person shows document_reviewed (got employer_confirmed)
+  not ok  PV19.6 the inbox payload names document_review
+  not ok  PV19.7 the claimed mail payload names document_review (got employer_confirmation)
+  ok  PV20.4 the candidate's own preview shows document_reviewed (got document_reviewed)
+  ok  PV20.5 the employer's profile of the person shows document_reviewed (got document_reviewed)
+  ok  PV20.6 the inbox payload names document_review
+  ok  PV20.7 the claimed mail payload names document_review (got document_review)
+  not ok  PV21.4 the candidate's own preview shows document_reviewed (got employer_confirmed)
+  not ok  PV21.5 the employer's profile of the person shows document_reviewed (got employer_confirmed)
+  not ok  PV21.6 the inbox payload names document_review
+  not ok  PV21.7 the claimed mail payload names document_review (got employer_confirmation)
+  ok  PV22.4 the candidate's own preview shows employer_confirmed (got employer_confirmed)
+  ok  PV22.5 the employer's profile of the person shows employer_confirmed (got employer_confirmed)
+  ok  PV22.6 the inbox payload names employer_confirmation
+  ok  PV22.7 the claimed mail payload names employer_confirmation (got employer_confirmation)
+  ok  PV23.4 the candidate's own preview shows employer_confirmed (got employer_confirmed)
+  ok  PV23.5 the employer's profile of the person shows employer_confirmed (got employer_confirmed)
+  ok  PV23.6 the inbox payload names employer_confirmation
+  ok  PV23.7 the claimed mail payload names employer_confirmation (got employer_confirmation)
+  ok  PV24.4 the candidate's own preview shows employer_confirmed (got employer_confirmed)
+  ok  PV24.5 the employer's profile of the person shows employer_confirmed (got employer_confirmed)
+  ok  PV24.6 the inbox payload names employer_confirmation
+  ok  PV24.7 the claimed mail payload names employer_confirmation (got employer_confirmation)
+  ok  PV10 the merits the card shows carry the same levels
+  not ok  PV11 and so does the experience
+  ok  PV12 no card says a source confirmed anything
+
+## BEFORE -- bun run scripts/provenance-parity-check.ts (exit 1)
+  ok PV1 a CQrityjob document review of a credential: database document_reviewed / notice document_review, application document_reviewed, expected document_reviewed
+  ok PV2 an issuer confirmation with no structural issuer: documented, never source-confirmed: database document_reviewed / notice document_review, application document_reviewed, expected document_reviewed
+  ok PV3 a legacy issuer method CQrityjob recorded about itself: database document_reviewed / notice document_review, application document_reviewed, expected document_reviewed
+  ok PV4 an employer confirmation of a credential: outside an employer's standing: database document_reviewed / notice document_review, application document_reviewed, expected document_reviewed
+  ok PV5 a legacy employer decision with CQrityjob as the deciding organisation: database document_reviewed / notice document_review, application document_reviewed, expected document_reviewed
+  ok PV6 a legitimate employer confirmation of an employment period keeps its level: database employer_confirmed / notice employer_confirmation, application employer_confirmed, expected employer_confirmed
+  ok PV7 an issuer confirmation of a period: documented: database document_reviewed / notice document_review, application document_reviewed, expected document_reviewed
+  ok PV8 a CQrityjob document review of a period: database document_reviewed / notice document_review, application document_reviewed, expected document_reviewed
+  ok PV9 an employer method with no named organisation: fail closed: database document_reviewed / notice document_review, application document_reviewed, expected document_reviewed
+  FAIL PV13 a legacy decision CQrityjob recorded, with a trailing tab: the name is trimmed as the application trims it: database employer_confirmed / notice employer_confirmation, application document_reviewed, expected document_reviewed
+  FAIL PV14 an employer method whose organisation is only a tab and a newline: no named organisation, fail closed: database employer_confirmed / notice employer_confirmation, application document_reviewed, expected document_reviewed
+  FAIL PV15 CQrityjob in another letter case between a no-break space, an ideographic space and a BOM: still CQrityjob: database employer_confirmed / notice employer_confirmation, application document_reviewed, expected document_reviewed
+  FAIL PV16 a name with a dotted capital I is not CQrityjob in the application, so not here either: letter case is folded for ASCII only, whatever the database collation: database document_reviewed / notice document_review, application employer_confirmed, expected employer_confirmed
+  FAIL PV17 CQrityjob between newlines (LF, CR LF): still CQrityjob: database employer_confirmed / notice employer_confirmation, application document_reviewed, expected document_reviewed
+  FAIL PV18 CQrityjob between mixed whitespace (space, tab, CR, LF, VT, FF, line and paragraph separators): still CQrityjob: database employer_confirmed / notice employer_confirmation, application document_reviewed, expected document_reviewed
+  FAIL PV19 CQRITYJOB between Unicode spaces trim() removes (ogham, en quad, four-per-em, hair, narrow no-break, medium mathematical): still CQrityjob: database employer_confirmed / notice employer_confirmation, application document_reviewed, expected document_reviewed
+  ok PV20 an employer method with an empty organisation: no named organisation, fail closed: database document_reviewed / notice document_review, application document_reviewed, expected document_reviewed
+  FAIL PV21 an employer method whose organisation is only Unicode spaces trim() removes: empty after normalisation, fail closed: database employer_confirmed / notice employer_confirmation, application document_reviewed, expected document_reviewed
+  ok PV22 a legitimate employer whose name has ordinary inner whitespace and outer whitespace: the employer confirmation keeps its level: database employer_confirmed / notice employer_confirmation, application employer_confirmed, expected employer_confirmed
+  ok PV23 a zero-width space is not whitespace to trim(), so this name is not CQrityjob in the application, and not here: database employer_confirmed / notice employer_confirmation, application employer_confirmed, expected employer_confirmed
+  ok PV24 NEL (U+0085) is not whitespace to trim(), so this name is not CQrityjob in the application, and not here: database employer_confirmed / notice employer_confirmation, application employer_confirmed, expected employer_confirmed
+  FAIL exhaustive padded: database [32] / application [9,10,11,12,13,32,160,5760,8192,8193,8194,8195,8196,8197,8198,8199,8200,8201,8202,8232,8233,8239,8287,12288,65279]
+  FAIL exhaustive alone: database [32] / application [9,10,11,12,13,32,160,5760,8192,8193,8194,8195,8196,8197,8198,8199,8200,8201,8202,8232,8233,8239,8287,12288,65279]
+  ok exhaustive letter1: every BMP code point, the same 2 documented [67,99]
+  ok exhaustive letter2: every BMP code point, the same 2 documented [81,113]
+  ok exhaustive letter3: every BMP code point, the same 2 documented [82,114]
+  FAIL exhaustive letter4: database [73,105,304] / application [73,105]
+  ok exhaustive letter5: every BMP code point, the same 2 documented [84,116]
+  ok exhaustive letter6: every BMP code point, the same 2 documented [89,121]
+  ok exhaustive letter7: every BMP code point, the same 2 documented [74,106]
+  ok exhaustive letter8: every BMP code point, the same 2 documented [79,111]
+  ok exhaustive letter9: every BMP code point, the same 2 documented [66,98]
+provenance-parity FAILED (11)
+
+## AFTER -- psql -f supabase/tests/talent_provenance_test.sql (exit 0)
+##   151 ok, 0 not ok
+  ok  PV0 twenty-one shared cases loaded
+  ok  PV1.1 a CQrityjob document review of a credential: the talent level is document_reviewed (got document_reviewed)
+  ok  PV1.2 the decision notice names what the decision supports (got document_review)
+  ok  PV1.3 the decision row keeps the recorded method document_review and organisation as history
+  ok  PV2.1 an issuer confirmation with no structural issuer: documented, never source-confirmed: the talent level is document_reviewed (got document_reviewed)
+  ok  PV2.2 the decision notice names what the decision supports (got document_review)
+  ok  PV2.3 the decision row keeps the recorded method issuer_confirmation and organisation as history
+  ok  PV3.1 a legacy issuer method CQrityjob recorded about itself: the talent level is document_reviewed (got document_reviewed)
+  ok  PV3.2 the decision notice names what the decision supports (got document_review)
+  ok  PV3.3 the decision row keeps the recorded method issuer_confirmation and organisation as history
+  ok  PV4.1 an employer confirmation of a credential: outside an employer's standing: the talent level is document_reviewed (got document_reviewed)
+  ok  PV4.2 the decision notice names what the decision supports (got document_review)
+  ok  PV4.3 the decision row keeps the recorded method employer_confirmation and organisation as history
+  ok  PV5.1 a legacy employer decision with CQrityjob as the deciding organisation: the talent level is document_reviewed (got document_reviewed)
+  ok  PV5.2 the decision notice names what the decision supports (got document_review)
+  ok  PV5.3 the decision row keeps the recorded method employer_confirmation and organisation as history
+  ok  PV6.1 a legitimate employer confirmation of an employment period keeps its level: the talent level is employer_confirmed (got employer_confirmed)
+  ok  PV6.2 the decision notice names what the decision supports (got employer_confirmation)
+  ok  PV6.3 the decision row keeps the recorded method employer_confirmation and organisation as history
+  ok  PV7.1 an issuer confirmation of a period: documented: the talent level is document_reviewed (got document_reviewed)
+  ok  PV7.2 the decision notice names what the decision supports (got document_review)
+  ok  PV7.3 the decision row keeps the recorded method issuer_confirmation and organisation as history
+  ok  PV8.1 a CQrityjob document review of a period: the talent level is document_reviewed (got document_reviewed)
+  ok  PV8.2 the decision notice names what the decision supports (got document_review)
+  ok  PV8.3 the decision row keeps the recorded method document_review and organisation as history
+  ok  PV9.1 an employer method with no named organisation: fail closed: the talent level is document_reviewed (got document_reviewed)
+  ok  PV9.2 the decision notice names what the decision supports (got document_review)
+  ok  PV9.3 the decision row keeps the recorded method employer_confirmation and organisation as history
+  ok  PV13.1 a legacy decision CQrityjob recorded, with a trailing tab: the name is trimmed as the application trims it: the talent level is document_reviewed (got document_reviewed)
+  ok  PV13.2 the decision notice names what the decision supports (got document_review)
+  ok  PV13.3 the decision row keeps the recorded method employer_confirmation and organisation as history
+  ok  PV14.1 an employer method whose organisation is only a tab and a newline: no named organisation, fail closed: the talent level is document_reviewed (got document_reviewed)
+  ok  PV14.2 the decision notice names what the decision supports (got document_review)
+  ok  PV14.3 the decision row keeps the recorded method employer_confirmation and organisation as history
+  ok  PV15.1 CQrityjob in another letter case between a no-break space, an ideographic space and a BOM: still CQrityjob: the talent level is document_reviewed (got document_reviewed)
+  ok  PV15.2 the decision notice names what the decision supports (got document_review)
+  ok  PV15.3 the decision row keeps the recorded method employer_confirmation and organisation as history
+  ok  PV16.1 a name with a dotted capital I is not CQrityjob in the application, so not here either: letter case is folded for ASCII only, whatever the database collation: the talent level is employer_confirmed (got employer_confirmed)
+  ok  PV16.2 the decision notice names what the decision supports (got employer_confirmation)
+  ok  PV16.3 the decision row keeps the recorded method employer_confirmation and organisation as history
+  ok  PV17.1 CQrityjob between newlines (LF, CR LF): still CQrityjob: the talent level is document_reviewed (got document_reviewed)
+  ok  PV17.2 the decision notice names what the decision supports (got document_review)
+  ok  PV17.3 the decision row keeps the recorded method employer_confirmation and organisation as history
+  ok  PV18.1 CQrityjob between mixed whitespace (space, tab, CR, LF, VT, FF, line and paragraph separators): still CQrityjob: the talent level is document_reviewed (got document_reviewed)
+  ok  PV18.2 the decision notice names what the decision supports (got document_review)
+  ok  PV18.3 the decision row keeps the recorded method employer_confirmation and organisation as history
+  ok  PV19.1 CQRITYJOB between Unicode spaces trim() removes (ogham, en quad, four-per-em, hair, narrow no-break, medium mathematical): still CQrityjob: the talent level is document_reviewed (got document_reviewed)
+  ok  PV19.2 the decision notice names what the decision supports (got document_review)
+  ok  PV19.3 the decision row keeps the recorded method employer_confirmation and organisation as history
+  ok  PV20.1 an employer method with an empty organisation: no named organisation, fail closed: the talent level is document_reviewed (got document_reviewed)
+  ok  PV20.2 the decision notice names what the decision supports (got document_review)
+  ok  PV20.3 the decision row keeps the recorded method employer_confirmation and organisation as history
+  ok  PV21.1 an employer method whose organisation is only Unicode spaces trim() removes: empty after normalisation, fail closed: the talent level is document_reviewed (got document_reviewed)
+  ok  PV21.2 the decision notice names what the decision supports (got document_review)
+  ok  PV21.3 the decision row keeps the recorded method employer_confirmation and organisation as history
+  ok  PV22.1 a legitimate employer whose name has ordinary inner whitespace and outer whitespace: the employer confirmation keeps its level: the talent level is employer_confirmed (got employer_confirmed)
+  ok  PV22.2 the decision notice names what the decision supports (got employer_confirmation)
+  ok  PV22.3 the decision row keeps the recorded method employer_confirmation and organisation as history
+  ok  PV23.1 a zero-width space is not whitespace to trim(), so this name is not CQrityjob in the application, and not here: the talent level is employer_confirmed (got employer_confirmed)
+  ok  PV23.2 the decision notice names what the decision supports (got employer_confirmation)
+  ok  PV23.3 the decision row keeps the recorded method employer_confirmation and organisation as history
+  ok  PV24.1 NEL (U+0085) is not whitespace to trim(), so this name is not CQrityjob in the application, and not here: the talent level is employer_confirmed (got employer_confirmed)
+  ok  PV24.2 the decision notice names what the decision supports (got employer_confirmation)
+  ok  PV24.3 the decision row keeps the recorded method employer_confirmation and organisation as history
+  ok  PV1.4 the candidate's own preview shows document_reviewed (got document_reviewed)
+  ok  PV1.5 the employer's profile of the person shows document_reviewed (got document_reviewed)
+  ok  PV1.6 the inbox payload names document_review
+  ok  PV1.7 the claimed mail payload names document_review (got document_review)
+  ok  PV2.4 the candidate's own preview shows document_reviewed (got document_reviewed)
+  ok  PV2.5 the employer's profile of the person shows document_reviewed (got document_reviewed)
+  ok  PV2.6 the inbox payload names document_review
+  ok  PV2.7 the claimed mail payload names document_review (got document_review)
+  ok  PV3.4 the candidate's own preview shows document_reviewed (got document_reviewed)
+  ok  PV3.5 the employer's profile of the person shows document_reviewed (got document_reviewed)
+  ok  PV3.6 the inbox payload names document_review
+  ok  PV3.7 the claimed mail payload names document_review (got document_review)
+  ok  PV4.4 the candidate's own preview shows document_reviewed (got document_reviewed)
+  ok  PV4.5 the employer's profile of the person shows document_reviewed (got document_reviewed)
+  ok  PV4.6 the inbox payload names document_review
+  ok  PV4.7 the claimed mail payload names document_review (got document_review)
+  ok  PV5.4 the candidate's own preview shows document_reviewed (got document_reviewed)
+  ok  PV5.5 the employer's profile of the person shows document_reviewed (got document_reviewed)
+  ok  PV5.6 the inbox payload names document_review
+  ok  PV5.7 the claimed mail payload names document_review (got document_review)
+  ok  PV6.4 the candidate's own preview shows employer_confirmed (got employer_confirmed)
+  ok  PV6.5 the employer's profile of the person shows employer_confirmed (got employer_confirmed)
+  ok  PV6.6 the inbox payload names employer_confirmation
+  ok  PV6.7 the claimed mail payload names employer_confirmation (got employer_confirmation)
+  ok  PV7.4 the candidate's own preview shows document_reviewed (got document_reviewed)
+  ok  PV7.5 the employer's profile of the person shows document_reviewed (got document_reviewed)
+  ok  PV7.6 the inbox payload names document_review
+  ok  PV7.7 the claimed mail payload names document_review (got document_review)
+  ok  PV8.4 the candidate's own preview shows document_reviewed (got document_reviewed)
+  ok  PV8.5 the employer's profile of the person shows document_reviewed (got document_reviewed)
+  ok  PV8.6 the inbox payload names document_review
+  ok  PV8.7 the claimed mail payload names document_review (got document_review)
+  ok  PV9.4 the candidate's own preview shows document_reviewed (got document_reviewed)
+  ok  PV9.5 the employer's profile of the person shows document_reviewed (got document_reviewed)
+  ok  PV9.6 the inbox payload names document_review
+  ok  PV9.7 the claimed mail payload names document_review (got document_review)
+  ok  PV13.4 the candidate's own preview shows document_reviewed (got document_reviewed)
+  ok  PV13.5 the employer's profile of the person shows document_reviewed (got document_reviewed)
+  ok  PV13.6 the inbox payload names document_review
+  ok  PV13.7 the claimed mail payload names document_review (got document_review)
+  ok  PV14.4 the candidate's own preview shows document_reviewed (got document_reviewed)
+  ok  PV14.5 the employer's profile of the person shows document_reviewed (got document_reviewed)
+  ok  PV14.6 the inbox payload names document_review
+  ok  PV14.7 the claimed mail payload names document_review (got document_review)
+  ok  PV15.4 the candidate's own preview shows document_reviewed (got document_reviewed)
+  ok  PV15.5 the employer's profile of the person shows document_reviewed (got document_reviewed)
+  ok  PV15.6 the inbox payload names document_review
+  ok  PV15.7 the claimed mail payload names document_review (got document_review)
+  ok  PV16.4 the candidate's own preview shows employer_confirmed (got employer_confirmed)
+  ok  PV16.5 the employer's profile of the person shows employer_confirmed (got employer_confirmed)
+  ok  PV16.6 the inbox payload names employer_confirmation
+  ok  PV16.7 the claimed mail payload names employer_confirmation (got employer_confirmation)
+  ok  PV17.4 the candidate's own preview shows document_reviewed (got document_reviewed)
+  ok  PV17.5 the employer's profile of the person shows document_reviewed (got document_reviewed)
+  ok  PV17.6 the inbox payload names document_review
+  ok  PV17.7 the claimed mail payload names document_review (got document_review)
+  ok  PV18.4 the candidate's own preview shows document_reviewed (got document_reviewed)
+  ok  PV18.5 the employer's profile of the person shows document_reviewed (got document_reviewed)
+  ok  PV18.6 the inbox payload names document_review
+  ok  PV18.7 the claimed mail payload names document_review (got document_review)
+  ok  PV19.4 the candidate's own preview shows document_reviewed (got document_reviewed)
+  ok  PV19.5 the employer's profile of the person shows document_reviewed (got document_reviewed)
+  ok  PV19.6 the inbox payload names document_review
+  ok  PV19.7 the claimed mail payload names document_review (got document_review)
+  ok  PV20.4 the candidate's own preview shows document_reviewed (got document_reviewed)
+  ok  PV20.5 the employer's profile of the person shows document_reviewed (got document_reviewed)
+  ok  PV20.6 the inbox payload names document_review
+  ok  PV20.7 the claimed mail payload names document_review (got document_review)
+  ok  PV21.4 the candidate's own preview shows document_reviewed (got document_reviewed)
+  ok  PV21.5 the employer's profile of the person shows document_reviewed (got document_reviewed)
+  ok  PV21.6 the inbox payload names document_review
+  ok  PV21.7 the claimed mail payload names document_review (got document_review)
+  ok  PV22.4 the candidate's own preview shows employer_confirmed (got employer_confirmed)
+  ok  PV22.5 the employer's profile of the person shows employer_confirmed (got employer_confirmed)
+  ok  PV22.6 the inbox payload names employer_confirmation
+  ok  PV22.7 the claimed mail payload names employer_confirmation (got employer_confirmation)
+  ok  PV23.4 the candidate's own preview shows employer_confirmed (got employer_confirmed)
+  ok  PV23.5 the employer's profile of the person shows employer_confirmed (got employer_confirmed)
+  ok  PV23.6 the inbox payload names employer_confirmation
+  ok  PV23.7 the claimed mail payload names employer_confirmation (got employer_confirmation)
+  ok  PV24.4 the candidate's own preview shows employer_confirmed (got employer_confirmed)
+  ok  PV24.5 the employer's profile of the person shows employer_confirmed (got employer_confirmed)
+  ok  PV24.6 the inbox payload names employer_confirmation
+  ok  PV24.7 the claimed mail payload names employer_confirmation (got employer_confirmation)
+  ok  PV10 the merits the card shows carry the same levels
+  ok  PV11 and so does the experience
+  ok  PV12 no card says a source confirmed anything
+
+## AFTER -- bun run scripts/provenance-parity-check.ts (exit 0)
+  ok PV1 a CQrityjob document review of a credential: database document_reviewed / notice document_review, application document_reviewed, expected document_reviewed
+  ok PV2 an issuer confirmation with no structural issuer: documented, never source-confirmed: database document_reviewed / notice document_review, application document_reviewed, expected document_reviewed
+  ok PV3 a legacy issuer method CQrityjob recorded about itself: database document_reviewed / notice document_review, application document_reviewed, expected document_reviewed
+  ok PV4 an employer confirmation of a credential: outside an employer's standing: database document_reviewed / notice document_review, application document_reviewed, expected document_reviewed
+  ok PV5 a legacy employer decision with CQrityjob as the deciding organisation: database document_reviewed / notice document_review, application document_reviewed, expected document_reviewed
+  ok PV6 a legitimate employer confirmation of an employment period keeps its level: database employer_confirmed / notice employer_confirmation, application employer_confirmed, expected employer_confirmed
+  ok PV7 an issuer confirmation of a period: documented: database document_reviewed / notice document_review, application document_reviewed, expected document_reviewed
+  ok PV8 a CQrityjob document review of a period: database document_reviewed / notice document_review, application document_reviewed, expected document_reviewed
+  ok PV9 an employer method with no named organisation: fail closed: database document_reviewed / notice document_review, application document_reviewed, expected document_reviewed
+  ok PV13 a legacy decision CQrityjob recorded, with a trailing tab: the name is trimmed as the application trims it: database document_reviewed / notice document_review, application document_reviewed, expected document_reviewed
+  ok PV14 an employer method whose organisation is only a tab and a newline: no named organisation, fail closed: database document_reviewed / notice document_review, application document_reviewed, expected document_reviewed
+  ok PV15 CQrityjob in another letter case between a no-break space, an ideographic space and a BOM: still CQrityjob: database document_reviewed / notice document_review, application document_reviewed, expected document_reviewed
+  ok PV16 a name with a dotted capital I is not CQrityjob in the application, so not here either: letter case is folded for ASCII only, whatever the database collation: database employer_confirmed / notice employer_confirmation, application employer_confirmed, expected employer_confirmed
+  ok PV17 CQrityjob between newlines (LF, CR LF): still CQrityjob: database document_reviewed / notice document_review, application document_reviewed, expected document_reviewed
+  ok PV18 CQrityjob between mixed whitespace (space, tab, CR, LF, VT, FF, line and paragraph separators): still CQrityjob: database document_reviewed / notice document_review, application document_reviewed, expected document_reviewed
+  ok PV19 CQRITYJOB between Unicode spaces trim() removes (ogham, en quad, four-per-em, hair, narrow no-break, medium mathematical): still CQrityjob: database document_reviewed / notice document_review, application document_reviewed, expected document_reviewed
+  ok PV20 an employer method with an empty organisation: no named organisation, fail closed: database document_reviewed / notice document_review, application document_reviewed, expected document_reviewed
+  ok PV21 an employer method whose organisation is only Unicode spaces trim() removes: empty after normalisation, fail closed: database document_reviewed / notice document_review, application document_reviewed, expected document_reviewed
+  ok PV22 a legitimate employer whose name has ordinary inner whitespace and outer whitespace: the employer confirmation keeps its level: database employer_confirmed / notice employer_confirmation, application employer_confirmed, expected employer_confirmed
+  ok PV23 a zero-width space is not whitespace to trim(), so this name is not CQrityjob in the application, and not here: database employer_confirmed / notice employer_confirmation, application employer_confirmed, expected employer_confirmed
+  ok PV24 NEL (U+0085) is not whitespace to trim(), so this name is not CQrityjob in the application, and not here: database employer_confirmed / notice employer_confirmation, application employer_confirmed, expected employer_confirmed
+  ok exhaustive padded: every code point, the same 25 documented [9,10,11,12,13,32,160,5760,8192,8193,8194,8195,8196,8197,8198,8199,8200,8201,8202,8232,8233,8239,8287,12288,65279]
+  ok exhaustive alone: every code point, the same 25 documented [9,10,11,12,13,32,160,5760,8192,8193,8194,8195,8196,8197,8198,8199,8200,8201,8202,8232,8233,8239,8287,12288,65279]
+  ok exhaustive letter1: every BMP code point, the same 2 documented [67,99]
+  ok exhaustive letter2: every BMP code point, the same 2 documented [81,113]
+  ok exhaustive letter3: every BMP code point, the same 2 documented [82,114]
+  ok exhaustive letter4: every BMP code point, the same 2 documented [73,105]
+  ok exhaustive letter5: every BMP code point, the same 2 documented [84,116]
+  ok exhaustive letter6: every BMP code point, the same 2 documented [89,121]
+  ok exhaustive letter7: every BMP code point, the same 2 documented [74,106]
+  ok exhaustive letter8: every BMP code point, the same 2 documented [79,111]
+  ok exhaustive letter9: every BMP code point, the same 2 documented [66,98]
+provenance-parity: the database and the application agree on all 21 cases and on every code point tried
