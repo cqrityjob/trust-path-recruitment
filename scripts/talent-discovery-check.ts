@@ -10,7 +10,8 @@
 //
 // Run: bun run talent-discovery:check
 
-import { noticeLabelKey } from "../src/lib/notices/notice-label";
+import { approvalLabelKey, noticeLabelKey } from "../src/lib/notices/notice-label";
+import { passportT } from "../src/lib/security-passport/i18n";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -221,6 +222,48 @@ check(
     }) === "notices.kind.passport_decision_approved",
   "E3d RF8 the inbox names an employer confirmation as one, never as a document review",
 );
+// RF8, the same rule on the entry page: an approval's current state and its
+// line in the case history follow the verification method, and every approval
+// reads "Approved". Found by the public pilot: the history called every
+// approval "Document-reviewed", employer confirmations included.
+check(
+  approvalLabelKey("document_review") === "ver.approved.document_review" &&
+    approvalLabelKey("employer_confirmation") === "ver.approved.employer_confirmation" &&
+    approvalLabelKey("issuer_confirmation") === "ver.approved.issuer_confirmation" &&
+    approvalLabelKey(null) === "ver.status.approved" &&
+    approvalLabelKey("something_else") === "ver.status.approved",
+  "E3e RF8 the entry page names an approval by its verification method",
+);
+for (const lang of ["sv", "en"] as const) {
+  const approved = passportT("ver.status.approved", lang);
+  const keys = [
+    "ver.approved.document_review",
+    "ver.approved.employer_confirmation",
+    "ver.approved.issuer_confirmation",
+  ] as const;
+  check(
+    keys.every((k) => passportT(k, lang).startsWith(approved)) &&
+      !/dokumentgransk|document-review/i.test(
+        passportT("ver.approved.employer_confirmation", lang),
+      ) &&
+      !/dokumentgransk|document-review/i.test(
+        passportT("ver.approved.issuer_confirmation", lang),
+      ) &&
+      !/dokumentgransk|document-review/i.test(passportT("next.done.title", lang)),
+    `E3f RF8 (${lang}) every approval reads "${approved}"; only a document review says so`,
+  );
+}
+{
+  const thread = readFileSync(
+    join(ROOT, "src/components/security-passport/live/ReviewThread.tsx"),
+    "utf8",
+  );
+  check(
+    (thread.match(/approvalLabelKey\(/g) ?? []).length === 2 &&
+      thread.includes('current.state === "approved" && current.method === "document_review"'),
+    "E3g RF8 the current state and the history both use it; the not-the-issuer note only for a document review",
+  );
+}
 // RF8 (review 2026-10-15): the mail follows the verification method.
 for (const language of ["sv", "en"] as const) {
   const employer = renderProductNotice({

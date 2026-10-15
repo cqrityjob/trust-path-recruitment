@@ -11,3 +11,20 @@ export function noticeLabelKey(n: { kind: string; verificationMethod?: string | 
   }
   return `notices.kind.${n.kind}`;
 }
+
+/** The words for an approval in an entry's current state and case history.
+ * Every approval reads "Approved" (the status word of the request list and
+ * the review queue), qualified by how it was verified: only a CQrityjob
+ * document review is called one (RF8, the same rule as the inbox and mail). */
+export function approvalLabelKey(
+  method: string | null | undefined,
+):
+  | "ver.approved.document_review"
+  | "ver.approved.employer_confirmation"
+  | "ver.approved.issuer_confirmation"
+  | "ver.status.approved" {
+  if (method === "document_review") return "ver.approved.document_review";
+  if (method === "employer_confirmation") return "ver.approved.employer_confirmation";
+  if (method === "issuer_confirmation") return "ver.approved.issuer_confirmation";
+  return "ver.status.approved";
+}

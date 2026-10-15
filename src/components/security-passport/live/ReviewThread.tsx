@@ -7,6 +7,7 @@
 //
 // A failed read is said as a failure with a retry, never as an empty history.
 
+import { approvalLabelKey } from "@/lib/notices/notice-label";
 import { useState } from "react";
 import { MessageSquare, RotateCw } from "lucide-react";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
@@ -16,31 +17,29 @@ import type {
   ReviewThread as Thread,
   ReviewThreadEvent,
 } from "@/lib/security-passport/review-thread.functions";
-import {
-  REPLY_MAX_LENGTH,
-  type ReplyErrorCode,
-} from "@/lib/security-passport/review-thread.functions";
+// The constants come from the pure module: this component must not import the
+// server functions at runtime (it renders in source-only checks too).
+import { REPLY_MAX_LENGTH, type ReplyErrorCode } from "@/lib/security-passport/review-reply";
 
 export type ThreadLoad =
   | { readonly status: "loading" }
   | { readonly status: "error" }
   | { readonly status: "ready"; readonly thread: Thread };
 
-const CURRENT_KEY: Record<ReviewCurrent["state"], PassportCopyKey> = {
+// An approval is named by approvalLabelKey (its verification method).
+const CURRENT_KEY: Record<Exclude<ReviewCurrent["state"], "approved">, PassportCopyKey> = {
   none: "ver.current.none",
   pending: "ver.current.pending",
   clarification_requested: "ver.current.clarification_requested",
-  approved: "ver.current.approved",
   rejected: "ver.current.rejected",
   revoked: "ver.current.revoked",
   withdrawn: "ver.current.withdrawn",
 };
 
 const DECISION_KEY: Record<
-  Extract<ReviewThreadEvent, { type: "decision" }>["decision"],
+  Exclude<Extract<ReviewThreadEvent, { type: "decision" }>["decision"], "approved">,
   PassportCopyKey
 > = {
-  approved: "ver.thread.decision.approved",
   rejected: "ver.thread.decision.rejected",
   clarification_requested: "ver.thread.decision.clarification_requested",
   revoked: "ver.thread.decision.revoked",
@@ -61,14 +60,18 @@ export function ReviewCurrentState({ current }: { readonly current: ReviewCurren
         {pt("ver.current.label")}
       </p>
       <p className="mt-0.5 text-sm font-semibold text-foreground">
-        {pt(CURRENT_KEY[current.state])}
+        {pt(
+          current.state === "approved"
+            ? approvalLabelKey(current.method)
+            : CURRENT_KEY[current.state],
+        )}
         {current.since ? (
           <span className="ml-2 font-normal tabular-nums text-muted-foreground">
             {day(current.since)}
           </span>
         ) : null}
       </p>
-      {current.state === "approved" ? (
+      {current.state === "approved" && current.method === "document_review" ? (
         <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
           {pt("ver.current.reviewNotIssuer")}
         </p>
@@ -140,7 +143,11 @@ export function ReviewThreadHistory({
             className="rounded-md border border-border p-3"
           >
             <p className="flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
-              <span className="font-semibold text-foreground">{pt(DECISION_KEY[e.decision])}</span>
+              <span className="font-semibold text-foreground">
+                {pt(
+                  e.decision === "approved" ? approvalLabelKey(e.method) : DECISION_KEY[e.decision],
+                )}
+              </span>
               <span className="tabular-nums">{day(e.at)}</span>
               {e.organisation ? (
                 <span>
