@@ -1616,6 +1616,14 @@ jobs:
       - name: Passport launch completion
         run: bun run passport-launch-completion:check
 
+      # Slutuppdrag 2026-10-15: next step, clarification reply, notices,
+      # voluntary discoverability and talent search -- the interface rules on
+      # top of the three SQL suites (no score, "not shared" is not "missing",
+      # a document review is not an issuer confirmation, notice mail is
+      # single-line, escaped and on the site's own origin).
+      - name: Talent discovery
+        run: bun run talent-discovery:check
+
       # The credential shield system (PR #263): one scope resolver, four shield
       # slots at every count, trust told by shape and words, and a shared view
       # whose "+N" counts disclosed credentials only. Read-only over committed

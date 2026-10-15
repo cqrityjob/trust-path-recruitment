@@ -306,6 +306,7 @@
     "passport-cv-boundary:check": "bun run scripts/passport-cv-boundary-check.ts",
     "passport-page-composition:check": "bun run scripts/passport-page-composition-check.ts",
     "passport-launch-completion:check": "bun run scripts/passport-launch-completion-check.ts",
+    "talent-discovery:check": "bun run scripts/talent-discovery-check.ts",
     "passport-credential-shield:check": "bun run scripts/passport-credential-shield-check.tsx",
     "passport-hayat:check": "bun run scripts/passport-hayat-check.ts",
     "negative-controls:passport-hayat": "bun run scripts/negative-controls/passport-hayat-controls.ts",

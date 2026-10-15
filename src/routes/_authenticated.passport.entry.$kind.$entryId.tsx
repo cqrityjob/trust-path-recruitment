@@ -84,6 +84,13 @@ import {
   cleanupMyUploadAttempt,
 } from "@/lib/security-passport/evidence-upload-recovery.functions";
 import { VerificationPanel } from "@/components/security-passport/live/VerificationPanel";
+import { EntryNextStep } from "@/components/security-passport/live/EntryNextStep";
+import type { ThreadLoad } from "@/components/security-passport/live/ReviewThread";
+import {
+  getReviewThread,
+  replyToClarification,
+} from "@/lib/security-passport/review-thread.functions";
+import { entryNextStep, reviewStateFromRequests } from "@/lib/security-passport/entry-next-step";
 import type { EmployerSearchState } from "@/components/security-passport/live/EmployerConfirmationPicker";
 import type { PassportCopyKey } from "@/lib/security-passport/i18n";
 
@@ -135,6 +142,10 @@ function PassportEntryRoute() {
   const loadVersions = useServerFn(listClaimVersions);
   const loadCredentialTypes = useServerFn(listCredentialTypes);
   const loadPrivateFields = useServerFn(getCredentialPrivateFields);
+  const loadThread = useServerFn(getReviewThread);
+  const doReply = useServerFn(replyToClarification);
+  const [thread, setThread] = useState<ThreadLoad>({ status: "loading" });
+  const [threadGeneration, setThreadGeneration] = useState(0);
 
   const [snapshot, setSnapshot] = useState<PassportSnapshot | null>(null);
   const [evidence, setEvidence] = useState<readonly EvidenceRecord[]>([]);
@@ -192,6 +203,23 @@ function PassportEntryRoute() {
     setCorrectionPrefill(null);
     void refresh();
   }, [refresh, entryId]);
+
+  // The case thread is loaded on its own: a failure to read history must not
+  // take down the entry, and must be said as a failure, never as "no history".
+  useEffect(() => {
+    let alive = true;
+    setThread({ status: "loading" });
+    loadThread({ data: { kind: isClaim ? "claim" : "experience", entryId } })
+      .then((t) => alive && setThread({ status: "ready", thread: t }))
+      .catch(() => alive && setThread({ status: "error" }));
+    return () => {
+      alive = false;
+    };
+  }, [loadThread, isClaim, entryId, threadGeneration]);
+  const refreshAll = useCallback(async () => {
+    await refresh();
+    setThreadGeneration((g) => g + 1);
+  }, [refresh]);
 
   // The version chain is claim-only and loaded separately: it is history,
   // and a failure to load it must not take down the entry itself.
@@ -624,6 +652,33 @@ function PassportEntryRoute() {
         </div>
       </header>
 
+      <EntryNextStep
+        step={entryNextStep({
+          kind: isClaim ? "claim" : "experience",
+          assertionLevel: subject.assertionLevel,
+          hasActiveEvidence: entryEvidence.some((item) => item.lifecycleState === "active"),
+          reviewState:
+            thread.status === "ready" && thread.thread.installed
+              ? thread.thread.current.state
+              : reviewStateFromRequests(entryRequests, entryDecisions),
+          hasExpired: validity.hasExpired,
+          expiresSoon: validity.expiresSoon,
+        })}
+        isPassportCredential={Boolean(claim && isPassportCredential(claim))}
+        onRequestReview={async () => {
+          await doSubmit({
+            data: {
+              claimId: isClaim ? entryId : null,
+              periodId: isClaim ? null : entryId,
+              kind: "cqrityjob_review",
+              employerId: null,
+            },
+          });
+          trackFunnelOnce("passport_review_requested");
+          await refreshAll();
+        }}
+      />
+
       <EvidenceUploadRecoveryPanel
         load={loadUploadAttempts}
         resume={resumeUploadAttempt}
@@ -676,24 +731,6 @@ function PassportEntryRoute() {
           }}
         />
       </div>
-
-      {claim && isPassportCredential(claim) ? (
-        <section className="rounded-xl border border-border bg-card p-5">
-          <p className="text-sm text-muted-foreground">
-            {lang === "sv"
-              ? "Välj meriter, valfria uppgifter och giltighetstid innan du skapar en länk. Underlag delas inte automatiskt."
-              : "Choose credentials, optional fields and expiry before creating a link. Evidence is not shared automatically."}
-          </p>
-          <Link
-            to="/passport/share"
-            className="mt-3 inline-flex min-h-11 items-center rounded-md border border-input px-4 text-sm font-medium"
-          >
-            {lang === "sv"
-              ? "Välj meriter och uppgifter att dela"
-              : "Select credentials and permitted fields"}
-          </Link>
-        </section>
-      ) : null}
 
       {claim && isPassportCredential(claim) && (
         <CredentialDefinitionContext
@@ -754,11 +791,17 @@ function PassportEntryRoute() {
             });
             // Anonymous funnel event, name only; never the credential or request.
             if (requestKind === "cqrityjob_review") trackFunnelOnce("passport_review_requested");
-            await refresh();
+            await refreshAll();
           }}
           onWithdrawRequest={async (requestId) => {
             await doWithdrawRequest({ data: { requestId } });
-            await refresh();
+            await refreshAll();
+          }}
+          thread={thread}
+          onThreadRetry={() => setThreadGeneration((g) => g + 1)}
+          onReply={async (requestId, reviewedSubmittedAt, body) => {
+            await doReply({ data: { requestId, reviewedSubmittedAt, body } });
+            await refreshAll();
           }}
           onDispute={async (reason) => {
             await doDispute({
@@ -772,6 +815,26 @@ function PassportEntryRoute() {
           }}
         />
       </div>
+
+      {/* Sharing comes after review, and next to visibility (Nästa steg):
+          after an upload the recommended way forward is the review. */}
+      {claim && isPassportCredential(claim) ? (
+        <section className="rounded-xl border border-border bg-card p-5">
+          <p className="text-sm text-muted-foreground">
+            {lang === "sv"
+              ? "Välj meriter, valfria uppgifter och giltighetstid innan du skapar en länk. Underlag delas inte automatiskt."
+              : "Choose credentials, optional fields and expiry before creating a link. Evidence is not shared automatically."}
+          </p>
+          <Link
+            to="/passport/share"
+            className="mt-3 inline-flex min-h-11 items-center rounded-md border border-input px-4 text-sm font-medium"
+          >
+            {lang === "sv"
+              ? "Välj meriter och uppgifter att dela"
+              : "Select credentials and permitted fields"}
+          </Link>
+        </section>
+      ) : null}
 
       {/* ── Disputed: what happens next, said to the holder ─────────────
           The tester pressed "Anmäl att uppgiften är fel", watched the chip

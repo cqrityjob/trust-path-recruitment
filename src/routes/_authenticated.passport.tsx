@@ -42,6 +42,9 @@ const NAV = [
     en: "Credentials",
   },
   { to: "/passport", hash: "attention", sv: "Granskning", en: "Verification" },
+  // Visibility for employers and the contact requests that follow from it:
+  // a tab of the same workspace, never a second profile.
+  { to: "/passport/discoverability", sv: "Jobbmöjligheter", en: "Job opportunities" },
   // The recipient-style Passport lives in exactly one place, and so does
   // everything about who may see it. /passport/card redirects here.
   { to: "/passport/share", also: ["/passport/privacy"], sv: "Dela", en: "Share" },

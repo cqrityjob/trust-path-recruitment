@@ -302,7 +302,7 @@ const CORS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS,HEAD",
   "Access-Control-Allow-Headers":
-    "authorization,apikey,content-type,x-client-info,prefer,accept-profile,content-profile,range,x-supabase-api-version",
+    "authorization,apikey,content-type,x-client-info,prefer,accept-profile,content-profile,range,x-supabase-api-version,x-retry-count",
   "Access-Control-Expose-Headers": "content-range,content-location,x-supabase-api-version",
   "Access-Control-Max-Age": "86400",
 };
@@ -599,6 +599,9 @@ async function handle(req, res) {
     const route = url.pathname.slice("/storage/v1/".length);
     const claims = verify(bearer(req));
     const user = claims && claims.role === "authenticated" ? String(claims.sub ?? "") : "";
+    // The server tier writes some objects with the service role (the
+    // application CV); real Storage lets that role past the object policies.
+    const service = Boolean(claims && claims.role === "service_role");
     const storageError = (status, message) =>
       send(res, status, { statusCode: String(status), error: message, message });
     const bucketGet = /^bucket\/([^/]+)$/.exec(route);
@@ -606,7 +609,7 @@ async function handle(req, res) {
       return send(res, 200, { id: bucketGet[1], name: bucketGet[1], public: false });
     const signRoute = /^object\/sign\/([^/]+)\/(.+)$/.exec(route);
     if (signRoute && req.method === "POST") {
-      if (!user) return storageError(401, "Unauthorized");
+      if (!user && !service) return storageError(401, "Unauthorized");
       const key = `${signRoute[1]}/${decodeURIComponent(signRoute[2])}`;
       if (!objects.has(key)) return storageError(404, "Object not found");
       const token = randomUUID();
@@ -630,9 +633,9 @@ async function handle(req, res) {
     }
     const objectRoute = /^object\/(?:authenticated\/)?([^/]+)\/(.+)$/.exec(route);
     if (objectRoute && req.method === "POST") {
-      if (!user) return storageError(401, "Unauthorized");
+      if (!user && !service) return storageError(401, "Unauthorized");
       const path = decodeURIComponent(objectRoute[2]);
-      if (!path.startsWith(`${user}/`))
+      if (!service && !path.startsWith(`${user}/`))
         return storageError(403, "new row violates row-level security policy");
       const key = `${objectRoute[1]}/${path}`;
       if (objects.has(key) && req.headers["x-upsert"] !== "true")
@@ -641,10 +644,20 @@ async function handle(req, res) {
         bytes: await readBody(req),
         type: String(req.headers["content-type"] ?? "application/octet-stream"),
       });
+      // Real Storage records every object in storage.objects, and database
+      // rules read it (sp_evidence_upload_attachment_guard refuses an
+      // attachment whose object is not there). The bytes stay in memory;
+      // the metadata row is written as Storage would write it.
+      await query(
+        `INSERT INTO storage.buckets (id, name, public) VALUES (:'bucket', :'bucket', false) ON CONFLICT (id) DO NOTHING;
+         INSERT INTO storage.objects (bucket_id, name, owner) VALUES (:'bucket', :'name', NULLIF(:'owner', '')::uuid)
+           ON CONFLICT (bucket_id, name) DO NOTHING;`,
+        { bucket: objectRoute[1], name: path, owner: user },
+      );
       return send(res, 200, { Id: randomUUID(), Key: key });
     }
     if (objectRoute && req.method === "GET") {
-      if (!user) return storageError(401, "Unauthorized");
+      if (!user && !service) return storageError(401, "Unauthorized");
       const path = decodeURIComponent(objectRoute[2]);
       const object = objects.get(`${objectRoute[1]}/${path}`);
       if (!object) return storageError(404, "Object not found");
@@ -653,12 +666,20 @@ async function handle(req, res) {
     }
     const removeRoute = /^object\/([^/]+)$/.exec(route);
     if (removeRoute && req.method === "DELETE") {
-      if (!user) return storageError(401, "Unauthorized");
+      if (!user && !service) return storageError(401, "Unauthorized");
       const body = JSON.parse((await readBody(req)).toString("utf8") || "{}");
       const removed = [];
       for (const path of body.prefixes ?? []) {
-        if (objects.delete(`${removeRoute[1]}/${path}`))
+        if (objects.delete(`${removeRoute[1]}/${path}`)) {
           removed.push({ name: path, bucket_id: removeRoute[1] });
+          await query(
+            `DELETE FROM storage.objects WHERE bucket_id = :'bucket' AND name = :'name';`,
+            {
+              bucket: removeRoute[1],
+              name: path,
+            },
+          );
+        }
       }
       return send(res, 200, removed);
     }
@@ -666,6 +687,32 @@ async function handle(req, res) {
       404,
       "the local gateway implements only the storage calls the Passport makes",
     );
+  }
+
+  // -- the product mail CATCHER (2026-10-15) ---------------------------------
+  //    The application's transactional-email Edge Function, substituted: the
+  //    same caller check (a service-role key), the same request shape, and the
+  //    mail is recorded in the controlled inbox instead of being sent. Nothing
+  //    leaves this process, so a synthetic address can never receive mail.
+  //    The Idempotency-Key is honoured the way the provider honours it: a
+  //    repeat of one key is accepted and not delivered twice.
+  if (url.pathname === "/functions/v1/transactional-email" && req.method === "POST") {
+    const claims = verify(bearer(req));
+    if (!claims || claims.role !== "service_role") return send(res, 401, { error: "unauthorised" });
+    const mail = JSON.parse((await readBody(req)).toString("utf8") || "{}");
+    const key = String(req.headers["idempotency-key"] ?? "");
+    if (key && inbox.some((m) => m.idempotencyKey === key))
+      return send(res, 200, { id: key, repeat: true });
+    inbox.push({
+      to: String(mail.to ?? "").toLowerCase(),
+      type: `product:${String(mail.kind ?? "")}`,
+      subject: String(mail.subject ?? ""),
+      text: String(mail.text ?? ""),
+      idempotencyKey: key || null,
+      at: new Date().toISOString(),
+    });
+    console.log(`[inbox] ${String(mail.kind ?? "")} mail caught`);
+    return send(res, 200, { id: key || randomUUID() });
   }
 
   // -- the controlled test inbox, loopback only -----------------------------
@@ -695,6 +742,9 @@ async function handle(req, res) {
     const out = Buffer.from(await upstream.arrayBuffer());
     const outHeaders = { ...CORS };
     upstream.headers.forEach((v, k) => {
+      // The gateway answers CORS itself; PostgREST's own copy would make the
+      // browser see "*, *" and refuse the response.
+      if (k.startsWith("access-control-")) return;
       if (!["content-encoding", "transfer-encoding", "connection"].includes(k)) outHeaders[k] = v;
     });
     res.writeHead(upstream.status, outHeaders);
