@@ -11,16 +11,27 @@ Tråden: **registrera → styrk → välj synlighet → bli hittad → kontakt �
 | Webbläsartest mot riktig databas               | `e2e/talent-discovery-local.spec.ts` + `scripts/fixtures/talent-discovery-fixture.sql`                                      |
 | Bilder och mätvärden                           | [evidence/](evidence/)                                                                                                      |
 
+## Oberoende granskning 2026-10-15
+
+Nio fynd, alla rättade vid sin grundorsak. Varje fynd har ett regressionstest som föll före
+rättelsen och går igenom efter. Utfallen finns i [review-2026-10-15/](review-2026-10-15/).
+Fynd, commit och test redovisas i PR cqrityjob/trust-path-recruitment#472 (RF1–RF8, schema) och
+cqrityjob/trust-path-recruitment#473 (RF6–RF9, appen).
+
+Scenario 12 i webbläsarsviten kör riktig sessionsåterkallelse (utloggning via `/auth/v1/logout`)
+och borttagen granskarroll. Det visar också att en arbetsgivares interna anteckning aldrig når
+granskaren. Sviten körs inte längre seriellt, så ett tidigt fel lämnar inga scenarier överhoppade.
+
 ## Ordning för release
 
 1. **Schema-PR (#472)** mergas och appliceras av Supabase-integrationen. Den ändrar ingen applikationskod;
    inget anropar de nya funktionerna förrän steg 3.
 2. Releaseansvarig verifierar det hostade schemat och skriver `applied` i `supabase/release-state.json`.
 3. **App-PR** (denna gren) blir merge-bar. `schema-first-release:check` blockerar den till dess, avsiktligt.
-4. Mejl: i varje test- eller förhandsmiljö ska `PRODUCT_EMAIL_RECIPIENT_ALLOWLIST` sättas till de
-   godkända testadresserna (kommaseparerat, `@domän` tillåts). Andra mottagare får då inget mejl och
-   markeras `not_allowlisted`. Utan listan, alltså i produktion, får varje mottagare sitt produktmejl. I
-   appen syns notisen alltid.
+4. Mejl: produktion måste deklareras uttryckligen med `PRODUCT_EMAIL_MODE=production`. I alla
+   andra miljöer skickas mejl bara till adresserna i `PRODUCT_EMAIL_RECIPIENT_ALLOWLIST`
+   (kommaseparerat, `@domän` tillåts). Utan lista skickas inget mejl alls, och notisen markeras
+   `not_allowlisted`. I appen syns notisen alltid.
 
 Merge, driftsättning och publicering samordnas med releaseansvarig. Astra granskar oberoende.
 
