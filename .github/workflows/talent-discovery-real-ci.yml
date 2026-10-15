@@ -68,5 +68,7 @@ jobs:
           path: |
             td-real-public/manifest.json
             td-real-public/images/*.png
+            test-results/**/error-context.md
+            test-results/**/test-failed-*.png
           if-no-files-found: warn
           retention-days: 7

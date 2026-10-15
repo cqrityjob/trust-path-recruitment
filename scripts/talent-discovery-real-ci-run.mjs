@@ -88,6 +88,39 @@ const dbEnv = () => {
 };
 const sql = (q) => run("psql", ["-At", "-v", "ON_ERROR_STOP=1", "-c", q], { env: dbEnv() }).trim();
 
+// On a failed scenario, say why in the job log: each failed test's error
+// context (the page as Playwright saw it) and the application server's error
+// lines. Everything here is synthetic (the fixture's people and texts); no
+// key, token or password is ever printed (the server never logs them, and
+// the filter drops any line that looks like one).
+function printFailureDiagnostics() {
+  const secret = /eyJ[A-Za-z0-9_-]{10,}|Bearer\s|password|service_role|apikey/i;
+  try {
+    const dirs = fs.readdirSync(path.join(root, "test-results"), { withFileTypes: true });
+    for (const d of dirs.filter((x) => x.isDirectory())) {
+      const ctx = path.join(root, "test-results", d.name, "error-context.md");
+      if (!fs.existsSync(ctx)) continue;
+      console.log(`::group::error context ${d.name}`);
+      for (const line of fs.readFileSync(ctx, "utf8").split("\n").slice(0, 200))
+        if (!secret.test(line)) console.log(line);
+      console.log("::endgroup::");
+    }
+  } catch {
+    /* no test results */
+  }
+  try {
+    const log = fs.readFileSync(path.join(privateRoot, "app.log"), "utf8").split("\n");
+    const errors = log.filter(
+      (l) => /error|fail|refus|\[applications\]|\[talent\]|\[notices\]/i.test(l) && !secret.test(l),
+    );
+    console.log("::group::application server error lines");
+    for (const line of errors.slice(-80)) console.log(line.slice(0, 400));
+    console.log("::endgroup::");
+  } catch {
+    /* no app log */
+  }
+}
+
 async function main() {
   requireRunner(process.env);
   fs.mkdirSync(path.join(stackRoot, "supabase"), { recursive: true });
@@ -244,6 +277,7 @@ async function main() {
     } catch (error) {
       failure = error;
     }
+    if (failure) printFailureDiagnostics();
     const stats = JSON.parse(fs.readFileSync(jsonFile, "utf8")).stats;
     report.browser = requireBrowserCounts(stats, SCENARIOS, { allowFailure: Boolean(failure) });
     if (failure) throw Error("TD_REAL_BROWSER_FAILED");
