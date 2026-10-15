@@ -335,8 +335,12 @@ test.describe("recruitment case", () => {
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("Sökande 0001");
     await expect(page.getByText("1 av 1")).toBeVisible();
     // Filters over the whole list, not a sample: the licence question was
-    // answered yes by every odd-numbered applicant.
-    await openCaseRead(page, casePath(BIG, "?step=applications&stage=all"));
+    // answered yes by every odd-numbered applicant. The list's own default
+    // view (no view parameters; every one of the 5 050 is still open) is the
+    // view "Rensa filter" returns to -- it clears the stage too -- so the
+    // step below goes back to a view this page has read.
+    await openCaseRead(page, casePath(BIG, "?step=applications"));
+    await expect(pager(page)).toContainText("av 5050");
     await openMoreFilters(page);
     const licence = page.locator("select").filter({ hasText: "Alla svar" }).first();
     const filtered = candidateRead(page);
