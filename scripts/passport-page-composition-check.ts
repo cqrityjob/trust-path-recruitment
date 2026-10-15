@@ -381,16 +381,18 @@ check(
 }
 
 /* ------------------------------------------------------------------ */
-console.log("\n4c · four tabs");
+// The four reviewed tabs, plus the one reviewed addition: "Job opportunities"
+// (voluntary discoverability, 2026-10-15), a tab of the same workspace.
+console.log("\n4c · four tabs, and Job opportunities");
 
 const shell = code(read(SHELL));
 const navBlock = shell.match(/const NAV = \[([\s\S]*?)\n\] as const;/)?.[1] ?? "";
 check(
-  (navBlock.match(/\ben: "/g) ?? []).join("|") === 'en: "|en: "|en: "|en: "' &&
-    /en: "Overview"[\s\S]*en: "Credentials"[\s\S]*en: "Verification"[\s\S]*en: "Share"/.test(
+  (navBlock.match(/\ben: "/g) ?? []).join("|") === 'en: "|en: "|en: "|en: "|en: "' &&
+    /en: "Overview"[\s\S]*en: "Credentials"[\s\S]*en: "Verification"[\s\S]*en: "Job opportunities"[\s\S]*en: "Share"/.test(
       navBlock,
     ),
-  "Overview, Credentials, Verification, Share — in that order and no others",
+  "Overview, Credentials, Verification, Job opportunities, Share — in that order and no others",
 );
 check(
   /also: \["\/passport\/credentials\/new"\]/.test(navBlock) &&

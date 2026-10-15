@@ -553,11 +553,16 @@ console.log("\nPLACEMENT -- Mitt Security Passport > Mina uppgifter");
   );
 
   // Nothing about the Passport navigation may quietly change here: this is a
-  // Passport bugfix, and the tabs are a separate, reviewed decision.
+  // Passport bugfix, and the tabs are a separate, reviewed decision. The one
+  // reviewed addition since is "Job opportunities" (voluntary discoverability,
+  // 2026-10-15); the six earlier destinations are unchanged.
   const shell = read("src/routes/_authenticated.passport.tsx");
   ck(
-    "the Passport navigation has six product destinations",
-    (shell.match(/to: "\/passport/g) ?? []).length === 6,
+    "the Passport navigation has the six reviewed destinations plus Job opportunities",
+    (shell.match(/to: "\/passport/g) ?? []).length === 7 &&
+      shell.includes(
+        '{ to: "/passport/discoverability", sv: "Jobbmöjligheter", en: "Job opportunities" }',
+      ),
   );
 }
 
