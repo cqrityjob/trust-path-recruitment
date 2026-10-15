@@ -193,6 +193,40 @@ async function open(page: Page, path: string) {
     await page.goto(path);
   }
 }
+/** The server-function export a request calls, decoded from its URL. */
+function exportOf(url: string): string | null {
+  const m = /\/_serverFn\/([A-Za-z0-9_-]+)/.exec(url);
+  if (!m) return null;
+  try {
+    const json = JSON.parse(
+      Buffer.from(m[1]!.replace(/-/g, "+").replace(/_/g, "/"), "base64").toString("utf8"),
+    ) as { export?: string };
+    return String(json.export ?? "").replace(/_createServerFn_handler$/, "");
+  } catch {
+    return null;
+  }
+}
+/**
+ * The candidate read of the open case (listRecruitmentCandidatesPage). The
+ * header count, the step chip, the pager and the rows all come from this one
+ * response, and on the 5 050-application case it is slow by construction:
+ * rec_ri_candidate_view evaluates every application for its page of 25
+ * (has_employer_role 10 101 calls, rec_is_member, rec_can_manage and
+ * application_state 5 050 each -- about 2 s on a quiet machine, more on a
+ * loaded runner). An assertion started at page load raced it: on #472
+ * (run 38733159776, both attempts) the header still showed "…" when the
+ * default 5 s ran out, and the count arrived just after -- the failure
+ * screenshot shows it. So the walk waits for the read it is about to check,
+ * then asserts at once; no assertion's own timeout is raised.
+ */
+function candidateRead(page: Page) {
+  return page.waitForResponse((r) => exportOf(r.url()) === "listRecruitmentCandidatesPage");
+}
+async function openCaseRead(page: Page, path: string) {
+  const read = candidateRead(page);
+  await open(page, path);
+  expect((await read).status()).toBe(200);
+}
 const stepNav = (page: Page) => page.getByRole("navigation", { name: "Rekryteringens steg" });
 const actionBar = (page: Page) =>
   page.getByRole("region", { name: "Åtgärder för markerade kandidater" });
@@ -276,7 +310,7 @@ test.describe("recruitment case", () => {
     page,
   }) => {
     await signIn(page, "anna.agare@nordvakt.test");
-    await open(page, casePath(BIG, "?step=applications&stage=all"));
+    await openCaseRead(page, casePath(BIG, "?step=applications&stage=all"));
     // The header count, the chip and the pager all say 5 050 -- a number the
     // old read, capped at 5 000, could never have shown.
     await expect(
@@ -288,13 +322,13 @@ test.describe("recruitment case", () => {
     await expect(pager(page)).toContainText("Visar 1–25 av 5050");
     await expect(pager(page)).toContainText("Sida 1 av 202");
     await expect(nameLinks(page).first()).toHaveText("Sökande 5050");
-    await open(page, casePath(BIG, "?step=applications&stage=all&page=202"));
+    await openCaseRead(page, casePath(BIG, "?step=applications&stage=all&page=202"));
     await expect(pager(page)).toContainText("Visar 5026–5050 av 5050");
     await expect(nameLinks(page)).toHaveCount(25);
     await expect(nameLinks(page).last()).toHaveText("Sökande 0001");
     // The oldest applicant -- the first one the old limit dropped -- is
     // found by search, and opens.
-    await open(page, casePath(BIG, "?step=applications&stage=all&q=S%C3%B6kande%200001"));
+    await openCaseRead(page, casePath(BIG, "?step=applications&stage=all&q=S%C3%B6kande%200001"));
     await expect(pager(page)).toContainText("Visar 1–1 av 1");
     await expect(nameLinks(page)).toHaveCount(1);
     await nameLinks(page).first().click();
@@ -302,11 +336,14 @@ test.describe("recruitment case", () => {
     await expect(page.getByText("1 av 1")).toBeVisible();
     // Filters over the whole list, not a sample: the licence question was
     // answered yes by every odd-numbered applicant.
-    await open(page, casePath(BIG, "?step=applications&stage=all"));
+    await openCaseRead(page, casePath(BIG, "?step=applications&stage=all"));
     await openMoreFilters(page);
     const licence = page.locator("select").filter({ hasText: "Alla svar" }).first();
+    const filtered = candidateRead(page);
     await licence.selectOption({ label: "Ja" });
+    await filtered;
     await expect(pager(page)).toContainText("av 2525");
+    // Back to a view the page has already read: shown from the cache at once.
     await page.getByRole("button", { name: /Rensa filter/ }).click();
     await expect(pager(page)).toContainText("av 5050");
   });
@@ -315,7 +352,7 @@ test.describe("recruitment case", () => {
     page,
   }) => {
     await signIn(page, "anna.agare@nordvakt.test");
-    await open(page, casePath(BIG, "?step=applications&stage=all&page=201"));
+    await openCaseRead(page, casePath(BIG, "?step=applications&stage=all&page=201"));
     await expect(pager(page)).toContainText("Visar 5001–5025 av 5050");
     await nameLinks(page).first().click();
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("Sökande 0050");
@@ -1151,7 +1188,7 @@ test.describe("recruitment case", () => {
     page,
   }) => {
     await signIn(page, "anna.agare@nordvakt.test");
-    await open(page, casePath(BIG, "?step=applications&stage=open"));
+    await openCaseRead(page, casePath(BIG, "?step=applications&stage=open"));
     const before = bookingsOf(BIG);
     await page.getByRole("checkbox", { name: "Markera alla på den här sidan" }).check();
     await expect(actionBar(page)).toContainText("25 markerade");
@@ -1208,7 +1245,7 @@ test.describe("recruitment case", () => {
     page,
   }) => {
     await signIn(page, "anna.agare@nordvakt.test");
-    await open(page, casePath(BIG, "?step=applications&stage=open"));
+    await openCaseRead(page, casePath(BIG, "?step=applications&stage=open"));
     const before = bookingsOf(BIG);
     await rowCheckboxes(page).nth(3).check();
     await actionBar(page).getByRole("button", { name: "Intervju" }).click();
