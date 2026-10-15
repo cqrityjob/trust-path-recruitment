@@ -7,11 +7,11 @@ migrationerna är applicerade och verifierade på `wrygicdfxwjnrugduxnt` och
 
 ## Migrationer, i ordning
 
-| # | Fil | Innehåll | Rollback |
-|---|---|---|---|
-| 1 | `20270316090000_sp_review_reply_history_and_notices.sql` | Ärendebundet textsvar på komplettering, meddelande per beslut, entydig aktuell granskningsstatus och historik, inkorg/mejl-outbox, mätning. `sp_verifier_decide` byts med samma signatur | Vägrar om svar, beslutsmeddelanden eller notiser finns; återställer `sp_verifier_decide` till 20270125090000 |
-| 2 | `20270317090000_sp_talent_discovery.sql` | Frivillig sökbarhet (avstängd från början), urval, preferenser, spärrar, samtyckeshistorik, den enda kortbyggaren | Vägrar om någon öppnat inställningen |
-| 3 | `20270318090000_rec_talent_search_and_contact.sql` | Katalogbundna kriterier för bekräftad kravprofil, sökning, profil, kontaktförfrågan | Vägrar om kontakter eller kriterier finns; återställer notisfunktionerna |
+| #   | Fil                                                      | Innehåll                                                                                                                                                                                 | Rollback                                                                                                     |
+| --- | -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| 1   | `20270316090000_sp_review_reply_history_and_notices.sql` | Ärendebundet textsvar på komplettering, meddelande per beslut, entydig aktuell granskningsstatus och historik, inkorg/mejl-outbox, mätning. `sp_verifier_decide` byts med samma signatur | Vägrar om svar, beslutsmeddelanden eller notiser finns; återställer `sp_verifier_decide` till 20270125090000 |
+| 2   | `20270317090000_sp_talent_discovery.sql`                 | Frivillig sökbarhet (avstängd från början), urval, preferenser, spärrar, samtyckeshistorik, den enda kortbyggaren                                                                        | Vägrar om någon öppnat inställningen                                                                         |
+| 3   | `20270318090000_rec_talent_search_and_contact.sql`       | Katalogbundna kriterier för bekräftad kravprofil, sökning, profil, kontaktförfrågan                                                                                                      | Vägrar om kontakter eller kriterier finns; återställer notisfunktionerna                                     |
 
 Kontrakt: [`docs/passport/talent-discovery/talent-search-contract.md`](../passport/talent-discovery/talent-search-contract.md).
 
