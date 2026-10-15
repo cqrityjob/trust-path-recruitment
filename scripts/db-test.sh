@@ -251,6 +251,118 @@ RI_UPLOAD_PASSED="$(echo "$RI_UPLOAD_OUT" | command grep -c 'NOTICE:  ok ' || tr
 [ "$RI_UPLOAD_PASSED" -ge 41 ] || { echo "$RI_UPLOAD_OUT"; echo "FAIL:41 upload assertions required" >&2; exit 1; }
 echo "    ok  ${RI_UPLOAD_PASSED} durable upload SQL assertions"
 
+# Slutuppdrag 2026-10-15 (slots 20270316, 20270317, 20270318): the Passport's
+# case-bound clarification reply, decision history and notices; voluntary
+# discoverability; catalogue-bound job criteria, talent search and contact.
+# Run against the full current schema, then stood down newest first -- before
+# the v0.4 standdown below, whose requirement-profile bodies 20270318 reads.
+# Each suite rolls back its own fixture.
+TD_M1=supabase/migrations/20270316090000_sp_review_reply_history_and_notices.sql
+TD_M2=supabase/migrations/20270317090000_sp_talent_discovery.sql
+TD_M3=supabase/migrations/20270318090000_rec_talent_search_and_contact.sql
+td_run() { psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f "supabase/tests/$1.sql" 2>&1; }
+td_suite() {
+  local file="$1" label="$2" floor="$3"; shift 3
+  set +e
+  local out; out="$(td_run "$file")"; local rc=$?
+  set -e
+  local passed; passed="$(echo "$out" | grep -c "NOTICE:  ok  " || true)"
+  if [ "$rc" -ne 0 ]; then
+    echo "$out" | grep -E "ASSERTION FAILED|ERROR" | head -5 >&2 || true
+    suite_failed "$label"; return 0
+  fi
+  if [ "$passed" -lt "$floor" ]; then
+    suite_failed "$label (assertion shortfall: $passed, floor $floor)"; return 0
+  fi
+  local req
+  for req in "$@"; do
+    echo "$out" | grep -qF "ok  $req" || { suite_failed "$label (missing: $req)"; return 0; }
+  done
+  echo "    ok  $passed $label assertions"
+}
+# A planted defect MUST make the named assertion fail.
+td_nc() {
+  local file="$1" label="$2" expect="$3"
+  set +e
+  local out; out="$(td_run "$file")"; local rc=$?
+  set -e
+  if [ "$rc" -eq 0 ] || ! echo "$out" | grep -q "ASSERTION FAILED: $expect"; then
+    echo "$out" | grep -E "ASSERTION FAILED|ERROR" | head -3 >&2 || true
+    echo "FAIL: negative control '${label}' did not fail on ${expect} -- the suite proves nothing" >&2
+    exit 1
+  fi
+  echo "    ok  NC ${label}: the suite fails on ${expect}"
+}
+td_fn() { sed -n "/^$2/,/$3/p" "$1" | sed '1s/^CREATE FUNCTION/CREATE OR REPLACE FUNCTION/'; }
+td_plant() { psql_q -d "$TEST_DB" -c "$(td_fn "$1" "$2" "$3" | sed "$4")" >/dev/null; }
+td_restore() { psql_q -d "$TEST_DB" -c "$(td_fn "$1" "$2" "$3")" >/dev/null; }
+
+echo "==> Running Passport clarification reply, decision history and notices"
+td_suite sp_review_reply_history_and_notices_test "Passport reply/history/notices" 53 \
+  "RH3.2 the request is back in review with a new version" \
+  "RH5.1 approval from the page opened before the reply is refused" \
+  "RH6.7 after the new approval the entry is active and verified: no contradiction left" \
+  "RH8.2 the holder never receives the internal note" \
+  "RH9.5 a recipient who may no longer receive the notice is skipped at claim time"
+echo "==> Running Passport voluntary discoverability"
+td_suite sp_talent_discovery_test "Passport discoverability" 33 \
+  "TD1.1 no profile row for an existing account" \
+  "TD2.2 enabling without consent is refused" \
+  "TD4.2 no credential number, scope text, employer name, person name, address or document" \
+  "TD6.2 the reference is rotated; the selection is kept"
+echo "==> Running talent search, explanation and contact"
+td_suite rec_talent_search_and_contact_test "Talent search and contact" 75 \
+  "TS1.2 a plain member may not: membership is not a recruiting right" \
+  "TS3.3 the private person and the person blocking this organisation are absent" \
+  "TS4.6 C3: international certifications are never read as the local authorisation" \
+  "TS7.1 private, blocking and unknown references all read the same" \
+  "TS8.13 no application and no Passport disclosure without the person's own act" \
+  "TS11.1 the old reference stops resolving at once" \
+  "TS13.3 hiring creates no Passport access of any kind"
+
+# Negative controls: each planted defect is caught by the assertion named.
+TD_DECIDE='CREATE OR REPLACE FUNCTION public.sp_verifier_decide('
+td_plant "$TD_M1" "$TD_DECIDE" '^END; \$function\$;' "s/lifecycle_state = CASE WHEN lifecycle_state = 'revoked' THEN 'active' ELSE lifecycle_state END/lifecycle_state = lifecycle_state/"
+td_nc sp_review_reply_history_and_notices_test "TD NC1 re-approval leaves the entry revoked" "RH6.7"
+td_restore "$TD_M1" "$TD_DECIDE" '^END; \$function\$;'
+td_plant "$TD_M2" 'CREATE FUNCTION public.sp_talent_pause()' '^END \$\$;' "s/search_ref = gen_random_uuid(), //"
+td_nc sp_talent_discovery_test "TD NC2 pause keeps the old reference" "TD6.2"
+td_restore "$TD_M2" 'CREATE FUNCTION public.sp_talent_pause()' '^END \$\$;'
+td_plant "$TD_M3" 'CREATE FUNCTION public.rec_talent_pool(' '^\$\$;' "s/WHERE p.visibility IN ('open', 'active')/WHERE true/"
+td_nc rec_talent_search_and_contact_test "TD NC3 private people enter the pool" "TS3.1"
+td_restore "$TD_M3" 'CREATE FUNCTION public.rec_talent_pool(' '^\$\$;'
+td_plant "$TD_M3" 'CREATE FUNCTION public.rec_talent_user_may_search(' '^\$\$;' "s/AND (public.has_employer_role(_user, j.employer_id, ARRAY\['owner', 'admin'\])/AND (true/"
+td_nc rec_talent_search_and_contact_test "TD NC4 any member may search" "TS1.2"
+td_restore "$TD_M3" 'CREATE FUNCTION public.rec_talent_user_may_search(' '^\$\$;'
+td_plant "$TD_M3" 'CREATE FUNCTION public.rec_talent_evaluate(' '^END \$\$;' "s/AND EXISTS (SELECT 1 FROM jsonb_array_elements(_card->'merits') x WHERE x->>'requirementClass' = 'certification') THEN/AND false THEN/"
+td_nc rec_talent_search_and_contact_test "TD NC5 no warning that a certification is not an authorisation" "TS4.6"
+td_restore "$TD_M3" 'CREATE FUNCTION public.rec_talent_evaluate(' '^END \$\$;'
+td_suite rec_talent_search_and_contact_test "Talent search and contact (after controls)" 75
+
+# The data-bearing rollbacks refuse recorded data before changing anything:
+# each suite's own fixture, with the rollback in place of its ROLLBACK.
+TD_PROBE="$(mktemp)"
+for td_pair in "rec_talent_search_and_contact_test:20270318090000_rec_talent_search_and_contact" \
+               "sp_talent_discovery_test:20270317090000_sp_talent_discovery" \
+               "sp_review_reply_history_and_notices_test:20270316090000_sp_review_reply_history_and_notices"; do
+  sed '$d' "supabase/tests/${td_pair%%:*}.sql" > "$TD_PROBE"
+  printf 'RESET ROLE;\n\\i supabase/rollback/%s_rollback.sql\nROLLBACK;\n' "${td_pair##*:}" >> "$TD_PROBE"
+  set +e
+  TD_REFUSED="$(psql -X -d "$TEST_DB" -f "$TD_PROBE" 2>&1)"
+  set -e
+  echo "$TD_REFUSED" | grep -q 'SP_ROLLBACK_REQUIRES_PRESERVED_DATA' || { echo "$TD_REFUSED" | tail -5 >&2; echo "FAIL: ${td_pair##*:} rollback must refuse recorded data" >&2; exit 1; }
+done
+rm -f "$TD_PROBE"
+echo "    ok  the three data-bearing rollbacks refuse recorded data; probe fixtures rolled back"
+# Stand the three empty slots down, newest first. Each rollback proves its own
+# postflight (sp_verifier_decide is the 20270125090000 body again).
+psql_q -d "$TEST_DB" -f supabase/rollback/20270318090000_rec_talent_search_and_contact_rollback.sql >/dev/null
+psql_q -d "$TEST_DB" -f supabase/rollback/20270317090000_sp_talent_discovery_rollback.sql >/dev/null
+psql_q -d "$TEST_DB" -f supabase/rollback/20270316090000_sp_review_reply_history_and_notices_rollback.sql >/dev/null
+TD_STOOD_DOWN="$(psql_q -d "$TEST_DB" -Atc "SELECT (to_regclass('public.user_notices') IS NULL AND to_regclass('public.sp_talent_profiles') IS NULL AND to_regclass('public.rec_talent_contact_requests') IS NULL AND to_regclass('public.product_metric_events') IS NULL AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'sp_verification_decisions' AND column_name IN ('holder_message', 'recorded_at')) AND position('lifecycle_state = CASE' IN (SELECT prosrc FROM pg_proc WHERE oid = 'public.sp_verifier_decide(uuid,text,text,text,text,date,date)'::regprocedure)) = 0)::text")"
+[ "$TD_STOOD_DOWN" = "true" ] || { echo "FAIL: the 2026-10-15 rollbacks left an object behind." >&2; exit 1; }
+echo "    ok  2026-10-15 slots stood down to the 20270315 schema before historical consumers"
+
 # Slutuppdrag 2026-10-11 (slots 131, 141, 151): the motivated profile change on
 # every write path, the candidate's in-app supplement answer and BESKT items in
 # the composition, against the full current schema. The suite rolls back.
