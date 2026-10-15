@@ -1,0 +1,39 @@
+# passport-public-pilot-local.spec.ts F, attachDocument -- root cause
+#
+# CI: run 38743864633 attempt 1 on 5ab6ffed (job 116452244561), both projects:
+#   locator('[data-evidence-saved-file]') toHaveText("sira-kort-framsida.pdf")
+#   -> element(s) not found within 60000 ms (spec.ts:332, from F at :753).
+# Attempt 2 on the same commit passed. The failure artifact (screenshot,
+# error context) could not be fetched from this environment (blob host
+# refused by the proxy), so the cause was established from the code and a
+# targeted reproduction.
+
+## 1. The code path
+  src/routes/_authenticated.passport.entry.$kind.$entryId.tsx:
+    const [uploadRecoveryPending, setUploadRecoveryPending] = useState(true);
+    -- cleared by EvidenceUploadRecoveryPanel once listMyUploadAttempts answers.
+  src/components/security-passport/live/EvidencePanel.tsx:
+    const needsCheck = uploadNeedsCheck || uploadRecoveryPending === true;
+    <input id="sp-evidence-file" type="file" disabled={busy !== null || needsCheck} ...>
+    async function handleFile(file) { if (needsCheck) return; ... }
+  A file chosen while the interrupted-upload read is still out is dropped
+  without a word. A person cannot pick then (the button and the input are
+  disabled); Playwright's setInputFiles does not wait for enabled.
+  The spec picked at once after page.goto. The talent suite and
+  platform-live-journeys.spec.ts already wait:
+    await expect(page.locator("#sp-evidence-file")).toBeEnabled();
+  This branch adds a second read at mount on the same page (getReviewThread),
+  which can put listMyUploadAttempts later on a loaded runner.
+
+## 2. The race, reproduced (local stack: PostgreSQL 16, PostgREST 12.2.3,
+##    the repo gateway; app at the #473 head; listMyUploadAttempts delayed
+##    as on a loaded runner)
+  claim 8fbecab2-8653-4766-8505-83fbabfc88e2 (td-cand-b), read delay 4000 ms
+  original: FAIL (marker never showed); listMyUploadAttempts delayed 2x by 4000 ms; picker disabled at the pick: true; evidence rows for the file: 0; error shown: (none)
+  fixed: PASS; listMyUploadAttempts delayed 3x by 4000 ms; evidence rows for the file: 1; error shown: (none)
+
+## Root cause and fix
+The walk chose the file before the page allowed a choice; the page ignored
+it, as it is built to. attachDocument now waits for #sp-evidence-file to be
+enabled -- the state a person waits for -- and picks on that input. No
+assertion timeout was raised and the product code is unchanged.
