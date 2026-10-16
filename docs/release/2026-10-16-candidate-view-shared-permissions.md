@@ -77,8 +77,16 @@ miljö och metod.
 Basmätningen före allt annat (20 körningar) gav SQL-median 2 409 ms och API-median 2 679 ms.
 Det stämmer med den omväxlande mätningen.
 
-Appens egen tid i CI (Recruitment workspace-workflowet, 7 anrop av serverfunktionen per
-körning) fylls i i PR-beskrivningen från körningarna före och efter.
+Appens egen tid i CI, i samma workflow (Recruitment workspace, Supabase CLI 2.117 med riktig
+GoTrue och PostgREST), mätt på `listRecruitmentCandidatesPage` med 5 050 ansökningar, 5 anrop per
+körning:
+
+| Körning                                                                                                                                     |   n |   Median | Min–max (ms) |
+| ------------------------------------------------------------------------------------------------------------------------------------------- | --: | -------: | -----------: |
+| Före: `41209160`, `main`:s funktion ([jobb](https://github.com/cqrityjob/trust-path-recruitment/actions/runs/38856358538/job/116828596591)) |   5 | 2 862 ms |  2 785–3 027 |
+| Efter: `58ff817b` ([jobb](https://github.com/cqrityjob/trust-path-recruitment/actions/runs/38857091040/job/116830895153))                   |   5 |   523 ms |      509–536 |
+
+Hela e2e-testet "5 050 applications …" tog 26,0 s före och 10,7 s efter.
 
 ## Åtkomsten är oförändrad: tester
 
