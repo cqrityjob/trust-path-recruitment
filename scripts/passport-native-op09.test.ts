@@ -65,7 +65,7 @@ test("native target refuses workstations, hosted/inherited credentials and wrong
   assert.throws(() => validateTarget(valid, evidence, "cce2c8a238522d51396b52697d25bc9d54a8a8bd"));
   assert.throws(() => validateTarget(valid, evidence, "a5dd89ebee2c30f4d2ff18df7117d07e2bb125d2"));
 });
-test("native service target/key roles and exact398 history fail closed", () => {
+test("native service target/key roles and exact399 history fail closed", () => {
   const status = {
     API_URL: API,
     DB_URL: "postgresql://postgres:private@127.0.0.1:55821/postgres",
@@ -83,13 +83,13 @@ test("native service target/key roles and exact398 history fail closed", () => {
     assert.throws(() => validateStatus({ ...status, ...patch }));
   const files = fs.readdirSync(path.join(root, "supabase/migrations"));
   assert.equal(APP_SHA, "53659419a1c243c27a59540eb849569140b71365");
-  assert.equal(SCHEMA_SHA, "173bb7f1444e39917130ffda6e6def5207c39b3e");
-  assert.equal(history(files).length, 398);
+  assert.equal(SCHEMA_SHA, "824be8e1039da3ed232b40e539ab738836e43b39");
+  assert.equal(history(files).length, 399);
   assert.throws(() =>
     history(
       files.filter(
         (f) =>
-          !/^202703(?:10090000|10100000|11100000|12100000|13100000|14100000|15100000|16090000|17090000|18090000|19090000)_/.test(
+          !/^202703(?:10090000|10100000|11100000|12100000|13100000|14100000|15100000|16090000|17090000|18090000|19090000|20090000)_/.test(
             f,
           ),
       ),
@@ -110,6 +110,7 @@ test("native service target/key roles and exact398 history fail closed", () => {
     "20270317090000",
     "20270318090000",
     "20270319090000",
+    "20270320090000",
   ]) {
     const omitted = files.filter((f) => !f.startsWith(prefix));
     assert.throws(() => history(files.filter((f) => !f.startsWith(prefix))));
@@ -117,7 +118,7 @@ test("native service target/key roles and exact398 history fail closed", () => {
   }
   assert.throws(() => history([...files, files.find((f) => f.endsWith(".sql"))!]));
 });
-test("exact398 witness preserves all387 historic blobs and refuses old schema or changed/missing new migrations", () => {
+test("exact399 witness preserves all387 historic blobs and refuses old schema or changed/missing new migrations", () => {
   const oldSchema = "1e5988c6f9c7121a0fefd22c0db06f6b573f0ae9";
   const git = (cwd: string, args: string[], input?: string) =>
     execFileSync("git", args, {
@@ -140,7 +141,7 @@ test("exact398 witness preserves all387 historic blobs and refuses old schema or
   const oldFiles = [...oldBlobs.keys()];
   const newFiles = [...newBlobs.keys()];
   assert.equal(oldFiles.length, 387);
-  assert.equal(newFiles.length, 398);
+  assert.equal(newFiles.length, 399);
   assert.equal(git(root, ["merge-base", "--is-ancestor", oldSchema, SCHEMA_SHA]), "");
   for (const name of oldFiles) {
     assert.ok(newFiles.includes(name));
@@ -163,6 +164,7 @@ test("exact398 witness preserves all387 historic blobs and refuses old schema or
     "20270317090000_sp_talent_discovery.sql",
     "20270318090000_rec_talent_search_and_contact.sql",
     "20270319090000_rec_candidate_view_shared_permissions.sql",
+    "20270320090000_rec_session_required.sql",
   ]);
   const temp = fs.mkdtempSync(path.join(os.tmpdir(), "op09-exact-schema-"));
   try {
@@ -366,7 +368,7 @@ test("preparation preserves schema/app pins and native Auth/Storage with no Auth
   assert.match(sdk, /context.appRoot, "scripts\/passport-upload-recovery-operational.ts"/);
   assert.match(workflow, new RegExp(APP_SHA));
   assert.match(workflow, new RegExp(`ref: ${APP_SHA}\\n\\s+path: app\\n`));
-  assert.match(workflow, /Complete398 native schema, Auth8, actual44 and browser4/);
+  assert.match(workflow, /Complete399 native schema, Auth8, actual44 and browser4/);
   assert.doesNotMatch(workflow, /ref: (?:main|latest)|continue-on-error:/);
   assert.match(source("scripts/passport-native-op09-contract.mjs"), new RegExp(SCHEMA_SHA));
   assert.match(workflow, /passport-native-op09-evidence/);
