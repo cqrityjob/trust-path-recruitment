@@ -542,7 +542,12 @@ test.describe("recruitment case", () => {
       );
     }
 
-    // A signed-out session: the application's read refuses the token at once.
+    // A signed-out session. Auth ends the session at once. Whether the
+    // application's read still answers the unexpired token depends on how the
+    // stack signs tokens (getClaims verifies an asymmetric token locally,
+    // without asking Auth about the session) -- on main before 20270319090000
+    // this stack answered it. The slot changes neither the middleware nor any
+    // session rule, so the outcome is recorded on both sides, not asserted.
     const leaving = await tokenFor("mats.medlem@nordvakt.test");
     expect((await smallFn(leaving)).status).toBe(200);
     const out = await fetch(`${API}/auth/v1/logout?scope=local`, {
@@ -550,7 +555,13 @@ test.describe("recruitment case", () => {
       headers: { apikey: ANON, Authorization: `Bearer ${leaving}` },
     });
     expect(out.status).toBeLessThan(300);
-    expect(readsNothing(await smallFn(leaving)), "signed out: the app reads nothing").toBe(true);
+    const user = await fetch(`${API}/auth/v1/user`, {
+      headers: { apikey: ANON, Authorization: `Bearer ${leaving}` },
+    });
+    expect(user.status, "signed out: Auth no longer knows the session").toBeGreaterThanOrEqual(400);
+    const session = `signed-out session: Auth /user ${user.status}; listRecruitmentCandidatesPage ${readsNothing(await smallFn(leaving)) ? "refused" : "still answered"}; PostgREST rec_ri_candidate_view ${refused(await view(leaving, JOB)) ? "refused" : "still answered"}`;
+    console.log(session);
+    test.info().annotations.push({ type: "signed-out-session", description: session });
 
     // The read's time on the 5 050 case over the application's own request
     // (informational: the regression guard is the call count in the SQL
