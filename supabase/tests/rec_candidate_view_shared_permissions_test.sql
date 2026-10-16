@@ -21,8 +21,8 @@
 --         membership count from the very next call -- both bodies agree.
 --   CV8   a revoked session: the database read is unchanged by this slot,
 --         which touches no session rule. The function never consulted
---         auth.sessions; what a signed-out token reads over real Auth is
---         recorded on both sides by e2e/recruitment-workspace.spec.ts.
+--         auth.sessions; the session rule is the next slot's, 20270320090000
+--         (supabase/tests/rec_session_required_test.sql).
 --   CV9   the regression guard: the shared checks run a FIXED number of times
 --         per read, whatever the number of applications; the reference body
 --         grows with the rows.
