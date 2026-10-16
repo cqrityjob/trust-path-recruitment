@@ -148,9 +148,9 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the next step grows its own Add credential button again, so the overview has two primary ways to do one thing",
     file: SIDE,
-    find: '        {next.kind === "clarify" && (',
+    find: '          {next.kind === "unknown" && (',
     replace:
-      '        <Link to="/passport/credentials/new">+</Link>\n        {next.kind === "clarify" && (',
+      '          <Link to="/passport/credentials/new">+</Link>\n          {next.kind === "unknown" && (',
     guard: GUARD,
     expect: "exactly ONE Add credential",
   },
@@ -169,20 +169,40 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "a reviewer's question sends the holder to the documents instead of the review panel where the question is answered",
     file: SIDE,
-    find: '        hash={next.kind === "clarify" ? ENTRY_VERIFICATION_ANCHOR : ENTRY_EVIDENCE_ANCHOR}\n',
+    find: '        hash={anchor === "verification" ? ENTRY_VERIFICATION_ANCHOR : ENTRY_EVIDENCE_ANCHOR}\n',
     replace: "        hash={ENTRY_EVIDENCE_ANCHOR}\n",
     guard: GUARD,
-    expect: "the clarify step lands on the review panel",
+    expect: "lands on the section that does it",
   },
   {
     id: "PPC-NC-NEXT-STEP-UNNAMED",
     defect:
       "the step's accessible name loses the credential, so a screen-reader user hears 'Add evidence' without knowing for which credential",
     file: SIDE,
-    find: "        }: ${next.title}`}\n",
-    replace: "        }`}\n",
+    find: "        aria-label={`${pt(stepCopy.action)}: ${next.title}`}\n",
+    replace: "        aria-label={pt(stepCopy.action)}\n",
     guard: GUARD,
-    expect: "labelled with the action it opens and the credential",
+    expect: "and the credential it is for",
+  },
+  {
+    id: "PPC-NC-OVERVIEW-OWN-REVIEW-RULE",
+    defect:
+      "the overview stops reading the open review and the latest decision, so it offers 'request a review' for a credential whose page says the reviewer is waiting on the holder (workshop 2026-10-15)",
+    file: SIDE,
+    find: "      reviewState: overviewReviewState(reviews?.get(c.id), latest?.result),\n",
+    replace: '      reviewState: "none",\n',
+    guard: GUARD,
+    expect: "its own page's entryNextStep",
+  },
+  {
+    id: "PPC-NC-OVERVIEW-FIRST-NOT-MOST-PRESSING",
+    defect:
+      "the overview offers the first credential's step instead of the most pressing one, so a reviewer's question waits behind an upload",
+    file: SIDE,
+    find: "  const picked = overviewNextStep(steps);\n",
+    replace: "  const picked = overviewNextStep(steps.slice(0, 1));\n",
+    guard: GUARD,
+    expect: "the most pressing one is offered",
   },
   {
     id: "PPC-NC-ENTRY-LOSES-ITS-TARGET",

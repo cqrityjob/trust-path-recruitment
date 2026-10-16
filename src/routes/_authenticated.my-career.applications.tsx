@@ -19,6 +19,7 @@ import { ApplicationPassportShare } from "@/components/jobs/ApplicationPassportS
 import { MyPreparations } from "@/components/beskt/MyPreparations";
 import { ConfirmAction } from "@/components/employer/ConfirmAction";
 import { CandidateApplicationInbox } from "@/components/recruitment/CandidateApplicationInbox";
+import { PendingContactsNotice } from "@/components/talent/PendingContactsNotice";
 import { listMyRecruitmentInbox } from "@/lib/recruitment/recruitment.functions";
 import { listMyCandidateReplies } from "@/lib/recruitment/candidate-reply.functions";
 import {
@@ -131,6 +132,10 @@ function MyApplicationsPage() {
             {t("candidate.applications.backToMyCareer")}
           </Link>
         </div>
+
+        {/* Employers who asked to get in touch (talent discovery): answered on
+            the Passport's Job opportunities page, never here. */}
+        <PendingContactsNotice />
 
         {actionError && (
           <div className="mt-4 rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">

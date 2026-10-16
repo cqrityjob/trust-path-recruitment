@@ -1,9 +1,11 @@
 import { AttentionPanel } from "@/components/security-passport/AttentionPanel";
+import { NoticesPanel } from "@/components/notices/NoticesPanel";
 import { ScrollToHashOnceReady } from "@/components/security-passport/ScrollToHashOnceReady";
 import { attentionFor } from "@/lib/security-passport/attention";
 import { VerificationOutcomes } from "@/components/professional-identity/VerificationOutcomes";
 import {
   deriveVerificationAttention,
+  revokedRequestIdsOf,
   VERIFICATION_ATTENTION_UNAVAILABLE,
   type VerificationAttention,
 } from "@/lib/professional-identity/verification-attention";
@@ -73,7 +75,11 @@ function PassportWorkspaceRoute() {
         currentSnapshot?.holder.claims.filter(isPassportCredential).map((c) => c.id) ?? [],
       );
       setAttention(
-        deriveVerificationAttention(r.requests.filter((r) => r.claimId && owned.has(r.claimId))),
+        deriveVerificationAttention(
+          r.requests.filter((r) => r.claimId && owned.has(r.claimId)),
+          new Date(),
+          revokedRequestIdsOf(r.decisions),
+        ),
       );
       setReviews(
         new Map(
@@ -192,6 +198,19 @@ function PassportWorkspaceRoute() {
             }}
           />
         </section>
+        {/* Updates (20270316090000): what was decided and what waits for the
+            holder. A credential's notice leads to its ROW on this page, like
+            every other outcome here; a contact request to Job opportunities. */}
+        <NoticesPanel
+          audience={["holder"]}
+          hrefOf={(n) =>
+            n.kind.startsWith("talent_")
+              ? "/passport/discoverability#contacts"
+              : n.subjectType === "claim"
+                ? `/passport#${credentialRowAnchor(n.subjectId)}`
+                : `/passport/entry/experience/${n.subjectId}`
+          }
+        />
       </div>
     </div>
   );

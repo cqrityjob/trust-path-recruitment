@@ -627,6 +627,39 @@ console.log("\n2c. employer_new_application: CQrityjob writes to an organisation
   ck("the app's transport knows the kind", /\|\s+"employer_new_application"/.test(transport));
 }
 
+console.log(
+  "\n2d. product_notice: Passport and talent notices, to the one person the database chose",
+);
+{
+  // Same contract as employer_new_application: the recipient comes from the
+  // notice row (user_notices_claim_emails), the mail is CQrityjob's own.
+  const fn = readFileSync(FN, "utf8");
+  const toProvider = () => calls.filter((c) => c.url === "https://api.resend.com/emails");
+  ck(
+    "the kind is listed, to the caller's named address, with no Reply-To",
+    /product_notice: \{ to: "caller", replyTo: "none" \}/.test(fn),
+  );
+  const sentBefore = toProvider().length;
+  await post({
+    kind: "product_notice",
+    to: "holder@example.test",
+    replyTo: "attacker@evil.example",
+    senderName: "Somebody Else AB",
+    ...message,
+  });
+  const c = toProvider().length > sentBefore ? toProvider().at(-1) : undefined;
+  ck(
+    "it goes to the one address the request names, with no Reply-To and CQrityjob's own From",
+    JSON.stringify(c?.body.to) === JSON.stringify(["holder@example.test"]) &&
+      c !== undefined &&
+      !("reply_to" in c.body) &&
+      c.body.from === "CQrityjob <no-reply@cqrityjob.com>",
+    JSON.stringify(c?.body),
+  );
+  const transport = readFileSync("src/lib/email/transport.server.ts", "utf8");
+  ck("the app's transport knows the kind", /\|\s+"product_notice"/.test(transport));
+}
+
 console.log("\n3. Status passthrough, idempotency, no provider body, minimal logs");
 {
   calls.length = 0;

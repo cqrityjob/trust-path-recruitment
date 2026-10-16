@@ -1,0 +1,1104 @@
+{
+  "formatVersion": 1,
+  "projectRef": "wrygicdfxwjnrugduxnt",
+  "installation": "official_supabase_github_integration",
+  "readOnly": true,
+  "observedBy": "Claude session for #473 under the owner's instruction of 2026-10-15 to verify the actual installation of 0316-0318 before registering it (merge of #472 was the owner's).",
+  "merges": [
+    {
+      "pr": 472,
+      "head": "1a6c20342a06837b646ddd784c9d62dda24b43cf",
+      "mergeSha": "b8e2de8153a2da7c2abec140ea58cf0592ea0598",
+      "mergedAt": "2026-10-15T17:42:12Z",
+      "slots": ["20270316090000", "20270317090000", "20270318090000"],
+      "verifiedOnHead": "Independent review approved head 1a6c2034 with all 11 PR workflows successful on that exact commit (https://github.com/cqrityjob/trust-path-recruitment/pull/472#issuecomment-6198446133); full CI run https://github.com/cqrityjob/trust-path-recruitment/actions/runs/38772743547."
+    }
+  ],
+  "migrationSha256": {
+    "20270316090000_sp_review_reply_history_and_notices.sql": "364ca25f9a94ddbd0e793442ac65624f33deaf63a19c72b1592001ed9647e4a4",
+    "20270317090000_sp_talent_discovery.sql": "f2dc48060738dc7b96dd15cc6196db9ee9dbadf5616aa3db17431f4438bde8d6",
+    "20270318090000_rec_talent_search_and_contact.sql": "983aa2f89acfce35900bc8b89fc069fd402b3a67d433398434f95f55118755f0"
+  },
+  "ledger": {
+    "before472": {
+      "count": 394,
+      "latest": "20270315100000",
+      "versionNameNewlineMd5": "497fb4e7494ac527968368b44d8b9896",
+      "observedAt": "2026-10-11T14:54:54Z (recorded in docs/release/2026-10-11-slutuppdrag-hosted-verification.json)"
+    },
+    "after472": {
+      "count": 397,
+      "latest": "20270318090000",
+      "versionNameNewlineMd5": "9a299f7ae7f98aa325b3fcb1f4919382",
+      "observedAt": "2026-10-15T18:36:45.480201+00:00",
+      "newRows": [
+        "20270316090000 sp_review_reply_history_and_notices",
+        "20270317090000 sp_talent_discovery",
+        "20270318090000 rec_talent_search_and_contact"
+      ]
+    },
+    "prior394UnchangedAfter472": {
+      "count": 394,
+      "versionNameNewlineMd5": "497fb4e7494ac527968368b44d8b9896"
+    },
+    "formula": "md5(string_agg(version || ' ' || name, E'\\n' ORDER BY version)) over supabase_migrations.schema_migrations"
+  },
+  "localReplay": {
+    "database": "isolated local PostgreSQL 16, fresh database",
+    "source": "main b8e2de8153a2da7c2abec140ea58cf0592ea0598 (the merge of #472)",
+    "history": "strict replay of all 397 canonical migrations after supabase/tests/00_bootstrap.sql and the hosted privilege baseline (no EXECUTE default for authenticated/service_role), ON_ERROR_STOP"
+  },
+  "fingerprints": {
+    "note": "The same read-only query on the hosted project and on the local replay (docs: the objects the three slots create or replace). Signatures sorted under COLLATE \"C\": the hosted and local clusters sort '(' and '_' differently under their default collations, which changed the aggregate but no row.",
+    "functions": {
+      "count": 58,
+      "hosted": "1885b9779c56687700b5524ac0e8ea9b",
+      "localReplay": "1885b9779c56687700b5524ac0e8ea9b",
+      "formula": "md5(string_agg(regprocedure || '|' || md5(prosrc) || '|' || prosecdef || '|' || proconfig || '|' || anon||authenticated||service_role EXECUTE, E'\\n' ORDER BY regprocedure COLLATE \"C\"))",
+      "anonExecutable": 0
+    },
+    "columns": {
+      "count": 88,
+      "hosted": "02710476c0eb0bc7889c2fb428a907bb",
+      "localReplay": "02710476c0eb0bc7889c2fb428a907bb",
+      "tables": [
+        "product_metric_events",
+        "rec_requirement_criteria_sets",
+        "rec_talent_contact_requests",
+        "rec_talent_search_log",
+        "sp_talent_blocks",
+        "sp_talent_consent_events",
+        "sp_talent_items",
+        "sp_talent_profiles",
+        "sp_verification_replies",
+        "user_notices"
+      ]
+    },
+    "policies": {
+      "count": 12,
+      "hosted": "6c1f7b26325c34bfc91252f522f8ba5f",
+      "localReplay": "6c1f7b26325c34bfc91252f522f8ba5f"
+    },
+    "rlsAndTableGrants": {
+      "hosted": "dcea3869a329b15f97931e97ddad9a96",
+      "localReplay": "dcea3869a329b15f97931e97ddad9a96",
+      "rows": "all ten tables RLS on (not forced); anon no SELECT/INSERT; authenticated SELECT only on sp_talent_blocks, sp_talent_consent_events, sp_talent_items and sp_verification_replies (under their policies), no client-role write on any"
+    },
+    "triggers": {
+      "count": 11,
+      "hosted": "4cf08d735daff5bea20558e4d62df60f",
+      "localReplay": "4cf08d735daff5bea20558e4d62df60f"
+    }
+  },
+  "spDecisionTrust": {
+    "bodyMd5": "69c0115c8bb20207d093a01c39474c6e",
+    "note": "The organisation normalisation fix ed882e95 (JS trim set, ASCII fold) is the body installed; equal to the local replay."
+  },
+  "privileges": {
+    "authenticatedMayClaimEmails": false,
+    "note": "user_notices_claim_emails and user_notices_settle_email are executable by service_role only; no new function is executable by anon."
+  },
+  "rowCounts": {
+    "observedAt": "2026-10-15T18:39:59.429577+00:00",
+    "sp_talent_profiles": 0,
+    "sp_talent_items": 0,
+    "rec_talent_contact_requests": 0,
+    "rec_requirement_criteria_sets": 0,
+    "sp_verification_replies": 0,
+    "user_notices": 0,
+    "note": "Counts only; no row content read. The migrations created no discoverable person, contact, criteria or notice."
+  },
+  "functionsDetail": [
+    {
+      "function": "public.product_metric_counts(date,date)",
+      "securityDefiner": true,
+      "searchPath": "public, pg_temp",
+      "bodyMd5": "41e23593373fbcbd1e722c263e8a41c9",
+      "localReplayMd5": "41e23593373fbcbd1e722c263e8a41c9",
+      "execute": {
+        "anon": false,
+        "authenticated": true,
+        "service_role": false
+      },
+      "localReplayExecute": {
+        "anon": false,
+        "authenticated": true,
+        "service_role": false
+      }
+    },
+    {
+      "function": "public.product_metric_record(text)",
+      "securityDefiner": true,
+      "searchPath": "public, pg_temp",
+      "bodyMd5": "751b484549c8e169871743f5d56b7c4a",
+      "localReplayMd5": "751b484549c8e169871743f5d56b7c4a",
+      "execute": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": false
+      },
+      "localReplayExecute": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": false
+      }
+    },
+    {
+      "function": "public.rec_criteria_sets_immutable()",
+      "securityDefiner": false,
+      "searchPath": "public, pg_temp",
+      "bodyMd5": "08310b64b04fb296d20c352c0d0c24ea",
+      "localReplayMd5": "08310b64b04fb296d20c352c0d0c24ea",
+      "execute": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": false
+      },
+      "localReplayExecute": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": false
+      }
+    },
+    {
+      "function": "public.rec_talent_access(uuid)",
+      "securityDefiner": true,
+      "searchPath": "public, pg_temp",
+      "bodyMd5": "17a3584bb8cda28d773bae96497af53e",
+      "localReplayMd5": "17a3584bb8cda28d773bae96497af53e",
+      "execute": {
+        "anon": false,
+        "authenticated": true,
+        "service_role": false
+      },
+      "localReplayExecute": {
+        "anon": false,
+        "authenticated": true,
+        "service_role": false
+      }
+    },
+    {
+      "function": "public.rec_talent_assert_may_search(uuid)",
+      "securityDefiner": true,
+      "searchPath": "public, pg_temp",
+      "bodyMd5": "e8f9792c6dcfbbee2563f1ff71ee5886",
+      "localReplayMd5": "e8f9792c6dcfbbee2563f1ff71ee5886",
+      "execute": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": false
+      },
+      "localReplayExecute": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": false
+      }
+    },
+    {
+      "function": "public.rec_talent_catalogue_options()",
+      "securityDefiner": true,
+      "searchPath": "public, pg_temp",
+      "bodyMd5": "e44f5ae5bd00f69b84750579f9d54d18",
+      "localReplayMd5": "e44f5ae5bd00f69b84750579f9d54d18",
+      "execute": {
+        "anon": false,
+        "authenticated": true,
+        "service_role": false
+      },
+      "localReplayExecute": {
+        "anon": false,
+        "authenticated": true,
+        "service_role": false
+      }
+    },
+    {
+      "function": "public.rec_talent_confirm_criteria(uuid,integer,uuid,jsonb)",
+      "securityDefiner": true,
+      "searchPath": "public, pg_temp",
+      "bodyMd5": "db60d817f78453dc008c302992b5c7f7",
+      "localReplayMd5": "db60d817f78453dc008c302992b5c7f7",
+      "execute": {
+        "anon": false,
+        "authenticated": true,
+        "service_role": false
+      },
+      "localReplayExecute": {
+        "anon": false,
+        "authenticated": true,
+        "service_role": false
+      }
+    },
+    {
+      "function": "public.rec_talent_contact_guard()",
+      "securityDefiner": false,
+      "searchPath": "public, pg_temp",
+      "bodyMd5": "b4ac26b4c3197fb4f96797e83875ae64",
+      "localReplayMd5": "b4ac26b4c3197fb4f96797e83875ae64",
+      "execute": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": false
+      },
+      "localReplayExecute": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": false
+      }
+    },
+    {
+      "function": "public.rec_talent_contacts(uuid)",
+      "securityDefiner": true,
+      "searchPath": "public, pg_temp",
+      "bodyMd5": "21a0236554c6314df13c683c55c877ee",
+      "localReplayMd5": "21a0236554c6314df13c683c55c877ee",
+      "execute": {
+        "anon": false,
+        "authenticated": true,
+        "service_role": false
+      },
+      "localReplayExecute": {
+        "anon": false,
+        "authenticated": true,
+        "service_role": false
+      }
+    },
+    {
+      "function": "public.rec_talent_evaluate(jsonb,jsonb,jobs)",
+      "securityDefiner": true,
+      "searchPath": "public, pg_temp",
+      "bodyMd5": "9c0709479bd45cd5307111489b15e029",
+      "localReplayMd5": "9c0709479bd45cd5307111489b15e029",
+      "execute": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": false
+      },
+      "localReplayExecute": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": false
+      }
+    },
+    {
+      "function": "public.rec_talent_get_criteria(uuid)",
+      "securityDefiner": true,
+      "searchPath": "public, pg_temp",
+      "bodyMd5": "8ce777a84779e59832d37adebd562473",
+      "localReplayMd5": "8ce777a84779e59832d37adebd562473",
+      "execute": {
+        "anon": false,
+        "authenticated": true,
+        "service_role": false
+      },
+      "localReplayExecute": {
+        "anon": false,
+        "authenticated": true,
+        "service_role": false
+      }
+    },
+    {
+      "function": "public.rec_talent_latest_criteria(uuid)",
+      "securityDefiner": true,
+      "searchPath": "public, pg_temp",
+      "bodyMd5": "238f1ccd6f091d3b1fd730616ef4517a",
+      "localReplayMd5": "238f1ccd6f091d3b1fd730616ef4517a",
+      "execute": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": false
+      },
+      "localReplayExecute": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": false
+      }
+    },
+    {
+      "function": "public.rec_talent_latest_profile(uuid)",
+      "securityDefiner": true,
+      "searchPath": "public, pg_temp",
+      "bodyMd5": "cf9c1c1091306e66392e0d80b025e19f",
+      "localReplayMd5": "cf9c1c1091306e66392e0d80b025e19f",
+      "execute": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": false
+      },
+      "localReplayExecute": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": false
+      }
+    },
+    {
+      "function": "public.rec_talent_level_rank(text)",
+      "securityDefiner": false,
+      "searchPath": null,
+      "bodyMd5": "a8272f67c8970748d95cfc09912571ea",
+      "localReplayMd5": "a8272f67c8970748d95cfc09912571ea",
+      "execute": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": false
+      },
+      "localReplayExecute": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": false
+      }
+    },
+    {
+      "function": "public.rec_talent_link_application()",
+      "securityDefiner": true,
+      "searchPath": "public, pg_temp",
+      "bodyMd5": "e7a1eb12f75ae590035dbab41f106e24",
+      "localReplayMd5": "e7a1eb12f75ae590035dbab41f106e24",
+      "execute": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": false
+      },
+      "localReplayExecute": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": false
+      }
+    },
+    {
+      "function": "public.rec_talent_pool(uuid)",
+      "securityDefiner": true,
+      "searchPath": "public, pg_temp",
+      "bodyMd5": "463e48f860b7ab4b5061fcc0d176edd5",
+      "localReplayMd5": "463e48f860b7ab4b5061fcc0d176edd5",
+      "execute": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": false
+      },
+      "localReplayExecute": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": false
+      }
+    },
+    {
+      "function": "public.rec_talent_profile(uuid,uuid)",
+      "securityDefiner": true,
+      "searchPath": "public, pg_temp",
+      "bodyMd5": "e19fe893d441df433a68f98cba951dc8",
+      "localReplayMd5": "e19fe893d441df433a68f98cba951dc8",
+      "execute": {
+        "anon": false,
+        "authenticated": true,
+        "service_role": false
+      },
+      "localReplayExecute": {
+        "anon": false,
+        "authenticated": true,
+        "service_role": false
+      }
+    },
+    {
+      "function": "public.rec_talent_search(uuid,jsonb)",
+      "securityDefiner": true,
+      "searchPath": "public, pg_temp",
+      "bodyMd5": "357dd6758b1528b6d138d2676686050f",
+      "localReplayMd5": "357dd6758b1528b6d138d2676686050f",
+      "execute": {
+        "anon": false,
+        "authenticated": true,
+        "service_role": false
+      },
+      "localReplayExecute": {
+        "anon": false,
+        "authenticated": true,
+        "service_role": false
+      }
+    },
+    {
+      "function": "public.rec_talent_send_contact(uuid,uuid,text,uuid,text)",
+      "securityDefiner": true,
+      "searchPath": "public, pg_temp",
+      "bodyMd5": "589986f2a04c01bde8cfed4bba570623",
+      "localReplayMd5": "589986f2a04c01bde8cfed4bba570623",
+      "execute": {
+        "anon": false,
+        "authenticated": true,
+        "service_role": false
+      },
+      "localReplayExecute": {
+        "anon": false,
+        "authenticated": true,
+        "service_role": false
+      }
+    },
+    {
+      "function": "public.rec_talent_user_may_search(uuid,uuid)",
+      "securityDefiner": true,
+      "searchPath": "public, pg_temp",
+      "bodyMd5": "e1ad67346b7baa4c8c2a58c17dde2c1d",
+      "localReplayMd5": "e1ad67346b7baa4c8c2a58c17dde2c1d",
+      "execute": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": false
+      },
+      "localReplayExecute": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": false
+      }
+    },
+    {
+      "function": "public.rec_talent_withdraw_contact(uuid)",
+      "securityDefiner": true,
+      "searchPath": "public, pg_temp",
+      "bodyMd5": "4014e4f00f78fac40164042788d51107",
+      "localReplayMd5": "4014e4f00f78fac40164042788d51107",
+      "execute": {
+        "anon": false,
+        "authenticated": true,
+        "service_role": false
+      },
+      "localReplayExecute": {
+        "anon": false,
+        "authenticated": true,
+        "service_role": false
+      }
+    },
+    {
+      "function": "public.sp_assert_passport_session()",
+      "securityDefiner": true,
+      "searchPath": "public, pg_temp",
+      "bodyMd5": "0a03b385ea8b09ec0507d052f7ff7edd",
+      "localReplayMd5": "0a03b385ea8b09ec0507d052f7ff7edd",
+      "execute": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": false
+      },
+      "localReplayExecute": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": false
+      }
+    },
+    {
+      "function": "public.sp_catalogue_requirement_class(text)",
+      "securityDefiner": true,
+      "searchPath": "public, pg_temp",
+      "bodyMd5": "495c19fe6461443a56f720847c8984fe",
+      "localReplayMd5": "495c19fe6461443a56f720847c8984fe",
+      "execute": {
+        "anon": false,
+        "authenticated": true,
+        "service_role": false
+      },
+      "localReplayExecute": {
+        "anon": false,
+        "authenticated": true,
+        "service_role": false
+      }
+    },
+    {
+      "function": "public.sp_decision_trust(text,text,boolean)",
+      "securityDefiner": false,
+      "searchPath": "public, pg_temp",
+      "bodyMd5": "69c0115c8bb20207d093a01c39474c6e",
+      "localReplayMd5": "69c0115c8bb20207d093a01c39474c6e",
+      "execute": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": false
+      },
+      "localReplayExecute": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": false
+      }
+    },
+    {
+      "function": "public.sp_entry_review_state_core(uuid,uuid,boolean)",
+      "securityDefiner": true,
+      "searchPath": "public, pg_temp",
+      "bodyMd5": "9a2cc2182d06ee904b502735c1174d44",
+      "localReplayMd5": "9a2cc2182d06ee904b502735c1174d44",
+      "execute": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": false
+      },
+      "localReplayExecute": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": false
+      }
+    },
+    {
+      "function": "public.sp_entry_review_state(uuid,uuid)",
+      "securityDefiner": true,
+      "searchPath": "public, pg_temp",
+      "bodyMd5": "2f56b0602239be97d99d82ade6678666",
+      "localReplayMd5": "2f56b0602239be97d99d82ade6678666",
+      "execute": {
+        "anon": false,
+        "authenticated": true,
+        "service_role": false
+      },
+      "localReplayExecute": {
+        "anon": false,
+        "authenticated": true,
+        "service_role": false
+      }
+    },
+    {
+      "function": "public.sp_metric_on_claim()",
+      "securityDefiner": true,
+      "searchPath": "public, pg_temp",
+      "bodyMd5": "dd3782be1e72be36def4ef1a84f94ae3",
+      "localReplayMd5": "dd3782be1e72be36def4ef1a84f94ae3",
+      "execute": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": false
+      },
+      "localReplayExecute": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": false
+      }
+    },
+    {
+      "function": "public.sp_metric_on_request()",
+      "securityDefiner": true,
+      "searchPath": "public, pg_temp",
+      "bodyMd5": "6ada271820961fd7dd662b170257836e",
+      "localReplayMd5": "6ada271820961fd7dd662b170257836e",
+      "execute": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": false
+      },
+      "localReplayExecute": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": false
+      }
+    },
+    {
+      "function": "public.sp_notice_on_decision()",
+      "securityDefiner": true,
+      "searchPath": "public, pg_temp",
+      "bodyMd5": "b5b701134da2543efe6c4a101764262e",
+      "localReplayMd5": "b5b701134da2543efe6c4a101764262e",
+      "execute": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": false
+      },
+      "localReplayExecute": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": false
+      }
+    },
+    {
+      "function": "public.sp_notice_on_request()",
+      "securityDefiner": true,
+      "searchPath": "public, pg_temp",
+      "bodyMd5": "f776f6e96191fcc7cf9f946076f6cb86",
+      "localReplayMd5": "f776f6e96191fcc7cf9f946076f6cb86",
+      "execute": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": false
+      },
+      "localReplayExecute": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": false
+      }
+    },
+    {
+      "function": "public.sp_notice_reviewers()",
+      "securityDefiner": true,
+      "searchPath": "public, pg_temp",
+      "bodyMd5": "b4ec820705061d0e36d362aae5515e20",
+      "localReplayMd5": "b4ec820705061d0e36d362aae5515e20",
+      "execute": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": false
+      },
+      "localReplayExecute": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": false
+      }
+    },
+    {
+      "function": "public.sp_reply_to_clarification(uuid,timestamp with time zone,text)",
+      "securityDefiner": true,
+      "searchPath": "public, pg_temp",
+      "bodyMd5": "073ae8aecdff0f3b9193fa30191298ec",
+      "localReplayMd5": "073ae8aecdff0f3b9193fa30191298ec",
+      "execute": {
+        "anon": false,
+        "authenticated": true,
+        "service_role": false
+      },
+      "localReplayExecute": {
+        "anon": false,
+        "authenticated": true,
+        "service_role": false
+      }
+    },
+    {
+      "function": "public.sp_review_reader(uuid,uuid)",
+      "securityDefiner": true,
+      "searchPath": "public, pg_temp",
+      "bodyMd5": "4034527149c0f6726e9980ebd690113b",
+      "localReplayMd5": "4034527149c0f6726e9980ebd690113b",
+      "execute": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": false
+      },
+      "localReplayExecute": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": false
+      }
+    },
+    {
+      "function": "public.sp_review_thread(uuid,uuid)",
+      "securityDefiner": true,
+      "searchPath": "public, pg_temp",
+      "bodyMd5": "ca970af5d683a1065ac75271be4acf64",
+      "localReplayMd5": "ca970af5d683a1065ac75271be4acf64",
+      "execute": {
+        "anon": false,
+        "authenticated": true,
+        "service_role": false
+      },
+      "localReplayExecute": {
+        "anon": false,
+        "authenticated": true,
+        "service_role": false
+      }
+    },
+    {
+      "function": "public.sp_talent_block_employer(uuid,uuid)",
+      "securityDefiner": true,
+      "searchPath": "public, pg_temp",
+      "bodyMd5": "176c1186db071e56f9a96f456567cd8c",
+      "localReplayMd5": "176c1186db071e56f9a96f456567cd8c",
+      "execute": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": false
+      },
+      "localReplayExecute": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": false
+      }
+    },
+    {
+      "function": "public.sp_talent_card(uuid)",
+      "securityDefiner": true,
+      "searchPath": "public, pg_temp",
+      "bodyMd5": "e96cc8c56c085f225bc32023f878bb21",
+      "localReplayMd5": "e96cc8c56c085f225bc32023f878bb21",
+      "execute": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": false
+      },
+      "localReplayExecute": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": false
+      }
+    },
+    {
+      "function": "public.sp_talent_consent_events_guard()",
+      "securityDefiner": false,
+      "searchPath": "public, pg_temp",
+      "bodyMd5": "5bca90a9627f32b297b8cb25d56a17ba",
+      "localReplayMd5": "5bca90a9627f32b297b8cb25d56a17ba",
+      "execute": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": false
+      },
+      "localReplayExecute": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": false
+      }
+    },
+    {
+      "function": "public.sp_talent_entry_level(text,uuid,uuid)",
+      "securityDefiner": true,
+      "searchPath": "public, pg_temp",
+      "bodyMd5": "3496bcc35b359501cd045c481aae48ca",
+      "localReplayMd5": "3496bcc35b359501cd045c481aae48ca",
+      "execute": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": false
+      },
+      "localReplayExecute": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": false
+      }
+    },
+    {
+      "function": "public.sp_talent_experience(uuid)",
+      "securityDefiner": true,
+      "searchPath": "public, pg_temp",
+      "bodyMd5": "7a1c1f84b3e52e8f737f2d0e378f6514",
+      "localReplayMd5": "7a1c1f84b3e52e8f737f2d0e378f6514",
+      "execute": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": false
+      },
+      "localReplayExecute": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": false
+      }
+    },
+    {
+      "function": "public.sp_talent_follow_correction()",
+      "securityDefiner": true,
+      "searchPath": "public, pg_temp",
+      "bodyMd5": "9785819deb669b5318949b4eb5b4007e",
+      "localReplayMd5": "9785819deb669b5318949b4eb5b4007e",
+      "execute": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": false
+      },
+      "localReplayExecute": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": false
+      }
+    },
+    {
+      "function": "public.sp_talent_get_settings()",
+      "securityDefiner": true,
+      "searchPath": "public, pg_temp",
+      "bodyMd5": "218036bdaf1b5a3992a5e1784a70b7c5",
+      "localReplayMd5": "218036bdaf1b5a3992a5e1784a70b7c5",
+      "execute": {
+        "anon": false,
+        "authenticated": true,
+        "service_role": false
+      },
+      "localReplayExecute": {
+        "anon": false,
+        "authenticated": true,
+        "service_role": false
+      }
+    },
+    {
+      "function": "public.sp_talent_merits(uuid)",
+      "securityDefiner": true,
+      "searchPath": "public, pg_temp",
+      "bodyMd5": "5bd58286be06c77c60c6dcdd6abc4215",
+      "localReplayMd5": "5bd58286be06c77c60c6dcdd6abc4215",
+      "execute": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": false
+      },
+      "localReplayExecute": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": false
+      }
+    },
+    {
+      "function": "public.sp_talent_my_contacts()",
+      "securityDefiner": true,
+      "searchPath": "public, pg_temp",
+      "bodyMd5": "a71e122a544d3ba8d341787196d54e65",
+      "localReplayMd5": "a71e122a544d3ba8d341787196d54e65",
+      "execute": {
+        "anon": false,
+        "authenticated": true,
+        "service_role": false
+      },
+      "localReplayExecute": {
+        "anon": false,
+        "authenticated": true,
+        "service_role": false
+      }
+    },
+    {
+      "function": "public.sp_talent_pause()",
+      "securityDefiner": true,
+      "searchPath": "public, pg_temp",
+      "bodyMd5": "7e71a1b0944c45dfa26d861dfd38d809",
+      "localReplayMd5": "7e71a1b0944c45dfa26d861dfd38d809",
+      "execute": {
+        "anon": false,
+        "authenticated": true,
+        "service_role": false
+      },
+      "localReplayExecute": {
+        "anon": false,
+        "authenticated": true,
+        "service_role": false
+      }
+    },
+    {
+      "function": "public.sp_talent_preview()",
+      "securityDefiner": true,
+      "searchPath": "public, pg_temp",
+      "bodyMd5": "0ee01f30df5fb3bbf97229cbe24dde0a",
+      "localReplayMd5": "0ee01f30df5fb3bbf97229cbe24dde0a",
+      "execute": {
+        "anon": false,
+        "authenticated": true,
+        "service_role": false
+      },
+      "localReplayExecute": {
+        "anon": false,
+        "authenticated": true,
+        "service_role": false
+      }
+    },
+    {
+      "function": "public.sp_talent_respond_contact(uuid,boolean,boolean)",
+      "securityDefiner": true,
+      "searchPath": "public, pg_temp",
+      "bodyMd5": "bc9f3059e83fd22ade43aba003266eee",
+      "localReplayMd5": "bc9f3059e83fd22ade43aba003266eee",
+      "execute": {
+        "anon": false,
+        "authenticated": true,
+        "service_role": false
+      },
+      "localReplayExecute": {
+        "anon": false,
+        "authenticated": true,
+        "service_role": false
+      }
+    },
+    {
+      "function": "public.sp_talent_save_settings(integer,text,text,uuid[],uuid[],jsonb)",
+      "securityDefiner": true,
+      "searchPath": "public, pg_temp",
+      "bodyMd5": "59180e200c5852609808e7ddacaa6869",
+      "localReplayMd5": "59180e200c5852609808e7ddacaa6869",
+      "execute": {
+        "anon": false,
+        "authenticated": true,
+        "service_role": false
+      },
+      "localReplayExecute": {
+        "anon": false,
+        "authenticated": true,
+        "service_role": false
+      }
+    },
+    {
+      "function": "public.sp_talent_unblock_employer(uuid)",
+      "securityDefiner": true,
+      "searchPath": "public, pg_temp",
+      "bodyMd5": "6af22687e50f6b0ea4df46ed8e9dd549",
+      "localReplayMd5": "6af22687e50f6b0ea4df46ed8e9dd549",
+      "execute": {
+        "anon": false,
+        "authenticated": true,
+        "service_role": false
+      },
+      "localReplayExecute": {
+        "anon": false,
+        "authenticated": true,
+        "service_role": false
+      }
+    },
+    {
+      "function": "public.sp_talent_validity(date,date,boolean)",
+      "securityDefiner": false,
+      "searchPath": "public, pg_temp",
+      "bodyMd5": "03b728924d3460a647c1f74e32d5e08b",
+      "localReplayMd5": "03b728924d3460a647c1f74e32d5e08b",
+      "execute": {
+        "anon": false,
+        "authenticated": true,
+        "service_role": false
+      },
+      "localReplayExecute": {
+        "anon": false,
+        "authenticated": true,
+        "service_role": false
+      }
+    },
+    {
+      "function": "public.sp_verification_replies_guard()",
+      "securityDefiner": false,
+      "searchPath": "public, pg_temp",
+      "bodyMd5": "ddba45715ae1bc4fc6c55f2245d9121c",
+      "localReplayMd5": "ddba45715ae1bc4fc6c55f2245d9121c",
+      "execute": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": false
+      },
+      "localReplayExecute": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": false
+      }
+    },
+    {
+      "function": "public.sp_verifier_decide(uuid,text,text,text,text,date,date)",
+      "securityDefiner": true,
+      "searchPath": "public",
+      "bodyMd5": "8d02249e257c9d31df4691a2b53b5b8c",
+      "localReplayMd5": "8d02249e257c9d31df4691a2b53b5b8c",
+      "execute": {
+        "anon": false,
+        "authenticated": true,
+        "service_role": false
+      },
+      "localReplayExecute": {
+        "anon": false,
+        "authenticated": true,
+        "service_role": false
+      }
+    },
+    {
+      "function": "public.user_notices_claim_emails(integer)",
+      "securityDefiner": true,
+      "searchPath": "public, pg_temp",
+      "bodyMd5": "68cac96114f18e1bc27a52bee198184b",
+      "localReplayMd5": "68cac96114f18e1bc27a52bee198184b",
+      "execute": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": true
+      },
+      "localReplayExecute": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": true
+      }
+    },
+    {
+      "function": "public.user_notices_enqueue(uuid,text,text,text,uuid,uuid,text,text)",
+      "securityDefiner": true,
+      "searchPath": "public, pg_temp",
+      "bodyMd5": "df3b5b038b5af09616c6f0343e589b5f",
+      "localReplayMd5": "df3b5b038b5af09616c6f0343e589b5f",
+      "execute": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": false
+      },
+      "localReplayExecute": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": false
+      }
+    },
+    {
+      "function": "public.user_notices_inbox(integer)",
+      "securityDefiner": true,
+      "searchPath": "public, pg_temp",
+      "bodyMd5": "6f7874d82a95d44e78e7c8866a874685",
+      "localReplayMd5": "6f7874d82a95d44e78e7c8866a874685",
+      "execute": {
+        "anon": false,
+        "authenticated": true,
+        "service_role": false
+      },
+      "localReplayExecute": {
+        "anon": false,
+        "authenticated": true,
+        "service_role": false
+      }
+    },
+    {
+      "function": "public.user_notices_mark_read(uuid[])",
+      "securityDefiner": true,
+      "searchPath": "public, pg_temp",
+      "bodyMd5": "ae69fea9b394f3b279031ee5458a011e",
+      "localReplayMd5": "ae69fea9b394f3b279031ee5458a011e",
+      "execute": {
+        "anon": false,
+        "authenticated": true,
+        "service_role": false
+      },
+      "localReplayExecute": {
+        "anon": false,
+        "authenticated": true,
+        "service_role": false
+      }
+    },
+    {
+      "function": "public.user_notices_settle_email(uuid,uuid,text,text)",
+      "securityDefiner": true,
+      "searchPath": "public, pg_temp",
+      "bodyMd5": "31a692f8399b342a3dd8f7dad25c0e30",
+      "localReplayMd5": "31a692f8399b342a3dd8f7dad25c0e30",
+      "execute": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": true
+      },
+      "localReplayExecute": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": true
+      }
+    },
+    {
+      "function": "public.user_notices_still_allowed(user_notices)",
+      "securityDefiner": true,
+      "searchPath": "public, pg_temp",
+      "bodyMd5": "c66d86662f756105b82f53e703e0bf59",
+      "localReplayMd5": "c66d86662f756105b82f53e703e0bf59",
+      "execute": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": false
+      },
+      "localReplayExecute": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": false
+      }
+    },
+    {
+      "function": "public.user_notices_visible(user_notices)",
+      "securityDefiner": true,
+      "searchPath": "public, pg_temp",
+      "bodyMd5": "add50b6d7d01d6a0b9286fae34ca592a",
+      "localReplayMd5": "add50b6d7d01d6a0b9286fae34ca592a",
+      "execute": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": false
+      },
+      "localReplayExecute": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": false
+      }
+    }
+  ],
+  "notVerifiedHere": [
+    "The deployed application version (the app is #473, not merged).",
+    "Actual e-mail delivery, retry and deduplication of product notices (separate production tests).",
+    "Any write path on production: this verification wrote nothing."
+  ]
+}

@@ -515,6 +515,13 @@ async function mount(page: Page, urlPath: string, scenario: Scenario) {
   await page.route("**/_serverFn/**", async (route) => {
     const name = exportOf(route.request().url()) ?? "?";
     switch (name) {
+      // The Passport's updates and an entry's review history (2026-10-15)
+      // are not what these scenarios look at: answered as not installed, so
+      // the page renders exactly as before; the real reads are proven by
+      // the Passport and talent suites against a database.
+      case "listMyNotices":
+      case "getReviewThread":
+        return ok(route, { installed: false });
       case "getMyPassport":
         if (scenario.passportFails) return boom(route, "passport read failed");
         if (scenario.fourCredentials || scenario.elevenCredentials)

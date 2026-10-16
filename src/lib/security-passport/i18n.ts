@@ -2634,6 +2634,231 @@ const sv = {
     "Utfärdarens publicerade märke, hämtat från länken du angav",
   "hayat.saved.referenceNote":
     "Referensen pekar ut den här enda kontrollen, för din egen del och för support. Den är inget verifieringsnummer, säger inget om dig och kan inte slås upp av någon annan.",
+  // ── Slutuppdrag 2026-10-15: textsvar, historik, nästa steg ───────────
+  "ver.reply.title": "Svara granskaren",
+  "ver.reply.label": "Ditt svar till granskaren",
+  "ver.reply.help":
+    "Förklara här om det räcker med text. Behöver granskaren ett nytt dokument laddar du upp det under Dokumentation. Ditt svar skickar tillbaka ärendet till granskaren.",
+  "ver.reply.submit": "Skicka svar",
+  "ver.reply.submitting": "Skickar …",
+  "ver.reply.sent": "Ditt svar är skickat. Ärendet är tillbaka hos granskaren.",
+  "ver.reply.stale":
+    "Ärendet ändrades medan sidan var öppen. Läs om sidan; det du skrev finns kvar här så att du kan skicka det igen.",
+  "ver.reply.notAwaiting": "Ärendet väntar inte längre på ett svar från dig. Läs om sidan.",
+  "ver.reply.invalid": "Skriv ett svar på högst 2 000 tecken.",
+  "ver.reply.failed": "Svaret kunde inte skickas. Det du skrev finns kvar. Försök igen.",
+  "ver.reply.count": "tecken kvar",
+  "ver.thread.title": "Ärendets historik",
+  "ver.thread.loadError":
+    "Historiken kunde inte hämtas just nu. Det betyder inte att något saknas. Försök igen.",
+  "ver.thread.retry": "Försök igen",
+  "ver.thread.empty": "Inga beslut eller svar ännu.",
+  "ver.thread.decision.rejected": "Kunde inte godkännas",
+  "ver.thread.decision.clarification_requested": "Komplettering begärd",
+  "ver.thread.decision.revoked": "Granskningen återkallad",
+  "ver.thread.reply": "Ditt svar",
+  "ver.thread.replyReviewer": "Innehavarens svar",
+  "ver.thread.message": "Meddelande",
+  "ver.thread.internalNote": "Intern anteckning (visas aldrig för innehavaren)",
+  "ver.thread.by": "av",
+  "ver.current.label": "Aktuell status",
+  "ver.current.none": "Inte granskad",
+  "ver.current.pending": "Under granskning",
+  "ver.current.clarification_requested": "Komplettering begärd",
+  "ver.basis.label": "Styrks genom",
+  "ver.current.rejected": "Kunde inte godkännas",
+  "ver.current.revoked": "Granskningen återkallad",
+  "ver.current.withdrawn": "Begäran återtagen",
+  "ver.current.reviewNotIssuer":
+    "Dokumentgranskad betyder att CQrityjob har granskat underlaget. Det är inte en bekräftelse från utfärdaren.",
+
+  "next.title": "Nästa steg",
+  "next.addEvidence.title": "Underlag saknas",
+  "next.addEvidence.body":
+    "Meriten är registrerad som din egen uppgift. Med ett intyg eller kort kan du begära dokumentgranskning.",
+  "next.addEvidence.action": "Bifoga underlag",
+  "next.requestReview.title": "Begär granskning",
+  "next.requestReview.body":
+    "Underlaget är uppladdat men inte granskat. Begär dokumentgranskning så att meriten kan visas som dokumentgranskad.",
+  "next.requestReview.action": "Begär granskning",
+  "next.waiting.title": "Granskning pågår",
+  "next.waiting.body":
+    "Nu är det granskaren som gör nästa steg. Du behöver inte göra något; du får besked i Passport och via e-post när ärendet är bedömt.",
+  "next.clarification.title": "Komplettering begärd",
+  "next.clarification.body":
+    "Granskaren behöver mer information. Svara med text eller ladda upp nytt underlag.",
+  "next.clarification.action": "Läs och svara",
+  "next.rejected.title": "Granskningen kunde inte godkännas",
+  "next.rejected.body":
+    "Läs motiveringen. Rätta uppgifterna eller ladda upp ett tydligare underlag och begär en ny granskning.",
+  "next.rejected.action": "Läs beslutet",
+  "next.revoked.title": "Granskningen är återkallad",
+  "next.revoked.body":
+    "Meriten visas inte längre som granskad. Läs varför och ladda upp nytt underlag om du vill begära en ny granskning.",
+  "next.revoked.action": "Läs beslutet",
+  "next.renew.title": "Förnya meriten",
+  "next.renew.body":
+    "Meriten har gått ut eller går snart ut. Rätta giltighetsdatumet när du har ett nytt intyg, ladda upp det och begär ny granskning. En ändrad merit behåller inte en tidigare granskning.",
+  "next.renew.action": "Uppdatera meriten",
+  "next.done.title": "Granskningen är godkänd",
+  "next.done.body":
+    "Beslutet gäller underlaget som granskades. Det är inget löfte om behörighet eller om att meriten fortfarande gäller. Du väljer själv om meriten ska delas via länk eller vara sökbar för arbetsgivare. Inget delas automatiskt.",
+  "next.done.share": "Dela med en länk",
+  "next.done.discover": "Välj synlighet för arbetsgivare",
+  "next.employer.title": "Bekräftelse från arbetsgivare",
+  "next.employer.body":
+    "En anställning kan bekräftas av arbetsgivaren eller dokumentgranskas av CQrityjob. Välj under Granskning.",
+  "next.employer.action": "Gå till granskning",
+
+  // ── Inkorg ────────────────────────────────────────────────────────────
+  "notices.title": "Händelser",
+  "notices.lead": "Det som väntar på dig och det som har beslutats.",
+  "notices.empty": "Inga händelser just nu.",
+  "notices.loadError": "Händelserna kunde inte hämtas just nu. Försök igen.",
+  "notices.retry": "Försök igen",
+  "notices.markAll": "Markera alla som lästa",
+  "notices.unread": "olästa",
+  "notices.new": "Ny",
+  "notices.open": "Öppna",
+  "notices.kind.passport_review_requested": "Ett ärende väntar på granskning",
+  "notices.kind.passport_clarification_answered": "Svar på komplettering väntar på granskning",
+  "notices.kind.passport_clarification_requested": "Komplettering begärd för en merit",
+  "notices.kind.passport_decision_approved": "En merit är dokumentgranskad",
+  "notices.kind.passport_decision_employer_confirmed":
+    "En arbetsgivare har bekräftat en anställning",
+  "notices.kind.passport_decision_approved_other": "En granskning är godkänd",
+  "notices.kind.passport_decision_rejected": "En granskning kunde inte godkännas",
+  "notices.kind.passport_verification_revoked": "En granskning har återkallats",
+  "notices.kind.talent_contact_received": "Ny kontaktförfrågan från en arbetsgivare",
+  "notices.kind.talent_contact_accepted": "Kontaktförfrågan accepterad",
+  "notices.kind.talent_contact_declined": "Kontaktförfrågan avböjd",
+
+  // ── Synlighet för arbetsgivare ────────────────────────────────────────
+  "disc.nav": "Jobbmöjligheter",
+  "disc.title": "Synlighet för arbetsgivare",
+  "disc.lead":
+    "Ditt Passport är privat. Här väljer du om godkända arbetsgivare får hitta dig när de söker personer till en publicerad tjänst – och exakt vad de då ser.",
+  "disc.loadError": "Inställningen kunde inte hämtas just nu. Inget har ändrats. Försök igen.",
+  "disc.notInstalled":
+    "Sökbarhet för arbetsgivare är inte aktiverad i den här miljön ännu. Ditt Passport är privat.",
+  "disc.retry": "Försök igen",
+  "disc.back": "Tillbaka till ditt Passport",
+  "disc.savedState.title": "Sparat läge",
+  "disc.savedState.private": "Du är inte sökbar. Ingen arbetsgivare kan hitta dig.",
+  "disc.savedState.searchable":
+    "Arbetsgivare med en publicerad tjänst kan hitta de uppgifter du har sparat, utan ditt namn.",
+  "disc.pause.help":
+    "Pausa döljer dig direkt och ger dig en ny anonym referens, så att tidigare sökresultat inte längre leder till dig.",
+  "disc.items.support":
+    "Under varje uppgift står hur den styrks och om den är giltig, med samma ord som arbetsgivaren ser. Egna uppgifter kan också göras sökbara och märks då som egen uppgift.",
+  "disc.items.ongoing": "pågår",
+  "disc.summary.title": "Sammanfattning av dina val",
+  "disc.summary.lead":
+    "Det här blir sökbart när du sparar. Sammanfattningen visar formulärets val; hur arbetsgivare ser dig visas under Så visas dina sparade uppgifter när du har sparat.",
+  "disc.summary.private":
+    "Du har valt Privat. Om du sparar blir ingenting sökbart och ingen arbetsgivare kan hitta dig.",
+  "disc.summary.state": "Läge",
+  "disc.summary.none": "Inget valt",
+  "disc.summary.noPrefs": "Inga angivna",
+  "disc.summary.consentGiven":
+    "Du samtycker till att godkända arbetsgivare kan hitta det som står ovan och be om kontakt. Du kan pausa när som helst.",
+  "disc.summary.consentMissing": "Inte lämnat än. Kryssa i samtycket nedan innan du sparar.",
+  "disc.unsaved.title": "Osparade ändringar",
+  "disc.unsaved.body": "Arbetsgivare ser fortfarande det sparade läget nedan tills du sparar.",
+  "disc.activate": "Gör mig sökbar",
+  "disc.saveChanges": "Spara ändringar",
+  "disc.activated": "Du är sökbar. Så visas dina sparade uppgifter för arbetsgivare.",
+  "disc.state.title": "Vill du vara sökbar?",
+  "disc.state.private": "Privat – inte sökbar",
+  "disc.state.private.help":
+    "Ingen arbetsgivare kan hitta dig. Du använder Passport för dig själv och för länkar du delar.",
+  "disc.state.open": "Öppen för relevanta möjligheter",
+  "disc.state.open.help":
+    "Arbetsgivare med en publicerad tjänst där dina valda meriter är relevanta kan hitta dig och be om kontakt.",
+  "disc.state.active": "Aktivt jobbsökande",
+  "disc.state.active.help": "Som ovan, och arbetsgivare ser att du söker aktivt.",
+  "disc.since": "sedan",
+  "disc.items.title": "Vilka meriter ska vara sökbara?",
+  "disc.items.help":
+    "Bara det du markerar kan visas. Dokument, meritnummer, egna anteckningar och arbetsgivarnamn visas aldrig.",
+  "disc.items.credentials": "Meriter",
+  "disc.items.experience": "Erfarenhet",
+  "disc.items.none": "Du har inga meriter att välja ännu. Registrera en merit först.",
+  "disc.items.addMerit": "Lägg till en merit",
+  "disc.prefs.title": "Jobbpreferenser",
+  "disc.prefs.help": "Valfritt. Hjälper arbetsgivare att se om en tjänst passar dig.",
+  "disc.prefs.areas": "Yrkesområden",
+  "disc.prefs.countries": "Länder du vill arbeta i",
+  "disc.prefs.cities": "Orter (högst fem, separera med komma)",
+  "disc.prefs.employmentTypes": "Anställningsform",
+  "disc.prefs.workplaceTypes": "Arbetsplats",
+  "disc.prefs.availableFrom": "Tillgänglig från",
+  "disc.preview.title": "Så visas dina sparade uppgifter",
+  "disc.preview.lead":
+    "Det här ser en behörig rekryterare när du är sökbar, byggt från det du har sparat. Namn och kontaktuppgifter visas inte förrän du själv accepterar en kontaktförfrågan.",
+  "disc.preview.notSearchable":
+    "Du är inte sökbar just nu. Så här skulle du visas om du blir sökbar:",
+  "disc.preview.empty": "Inget är valt ännu.",
+  "disc.preview.months": "månader säkerhetsrelevant erfarenhet",
+  "disc.preview.limited": "Begränsad till ett visst uppdrag",
+  "disc.consent.title": "Samtycke",
+  "disc.consent.label":
+    "Jag samtycker till att godkända arbetsgivare kan hitta de meriter och preferenser jag valt ovan och be om kontakt med mig. Jag kan pausa när som helst.",
+  "disc.consent.note":
+    "Det här är ett eget val. Att du delar ditt Passport med en ansökan gör dig inte sökbar.",
+  "disc.saving": "Sparar …",
+  "disc.saved": "Sparat.",
+  "disc.pause": "Pausa sökbarhet",
+  "disc.paused":
+    "Sökbarheten är pausad. Arbetsgivare kan inte längre hitta dig eller öppna din profil, inte heller från tidigare sökresultat.",
+  "disc.error.SP_TALENT_STALE":
+    "Inställningen ändrades i ett annat fönster. Läs om sidan; dina val här finns kvar tills du gör det.",
+  "disc.error.SP_TALENT_CONSENT_REQUIRED": "Kryssa i samtycket för att bli sökbar.",
+  "disc.error.SP_TALENT_NOTHING_SELECTED":
+    "Välj minst en merit eller erfarenhet för att bli sökbar.",
+  "disc.error.SP_TALENT_ITEM_NOT_AVAILABLE":
+    "En vald merit är inte längre aktuell. Läs om sidan och välj igen.",
+  "disc.error.SP_TALENT_INVALID": "Kontrollera preferenserna och försök igen.",
+  "disc.error.DISCOVERABILITY_FAILED": "Det gick inte att spara. Dina val finns kvar. Försök igen.",
+  "disc.blocked.title": "Företag du har stoppat",
+  "disc.blocked.help": "De kan inte hitta dig eller kontakta dig.",
+  "disc.blocked.undo": "Tillåt igen",
+  "disc.contacts.title": "Kontaktförfrågningar",
+  "disc.contacts.lead":
+    "Arbetsgivare som vill komma i kontakt med dig om en tjänst. Du bestämmer om och hur du vill svara.",
+  "disc.contacts.empty": "Inga kontaktförfrågningar.",
+  "disc.contacts.loadError": "Förfrågningarna kunde inte hämtas just nu. Försök igen.",
+  "disc.contacts.from": "Från",
+  "disc.contacts.about": "Om tjänsten",
+  "disc.contacts.message": "Meddelande",
+  "disc.contacts.received": "Mottagen",
+  "disc.contacts.jobClosed": "Tjänsten är inte längre öppen.",
+  "disc.contacts.whatAccept":
+    "När du accepterar får företaget se ditt namn. Ingen ansökan skickas. Du väljer själv om du söker och vilka Passport-uppgifter du delar då.",
+  "disc.contacts.readAdvert": "Läs annonsen",
+  "disc.contacts.accept": "Acceptera och dela mitt namn",
+  "disc.contacts.decline": "Avböj",
+  "disc.contacts.declineBlock": "Avböj och stoppa {company}",
+  "disc.contacts.declineHelp":
+    "Avböj svarar nej på den här förfrågan. Att stoppa gäller hela {company}: företaget kan inte längre hitta dig eller kontakta dig om någon tjänst. Du kan ångra det under Företag du har stoppat.",
+  "disc.contacts.declineBlockConfirm":
+    "{company} kommer inte längre att kunna hitta dig eller kontakta dig om någon tjänst. Du kan ångra det under Företag du har stoppat. Fortsätta?",
+  "disc.contacts.acceptedApplyLeft":
+    "Företaget ser nu ditt namn. Du har inte sökt tjänsten och ingen ansökan har skickats. Vill du söka gör du det i annonsen; där väljer du själv om du delar ditt Passport och vilka uppgifter.",
+  "disc.contacts.acceptedExternal":
+    "Företaget ser nu ditt namn. Den här tjänsten söks via företagets egen kanal, som annonsen beskriver. En ansökan där registreras inte i CQrityjob.",
+  "disc.contacts.status.pending": "Väntar på ditt svar",
+  "disc.contacts.status.accepted": "Accepterad",
+  "disc.contacts.status.declined": "Avböjd",
+  "disc.contacts.status.withdrawn": "Återtagen av företaget",
+  "disc.contacts.apply": "Läs annonsen och sök tjänsten",
+  "disc.contacts.applied": "Du har sökt tjänsten. Fortsätt under Mina ansökningar.",
+  "disc.contacts.openApplications": "Mina ansökningar",
+  "disc.contacts.error.TALENT_JOB_CLOSED":
+    "Tjänsten är inte längre öppen, så förfrågan kan inte accepteras.",
+  "disc.contacts.error.TALENT_CONTACT_ALREADY_ANSWERED":
+    "Du har redan svarat på den här förfrågan.",
+  "disc.contacts.error.generic": "Svaret kunde inte sparas. Försök igen.",
 } as const;
 
 export type PassportCopyKey = keyof typeof sv;
@@ -4895,6 +5120,230 @@ const en: Record<PassportCopyKey, string> = {
     "The issuer's published badge, fetched from the link you gave",
   "hayat.saved.referenceNote":
     "The reference identifies this one check, for your own records and for support. It is not a verification number, says nothing about you, and nobody else can look it up.",
+  // ── Final assignment 2026-10-15: text reply, history, next step ──────
+  "ver.reply.title": "Reply to the reviewer",
+  "ver.reply.label": "Your reply to the reviewer",
+  "ver.reply.help":
+    "Explain here if text is enough. If the reviewer needs a new document, upload it under Documentation. Your reply sends the case back to the reviewer.",
+  "ver.reply.submit": "Send reply",
+  "ver.reply.submitting": "Sending …",
+  "ver.reply.sent": "Your reply has been sent. The case is back with the reviewer.",
+  "ver.reply.stale":
+    "The case changed while this page was open. Reload the page; what you wrote is still here so you can send it again.",
+  "ver.reply.notAwaiting": "The case is no longer waiting for a reply from you. Reload the page.",
+  "ver.reply.invalid": "Write a reply of at most 2,000 characters.",
+  "ver.reply.failed": "The reply could not be sent. What you wrote is still here. Try again.",
+  "ver.reply.count": "characters left",
+  "ver.thread.title": "Case history",
+  "ver.thread.loadError":
+    "The history could not be loaded right now. That does not mean anything is missing. Try again.",
+  "ver.thread.retry": "Try again",
+  "ver.thread.empty": "No decisions or replies yet.",
+  "ver.thread.decision.rejected": "Could not be approved",
+  "ver.thread.decision.clarification_requested": "More information requested",
+  "ver.thread.decision.revoked": "Review revoked",
+  "ver.thread.reply": "Your reply",
+  "ver.thread.replyReviewer": "Holder's reply",
+  "ver.thread.message": "Message",
+  "ver.thread.internalNote": "Internal note (never shown to the holder)",
+  "ver.thread.by": "by",
+  "ver.current.label": "Current status",
+  "ver.current.none": "Not reviewed",
+  "ver.current.pending": "Under review",
+  "ver.current.clarification_requested": "More information requested",
+  "ver.basis.label": "Supported by",
+  "ver.current.rejected": "Could not be approved",
+  "ver.current.revoked": "Review revoked",
+  "ver.current.withdrawn": "Request withdrawn",
+  "ver.current.reviewNotIssuer":
+    "Document-reviewed means CQrityjob has reviewed the documentation. It is not a confirmation from the issuer.",
+
+  "next.title": "Next step",
+  "next.addEvidence.title": "Documentation missing",
+  "next.addEvidence.body":
+    "The credential is registered as your own statement. With a certificate or card you can request a document review.",
+  "next.addEvidence.action": "Add supporting evidence",
+  "next.requestReview.title": "Request a review",
+  "next.requestReview.body":
+    "The documentation is uploaded but not reviewed. Request a document review so the credential can be shown as document-reviewed.",
+  "next.requestReview.action": "Request a review",
+  "next.waiting.title": "Review in progress",
+  "next.waiting.body":
+    "The reviewer takes the next step now. You do not need to do anything; you will hear in Passport and by e-mail when the case has been assessed.",
+  "next.clarification.title": "More information requested",
+  "next.clarification.body":
+    "The reviewer needs more information. Reply in text or upload new documentation.",
+  "next.clarification.action": "Read and reply",
+  "next.rejected.title": "The review could not be approved",
+  "next.rejected.body":
+    "Read the reason. Correct the details or upload clearer documentation and request a new review.",
+  "next.rejected.action": "Read the decision",
+  "next.revoked.title": "The review has been revoked",
+  "next.revoked.body":
+    "The credential is no longer shown as reviewed. Read why, and upload new documentation if you want to request a new review.",
+  "next.revoked.action": "Read the decision",
+  "next.renew.title": "Renew the credential",
+  "next.renew.body":
+    "The credential has expired or expires soon. Correct the validity date when you have a new certificate, upload it and request a new review. A changed credential does not keep an earlier review.",
+  "next.renew.action": "Update the credential",
+  "next.done.title": "The review was approved",
+  "next.done.body":
+    "The decision covers the documentation that was reviewed. It is not a promise of an authorisation or that the credential is still valid. You decide whether the credential is shared by link or discoverable by employers. Nothing is shared automatically.",
+  "next.done.share": "Share with a link",
+  "next.done.discover": "Choose visibility for employers",
+  "next.employer.title": "Confirmation from an employer",
+  "next.employer.body":
+    "An employment can be confirmed by the employer or document-reviewed by CQrityjob. Choose under Verification.",
+  "next.employer.action": "Go to verification",
+
+  // ── Inbox ─────────────────────────────────────────────────────────────
+  "notices.title": "Updates",
+  "notices.lead": "What is waiting for you and what has been decided.",
+  "notices.empty": "No updates right now.",
+  "notices.loadError": "Updates could not be loaded right now. Try again.",
+  "notices.retry": "Try again",
+  "notices.markAll": "Mark all as read",
+  "notices.unread": "unread",
+  "notices.new": "New",
+  "notices.open": "Open",
+  "notices.kind.passport_review_requested": "A case is waiting for review",
+  "notices.kind.passport_clarification_answered":
+    "An answer to a clarification is waiting for review",
+  "notices.kind.passport_clarification_requested": "More information requested for a credential",
+  "notices.kind.passport_decision_approved": "A credential has been document-reviewed",
+  "notices.kind.passport_decision_employer_confirmed": "An employer has confirmed employment",
+  "notices.kind.passport_decision_approved_other": "A review has been approved",
+  "notices.kind.passport_decision_rejected": "A review could not be approved",
+  "notices.kind.passport_verification_revoked": "A review has been revoked",
+  "notices.kind.talent_contact_received": "New contact request from an employer",
+  "notices.kind.talent_contact_accepted": "Contact request accepted",
+  "notices.kind.talent_contact_declined": "Contact request declined",
+
+  // ── Visibility for employers ──────────────────────────────────────────
+  "disc.nav": "Job opportunities",
+  "disc.title": "Visibility for employers",
+  "disc.lead":
+    "Your Passport is private. Here you choose whether approved employers may find you when they look for people for a published position – and exactly what they then see.",
+  "disc.loadError": "The setting could not be loaded right now. Nothing has changed. Try again.",
+  "disc.notInstalled":
+    "Discoverability for employers is not enabled in this environment yet. Your Passport is private.",
+  "disc.retry": "Try again",
+  "disc.back": "Back to your Passport",
+  "disc.savedState.title": "Saved setting",
+  "disc.savedState.private": "You are not discoverable. No employer can find you.",
+  "disc.savedState.searchable":
+    "Employers with a published position can find the details you have saved, without your name.",
+  "disc.pause.help":
+    "Pausing hides you at once and gives you a new anonymous reference, so earlier search results no longer lead to you.",
+  "disc.items.support":
+    "Under each item you see how it is supported and whether it is valid, in the same words the employer sees. Your own statements can be made discoverable too and are then labelled as your own statement.",
+  "disc.items.ongoing": "ongoing",
+  "disc.summary.title": "Summary of your choices",
+  "disc.summary.lead":
+    "This becomes discoverable when you save. The summary shows the form's choices; how employers see you is shown under How your saved details are shown once you have saved.",
+  "disc.summary.private":
+    "You have chosen Private. If you save, nothing becomes discoverable and no employer can find you.",
+  "disc.summary.state": "Setting",
+  "disc.summary.none": "Nothing chosen",
+  "disc.summary.noPrefs": "None given",
+  "disc.summary.consentGiven":
+    "You consent to approved employers finding what is listed above and asking to get in touch. You can pause at any time.",
+  "disc.summary.consentMissing": "Not given yet. Tick the consent below before you save.",
+  "disc.unsaved.title": "Unsaved changes",
+  "disc.unsaved.body": "Employers still see the saved setting below until you save.",
+  "disc.activate": "Make me discoverable",
+  "disc.saveChanges": "Save changes",
+  "disc.activated": "You are discoverable. This is how employers see your saved details.",
+  "disc.state.title": "Do you want to be discoverable?",
+  "disc.state.private": "Private – not discoverable",
+  "disc.state.private.help":
+    "No employer can find you. You use Passport for yourself and for links you share.",
+  "disc.state.open": "Open to relevant opportunities",
+  "disc.state.open.help":
+    "Employers with a published position where your chosen credentials are relevant can find you and ask to get in touch.",
+  "disc.state.active": "Actively looking for a job",
+  "disc.state.active.help": "As above, and employers see that you are actively looking.",
+  "disc.since": "since",
+  "disc.items.title": "Which credentials should be discoverable?",
+  "disc.items.help":
+    "Only what you tick can be shown. Documents, credential numbers, your own notes and employer names are never shown.",
+  "disc.items.credentials": "Credentials",
+  "disc.items.experience": "Experience",
+  "disc.items.none": "You have no credentials to choose yet. Register a credential first.",
+  "disc.items.addMerit": "Add a credential",
+  "disc.prefs.title": "Job preferences",
+  "disc.prefs.help": "Optional. Helps employers see whether a position suits you.",
+  "disc.prefs.areas": "Occupational areas",
+  "disc.prefs.countries": "Countries you want to work in",
+  "disc.prefs.cities": "Places (at most five, separated by commas)",
+  "disc.prefs.employmentTypes": "Employment type",
+  "disc.prefs.workplaceTypes": "Workplace",
+  "disc.prefs.availableFrom": "Available from",
+  "disc.preview.title": "How your saved details are shown",
+  "disc.preview.lead":
+    "This is what an authorised recruiter sees while you are discoverable, built from what you have saved. Your name and contact details are not shown until you accept a contact request yourself.",
+  "disc.preview.notSearchable":
+    "You are not discoverable right now. This is how you would appear if you become discoverable:",
+  "disc.preview.empty": "Nothing is selected yet.",
+  "disc.preview.months": "months of security-relevant experience",
+  "disc.preview.limited": "Limited to a specific assignment",
+  "disc.consent.title": "Consent",
+  "disc.consent.label":
+    "I consent to approved employers finding the credentials and preferences I chose above and asking to get in touch with me. I can pause at any time.",
+  "disc.consent.note":
+    "This is a separate choice. Sharing your Passport with an application does not make you discoverable.",
+  "disc.saving": "Saving …",
+  "disc.saved": "Saved.",
+  "disc.pause": "Pause discoverability",
+  "disc.paused":
+    "Discoverability is paused. Employers can no longer find you or open your profile, not even from earlier search results.",
+  "disc.error.SP_TALENT_STALE":
+    "The setting changed in another window. Reload the page; your choices here stay until you do.",
+  "disc.error.SP_TALENT_CONSENT_REQUIRED": "Tick the consent to become discoverable.",
+  "disc.error.SP_TALENT_NOTHING_SELECTED":
+    "Choose at least one credential or experience to become discoverable.",
+  "disc.error.SP_TALENT_ITEM_NOT_AVAILABLE":
+    "A chosen credential is no longer current. Reload the page and choose again.",
+  "disc.error.SP_TALENT_INVALID": "Check the preferences and try again.",
+  "disc.error.DISCOVERABILITY_FAILED": "Could not save. Your choices are still here. Try again.",
+  "disc.blocked.title": "Companies you have stopped",
+  "disc.blocked.help": "They cannot find you or contact you.",
+  "disc.blocked.undo": "Allow again",
+  "disc.contacts.title": "Contact requests",
+  "disc.contacts.lead":
+    "Employers who would like to get in touch with you about a position. You decide whether and how to answer.",
+  "disc.contacts.empty": "No contact requests.",
+  "disc.contacts.loadError": "The requests could not be loaded right now. Try again.",
+  "disc.contacts.from": "From",
+  "disc.contacts.about": "About the position",
+  "disc.contacts.message": "Message",
+  "disc.contacts.received": "Received",
+  "disc.contacts.jobClosed": "The position is no longer open.",
+  "disc.contacts.whatAccept":
+    "When you accept, the company sees your name. No application is sent. You decide yourself whether to apply and which Passport details you share then.",
+  "disc.contacts.readAdvert": "Read the advert",
+  "disc.contacts.accept": "Accept and share my name",
+  "disc.contacts.decline": "Decline",
+  "disc.contacts.declineBlock": "Decline and stop {company}",
+  "disc.contacts.declineHelp":
+    "Decline says no to this request. Stopping covers all of {company}: the company can no longer find you or contact you about any position. You can undo it under Companies you have stopped.",
+  "disc.contacts.declineBlockConfirm":
+    "{company} will no longer be able to find you or contact you about any position. You can undo this under Companies you have stopped. Continue?",
+  "disc.contacts.acceptedApplyLeft":
+    "The company now sees your name. You have not applied and no application has been sent. If you want to apply, do it from the advert; there you choose whether to share your Passport and which details.",
+  "disc.contacts.acceptedExternal":
+    "The company now sees your name. This position is applied for through the company's own channel, described in the advert. An application there is not recorded in CQrityjob.",
+  "disc.contacts.status.pending": "Waiting for your answer",
+  "disc.contacts.status.accepted": "Accepted",
+  "disc.contacts.status.declined": "Declined",
+  "disc.contacts.status.withdrawn": "Withdrawn by the company",
+  "disc.contacts.apply": "Read the advert and apply",
+  "disc.contacts.applied": "You have applied for the position. Continue under My applications.",
+  "disc.contacts.openApplications": "My applications",
+  "disc.contacts.error.TALENT_JOB_CLOSED":
+    "The position is no longer open, so the request cannot be accepted.",
+  "disc.contacts.error.TALENT_CONTACT_ALREADY_ANSWERED": "You have already answered this request.",
+  "disc.contacts.error.generic": "Your answer could not be saved. Try again.",
 };
 
 export const passportCopy: Readonly<Record<PassportLang, Record<PassportCopyKey, string>>> = {

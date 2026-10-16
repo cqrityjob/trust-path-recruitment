@@ -98,6 +98,12 @@ async function mount(
     },
     getInternationalPassportMetadata: metadata,
     listMyVerificationRequests: { requests: [], decisions: [] },
+    // The Passport's updates and an entry's review history (2026-10-15)
+    // are not what these scenarios look at: answered as not installed, so
+    // the page renders exactly as before; the real reads are proven by
+    // the Passport and talent suites against a database.
+    listMyNotices: { installed: false },
+    getReviewThread: { installed: false },
     listMyShares: [],
     getMyPassportNumber: { number: null, designation: null },
     listMySocialShares: [],

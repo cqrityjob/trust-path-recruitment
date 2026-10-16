@@ -100,6 +100,7 @@ import { Route as AuthenticatedMyCareerCvRouteImport } from './routes/_authentic
 import { Route as AuthenticatedMyCareerProfileRouteImport } from './routes/_authenticated.my-career.profile'
 import { Route as AuthenticatedPassportIndexRouteImport } from './routes/_authenticated.passport.index'
 import { Route as AuthenticatedPassportCardRouteImport } from './routes/_authenticated.passport.card'
+import { Route as AuthenticatedPassportDiscoverabilityRouteImport } from './routes/_authenticated.passport.discoverability'
 import { Route as AuthenticatedPassportInformationRouteImport } from './routes/_authenticated.passport.information'
 import { Route as AuthenticatedPassportOnboardingRouteImport } from './routes/_authenticated.passport.onboarding'
 import { Route as AuthenticatedPassportPrivacyRouteImport } from './routes/_authenticated.passport.privacy'
@@ -215,6 +216,7 @@ import { Route as AuthenticatedEmployerEmployerSlugInterviewIntelligenceCaseIdSu
 import { Route as AuthenticatedEmployerEmployerSlugInterviewIntelligenceCaseIdTestsRouteImport } from './routes/_authenticated.employer.$employerSlug.interview-intelligence.$caseId.tests'
 import { Route as AuthenticatedEmployerEmployerSlugJobsJobIdIndexRouteImport } from './routes/_authenticated.employer.$employerSlug.jobs.$jobId.index'
 import { Route as AuthenticatedEmployerEmployerSlugJobsJobIdEditRouteImport } from './routes/_authenticated.employer.$employerSlug.jobs.$jobId.edit'
+import { Route as AuthenticatedEmployerEmployerSlugJobsJobIdTalentRouteImport } from './routes/_authenticated.employer.$employerSlug.jobs.$jobId.talent'
 import { Route as AuthenticatedSecurityWorkWorkspaceIdReportsManagementReportIdRouteImport } from './routes/_authenticated.security-work.$workspaceId.reports.management.$reportId'
 
 const IndexRoute = IndexRouteImport.update({
@@ -710,6 +712,12 @@ const AuthenticatedPassportCardRoute =
   AuthenticatedPassportCardRouteImport.update({
     id: '/card',
     path: '/card',
+    getParentRoute: () => AuthenticatedPassportRoute,
+  } as any)
+const AuthenticatedPassportDiscoverabilityRoute =
+  AuthenticatedPassportDiscoverabilityRouteImport.update({
+    id: '/discoverability',
+    path: '/discoverability',
     getParentRoute: () => AuthenticatedPassportRoute,
   } as any)
 const AuthenticatedPassportInformationRoute =
@@ -1449,6 +1457,12 @@ const AuthenticatedEmployerEmployerSlugJobsJobIdEditRoute =
     path: '/jobs/$jobId/edit',
     getParentRoute: () => AuthenticatedEmployerEmployerSlugRoute,
   } as any)
+const AuthenticatedEmployerEmployerSlugJobsJobIdTalentRoute =
+  AuthenticatedEmployerEmployerSlugJobsJobIdTalentRouteImport.update({
+    id: '/jobs/$jobId/talent',
+    path: '/jobs/$jobId/talent',
+    getParentRoute: () => AuthenticatedEmployerEmployerSlugRoute,
+  } as any)
 const AuthenticatedSecurityWorkWorkspaceIdReportsManagementReportIdRoute =
   AuthenticatedSecurityWorkWorkspaceIdReportsManagementReportIdRouteImport.update(
     {
@@ -1543,6 +1557,7 @@ export interface FileRoutesByFullPath {
   '/my-career/cv': typeof AuthenticatedMyCareerCvRouteWithChildren
   '/my-career/profile': typeof AuthenticatedMyCareerProfileRoute
   '/passport/card': typeof AuthenticatedPassportCardRoute
+  '/passport/discoverability': typeof AuthenticatedPassportDiscoverabilityRoute
   '/passport/information': typeof AuthenticatedPassportInformationRoute
   '/passport/onboarding': typeof AuthenticatedPassportOnboardingRoute
   '/passport/privacy': typeof AuthenticatedPassportPrivacyRoute
@@ -1660,6 +1675,7 @@ export interface FileRoutesByFullPath {
   '/employer/$employerSlug/interview-intelligence/$caseId/summary': typeof AuthenticatedEmployerEmployerSlugInterviewIntelligenceCaseIdSummaryRoute
   '/employer/$employerSlug/interview-intelligence/$caseId/tests': typeof AuthenticatedEmployerEmployerSlugInterviewIntelligenceCaseIdTestsRoute
   '/employer/$employerSlug/jobs/$jobId/edit': typeof AuthenticatedEmployerEmployerSlugJobsJobIdEditRoute
+  '/employer/$employerSlug/jobs/$jobId/talent': typeof AuthenticatedEmployerEmployerSlugJobsJobIdTalentRoute
   '/security-work/$workspaceId/reports/management/$reportId': typeof AuthenticatedSecurityWorkWorkspaceIdReportsManagementReportIdRoute
   '/employer/$employerSlug/assessments/assignments/': typeof AuthenticatedEmployerEmployerSlugAssessmentsAssignmentsIndexRoute
   '/employer/$employerSlug/assessments/reviews/': typeof AuthenticatedEmployerEmployerSlugAssessmentsReviewsIndexRoute
@@ -1731,6 +1747,7 @@ export interface FileRoutesByTo {
   '/my-career/career-card': typeof AuthenticatedMyCareerCareerCardRoute
   '/my-career/profile': typeof AuthenticatedMyCareerProfileRoute
   '/passport/card': typeof AuthenticatedPassportCardRoute
+  '/passport/discoverability': typeof AuthenticatedPassportDiscoverabilityRoute
   '/passport/information': typeof AuthenticatedPassportInformationRoute
   '/passport/onboarding': typeof AuthenticatedPassportOnboardingRoute
   '/passport/privacy': typeof AuthenticatedPassportPrivacyRoute
@@ -1845,6 +1862,7 @@ export interface FileRoutesByTo {
   '/employer/$employerSlug/interview-intelligence/$caseId/summary': typeof AuthenticatedEmployerEmployerSlugInterviewIntelligenceCaseIdSummaryRoute
   '/employer/$employerSlug/interview-intelligence/$caseId/tests': typeof AuthenticatedEmployerEmployerSlugInterviewIntelligenceCaseIdTestsRoute
   '/employer/$employerSlug/jobs/$jobId/edit': typeof AuthenticatedEmployerEmployerSlugJobsJobIdEditRoute
+  '/employer/$employerSlug/jobs/$jobId/talent': typeof AuthenticatedEmployerEmployerSlugJobsJobIdTalentRoute
   '/security-work/$workspaceId/reports/management/$reportId': typeof AuthenticatedSecurityWorkWorkspaceIdReportsManagementReportIdRoute
   '/employer/$employerSlug/assessments/assignments': typeof AuthenticatedEmployerEmployerSlugAssessmentsAssignmentsIndexRoute
   '/employer/$employerSlug/assessments/reviews': typeof AuthenticatedEmployerEmployerSlugAssessmentsReviewsIndexRoute
@@ -1938,6 +1956,7 @@ export interface FileRoutesById {
   '/_authenticated/my-career/cv': typeof AuthenticatedMyCareerCvRouteWithChildren
   '/_authenticated/my-career/profile': typeof AuthenticatedMyCareerProfileRoute
   '/_authenticated/passport/card': typeof AuthenticatedPassportCardRoute
+  '/_authenticated/passport/discoverability': typeof AuthenticatedPassportDiscoverabilityRoute
   '/_authenticated/passport/information': typeof AuthenticatedPassportInformationRoute
   '/_authenticated/passport/onboarding': typeof AuthenticatedPassportOnboardingRoute
   '/_authenticated/passport/privacy': typeof AuthenticatedPassportPrivacyRoute
@@ -2055,6 +2074,7 @@ export interface FileRoutesById {
   '/_authenticated/employer/$employerSlug/interview-intelligence/$caseId/summary': typeof AuthenticatedEmployerEmployerSlugInterviewIntelligenceCaseIdSummaryRoute
   '/_authenticated/employer/$employerSlug/interview-intelligence/$caseId/tests': typeof AuthenticatedEmployerEmployerSlugInterviewIntelligenceCaseIdTestsRoute
   '/_authenticated/employer/$employerSlug/jobs/$jobId/edit': typeof AuthenticatedEmployerEmployerSlugJobsJobIdEditRoute
+  '/_authenticated/employer/$employerSlug/jobs/$jobId/talent': typeof AuthenticatedEmployerEmployerSlugJobsJobIdTalentRoute
   '/_authenticated/security-work/$workspaceId/reports/management/$reportId': typeof AuthenticatedSecurityWorkWorkspaceIdReportsManagementReportIdRoute
   '/_authenticated/employer/$employerSlug/assessments/assignments/': typeof AuthenticatedEmployerEmployerSlugAssessmentsAssignmentsIndexRoute
   '/_authenticated/employer/$employerSlug/assessments/reviews/': typeof AuthenticatedEmployerEmployerSlugAssessmentsReviewsIndexRoute
@@ -2148,6 +2168,7 @@ export interface FileRouteTypes {
     | '/my-career/cv'
     | '/my-career/profile'
     | '/passport/card'
+    | '/passport/discoverability'
     | '/passport/information'
     | '/passport/onboarding'
     | '/passport/privacy'
@@ -2265,6 +2286,7 @@ export interface FileRouteTypes {
     | '/employer/$employerSlug/interview-intelligence/$caseId/summary'
     | '/employer/$employerSlug/interview-intelligence/$caseId/tests'
     | '/employer/$employerSlug/jobs/$jobId/edit'
+    | '/employer/$employerSlug/jobs/$jobId/talent'
     | '/security-work/$workspaceId/reports/management/$reportId'
     | '/employer/$employerSlug/assessments/assignments/'
     | '/employer/$employerSlug/assessments/reviews/'
@@ -2336,6 +2358,7 @@ export interface FileRouteTypes {
     | '/my-career/career-card'
     | '/my-career/profile'
     | '/passport/card'
+    | '/passport/discoverability'
     | '/passport/information'
     | '/passport/onboarding'
     | '/passport/privacy'
@@ -2450,6 +2473,7 @@ export interface FileRouteTypes {
     | '/employer/$employerSlug/interview-intelligence/$caseId/summary'
     | '/employer/$employerSlug/interview-intelligence/$caseId/tests'
     | '/employer/$employerSlug/jobs/$jobId/edit'
+    | '/employer/$employerSlug/jobs/$jobId/talent'
     | '/security-work/$workspaceId/reports/management/$reportId'
     | '/employer/$employerSlug/assessments/assignments'
     | '/employer/$employerSlug/assessments/reviews'
@@ -2542,6 +2566,7 @@ export interface FileRouteTypes {
     | '/_authenticated/my-career/cv'
     | '/_authenticated/my-career/profile'
     | '/_authenticated/passport/card'
+    | '/_authenticated/passport/discoverability'
     | '/_authenticated/passport/information'
     | '/_authenticated/passport/onboarding'
     | '/_authenticated/passport/privacy'
@@ -2659,6 +2684,7 @@ export interface FileRouteTypes {
     | '/_authenticated/employer/$employerSlug/interview-intelligence/$caseId/summary'
     | '/_authenticated/employer/$employerSlug/interview-intelligence/$caseId/tests'
     | '/_authenticated/employer/$employerSlug/jobs/$jobId/edit'
+    | '/_authenticated/employer/$employerSlug/jobs/$jobId/talent'
     | '/_authenticated/security-work/$workspaceId/reports/management/$reportId'
     | '/_authenticated/employer/$employerSlug/assessments/assignments/'
     | '/_authenticated/employer/$employerSlug/assessments/reviews/'
@@ -3346,6 +3372,13 @@ declare module '@tanstack/react-router' {
       path: '/card'
       fullPath: '/passport/card'
       preLoaderRoute: typeof AuthenticatedPassportCardRouteImport
+      parentRoute: typeof AuthenticatedPassportRoute
+    }
+    '/_authenticated/passport/discoverability': {
+      id: '/_authenticated/passport/discoverability'
+      path: '/discoverability'
+      fullPath: '/passport/discoverability'
+      preLoaderRoute: typeof AuthenticatedPassportDiscoverabilityRouteImport
       parentRoute: typeof AuthenticatedPassportRoute
     }
     '/_authenticated/passport/information': {
@@ -4153,6 +4186,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedEmployerEmployerSlugJobsJobIdEditRouteImport
       parentRoute: typeof AuthenticatedEmployerEmployerSlugRoute
     }
+    '/_authenticated/employer/$employerSlug/jobs/$jobId/talent': {
+      id: '/_authenticated/employer/$employerSlug/jobs/$jobId/talent'
+      path: '/jobs/$jobId/talent'
+      fullPath: '/employer/$employerSlug/jobs/$jobId/talent'
+      preLoaderRoute: typeof AuthenticatedEmployerEmployerSlugJobsJobIdTalentRouteImport
+      parentRoute: typeof AuthenticatedEmployerEmployerSlugRoute
+    }
     '/_authenticated/security-work/$workspaceId/reports/management/$reportId': {
       id: '/_authenticated/security-work/$workspaceId/reports/management/$reportId'
       path: '/reports/management/$reportId'
@@ -4522,6 +4562,7 @@ interface AuthenticatedEmployerEmployerSlugRouteChildren {
   AuthenticatedEmployerEmployerSlugAssessmentsResultsAttemptIdRoute: typeof AuthenticatedEmployerEmployerSlugAssessmentsResultsAttemptIdRoute
   AuthenticatedEmployerEmployerSlugAssessmentsReviewsAttemptIdRoute: typeof AuthenticatedEmployerEmployerSlugAssessmentsReviewsAttemptIdRoute
   AuthenticatedEmployerEmployerSlugJobsJobIdEditRoute: typeof AuthenticatedEmployerEmployerSlugJobsJobIdEditRoute
+  AuthenticatedEmployerEmployerSlugJobsJobIdTalentRoute: typeof AuthenticatedEmployerEmployerSlugJobsJobIdTalentRoute
   AuthenticatedEmployerEmployerSlugAssessmentsAssignmentsIndexRoute: typeof AuthenticatedEmployerEmployerSlugAssessmentsAssignmentsIndexRoute
   AuthenticatedEmployerEmployerSlugAssessmentsReviewsIndexRoute: typeof AuthenticatedEmployerEmployerSlugAssessmentsReviewsIndexRoute
   AuthenticatedEmployerEmployerSlugJobsJobIdIndexRoute: typeof AuthenticatedEmployerEmployerSlugJobsJobIdIndexRoute
@@ -4587,6 +4628,8 @@ const AuthenticatedEmployerEmployerSlugRouteChildren: AuthenticatedEmployerEmplo
       AuthenticatedEmployerEmployerSlugAssessmentsReviewsAttemptIdRoute,
     AuthenticatedEmployerEmployerSlugJobsJobIdEditRoute:
       AuthenticatedEmployerEmployerSlugJobsJobIdEditRoute,
+    AuthenticatedEmployerEmployerSlugJobsJobIdTalentRoute:
+      AuthenticatedEmployerEmployerSlugJobsJobIdTalentRoute,
     AuthenticatedEmployerEmployerSlugAssessmentsAssignmentsIndexRoute:
       AuthenticatedEmployerEmployerSlugAssessmentsAssignmentsIndexRoute,
     AuthenticatedEmployerEmployerSlugAssessmentsReviewsIndexRoute:
@@ -4684,6 +4727,7 @@ const AuthenticatedMyCareerRouteWithChildren =
 
 interface AuthenticatedPassportRouteChildren {
   AuthenticatedPassportCardRoute: typeof AuthenticatedPassportCardRoute
+  AuthenticatedPassportDiscoverabilityRoute: typeof AuthenticatedPassportDiscoverabilityRoute
   AuthenticatedPassportInformationRoute: typeof AuthenticatedPassportInformationRoute
   AuthenticatedPassportOnboardingRoute: typeof AuthenticatedPassportOnboardingRoute
   AuthenticatedPassportPrivacyRoute: typeof AuthenticatedPassportPrivacyRoute
@@ -4696,6 +4740,8 @@ interface AuthenticatedPassportRouteChildren {
 
 const AuthenticatedPassportRouteChildren: AuthenticatedPassportRouteChildren = {
   AuthenticatedPassportCardRoute: AuthenticatedPassportCardRoute,
+  AuthenticatedPassportDiscoverabilityRoute:
+    AuthenticatedPassportDiscoverabilityRoute,
   AuthenticatedPassportInformationRoute: AuthenticatedPassportInformationRoute,
   AuthenticatedPassportOnboardingRoute: AuthenticatedPassportOnboardingRoute,
   AuthenticatedPassportPrivacyRoute: AuthenticatedPassportPrivacyRoute,

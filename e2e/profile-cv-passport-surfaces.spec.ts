@@ -703,6 +703,12 @@ function passportOverrides() {
       types: [],
     }),
     listPassportMarketOverview: ok({ markets: [], current: null }),
+    // The Passport's updates and an entry's review history (2026-10-15)
+    // are not what these scenarios look at: answered as not installed, so
+    // the page renders exactly as before; the real reads are proven by
+    // the Passport and talent suites against a database.
+    listMyNotices: ok({ installed: false }),
+    getReviewThread: ok({ installed: false }),
   };
 }
 
@@ -754,7 +760,7 @@ test.describe("Security Passport", () => {
       // The side column is a next step and the sharing status.
       await expect(page.locator("[data-passport-next-step]")).toHaveAttribute(
         "data-passport-next-step",
-        "evidence",
+        "add_evidence",
       );
       await expect(page.locator("[data-passport-privacy-summary]")).toBeVisible();
       expect(await overflow(page)).toBeLessThanOrEqual(1);

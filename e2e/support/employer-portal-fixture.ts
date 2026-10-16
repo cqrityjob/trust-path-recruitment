@@ -718,6 +718,12 @@ export const table: Record<string, unknown | ((args: Record<string, unknown>) =>
         }
       : null,
   getProfileChangeHistory: [],
+  // Talent discovery slots (20270317090000 / 20270318090000) are not installed
+  // on the stubbed backend: the criteria panel and "Hitta kandidater" stay
+  // hidden, exactly as before those slots. Their behaviour is proven on real
+  // services by e2e/talent-discovery-local.spec.ts.
+  getTalentCriteria: { installed: false },
+  listTalentCatalogueOptions: [],
   // The next open application without a confirmed review, oldest first (Ali,
   // the first Uppsala applicant); three remain; the archived, decided Erik
   // stands outside the queue.

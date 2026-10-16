@@ -210,10 +210,16 @@ function refusalNextStep(kind: MyVerificationRequest["kind"]): AttentionNextStep
  * `now` is a parameter rather than a call to the clock so the recency
  * boundary is testable and so a surface rendering for a past moment answers
  * for that moment. Pure: same inputs, same output.
+ *
+ * `revokedRequestIds`: a revocation is recorded as a decision on the request
+ * it revokes, and the request row keeps "approved". An approval that was
+ * revoked is not news to announce as "recently verified" -- the Passport's
+ * next step says it was revoked (workshop 2026-10-15, package A).
  */
 export function deriveVerificationAttention(
   requests: readonly MyVerificationRequest[],
   now: Date = new Date(),
+  revokedRequestIds: ReadonlySet<string> = new Set(),
 ): VerificationAttention {
   const actionRequired: VerificationAttentionItem[] = [];
   const outcomes: VerificationAttentionItem[] = [];
@@ -245,8 +251,12 @@ export function deriveVerificationAttention(
         break;
 
       case "approved":
-        // News, while it is still news. See the header.
-        if (r.decidedAt && daysSince(r.decidedAt, now) <= RECENT_OUTCOME_DAYS) {
+        // News, while it is still news -- and while it still stands. See the header.
+        if (
+          !revokedRequestIds.has(r.id) &&
+          r.decidedAt &&
+          daysSince(r.decidedAt, now) <= RECENT_OUTCOME_DAYS
+        ) {
           information.push({ ...base, tone: "information", nextStep: "none" });
         }
         break;
@@ -291,4 +301,11 @@ export function deriveVerificationAttention(
  *  `waiting`. */
 export function attentionDemandCount(attention: VerificationAttention): number {
   return attention.actionRequired.length + attention.outcomes.length;
+}
+
+/** The requests a decision list says were revoked. No list, no revocation. */
+export function revokedRequestIdsOf(
+  decisions: readonly { readonly requestId: string; readonly decision: string }[] | undefined,
+): ReadonlySet<string> {
+  return new Set((decisions ?? []).filter((d) => d.decision === "revoked").map((d) => d.requestId));
 }

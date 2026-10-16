@@ -243,6 +243,10 @@ export const submitForVerification = createServerFn({ method: "POST" })
       _employer_id: orNull(data.employerId),
     });
     if (error) throw new Error(error.message);
+    // The reviewers are told by the database (user_notices, 20270316090000);
+    // the mail goes out bounded and never fails this request.
+    const { dispatchUserNoticesSoon } = await import("@/lib/notices/user-notice.server");
+    await dispatchUserNoticesSoon();
     return { id: id as unknown as string };
   });
 
@@ -658,6 +662,9 @@ export const decideVerification = createServerFn({ method: "POST" })
       });
       throw new Error(`${DECISION_ERROR_PREFIX}${classifyDecisionError(error.message)}`);
     }
+    // The holder is told by the database; the mail is sent bounded here.
+    const { dispatchUserNoticesSoon } = await import("@/lib/notices/user-notice.server");
+    await dispatchUserNoticesSoon();
     return { ok: true };
   });
 
@@ -679,6 +686,8 @@ export const revokeVerification = createServerFn({ method: "POST" })
       _reason: data.reason,
     });
     if (error) throw new Error(error.message);
+    const { dispatchUserNoticesSoon } = await import("@/lib/notices/user-notice.server");
+    await dispatchUserNoticesSoon();
     return { ok: true };
   });
 

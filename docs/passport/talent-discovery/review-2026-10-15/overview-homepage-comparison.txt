@@ -1,0 +1,57 @@
+e2e/passport-overview-acceptance.spec.ts: main against the workshop version, under the same conditions
+
+Conditions: the same machine and Chromium (/opt/pw-browsers/chromium), Playwright --project=chromium
+--workers=1 --reporter=list. Each commit runs its own spec against its own vite dev server, with the
+same .env.local and the spec's own stubbed server boundary (no database).
+
+== main b8e2de81 (merge of #472), dev server :3121, 2026-10-15 ~18:56 UTC
+  ✓   1 [chromium] › e2e/passport-overview-acceptance.spec.ts:277:3 › overview and shields · sv (3.1m)
+  ✓   2 [chromium] › e2e/passport-overview-acceptance.spec.ts:550:3 › the next step opens that credential at the action · sv
+  ✓   3 [chromium] › e2e/passport-overview-acceptance.spec.ts:669:3 › a long credential title never collides with its status · sv
+  ✘   4 [chromium] › e2e/passport-overview-acceptance.spec.ts:833:3 › the card finish: one quiet ground, on the overview and the homepage · sv
+  ✓   5 [chromium] › e2e/passport-overview-acceptance.spec.ts:985:3 › a shared view counts only what was disclosed · sv
+  ✓   6 [chromium] › e2e/passport-overview-acceptance.spec.ts:277:3 › overview and shields · en (2.5m)
+  ✓   7 [chromium] › e2e/passport-overview-acceptance.spec.ts:550:3 › the next step opens that credential at the action · en
+  ✓   8 [chromium] › e2e/passport-overview-acceptance.spec.ts:669:3 › a long credential title never collides with its status · en
+  ✘   9 [chromium] › e2e/passport-overview-acceptance.spec.ts:833:3 › the card finish: one quiet ground, on the overview and the homepage · en
+  ✓  10 [chromium] › e2e/passport-overview-acceptance.spec.ts:985:3 › a shared view counts only what was disclosed · en
+  2 failed
+  8 passed (8.9m)
+
+== workshop version (f67cad3a plus the uncommitted follow-up of this commit), dev server :3119, ~19:12 UTC
+  ✓   1 [chromium] › e2e/passport-overview-acceptance.spec.ts:277:3 › overview and shields · sv (2.6m)
+  ✓   2 [chromium] › e2e/passport-overview-acceptance.spec.ts:551:3 › the next step opens that credential at the action · sv
+  ✓   3 [chromium] › e2e/passport-overview-acceptance.spec.ts:676:3 › a long credential title never collides with its status · sv
+  ✘   4 [chromium] › e2e/passport-overview-acceptance.spec.ts:840:3 › the card finish: one quiet ground, on the overview and the homepage · sv
+  ✓   5 [chromium] › e2e/passport-overview-acceptance.spec.ts:992:3 › a shared view counts only what was disclosed · sv
+  ✓   6 [chromium] › e2e/passport-overview-acceptance.spec.ts:277:3 › overview and shields · en (2.6m)
+  ✓   7 [chromium] › e2e/passport-overview-acceptance.spec.ts:551:3 › the next step opens that credential at the action · en
+  ✓   8 [chromium] › e2e/passport-overview-acceptance.spec.ts:676:3 › a long credential title never collides with its status · en
+  ✘   9 [chromium] › e2e/passport-overview-acceptance.spec.ts:840:3 › the card finish: one quiet ground, on the overview and the homepage · en
+  ✓  10 [chromium] › e2e/passport-overview-acceptance.spec.ts:992:3 › a shared view counts only what was disclosed · en
+  2 failed
+  8 passed (8.5m)
+
+Both runs fail only "the card finish ... on the overview and the homepage", in sv and en, at the same line:
+  expect(page.locator('[data-home-passport-preview]')).toBeVisible() after page.goto('/').
+
+Root cause, independent of #473:
+- Since the locked homepage decision of 2026-09-30 (header of src/routes/index.tsx: six sections,
+  'HOMEPAGE = BREADTH. SUBPAGE = DEPTH.'), HomePassportPreview is rendered only on /security-passport
+  (src/routes/security-passport.index.tsx:137). The homepage no longer has a #passport section.
+- The spec still asserts the superseded seven-section homepage of 2026-09-27.
+- git diff origin/main..workshop for src/routes/index.tsx, src/components/site/ and
+  src/routes/security-passport.index.tsx is empty: #473 changes none of those files.
+
+Impact:
+- Affects no Passport, discoverability, contact or employer flow.
+- The spec is not part of CI, so no CI coverage changes.
+- The overview half of the same test passes before it reaches the homepage.
+
+Proposal: a separate one-line test change, outside this release, that points the homepage half at
+/security-passport (the intended product behaviour). It is not part of #473.
+
+Note: the first run on the workshop version also failed 'overview and shields . sv' in the shared
+harness step observeSupabaseStorageKey (e2e/support/public-entry-harness.ts:352: networkidle + 500 ms
+and no session key read). The release guards were running in parallel on the same machine at the time.
+The rerun above, with nothing else running, passes that test in sv and en.

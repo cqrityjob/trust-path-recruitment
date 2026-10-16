@@ -239,19 +239,20 @@ check(
   );
   check(
     (side.match(/data-cta="next-step"/g) ?? []).length === 2 &&
-      (side.match(/\{stepAction\}/g) ?? []).length === 2 &&
-      /next\.kind === "clarify" \|\| next\.kind === "evidence" \?/.test(side) &&
-      /hash=\{next\.kind === "clarify" \? ENTRY_VERIFICATION_ANCHOR : ENTRY_EVIDENCE_ANCHOR\}/.test(
+      (side.match(/\{stepAction\}/g) ?? []).length === 1 &&
+      /entryNextStep\(\{[\s\S]{0,400}reviewState: overviewReviewState\(/.test(side) &&
+      /overviewNextStep\(steps\)/.test(side) &&
+      /hash=\{anchor === "verification" \? ENTRY_VERIFICATION_ANCHOR : ENTRY_EVIDENCE_ANCHOR\}/.test(
         side,
       ),
-    "the clarify step lands on the review panel and the evidence step on the documents — one action, shared",
+    "each credential's step is its own page's entryNextStep, the most pressing one is offered, and it lands on the section that does it (workshop 2026-10-15)",
   );
   check(
-    /copy\("Svara granskaren", "Answer the reviewer"\)/.test(side) &&
-      /copy\("Bifoga underlag", "Add evidence"\)/.test(side) &&
-      /aria-label=\{`\$\{[\s\S]{0,200}\}: \$\{next\.title\}`\}/.test(side) &&
-      !/copy\("Visa meriten", "View credential"\)/.test(side),
-    'labelled with the action it opens and the credential it is for — never a bare "View credential"',
+    /NEXT_STEP_COPY\[next\.kind\]/.test(side) &&
+      /aria-label=\{`\$\{pt\(stepCopy\.action\)\}: \$\{next\.title\}`\}/.test(side) &&
+      !/copy\("Visa meriten", "View credential"\)/.test(side) &&
+      !/copy\("(Svara granskaren|Bifoga underlag)"/.test(side),
+    'labelled with the credential page\'s own action and the credential it is for -- never a bare "View credential" or a second wording',
   );
   check(
     /export const ENTRY_EVIDENCE_ANCHOR = "sp-entry-evidence"/.test(shared) &&
@@ -381,16 +382,18 @@ check(
 }
 
 /* ------------------------------------------------------------------ */
-console.log("\n4c · four tabs");
+// The four reviewed tabs, plus the one reviewed addition: "Job opportunities"
+// (voluntary discoverability, 2026-10-15), a tab of the same workspace.
+console.log("\n4c · four tabs, and Job opportunities");
 
 const shell = code(read(SHELL));
 const navBlock = shell.match(/const NAV = \[([\s\S]*?)\n\] as const;/)?.[1] ?? "";
 check(
-  (navBlock.match(/\ben: "/g) ?? []).join("|") === 'en: "|en: "|en: "|en: "' &&
-    /en: "Overview"[\s\S]*en: "Credentials"[\s\S]*en: "Verification"[\s\S]*en: "Share"/.test(
+  (navBlock.match(/\ben: "/g) ?? []).join("|") === 'en: "|en: "|en: "|en: "|en: "' &&
+    /en: "Overview"[\s\S]*en: "Credentials"[\s\S]*en: "Verification"[\s\S]*en: "Job opportunities"[\s\S]*en: "Share"/.test(
       navBlock,
     ),
-  "Overview, Credentials, Verification, Share — in that order and no others",
+  "Overview, Credentials, Verification, Job opportunities, Share — in that order and no others",
 );
 check(
   /also: \["\/passport\/credentials\/new"\]/.test(navBlock) &&

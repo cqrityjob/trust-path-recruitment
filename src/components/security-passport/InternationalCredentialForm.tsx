@@ -2,6 +2,7 @@ import { AbuDhabiIssuerAttribution } from "./AbuDhabiIssuerAttribution";
 import { CredentialDateInput } from "./CredentialDateInput";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
+import { useUnsavedChanges } from "@/hooks/use-unsaved-changes";
 import { AlertTriangle, ArrowRight, Lock, Check, FileCheck2 } from "lucide-react";
 import {
   likelyDuplicatesOf,
@@ -227,6 +228,17 @@ export function InternationalCredentialForm({
   latestMarks.current = marks;
   const assessRun = useRef(0);
   const [badgeLink, setBadgeLink] = useState("");
+  // ── UNSAVED INPUT ──────────────────────────────────────────────────────
+  // The shared guard (in-app navigation and reload). Dirty means anything the
+  // holder typed or chose beyond where the form started; it is released just
+  // before the form itself navigates away after a save. A refused save keeps
+  // the form and the guard, so nothing typed is lost to a stray click.
+  const pristineDraft = useRef(
+    JSON.stringify(initial ?? { ...blank, definition_code: preselected?.code ?? "" }),
+  );
+  const unsavedInput =
+    JSON.stringify(draft) !== pristineDraft.current || file !== null || badgeLink.trim() !== "";
+  const releaseUnsaved = useUnsavedChanges(unsavedInput);
   const [linkSources, setLinkSources] = useState<
     readonly { id: string; name: string; definitionCodes: readonly string[] }[]
   >([]);
@@ -623,6 +635,7 @@ export function InternationalCredentialForm({
       const link = badgeLink.trim() || null;
       if (onAssessSaved && (link || (file && signed)))
         await onAssessSaved({ claimId: savedId.current, badgeLink: link }).catch(() => undefined);
+      releaseUnsaved();
       await navigate({
         to: "/passport/entry/$kind/$entryId",
         params: { kind: "claim", entryId: savedId.current },
@@ -1595,6 +1608,9 @@ export function InternationalCredentialForm({
               onClick={() => {
                 const claimId = savedId.current;
                 if (!claimId) return;
+                // The credential is saved; what is left (a document) is
+                // resumed on its own page by the upload recovery panel.
+                releaseUnsaved();
                 void navigate({
                   to: "/passport/entry/$kind/$entryId",
                   params: { kind: "claim", entryId: claimId },

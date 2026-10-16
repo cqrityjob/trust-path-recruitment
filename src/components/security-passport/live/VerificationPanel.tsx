@@ -44,6 +44,12 @@ import type {
   VerificationDecisionRecord,
 } from "@/lib/security-passport/verification.functions";
 import { EmployerConfirmationPicker, type EmployerSearchState } from "./EmployerConfirmationPicker";
+import {
+  ClarificationReplyForm,
+  ReviewCurrentState,
+  ReviewThreadHistory,
+  type ThreadLoad,
+} from "./ReviewThread";
 
 export interface VerificationPanelProps {
   readonly assertionLevel: string;
@@ -101,6 +107,19 @@ export interface VerificationPanelProps {
   ) => Promise<void>;
   readonly onWithdrawRequest: (requestId: string) => Promise<void>;
   readonly onDispute: (reason: string) => Promise<void>;
+  /** The case thread (20270316090000): current state, decisions with their
+   *  messages, and the holder's replies. Absent or not installed: the request
+   *  list below is the history, as before. */
+  readonly thread?: ThreadLoad;
+  readonly onThreadRetry?: () => void;
+  /** The holder's text answer to an open clarification, bound to the version
+   *  the clarification was asked on. Absent: answer by correcting or adding a
+   *  document, as before. */
+  readonly onReply?: (
+    requestId: string,
+    reviewedSubmittedAt: string,
+    body: string,
+  ) => Promise<void>;
 }
 
 const STATUS_KEY: Readonly<Record<string, PassportCopyKey>> = {
@@ -146,6 +165,9 @@ export function VerificationPanel({
   onSubmit,
   onWithdrawRequest,
   onDispute,
+  thread,
+  onThreadRetry,
+  onReply,
 }: VerificationPanelProps) {
   const { pt, lang } = usePassportCopy();
   const [busy, setBusy] = useState(false);
@@ -154,7 +176,19 @@ export function VerificationPanel({
   const [disputeReason, setDisputeReason] = useState("");
 
   const latestApproval = decisions.find((d) => d.decision === "approved") ?? null;
-  const latestRevocation = decisions.find((d) => d.decision === "revoked") ?? null;
+  // ── ONE CURRENT STATE ─────────────────────────────────────────────────
+  // A revocation is history once a later approval exists. The database's
+  // current state (sp_entry_review_state) decides when it is installed;
+  // before that, the newest decision does. Showing "revoked" above a new
+  // approval was the contradiction this replaces.
+  const threadInstalled = thread?.status === "ready" && thread.thread.installed;
+  const currentState = threadInstalled && thread.thread.installed ? thread.thread.current : null;
+  const newestDecision = decisions[0] ?? null;
+  const latestRevocation = (
+    currentState ? currentState.state === "revoked" : newestDecision?.decision === "revoked"
+  )
+    ? (decisions.find((d) => d.decision === "revoked") ?? null)
+    : null;
   const renewable = mayRenew(assertionLevel, validity);
 
   // ── WHO IS BEING WAITED ON, AND WHO ANSWERED ──────────────────────────
@@ -442,6 +476,7 @@ export function VerificationPanel({
       {/* ── The open request ─────────────────────────────────────────── */}
       {openRequest ? (
         <div
+          data-open-request={openRequest.status}
           role={openRequest.status === "clarification_requested" ? "status" : undefined}
           className={
             openRequest.status === "clarification_requested"
@@ -519,6 +554,13 @@ export function VerificationPanel({
                 >
                   {pt("ver.employer.editEntry")}
                 </Link>
+              ) : null}
+              {/* A text answer, bound to the version the question was asked
+                  on. No document copy is needed to explain something. */}
+              {!employerOpen && onReply && threadInstalled ? (
+                <ClarificationReplyForm
+                  onReply={(body) => onReply(openRequest.id, openRequest.submittedAt, body)}
+                />
               ) : null}
             </>
           ) : employerOpen ? (
@@ -696,9 +738,21 @@ export function VerificationPanel({
       {/* ── History ──────────────────────────────────────────────────── */}
       <div className="mt-4 border-t border-border pt-4">
         <h4 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-          {pt("ver.historyTitle")}
+          {pt(threadInstalled ? "ver.thread.title" : "ver.historyTitle")}
         </h4>
-        {requests.length === 0 ? (
+        {thread && (thread.status !== "ready" || threadInstalled) ? (
+          <div className="mt-2 space-y-2">
+            {currentState ? (
+              <ReviewCurrentState current={currentState} subjectKind={subjectKind} />
+            ) : null}
+            <ReviewThreadHistory
+              load={thread}
+              audience="holder"
+              subjectKind={subjectKind}
+              onRetry={() => onThreadRetry?.()}
+            />
+          </div>
+        ) : requests.length === 0 ? (
           <p className="mt-2 text-sm text-muted-foreground">{pt("ver.historyEmpty")}</p>
         ) : (
           <ul data-verification-history className="mt-2 space-y-1.5">

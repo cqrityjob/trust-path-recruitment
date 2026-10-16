@@ -792,8 +792,12 @@ test.describe("the public pilot, on a real backend", () => {
       await expect(
         page.getByText("Mer information behövs innan uppgiften kan verifieras"),
       ).toBeVisible({ timeout: 60_000 });
+      // The message is shown where the request is open (and again in the
+      // case history further down): read it in the open request.
       await expect(
-        page.getByText("Ladda upp kortets baksida, där giltighetstiden syns."),
+        page
+          .locator('[data-open-request="clarification_requested"]')
+          .getByText("Ladda upp kortets baksida, där giltighetstiden syns."),
       ).toBeVisible();
       await attachDocument(page, uid, claim, "sira-kort-baksida.pdf");
       await evidence(page, "sv-review-clarification-answered");

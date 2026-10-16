@@ -34,7 +34,8 @@ export type TransactionalEmailKind =
   | "recruitment_message"
   | "assessment_invitation"
   | "academy_invitation"
-  | "employer_new_application";
+  | "employer_new_application"
+  | "product_notice";
 
 /** The two settings this transport needs, both already present on the app
  *  host for the service-role client. Named once for guards and admin UI. */

@@ -55,6 +55,11 @@ import {
   type VerifierRequestDetail,
 } from "@/lib/security-passport/verification.functions";
 import { getEvidenceViewUrl } from "@/lib/security-passport/evidence.functions";
+import { getReviewThread } from "@/lib/security-passport/review-thread.functions";
+import {
+  ReviewThreadHistory,
+  type ThreadLoad,
+} from "@/components/security-passport/live/ReviewThread";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import {
   CLAIM_TYPE_KEY,
@@ -200,6 +205,12 @@ export function PassportReviewWorkspace() {
   const whoAmI = useServerFn(passportVerifierWhoAmI);
   const loadQueue = useServerFn(listVerifierQueue);
   const loadDetail = useServerFn(getVerifierRequestDetail);
+  const loadThread = useServerFn(getReviewThread);
+  // The case thread (20270316090000): the holder's text replies and every
+  // earlier decision with what the holder was told. Loaded per opened case;
+  // a failure is said as a failure, never as "no history".
+  const [thread, setThread] = useState<ThreadLoad | null>(null);
+  const [threadAttempt, setThreadAttempt] = useState(0);
   const decide = useServerFn(decideVerification);
   const definitionFacts = useServerFn(getDefinitionFacts);
   const loadDefinitionFacts = useCallback(
@@ -310,6 +321,22 @@ export function PassportReviewWorkspace() {
         setDetailError(pt("vq.error.detail"));
       });
   }, [selected, loadDetail, pt]);
+
+  useEffect(() => {
+    const entryId = detail?.claim?.id ?? detail?.period?.id ?? null;
+    if (!detail || !entryId) {
+      setThread(null);
+      return;
+    }
+    let alive = true;
+    setThread({ status: "loading" });
+    loadThread({ data: { kind: detail.subjectType === "claim" ? "claim" : "experience", entryId } })
+      .then((t) => alive && setThread({ status: "ready", thread: t }))
+      .catch(() => alive && setThread({ status: "error" }));
+    return () => {
+      alive = false;
+    };
+  }, [detail, loadThread, threadAttempt]);
 
   if (isVerifier === null) {
     return <p className="text-sm text-muted-foreground">{pt("common.loading")}</p>;
@@ -787,6 +814,26 @@ export function PassportReviewWorkspace() {
                     <p className="mt-2 text-xs text-muted-foreground">{pt("vq.evidenceNote")}</p>
                     <p className="mt-1 text-xs text-muted-foreground">{pt("vq.accessNote")}</p>
                   </div>
+
+                  {/* 2b. THE CASE THREAD. What the holder answered, in their own
+                      words, next to what they were asked -- the reason a
+                      clarification exists. Shown above the decision so a
+                      reviewer reads the answer before deciding. */}
+                  {thread && !(thread.status === "ready" && !thread.thread.installed) ? (
+                    <div data-review-case-thread>
+                      <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+                        {pt("ver.thread.title")}
+                      </p>
+                      <ReviewThreadHistory
+                        load={thread}
+                        audience="reviewer"
+                        subjectKind={
+                          detail?.subjectType === "experience" ? "employment" : "credential"
+                        }
+                        onRetry={() => setThreadAttempt((n) => n + 1)}
+                      />
+                    </div>
+                  ) : null}
 
                   {/* 3. PRIOR HISTORY.
                       Silence here used to be ambiguous: a first submission and

@@ -79,9 +79,14 @@ export const Route = createFileRoute("/api/recruitment/receipts-sweep")({
         }
         // Never throws; the employer's notices are swept whatever the receipts did.
         const employerNotices = await sweepEmployerNotices({ limit });
+        // Passport review and talent-contact notices (user_notices), same
+        // schedule and token. Never throws; a missing migration is
+        // `available: false`.
+        const { dispatchUserNotices } = await import("@/lib/notices/user-notice.server");
+        const userNotices = await dispatchUserNotices({}, { limit, budgetMs: 20_000 });
         if (!receipts) {
           return Response.json(
-            { ok: false, code: "RECRUITMENT_ACTION_FAILED", employerNotices },
+            { ok: false, code: "RECRUITMENT_ACTION_FAILED", employerNotices, userNotices },
             { status: 500 },
           );
         }
@@ -90,6 +95,7 @@ export const Route = createFileRoute("/api/recruitment/receipts-sweep")({
           at: new Date().toISOString(),
           ...receipts,
           employerNotices,
+          userNotices,
         });
       },
       ANY: () => notFound(),

@@ -341,9 +341,9 @@ for (const lang of ["sv", "en"] as const) {
         "href",
         `/passport/entry/claim/${CPP.id}#sp-entry-evidence`,
       );
-      await expect(step).toHaveText(T("Bifoga underlag", "Add evidence"));
+      await expect(step).toHaveText(T("Bifoga underlag", "Add supporting evidence"));
       await expect(step).toHaveAccessibleName(
-        `${T("Bifoga underlag", "Add evidence")}: ${lang === "sv" ? CPP.titleSv : CPP.titleEn}`,
+        `${T("Bifoga underlag", "Add supporting evidence")}: ${lang === "sv" ? CPP.titleSv : CPP.titleEn}`,
       );
       // Still says WHICH credential, and the expiring one is still named.
       await expect(page.locator("[data-passport-next-step]")).toContainText(CPP.titleEn);
@@ -368,12 +368,13 @@ for (const lang of ["sv", "en"] as const) {
         CAREER_PROFILE_PROFESSION_EDIT_HREF,
       );
 
-      // Four tabs, one current.
+      // Five tabs, one current: visibility for employers is a tab of the
+      // same workspace, never a second profile.
       const tabs = page.locator("nav").filter({ has: page.locator('a[href$="#attention"]') });
       await expect(tabs.locator("a")).toHaveText(
         lang === "sv"
-          ? ["Översikt", "Meriter", "Granskning", "Dela"]
-          : ["Overview", "Credentials", "Verification", "Share"],
+          ? ["Översikt", "Meriter", "Granskning", "Jobbmöjligheter", "Dela"]
+          : ["Overview", "Credentials", "Verification", "Job opportunities", "Share"],
       );
       await expect(tabs.locator('a[aria-current="page"]')).toHaveCount(1);
       expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
@@ -570,7 +571,10 @@ for (const lang of ["sv", "en"] as const) {
     for (const width of [390, 1440] as const) {
       await page.setViewportSize({ width, height: 800 });
 
-      // ── evidence: twelve records, so the row is far below the fold ─────
+      // ── request a review: twelve records, so the row is far below the
+      // fold. PSP has a document nobody was asked to review; CPP has none.
+      // PSP's own page says "Request a review", and that comes before an
+      // upload in the overview's documented order.
       await mount(
         page,
         "/passport",
@@ -581,23 +585,26 @@ for (const lang of ["sv", "en"] as const) {
       await expect(step).toHaveCount(1, { timeout: 30_000 });
       await expect(page.locator("[data-passport-next-step]")).toHaveAttribute(
         "data-passport-next-step",
-        "evidence",
+        "request_review",
       );
-      await expect(step).toHaveText(T("Bifoga underlag", "Add evidence"));
-      await expect(step).toHaveAttribute("data-next-step-target", `${CPP.id}#sp-entry-evidence`);
+      await expect(step).toHaveText(T("Begär granskning", "Request a review"));
+      await expect(step).toHaveAttribute(
+        "data-next-step-target",
+        `${PSP.id}#sp-entry-verification`,
+      );
       await expect(step).toHaveAttribute(
         "href",
-        `/passport/entry/claim/${CPP.id}#sp-entry-evidence`,
+        `/passport/entry/claim/${PSP.id}#sp-entry-verification`,
       );
       // The row still carries its own plain link, and only one.
-      await expect(page.locator(`a[href="/passport/entry/claim/${CPP.id}"]`)).toHaveCount(1);
+      await expect(page.locator(`a[href="/passport/entry/claim/${PSP.id}"]`)).toHaveCount(1);
 
       // By keyboard: Enter on the step leaves the overview for the
-      // credential's page, at the documents section.
+      // credential's page, at the review section.
       await step.focus();
       await page.keyboard.press("Enter");
       await expect(page).toHaveURL(
-        new RegExp(`/passport/entry/claim/${CPP.id}#sp-entry-evidence$`),
+        new RegExp(`/passport/entry/claim/${PSP.id}#sp-entry-verification$`),
       );
       await page.goBack();
       await expect(page.locator("[data-credential-wallet]")).toBeVisible({ timeout: 30_000 });
@@ -618,10 +625,10 @@ for (const lang of ["sv", "en"] as const) {
       });
       await expect(page.locator("[data-passport-next-step]")).toHaveAttribute(
         "data-passport-next-step",
-        "clarify",
+        "clarification",
         { timeout: 30_000 },
       );
-      await expect(step).toHaveText(T("Svara granskaren", "Answer the reviewer"));
+      await expect(step).toHaveText(T("Läs och svara", "Read and reply"));
       await expect(step).toHaveAttribute(
         "href",
         `/passport/entry/claim/${OV.id}#sp-entry-verification`,

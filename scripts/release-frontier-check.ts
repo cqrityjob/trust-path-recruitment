@@ -452,18 +452,14 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // docs/release/2026-10-09-lifecycle-v03-hosted-verification.json. The hosted
 // ledger holds 391 identities ending 20270312100000.
 //
-// Slutuppdrag 2026-10-15 (schema PR): three forward slots are genuinely
-// WAITING on the owner's release decision and the official integration:
-//   20270316090000_sp_review_reply_history_and_notices
-//   20270317090000_sp_talent_discovery
-//   20270318090000_rec_talent_search_and_contact
-// They come OFF this list in the same change that records their hosted
-// installation with evidence, as every earlier name did.
-const expectedPending: string[] = [
-  "20270316090000_sp_review_reply_history_and_notices.sql",
-  "20270317090000_sp_talent_discovery.sql",
-  "20270318090000_rec_talent_search_and_contact.sql",
-];
+// Slutuppdrag 2026-10-15: #472 (20270316090000, 20270317090000,
+// 20270318090000) was merged under the owner's release decision (b8e2de81)
+// and installed by the official integration; the read-only hosted
+// verification is recorded in
+// docs/release/2026-10-15-passport-talent-discovery-hosted-verification.json.
+// The hosted ledger holds 397 identities ending 20270318090000. Nothing is
+// pending.
+const expectedPending: string[] = [];
 
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",

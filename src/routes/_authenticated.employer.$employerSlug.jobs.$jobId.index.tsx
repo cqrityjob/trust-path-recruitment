@@ -89,6 +89,7 @@ import type { ApplicationStatus } from "@/lib/job-intelligence/applications.func
 import { z } from "zod";
 import { NextUnreviewed } from "@/components/recruitment/NextUnreviewed";
 import { RequirementProfilePanel } from "@/components/recruitment/RequirementProfilePanel";
+import { FindCandidatesLink, TalentCriteriaPanel } from "@/components/talent/TalentCriteriaPanel";
 import { InterviewCompositionPanel } from "@/components/recruitment/InterviewCompositionPanel";
 import { getRequirementProfile } from "@/lib/recruitment/requirement-intelligence.functions";
 import { RecruiterCounts } from "@/components/recruitment/RecruiterStatus";
@@ -654,6 +655,12 @@ function JobHub({
             <Activity className="h-3.5 w-3.5" aria-hidden="true" />,
             "rec.hub.tab.activity",
           )}
+          <FindCandidatesLink
+            employerId={employerId}
+            employerSlug={employerSlug}
+            jobId={jobId}
+            className={btnSecondary}
+          />
           {primary}
         </div>
       </header>
@@ -745,6 +752,15 @@ function JobHub({
             />
           )}
           <RequirementProfilePanel employerId={employerId} jobId={jobId} />
+          {/* Talent search reads only the CONFIRMED profile, bound here to the
+              governed catalogue (20270318090000). */}
+          <div className="mt-5">
+            <TalentCriteriaPanel
+              employerId={employerId}
+              employerSlug={employerSlug}
+              jobId={jobId}
+            />
+          </div>
           {/* The recruitment's interview setup, after the requirements it
               interviews for: version-bound, every core question included,
               approved follow-ups chosen. Absent until its slot is installed

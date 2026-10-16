@@ -1,0 +1,7 @@
+# RF8 on the entry page -- BEFORE the fix (app 99002f4, copy as committed there)
+# Found by the public pilot (run 38736294886, scenario F): after approval the holder
+# never read 'Godkänd'; the case history called every approval 'Dokumentgranskad'.
+# Command: the E3f copy check of scripts/talent-discovery-check.ts against 99002f4's i18n.
+
+not ok E3f (sv) approved="Godkänd" {"employer":"","history_label_for_any_approval":"Dokumentgranskad","current_label_for_any_approval":"Dokumentgranskad","done":"Meriten är dokumentgranskad"}
+not ok E3f (en) approved="Approved" {"employer":"","history_label_for_any_approval":"Document-reviewed","current_label_for_any_approval":"Document-reviewed","done":"The credential is document-reviewed"}
