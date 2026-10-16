@@ -3987,6 +3987,14 @@
           "object": "sp_talent_respond_contact"
         }
       ]
+    },
+    {
+      "file": "20270319090000_rec_candidate_view_shared_permissions.sql",
+      "hostedState": "pending",
+      "note": "Performance, no new object and no contract change: rec_ri_candidate_view keeps its signature, grants, SECURITY DEFINER, search_path, every returned field, filter, ordering, page, total and count, and its refusal. Only can_manage is computed differently -- owner/admin standing once per call (after the unchanged membership check) and the responsible recruiter once per job, instead of rec_can_manage per application (5 050 calls on a 5 050-application vacancy). No cache: every call reads memberships, roles and responsibility afresh. The running application works unchanged with either body, so no application release depends on it. Install after 20270318090000.",
+      "rollback": "supabase/rollback/20270319090000_rec_candidate_view_shared_permissions_rollback.sql",
+      "verify": "Full-history replay plus supabase/tests/rec_candidate_view_shared_permissions_test.sql (CV0-CV9: owner/admin/responsible/member/removed/suspended/invited/inactive organisation/company B/outsider/no user; every principal x 28 views equal to the rollback's 20270308090000 body as a whole envelope; next-call role, responsibility and membership changes; call-count guard independent of row count), negative controls CV NC1-NC4 and the P1 100-application oracle on the new body, all in scripts/db-test.sh. The rollback stores nothing to preserve, restores the 20270308090000 body verbatim and is proved with a re-apply. Before any production installation, reverify the exact CI head; after it, read back the function body and EXECUTE grants read-only.",
+      "introduces": []
     }
   ],
   "policyVersion": 2, 

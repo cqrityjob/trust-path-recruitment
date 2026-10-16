@@ -209,15 +209,17 @@ function exportOf(url: string): string | null {
 /**
  * The candidate read of the open case (listRecruitmentCandidatesPage). The
  * header count, the step chip, the pager and the rows all come from this one
- * response, and on the 5 050-application case it is slow by construction:
- * rec_ri_candidate_view evaluates every application for its page of 25
- * (has_employer_role 10 101 calls, rec_is_member, rec_can_manage and
- * application_state 5 050 each -- about 2 s on a quiet machine, more on a
- * loaded runner). An assertion started at page load raced it: on #472
- * (run 38733159776, both attempts) the header still showed "…" when the
- * default 5 s ran out, and the count arrived just after -- the failure
- * screenshot shows it. So the walk waits for the read it is about to check,
- * then asserts at once; no assertion's own timeout is raised.
+ * response, and on the 5 050-application case it evaluates every application
+ * for its page of 25 (application_state 5 050 times). Until 20270319090000 it
+ * also re-judged the caller per application (has_employer_role 10 101 calls,
+ * rec_is_member and rec_can_manage 5 050 each) -- about 2.4 s on a quiet
+ * machine, more on a loaded runner; now the caller is judged once per read
+ * and the read takes about a third of that. An assertion started at page load
+ * raced it: on #472 (run 38733159776, both attempts) the header still showed
+ * "…" when the default 5 s ran out, and the count arrived just after -- the
+ * failure screenshot shows it. However fast the read, the walk waits for the
+ * read it is about to check, then asserts at once; no assertion's own timeout
+ * is raised.
  */
 function candidateRead(page: Page) {
   return page.waitForResponse((r) => exportOf(r.url()) === "listRecruitmentCandidatesPage");
