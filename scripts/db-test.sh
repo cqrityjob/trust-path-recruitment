@@ -297,6 +297,71 @@ td_fn() { sed -n "/^$2/,/$3/p" "$1" | sed '1s/^CREATE FUNCTION/CREATE OR REPLACE
 td_plant() { psql_q -d "$TEST_DB" -c "$(td_fn "$1" "$2" "$3" | sed "$4")" >/dev/null; }
 td_restore() { psql_q -d "$TEST_DB" -c "$(td_fn "$1" "$2" "$3")" >/dev/null; }
 
+# Slot 20270319090000 (2026-10-16): the employer candidate list judges the
+# caller's standing once per read and responsibility once per job, instead of
+# rec_can_manage per application. The newest slot, so it runs first on the
+# full current schema and is stood down first; the 2026-10-15 rollbacks below
+# never touch rec_ri_candidate_view. Every comparison is against the body it
+# replaced: the rollback's, loaded as rec_cv_reference.candidate_view.
+CV_M=supabase/migrations/20270319090000_rec_candidate_view_shared_permissions.sql
+CV_R=supabase/rollback/20270319090000_rec_candidate_view_shared_permissions_rollback.sql
+CV_FN='CREATE OR REPLACE FUNCTION public.rec_ri_candidate_view('
+cv_reference() {
+  {
+    echo "CREATE SCHEMA rec_cv_reference; GRANT USAGE ON SCHEMA rec_cv_reference TO authenticated;"
+    sed -n "/^${CV_FN}/,/^END \\\$\\\$;/p" "$CV_R" | sed '1s/public\.rec_ri_candidate_view(/rec_cv_reference.candidate_view(/'
+    echo "REVOKE ALL ON FUNCTION rec_cv_reference.candidate_view(uuid,uuid,jsonb,text,text,integer,integer,uuid) FROM PUBLIC, anon;"
+    echo "GRANT EXECUTE ON FUNCTION rec_cv_reference.candidate_view(uuid,uuid,jsonb,text,text,integer,integer,uuid) TO authenticated;"
+  } | psql_q -d "$TEST_DB" >/dev/null
+}
+echo "==> Running the candidate list's shared permission checks (20270319090000)"
+cv_reference
+td_suite rec_candidate_view_shared_permissions_test "Candidate list shared permissions" 32 \
+  "CV1.3 the responsible recruiter may manage J1 rows and not J2 rows, in one read" \
+  "CV2.1 a plain member reads the same population and may manage nothing" \
+  "CV3.1 removed, suspended and invited members are refused" \
+  "CV3.3 company B's owner reads nothing of company A, not even under B's own id" \
+  "CV5.1 every principal x every view: the whole envelope, or the error, is the previous function's" \
+  "CV7.5 membership removed: the very next call is refused, responsibility or not" \
+  "CV9.1 the installed body: no rec_can_manage; membership once, owner/admin once" \
+  "CV9.2 and the same counts for twice the applications: independent of the rows"
+# Negative controls: each planted defect is caught by the assertion named.
+td_plant "$CV_M" "$CV_FN" '^END \$\$;' 's/THEN admin_role OR EXISTS(SELECT 1 FROM public.recruitment_settings s WHERE s.job_id=j.id AND s.responsible_user_id=auth.uid())/THEN admin_role/'
+td_nc rec_candidate_view_shared_permissions_test "CV NC1 the responsible recruiter's half is dropped" "CV1.3"
+td_restore "$CV_M" "$CV_FN" '^END \$\$;'
+td_plant "$CV_M" "$CV_FN" '^END \$\$;' 's/      mg.can_manage,/      public.rec_can_manage(j.id)can_manage,/'
+td_nc rec_candidate_view_shared_permissions_test "CV NC2 the shared checks run per application again" "CV9.1"
+td_restore "$CV_M" "$CV_FN" '^END \$\$;'
+td_plant "$CV_M" "$CV_FN" '^END \$\$;' 's/IF NOT public.rec_is_member(_employer_id) OR (_job_id/IF (_job_id/'
+td_nc rec_candidate_view_shared_permissions_test "CV NC3 the membership check is gone" "CV3.1"
+td_restore "$CV_M" "$CV_FN" '^END \$\$;'
+td_plant "$CV_M" "$CV_FN" '^END \$\$;' "s/admin_role:=public.has_employer_role(auth.uid(),_employer_id,ARRAY\\['owner','admin'\\]);/admin_role:=public.has_employer_role(auth.uid(),_employer_id,NULL);/"
+td_nc rec_candidate_view_shared_permissions_test "CV NC4 every member counts as owner/admin" "CV1.3"
+td_restore "$CV_M" "$CV_FN" '^END \$\$;'
+td_suite rec_candidate_view_shared_permissions_test "Candidate list shared permissions (after controls)" 32
+# The existing 100-application P1 oracle (counts, filters, paging, neighbours,
+# overview, access) on the NEW body; it runs again on the old body below.
+set +e
+CV_P1_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/recruiter_intelligence_p1_test.sql 2>&1)"
+CV_P1_RC=$?
+set -e
+CV_P1_PASSED="$(echo "$CV_P1_OUT" | grep -c "NOTICE:  ok " || true)"
+if [ "$CV_P1_RC" -ne 0 ] || ! [ "$CV_P1_PASSED" -ge 95 ]; then
+  echo "$CV_P1_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "Recruiter Intelligence P1 oracle on the 20270319090000 candidate list"
+else
+  echo "    ok  ${CV_P1_PASSED} P1 oracle assertions on the 20270319090000 candidate list"
+fi
+# Stand down: the rollback restores the 20270308090000 body (it stores no data,
+# so it never refuses); the forward file re-applies and rolls back again.
+psql_q -d "$TEST_DB" -c "SET client_min_messages = warning; DROP SCHEMA rec_cv_reference CASCADE;" >/dev/null
+psql_q -d "$TEST_DB" -f "$CV_R" >/dev/null
+psql_q -d "$TEST_DB" -f "$CV_M" >/dev/null
+psql_q -d "$TEST_DB" -f "$CV_R" >/dev/null
+CV_STOOD_DOWN="$(psql_q -d "$TEST_DB" -Atc "SELECT (position('public.rec_can_manage(a.job_id)can_manage' IN p.prosrc) > 0 AND position('admin_role' IN p.prosrc) = 0 AND p.prosecdef AND obj_description(p.oid, 'pg_proc') IS NULL AND has_function_privilege('authenticated', p.oid, 'EXECUTE') AND NOT has_function_privilege('anon', p.oid, 'EXECUTE') AND to_regnamespace('rec_cv_reference') IS NULL)::text FROM pg_proc p WHERE p.oid = 'public.rec_ri_candidate_view(uuid,uuid,jsonb,text,text,integer,integer,uuid)'::regprocedure")"
+[ "$CV_STOOD_DOWN" = "true" ] || { echo "FAIL: the 20270319090000 rollback did not restore the 20270308090000 candidate list." >&2; exit 1; }
+echo "    ok  20270319090000 stood down (and re-applied once) to the 20270308090000 body before the 2026-10-15 slots"
+
 echo "==> Running Passport clarification reply, decision history and notices"
 td_suite sp_review_reply_history_and_notices_test "Passport reply/history/notices" 53 \
   "RH3.2 the request is back in review with a new version" \

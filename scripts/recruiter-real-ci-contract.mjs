@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import cp from "node:child_process";
 
-export const SCHEMA_SHA = "ed882e955f7019036aad8fa4404cb023d2c9fced";
+export const SCHEMA_SHA = "173bb7f1444e39917130ffda6e6def5207c39b3e";
 export const APP_SHA = "53659419a1c243c27a59540eb849569140b71365";
 export const PROJECT = "cqj-ri-real-20261008b";
 export const API = "http://127.0.0.1:55690";
@@ -14,7 +14,7 @@ export const EXCLUDED =
 export function requireCompleteHistory(names) {
   const files = names.filter((name) => name.endsWith(".sql")).sort();
   if (
-    files.length !== 397 ||
+    files.length !== 398 ||
     files.some((name) => !/^\d{14}_.+\.sql$/.test(name)) ||
     new Set(files.map((name) => name.slice(0, 14))).size !== files.length
   )
@@ -51,6 +51,8 @@ export function requireCompleteHistory(names) {
     !files.some((name) => name.startsWith("20270318090000_"))
   )
     throw Error("REAL_CI_TALENT_DISCOVERY_FORWARD_REQUIRED");
+  if (!files.some((name) => name.startsWith("20270319090000_")))
+    throw Error("REAL_CI_CANDIDATE_VIEW_FORWARD_REQUIRED");
   return files;
 }
 

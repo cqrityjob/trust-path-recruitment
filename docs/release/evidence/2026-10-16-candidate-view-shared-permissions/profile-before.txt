@@ -1,0 +1,168 @@
+NOTICE:  duration: 2421.584 ms  plan:
+Query Text: WITH base AS MATERIALIZED(
+    SELECT a.id,a.job_id,a.applicant_user_id,a.status,a.created_at,a.updated_at,a.cv_storage_path,a.cv_source,a.employer_archived_at,p.display_name,m.responsible_user_id,m.first_viewed_at,coalesce(m.version,1)meta_version,j.title_sv,j.title_en,
+      public.rec_can_manage(a.job_id)can_manage,recruiter_intelligence.application_state(a.id)ri,
+      b.starts_at next_activity_at,b.timezone next_activity_timezone,b.status next_activity_status,
+      EXISTS(SELECT 1 FROM public.assessment_assignments aa WHERE aa.application_id=a.id AND aa.status NOT IN ('completed','cancelled','expired'))assessment_open
+    FROM public.job_applications a JOIN public.jobs j ON j.id=a.job_id LEFT JOIN public.profiles p ON p.id=a.applicant_user_id
+    LEFT JOIN public.recruitment_application_meta m ON m.application_id=a.id
+    LEFT JOIN LATERAL(SELECT bk.starts_at,bk.timezone,bk.status FROM public.recruitment_interview_bookings bk WHERE bk.application_id=a.id AND a.status IN ('submitted','reviewing','interview') AND bk.status IN ('planned','invited','confirmed') AND bk.starts_at>=now()-interval '1 hour' ORDER BY bk.starts_at,bk.id LIMIT 1)b ON true
+    WHERE a.employer_id=_employer_id AND (_job_id IS NULL OR a.job_id=_job_id)
+  ), filtered AS MATERIALIZED(
+    SELECT * FROM base a WHERE CASE stagev WHEN 'received' THEN true WHEN 'archived' THEN a.employer_archived_at IS NOT NULL ELSE a.employer_archived_at IS NULL END
+      AND CASE stagev WHEN 'open' THEN a.status IN ('submitted','reviewing','interview') WHEN 'decided' THEN a.status NOT IN ('submitted','reviewing','interview') WHEN 'new' THEN a.status='submitted' WHEN 'review' THEN a.status='reviewing' WHEN 'interview' THEN a.status='interview' ELSE true END
+      AND (f->>'job' IS NULL OR a.job_id::text=f->>'job') AND (f->>'status' IS NULL OR a.status=f->>'status')
+      AND (f->>'owner' IS NULL OR CASE WHEN f->>'owner'='none' THEN a.responsible_user_id IS NULL ELSE a.responsible_user_id::text=f->>'owner' END)
+      AND (nullif(btrim(f->>'q'),'') IS NULL OR a.display_name ILIKE '%'||replace(replace(replace(btrim(f->>'q'),'\','\\'),'%','\%'),'_','\_')||'%' ESCAPE '\')
+      AND (f->>'requirement' IS NULL OR a.ri->>'requirementStatus'=f->>'requirement')
+      AND (f->>'review' IS NULL OR CASE WHEN f->>'review'='remaining' THEN a.ri->>'reviewState'<>'reviewed' ELSE a.ri->>'reviewState'=f->>'review' END)
+      AND (f->>'analysis' IS NULL OR a.ri->>'analysisState'=f->>'analysis')
+      AND (f->>'assessment' IS NULL OR f->>'assessment'<>'open' OR a.assessment_open)
+      AND NOT EXISTS(SELECT 1 FROM jsonb_array_elements(coalesce(f->'answers','[]'))af WHERE NOT EXISTS(SELECT 1 FROM public.job_application_answers ans WHERE ans.application_id=a.id AND ans.question_id::text=af->>'question_id' AND to_jsonb(ans.answer_bool)=af->'value'))
+  ), ranked AS MATERIALIZED(
+    SELECT f.*,row_number() OVER(ORDER BY
+      CASE WHEN sortv='requirements' THEN CASE f.ri->>'requirementStatus' WHEN 'green' THEN 0 WHEN 'yellow' THEN 1 WHEN 'gray' THEN 2 ELSE 3 END END,
+      CASE WHEN sortv IN ('requirements','applied') AND dirv='asc' THEN f.created_at END ASC,
+      CASE WHEN sortv IN ('requirements','applied') AND dirv='desc' THEN f.created_at END DESC,
+      CASE WHEN sortv='name' AND dirv='asc' THEN f.display_name COLLATE "sv-SE-x-icu" END ASC NULLS LAST,
+      CASE WHEN sortv='name' AND dirv='desc' THEN f.display_name COLLATE "sv-SE-x-icu" END DESC NULLS LAST,
+      CASE WHEN sortv='stage' THEN array_position(ARRAY['submitted','reviewing','interview','hired','rejected','withdrawn'],f.status)*CASE WHEN dirv='asc' THEN 1 ELSE -1 END END,
+      CASE WHEN sortv='activity' AND dirv='asc' THEN f.next_activity_at END ASC NULLS LAST,
+      CASE WHEN sortv='activity' AND dirv='desc' THEN f.next_activity_at END DESC NULLS LAST,f.id ASC)rank FROM filtered f
+  ), bounds AS(SELECT count(*)total,greatest(1,ceil(count(*)::numeric/coalesce(_size,25))::integer)pages FROM filtered), pagebounds AS(SELECT *,least(greatest(coalesce(_page,1),1),pages)page FROM bounds), picked AS(
+    SELECT r.* FROM ranked r CROSS JOIN pagebounds b WHERE CASE WHEN _around IS NOT NULL THEN r.rank BETWEEN (SELECT rank-1 FROM ranked WHERE id=_around) AND (SELECT rank+1 FROM ranked WHERE id=_around) ELSE r.rank>(b.page-1)*coalesce(_size,25) AND r.rank<=b.page*coalesce(_size,25) END
+  ) SELECT jsonb_build_object('rows',coalesce((SELECT jsonb_agg((to_jsonb(p)-'ri'-'cv_document_snapshot')||jsonb_build_object('requirement_status',p.ri->>'requirementStatus','review_state',p.ri->>'reviewState','analysis_state',p.ri->>'analysisState','next_action',p.ri->>'nextAction','review_revision',p.ri->'revision','profile_version',p.ri->'profileVersion') ORDER BY p.rank)FROM picked p),'[]'),
+    'total',b.total,'page',b.page,'pages',b.pages,'from',coalesce((SELECT min(rank)FROM picked),0),'to',coalesce((SELECT max(rank)FROM picked),0),
+    'counts',(SELECT jsonb_build_object('total',count(*),'new',count(*)FILTER(WHERE status='submitted'),'review',count(*)FILTER(WHERE status='reviewing'),'interview',count(*)FILTER(WHERE status='interview'),'hired',count(*)FILTER(WHERE status='hired'),'decided',count(*)FILTER(WHERE status NOT IN ('submitted','reviewing','interview')))FROM base WHERE employer_archived_at IS NULL),
+    'intelligenceCounts',(SELECT jsonb_build_object('received',count(*),'reviewed',count(*)FILTER(WHERE ri->>'reviewState'='reviewed'),'remaining',count(*)FILTER(WHERE ri->>'reviewState'<>'reviewed'),'green',count(*)FILTER(WHERE ri->>'requirementStatus'='green'),'yellow',count(*)FILTER(WHERE ri->>'requirementStatus'='yellow'),'gray',count(*)FILTER(WHERE ri->>'requirementStatus'='gray'),'notEstablished',count(*)FILTER(WHERE ri->>'requirementStatus'='not_established'),'filtered',b.total,'filteredReviewed',(SELECT count(*)FROM filtered WHERE ri->>'reviewState'='reviewed'),'filteredRemaining',(SELECT count(*)FROM filtered WHERE ri->>'reviewState'<>'reviewed'),'archived',count(*)FILTER(WHERE employer_archived_at IS NOT NULL),'withdrawn',count(*)FILTER(WHERE status='withdrawn'),'decided',count(*)FILTER(WHERE status NOT IN ('submitted','reviewing','interview')))FROM base))             FROM pagebounds b
+CTE Scan on pagebounds b  (cost=2232581.99..2233124.87 rows=1 width=32) (actual time=2421.535..2421.565 rows=1 loops=1)
+  Buffers: shared hit=169588, temp written=320
+  CTE base
+    ->  Nested Loop Left Join  (cost=251.96..85618.80 rows=5050 width=312) (actual time=8.027..2330.991 rows=5050 loops=1)
+          Buffers: shared hit=169582
+          ->  Hash Left Join  (cost=243.77..501.05 rows=5050 width=206) (actual time=1.512..16.665 rows=5050 loops=1)
+                Hash Cond: (a.id = m.application_id)
+                Buffers: shared hit=203
+                ->  Hash Left Join  (cost=219.60..463.61 rows=5050 width=178) (actual time=1.491..13.354 rows=5050 loops=1)
+                      Hash Cond: (a.applicant_user_id = p.id)
+                      Buffers: shared hit=203
+                      ->  Nested Loop  (cost=0.14..230.89 rows=5050 width=165) (actual time=0.027..6.173 rows=5050 loops=1)
+                            Buffers: shared hit=98
+                            ->  Index Scan using jobs_pkey on jobs j  (cost=0.14..8.16 rows=1 width=80) (actual time=0.014..0.015 rows=1 loops=1)
+                                  Index Cond: (id = '55555555-eeee-4000-8000-000000000005'::uuid)
+                                  Buffers: shared hit=2
+                            ->  Seq Scan on job_applications a  (cost=0.00..172.23 rows=5050 width=101) (actual time=0.011..4.460 rows=5050 loops=1)
+                                  Filter: ((job_id = '55555555-eeee-4000-8000-000000000005'::uuid) AND (employer_id = '11111111-aaaa-4000-8000-000000000001'::uuid))
+                                  Rows Removed by Filter: 32
+                                  Buffers: shared hit=96
+                      ->  Hash  (cost=155.87..155.87 rows=5087 width=29) (actual time=1.416..1.417 rows=5087 loops=1)
+                            Buckets: 8192  Batches: 1  Memory Usage: 372kB
+                            Buffers: shared hit=105
+                            ->  Seq Scan on profiles p  (cost=0.00..155.87 rows=5087 width=29) (actual time=0.016..0.651 rows=5087 loops=1)
+                                  Buffers: shared hit=105
+                ->  Hash  (cost=16.30..16.30 rows=630 width=44) (actual time=0.005..0.006 rows=0 loops=1)
+                      Buckets: 1024  Batches: 1  Memory Usage: 8kB
+                      ->  Seq Scan on recruitment_application_meta m  (cost=0.00..16.30 rows=630 width=44) (actual time=0.004..0.005 rows=0 loops=1)
+          ->  Limit  (cost=8.18..8.19 rows=1 width=88) (actual time=0.003..0.003 rows=0 loops=5050)
+                Buffers: shared hit=10106
+                ->  Sort  (cost=8.18..8.19 rows=1 width=88) (actual time=0.003..0.003 rows=0 loops=5050)
+                      Sort Key: bk.starts_at, bk.id
+                      Sort Method: quicksort  Memory: 25kB
+                      Buffers: shared hit=10106
+                      ->  Result  (cost=0.14..8.17 rows=1 width=88) (actual time=0.001..0.001 rows=0 loops=5050)
+                            One-Time Filter: (a.status = ANY ('{submitted,reviewing,interview}'::text[]))
+                            Buffers: shared hit=10100
+                            ->  Index Scan using recruitment_bookings_application_idx on recruitment_interview_bookings bk  (cost=0.14..8.17 rows=1 width=88) (actual time=0.001..0.001 rows=0 loops=5050)
+                                  Index Cond: (application_id = a.id)
+                                  Filter: ((status = ANY ('{planned,invited,confirmed}'::text[])) AND (starts_at >= (now() - '01:00:00'::interval)))
+                                  Buffers: shared hit=10100
+          SubPlan 2
+            ->  Seq Scan on assessment_assignments aa  (cost=0.00..11.51 rows=107 width=16) (actual time=0.005..0.006 rows=0 loops=1)
+                  Filter: (status <> ALL ('{completed,cancelled,expired}'::text[]))
+  CTE filtered
+    ->  Nested Loop Anti Join  (cost=0.00..2146175.93 rows=2524 width=398) (actual time=8.050..2354.391 rows=5050 loops=1)
+          Join Filter: (NOT (ANY ((a_1.id = (hashed SubPlan 5).col1) AND ((af.value ->> 'question_id'::text) = (hashed SubPlan 5).col2) AND ((af.value -> 'value'::text) = (hashed SubPlan 5).col3))))
+          Buffers: shared hit=169582
+          ->  CTE Scan on base a_1  (cost=0.00..119.94 rows=5048 width=398) (actual time=8.041..2349.026 rows=5050 loops=1)
+                Filter: ((employer_archived_at IS NULL) AND (status = ANY ('{submitted,reviewing,interview}'::text[])))
+                Buffers: shared hit=169582
+          ->  Function Scan on jsonb_array_elements af  (cost=0.00..1.00 rows=100 width=32) (actual time=0.000..0.000 rows=0 loops=5050)
+          SubPlan 5
+            ->  Seq Scan on job_application_answers ans  (cost=0.00..188.49 rows=5114 width=80) (never executed)
+  CTE ranked
+    ->  WindowAgg  (cost=218.38..338.23 rows=2524 width=510) (actual time=11.434..14.572 rows=5050 loops=1)
+          Buffers: shared hit=3
+          ->  Sort  (cost=218.34..224.65 rows=2524 width=494) (actual time=11.421..11.967 rows=5050 loops=1)
+                Sort Key: (CASE (f.ri ->> 'requirementStatus'::text) WHEN 'green'::text THEN 0 WHEN 'yellow'::text THEN 1 WHEN 'gray'::text THEN 2 ELSE 3 END), f.created_at DESC, f.id
+                Sort Method: quicksort  Memory: 2697kB
+                Buffers: shared hit=3
+                ->  CTE Scan on filtered f  (cost=0.00..75.72 rows=2524 width=494) (actual time=0.009..2.795 rows=5050 loops=1)
+  CTE pagebounds
+    ->  Subquery Scan on bounds  (cost=56.79..56.82 rows=1 width=16) (actual time=2367.953..2367.959 rows=1 loops=1)
+          Buffers: shared hit=169582
+          ->  Aggregate  (cost=56.79..56.81 rows=1 width=12) (actual time=2367.952..2367.954 rows=1 loops=1)
+                Buffers: shared hit=169582
+                ->  CTE Scan on filtered  (cost=0.00..50.48 rows=2524 width=0) (actual time=8.053..2365.658 rows=5050 loops=1)
+                      Buffers: shared hit=169582
+  CTE picked
+    ->  Nested Loop  (cost=0.00..107.29 rows=280 width=406) (actual time=11.460..41.110 rows=25 loops=1)
+          Join Filter: ((r.rank <= (b_1.page * 25)) AND (r.rank > ((b_1.page - 1) * 25)))
+          Rows Removed by Join Filter: 5025
+          Buffers: shared hit=3, temp written=320
+          ->  CTE Scan on pagebounds b_1  (cost=0.00..0.02 rows=1 width=4) (actual time=0.000..0.004 rows=1 loops=1)
+          ->  CTE Scan on ranked r  (cost=0.00..50.48 rows=2524 width=406) (actual time=11.453..40.714 rows=5050 loops=1)
+                Buffers: shared hit=3, temp written=320
+  InitPlan 10
+    ->  Aggregate  (cost=26.08..26.09 rows=1 width=32) (actual time=42.182..42.184 rows=1 loops=1)
+          Buffers: shared hit=6, temp written=320
+          ->  Sort  (cost=16.98..17.68 rows=280 width=104) (actual time=41.202..41.205 rows=25 loops=1)
+                Sort Key: p_1.rank
+                Sort Method: quicksort  Memory: 45kB
+                Buffers: shared hit=6, temp written=320
+                ->  CTE Scan on picked p_1  (cost=0.00..5.60 rows=280 width=104) (actual time=11.479..41.155 rows=25 loops=1)
+                      Buffers: shared hit=3, temp written=320
+  InitPlan 11
+    ->  Aggregate  (cost=6.30..6.31 rows=1 width=8) (actual time=0.016..0.017 rows=1 loops=1)
+          ->  CTE Scan on picked  (cost=0.00..5.60 rows=280 width=8) (actual time=0.002..0.008 rows=25 loops=1)
+  InitPlan 12
+    ->  Aggregate  (cost=6.30..6.31 rows=1 width=8) (actual time=0.010..0.011 rows=1 loops=1)
+          ->  CTE Scan on picked picked_1  (cost=0.00..5.60 rows=280 width=8) (actual time=0.000..0.003 rows=25 loops=1)
+  InitPlan 13
+    ->  Aggregate  (cost=246.19..246.20 rows=1 width=32) (actual time=2.121..2.123 rows=1 loops=1)
+          ->  CTE Scan on base  (cost=0.00..101.00 rows=5050 width=32) (actual time=0.002..1.047 rows=5050 loops=1)
+                Filter: (employer_archived_at IS NULL)
+  SubPlan 16
+    ->  Aggregate  (cost=542.84..542.86 rows=1 width=32) (actual time=9.064..9.065 rows=1 loops=1)
+          InitPlan 14
+            ->  Aggregate  (cost=63.13..63.14 rows=1 width=8) (actual time=1.832..1.833 rows=1 loops=1)
+                  ->  CTE Scan on filtered filtered_1  (cost=0.00..63.10 rows=13 width=0) (actual time=1.827..1.827 rows=0 loops=1)
+                        Filter: ((ri ->> 'reviewState'::text) = 'reviewed'::text)
+                        Rows Removed by Filter: 5050
+          InitPlan 15
+            ->  Aggregate  (cost=69.38..69.39 rows=1 width=8) (actual time=1.973..1.974 rows=1 loops=1)
+                  ->  CTE Scan on filtered filtered_2  (cost=0.00..63.10 rows=2511 width=0) (actual time=0.002..1.747 rows=5050 loops=1)
+                        Filter: ((ri ->> 'reviewState'::text) <> 'reviewed'::text)
+          ->  CTE Scan on base base_1  (cost=0.00..101.00 rows=5050 width=72) (actual time=0.001..0.942 rows=5050 loops=1)
+NOTICE:  duration: 2435.083 ms  plan:
+Query Text: EXPLAIN (ANALYZE, BUFFERS) SELECT public.rec_ri_candidate_view('11111111-aaaa-4000-8000-000000000001','55555555-eeee-4000-8000-000000000005','{"stage":"open","owner":null,"q":null,"job":null,"status":null,"requirement":null,"review":null,"analysis":null,"assessment":null,"answers":[]}'::jsonb,'requirements',NULL,1,25,NULL);
+Result  (cost=0.00..0.26 rows=1 width=32) (actual time=2435.079..2435.080 rows=1 loops=1)
+  Buffers: shared hit=172409, temp written=321
+                                        QUERY PLAN                                         
+-------------------------------------------------------------------------------------------
+ Result  (cost=0.00..0.26 rows=1 width=32) (actual time=2435.079..2435.080 rows=1 loops=1)
+   Buffers: shared hit=172409, temp written=321
+ Planning Time: 0.011 ms
+ Execution Time: 2435.148 ms
+(4 rows)
+
+                 function                 | calls | total_ms | self_ms 
+------------------------------------------+-------+----------+---------
+ public.rec_ri_candidate_view             |     1 |   2434.6 |   152.1
+ public.rec_can_manage                    |  5050 |   1433.3 |   110.5
+ public.rec_is_member                     |  5051 |    970.2 |   388.0
+ recruiter_intelligence.application_state |  5050 |    847.8 |   542.9
+ public.has_employer_role                 | 10101 |    759.9 |   759.9
+ recruiter_intelligence.source_version    | 10100 |    304.9 |   304.9
+ public.employer_is_active_status         |  5051 |    176.4 |   176.4
+(7 rows)
+
