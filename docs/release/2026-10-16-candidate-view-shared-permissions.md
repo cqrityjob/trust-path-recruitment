@@ -98,8 +98,8 @@ påståenden och är registrerad i `scripts/db-test.sh`:
 - **CV6:** en ansökan under en annan organisation än tjänstens.
 - **CV7:** ingen cache. Rolländring, nytt ansvar, borttaget medlemskap och avstängd
   organisation gäller från nästa anrop, i båda kropparna.
-- **CV8:** en återkallad session. Databasläsningen är oförändrad av denna slot;
-  sessionsregeln för läsningen är appens middleware, som e2e-testet visar.
+- **CV8:** en återkallad session. Databasläsningen är oförändrad av denna slot, som inte
+  rör någon sessionsregel. Funktionen har aldrig läst `auth.sessions`.
 - **CV9:** regressionsskyddet. De gemensamma kontrollerna körs ett fast antal gånger
   (`rec_can_manage` 0, `rec_is_member` 1, `has_employer_role` 2,
   `employer_is_active_status` 1), med samma antal för 60 och 120 ansökningar. Referensen ökar
@@ -128,7 +128,9 @@ judged afresh on every call".
 - En syntetisk person blir i tur och ordning medlem, admin, ansvarig och borttagen. Varje
   ändring gäller från nästa anrop, både via PostgREST och via appens egen
   `listRecruitmentCandidatesPage`.
-- En utloggad session nekas av appens läsning.
+- Efter utloggning har Auth avslutat sessionen (`/auth/v1/user` nekar). Vad appens läsning
+  och PostgREST därefter svarar på den ännu giltiga token registreras på båda sidor. Det
+  påstås inte, se "Befintlig iakttagelse" nedan.
 - Testet pushades före migrationen, så CI visar att det gäller även på den gamla kroppen.
 
 ## Verifierat lokalt
@@ -142,6 +144,19 @@ judged afresh on every call".
 - **Repots kontroller:** `migrations:check`, `migrations-duplicate:check`,
   `release-parity:check`, `release-frontier:check`, `deploy-plan:check`,
   `deploy-plan-negative:check` och `schema-first-release:check`.
+
+## Befintlig iakttagelse, utanför uppdraget
+
+CI-körningen på basversionen (`148d4115`, `main`:s funktion) visade att appens
+`listRecruitmentCandidatesPage` fortfarande svarade med kandidatdata på en utloggad användares
+ännu giltiga access-token. På CI-stacken verifierar `getClaims` token lokalt utan att fråga Auth
+om sessionen. Lokalt, med en HS256-token, nekade `/auth/v1/user` efter utloggningen (403),
+men ett direkt PostgREST-anrop till `rec_ri_candidate_view` med samma token svarade 200.
+
+Passporten har en databasregel för detta (`sp_assert_passport_session`), men rekryteringens
+läsningar har ingen. Detta är `main`:s beteende före och efter denna slot, och slotten ändrar
+det inte. Att införa en sessionsregel är en säkerhetsändring med egen release och föreslås
+som separat uppgift.
 
 ## Migrationsnummer
 

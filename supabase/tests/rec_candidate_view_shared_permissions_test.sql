@@ -19,9 +19,10 @@
 --         handled by the full rec_can_manage, as before.
 --   CV7   no cache: a role change, a new responsibility and a removed
 --         membership count from the very next call -- both bodies agree.
---   CV8   a revoked session: the database read is unchanged by this slot
---         (the session rule for this read is the application middleware,
---         proved over real Auth in e2e/recruitment-workspace.spec.ts).
+--   CV8   a revoked session: the database read is unchanged by this slot,
+--         which touches no session rule. The function never consulted
+--         auth.sessions; what a signed-out token reads over real Auth is
+--         recorded on both sides by e2e/recruitment-workspace.spec.ts.
 --   CV9   the regression guard: the shared checks run a FIXED number of times
 --         per read, whatever the number of applications; the reference body
 --         grows with the rows.
@@ -368,7 +369,7 @@ DO $$ BEGIN RAISE NOTICE 'GROUP CV8 — a revoked session'; END $$;
 INSERT INTO auth.sessions (id, user_id) SELECT 'cf195000-0000-4000-8000-0000000000a0', o FROM f;
 DELETE FROM auth.sessions WHERE id = 'cf195000-0000-4000-8000-0000000000a0';
 SELECT pg_temp.ok(pg_temp.cur(o::text, e1, j1) = pg_temp.ref(o::text, e1, j1),
-                  'CV8.1 the database read after a revoked session is unchanged by this slot (the middleware refuses it)') FROM f;
+                  'CV8.1 the database read after a revoked session is unchanged by this slot') FROM f;
 
 DO $$ BEGIN RAISE NOTICE 'GROUP CV9 — the shared checks run a fixed number of times per read'; END $$;
 CREATE TEMP TABLE guard AS
