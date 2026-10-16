@@ -346,7 +346,7 @@ CV_P1_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/recruiter_i
 CV_P1_RC=$?
 set -e
 CV_P1_PASSED="$(echo "$CV_P1_OUT" | grep -c "NOTICE:  ok " || true)"
-if [ "$CV_P1_RC" -ne 0 ] || [ "$CV_P1_PASSED" -lt 95 ]; then
+if [ "$CV_P1_RC" -ne 0 ] || ! [ "$CV_P1_PASSED" -ge 95 ]; then
   echo "$CV_P1_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
   suite_failed "Recruiter Intelligence P1 oracle on the 20270319090000 candidate list"
 else
