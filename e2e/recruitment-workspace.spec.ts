@@ -352,6 +352,216 @@ test.describe("recruitment case", () => {
     await expect(pager(page)).toContainText("av 5050");
   });
 
+  /**
+   * The candidate read's access, over real Auth and PostgREST, on the 5 050
+   * case. rec_ri_candidate_view judges the caller's standing once per read and
+   * responsibility once per job (20270319090000), so this walks every kind of
+   * caller through both doors -- the database function as PostgREST serves it,
+   * and the application's own listRecruitmentCandidatesPage request replayed
+   * with each person's token -- and changes a role, a responsibility and a
+   * membership between calls: each must count from the very next call. It
+   * also prints the read's time over the server function, so a run on this
+   * workflow is comparable with any other.
+   */
+  test("the candidate read over real Auth: one population for every role, nothing for anyone else, judged afresh on every call", async ({
+    page,
+  }) => {
+    const employerId =
+      sql(`SELECT id FROM public.employers WHERE slug = '${SLUG}'`) ??
+      "11111111-aaaa-4000-8000-000000000001";
+    type Envelope = {
+      total: number;
+      rows: { id: string; can_manage: boolean }[];
+      counts: Record<string, number>;
+    };
+    const view = async (token: string, jobId = BIG, viewPage = 1) => {
+      const r = await fetch(`${API}/rest/v1/rpc/rec_ri_candidate_view`, {
+        method: "POST",
+        headers: {
+          apikey: ANON,
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          _employer_id: employerId,
+          _job_id: jobId,
+          _filters: { stage: "received" },
+          _sort: "requirements",
+          _dir: null,
+          _page: viewPage,
+          _size: 25,
+          _around: null,
+        }),
+      });
+      const text = await r.text();
+      return { status: r.status, text, body: r.ok ? (JSON.parse(text) as Envelope) : null };
+    };
+    const refused = (r: { status: number; text: string }) =>
+      r.status >= 400 && !r.text.includes("Sökande ");
+    const manages = (e: Envelope | null) =>
+      e ? [...new Set(e.rows.map((x) => x.can_manage))].join("/") : "refused";
+
+    // The application's own request, captured once from the owner's browser.
+    await signIn(page, "anna.agare@nordvakt.test");
+    const read = candidateRead(page);
+    await open(page, casePath(BIG, "?step=applications&stage=received"));
+    const captured = (await read).request();
+    const replayHeaders = Object.fromEntries(
+      Object.entries(await captured.allHeaders()).filter(
+        ([k]) => !/^(authorization|cookie|content-length|host|connection|:)/i.test(k),
+      ),
+    );
+    const serverFn = async (token: string | null) => {
+      const t0 = performance.now();
+      const r = await fetch(captured.url(), {
+        method: captured.method(),
+        headers: { ...replayHeaders, ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: captured.postData() ?? undefined,
+      });
+      const text = await r.text();
+      return { status: r.status, text, ms: performance.now() - t0 };
+    };
+
+    // Owner and plain member: the same population, the same order, the same
+    // counts; only the member may not manage.
+    const anna = await tokenFor("anna.agare@nordvakt.test");
+    const mats = await tokenFor("mats.medlem@nordvakt.test");
+    const owner = await view(anna);
+    const member = await view(mats);
+    expect(owner.status).toBe(200);
+    expect(owner.body!.total).toBe(5050);
+    expect(owner.body!.rows).toHaveLength(25);
+    expect(manages(owner.body)).toBe("true");
+    expect(member.status).toBe(200);
+    expect(member.body!.rows.map((x) => x.id)).toEqual(owner.body!.rows.map((x) => x.id));
+    expect(member.body!.counts).toEqual(owner.body!.counts);
+    expect(member.body!.total).toBe(5050);
+    expect(manages(member.body)).toBe("false");
+    // The last page, through both doors' shared ordering.
+    const last = await view(mats, BIG, 202);
+    expect(last.body!.rows.map((x) => x.id)).toEqual(
+      (await view(anna, BIG, 202)).body!.rows.map((x) => x.id),
+    );
+    expect(last.body!.rows).toHaveLength(25);
+
+    // Company B's owner, a candidate and an anonymous caller read nothing.
+    const olle = await tokenFor("olle.agare@vaktbolaget.test");
+    const kim = await tokenFor("kim.kandidat@test.local");
+    for (const [who, r] of [
+      ["company B's owner", await view(olle)],
+      ["a candidate", await view(kim)],
+      ["no user (anon key)", await view(ANON)],
+    ] as const) {
+      expect(refused(r), `${who}: ${r.status} ${r.text.slice(0, 120)}`).toBe(true);
+    }
+
+    // The application's request: the owner and the member are answered, the
+    // others are not -- and no candidate name reaches them.
+    const ownerFn = await serverFn(anna);
+    expect(ownerFn.status).toBe(200);
+    expect(ownerFn.text).toContain("5050");
+    expect((await serverFn(mats)).status).toBe(200);
+    for (const [who, r] of [
+      ["company B's owner", await serverFn(olle)],
+      ["a candidate", await serverFn(kim)],
+      ["no token", await serverFn(null)],
+    ] as const) {
+      expect(r.status === 200 && r.text.includes("Sökande "), `${who} must read nothing`).toBe(
+        false,
+      );
+    }
+
+    // A person whose standing changes between calls: member, admin,
+    // responsible recruiter, removed. Created for this run on the local stack.
+    const email = `vera.vikarie.${Date.now()}@nordvakt.test`;
+    const created = await fetch(`${API}/auth/v1/admin/users`, {
+      method: "POST",
+      headers: { apikey: SRK, Authorization: `Bearer ${SRK}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email,
+        email_confirm: true,
+        user_metadata: { display_name: "Vera Vikarie" },
+      }),
+    }).then((r) => r.json() as Promise<{ id?: string }>);
+    const veraId = created.id!;
+    expect(veraId).toBeTruthy();
+    const settingsBefore = sql(
+      `SELECT coalesce(responsible_user_id::text, 'none') FROM public.recruitment_settings WHERE job_id = '${BIG}'`,
+    );
+    sql(
+      `INSERT INTO public.employer_memberships (employer_id, user_id, role, status) VALUES ('${employerId}', '${veraId}', 'member', 'active') RETURNING 1`,
+    );
+    try {
+      const vera = await tokenFor(email);
+      expect(manages((await view(vera)).body)).toBe("false");
+      sql(
+        `UPDATE public.employer_memberships SET role = 'admin' WHERE user_id = '${veraId}' RETURNING 1`,
+      );
+      expect(manages((await view(vera)).body), "made admin: the next call manages").toBe("true");
+      sql(
+        `UPDATE public.employer_memberships SET role = 'member' WHERE user_id = '${veraId}' RETURNING 1`,
+      );
+      expect(manages((await view(vera)).body), "member again: the next call does not").toBe(
+        "false",
+      );
+      sql(
+        `INSERT INTO public.recruitment_settings (job_id, employer_id, responsible_user_id) VALUES ('${BIG}', '${employerId}', '${veraId}')
+         ON CONFLICT (job_id) DO UPDATE SET responsible_user_id = EXCLUDED.responsible_user_id RETURNING 1`,
+      );
+      expect(manages((await view(vera)).body), "made responsible: the next call manages").toBe(
+        "true",
+      );
+      expect(manages((await view(mats)).body), "nobody else gains it").toBe("false");
+      expect((await serverFn(vera)).status).toBe(200);
+      sql(
+        `UPDATE public.employer_memberships SET status = 'removed' WHERE user_id = '${veraId}' RETURNING 1`,
+      );
+      const removed = await view(vera);
+      expect(refused(removed), `removed: ${removed.status} ${removed.text.slice(0, 120)}`).toBe(
+        true,
+      );
+      const removedFn = await serverFn(vera);
+      expect(
+        removedFn.status === 200 && removedFn.text.includes("Sökande "),
+        "removed: the app reads nothing",
+      ).toBe(false);
+    } finally {
+      if (settingsBefore === null || settingsBefore === "") {
+        sql(`DELETE FROM public.recruitment_settings WHERE job_id = '${BIG}' RETURNING 1`);
+      } else {
+        sql(
+          `UPDATE public.recruitment_settings SET responsible_user_id = ${settingsBefore === "none" ? "NULL" : `'${settingsBefore}'`} WHERE job_id = '${BIG}' RETURNING 1`,
+        );
+      }
+      sql(
+        `UPDATE public.employer_memberships SET status = 'removed' WHERE user_id = '${veraId}' RETURNING 1`,
+      );
+    }
+
+    // A signed-out session: the application's read refuses the token at once.
+    const leaving = await tokenFor("mats.medlem@nordvakt.test");
+    expect((await serverFn(leaving)).status).toBe(200);
+    const out = await fetch(`${API}/auth/v1/logout?scope=local`, {
+      method: "POST",
+      headers: { apikey: ANON, Authorization: `Bearer ${leaving}` },
+    });
+    expect(out.status).toBeLessThan(300);
+    const after = await serverFn(leaving);
+    expect(
+      after.status === 200 && after.text.includes("Sökande "),
+      "signed out: the app reads nothing",
+    ).toBe(false);
+
+    // The read's time over the application's own request (informational: the
+    // regression guard is the call count in the SQL suite, not a clock).
+    const times: number[] = [];
+    for (let i = 0; i < 7; i++) times.push((await serverFn(anna)).ms);
+    times.sort((a, b) => a - b);
+    const line = `listRecruitmentCandidatesPage, 5 050 applications, 7 calls: median ${times[3]!.toFixed(0)} ms, min ${times[0]!.toFixed(0)} ms, max ${times[6]!.toFixed(0)} ms`;
+    console.log(line);
+    test.info().annotations.push({ type: "candidate-read-ms", description: line });
+  });
+
   test("previous/next walk the server's ordering across a page edge, without the list's ids", async ({
     page,
   }) => {
