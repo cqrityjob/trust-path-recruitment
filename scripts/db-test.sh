@@ -297,6 +297,59 @@ td_fn() { sed -n "/^$2/,/$3/p" "$1" | sed '1s/^CREATE FUNCTION/CREATE OR REPLACE
 td_plant() { psql_q -d "$TEST_DB" -c "$(td_fn "$1" "$2" "$3" | sed "$4")" >/dev/null; }
 td_restore() { psql_q -d "$TEST_DB" -c "$(td_fn "$1" "$2" "$3")" >/dev/null; }
 
+# Slot 20270320090000 (2026-10-16): private recruitment data needs a live
+# Auth session, bound to its user (rec_session_active). The newest slot, so it
+# runs first on the full current schema and is stood down before 20270319090000,
+# whose suite -- like every older one -- signs in without a session id. A
+# signed-out token is refused through the rec_* RPCs AND through direct table
+# reads (restrictive policies), once per statement, never per candidate row.
+SR_M=supabase/migrations/20270320090000_rec_session_required.sql
+SR_R=supabase/rollback/20270320090000_rec_session_required_rollback.sql
+SR_ACTIVE='CREATE FUNCTION public.rec_session_active()'
+SR_MEMBER='CREATE OR REPLACE FUNCTION public.rec_is_member('
+SR_BOOKING='CREATE OR REPLACE FUNCTION public.rec_respond_to_booking('
+SR_POLICY='USING ((SELECT public.rec_session_active())) WITH CHECK ((SELECT public.rec_session_active()))'
+echo "==> Running the recruitment session requirement (20270320090000)"
+td_suite rec_session_required_test "Recruitment session requirement" 50 \
+  "SR1.1 the owner on o1: list, counts, job counts, legacy list, next, review, events, note and table rows" \
+  "SR2.1 every read with o1 is refused: RPCs raise, tables return no rows" \
+  "SR2.2 every write RPC with o1 is refused (comment, stage, legacy status, vacancy structure), and the composition read" \
+  "SR2.4 the refused writes left no change: comments, events, statuses, settings, booking" \
+  "SR3.1 the owner on o2 still reads everything" \
+  "SR4.1 the owner with the member's live session id is refused" \
+  "SR6.3 a new sign-in (new session) reads everything again" \
+  "SR7.4 the direct application and answer inserts are refused by row security" \
+  "SR9.4 expired, the CV object is out of reach too" \
+  "SR10.2 company B's owner with a live session still reads nothing of company A" \
+  "SR12.1 the candidate list checks the session once, for 30 and for 90 applications" \
+  "SR12.3 a table read checks once, not per row (120 applications, 29 answers)"
+# Negative controls: each planted defect is caught by the assertion named.
+td_plant "$SR_M" "$SR_MEMBER" '^\$function\$;' '/AND public.rec_session_active()/d'
+td_nc rec_session_required_test "SR NC1 rec_is_member forgets the session" "SR2.1"
+td_restore "$SR_M" "$SR_MEMBER" '^\$function\$;'
+td_plant "$SR_M" "$SR_ACTIVE" '^\$\$;' 's/ AND s.user_id = auth.uid()//'
+td_nc rec_session_required_test "SR NC2 any live session id is accepted, whoever it belongs to" "SR4.1"
+td_restore "$SR_M" "$SR_ACTIVE" '^\$\$;'
+psql_q -d "$TEST_DB" -c "ALTER POLICY rec_session_required ON public.job_applications USING (public.rec_session_active()) WITH CHECK (public.rec_session_active());" >/dev/null
+td_nc rec_session_required_test "SR NC3 the restrictive policy is evaluated per row" "SR12.3"
+psql_q -d "$TEST_DB" -c "ALTER POLICY rec_session_required ON public.job_applications ${SR_POLICY};" >/dev/null
+psql_q -d "$TEST_DB" -c "DROP POLICY rec_session_required ON public.job_application_answers;" >/dev/null
+td_nc rec_session_required_test "SR NC4 a table without the restrictive policy (direct PostgREST read)" "SR2.1"
+psql_q -d "$TEST_DB" -c "CREATE POLICY rec_session_required ON public.job_application_answers AS RESTRICTIVE FOR ALL TO authenticated ${SR_POLICY};" >/dev/null
+td_plant "$SR_M" "$SR_BOOKING" '\$function\$;$' '/IF NOT public.rec_session_active() THEN RAISE/d'
+td_nc rec_session_required_test "SR NC5 the candidate's booking reply forgets the session" "SR7.3"
+td_restore "$SR_M" "$SR_BOOKING" '\$function\$;$'
+td_suite rec_session_required_test "Recruitment session requirement (after controls)" 50
+# Stand down: the rollback restores every body and policy expression this slot
+# replaced and drops what it added (it stores no data, so it never refuses);
+# the forward file re-applies and rolls back again.
+psql_q -d "$TEST_DB" -f "$SR_R" >/dev/null
+psql_q -d "$TEST_DB" -f "$SR_M" >/dev/null
+psql_q -d "$TEST_DB" -f "$SR_R" >/dev/null
+SR_STOOD_DOWN="$(psql_q -d "$TEST_DB" -Atc "SELECT (to_regprocedure('public.rec_session_active()') IS NULL AND to_regprocedure('recruiter_intelligence.rec_member_without_session(uuid)') IS NULL AND NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'rec_session_required') AND (SELECT count(*) FROM pg_policies WHERE schemaname = 'public' AND qual ~ 'rec_is_member\\(employer_id\\)') >= 10 AND NOT EXISTS (SELECT 1 FROM pg_proc WHERE prosrc ~ 'rec_session_active|REC_SESSION_REVOKED'))::text")"
+[ "$SR_STOOD_DOWN" = "true" ] || { echo "FAIL: the 20270320090000 rollback did not restore the 20270319090000 state." >&2; exit 1; }
+echo "    ok  20270320090000 stood down (and re-applied once): no session rule left, member policies on rec_is_member"
+
 # Slot 20270319090000 (2026-10-16): the employer candidate list judges the
 # caller's standing once per read and responsibility once per job, instead of
 # rec_can_manage per application. The newest slot, so it runs first on the

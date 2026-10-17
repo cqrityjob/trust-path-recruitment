@@ -1,0 +1,39 @@
+ok   active session: PostgREST rec_ri_candidate_view answers
+ok   active session: PostgREST job_applications 32 rows
+ok   second session: PostgREST rec_ri_candidate_view answers
+ok   second session: PostgREST job_applications 32 rows
+ok   local sign-out accepted
+ok   Auth /user refuses the signed-out token (403)
+ok   after local sign-out: PostgREST rec_ri_candidate_view refused (403)
+ok   after local sign-out: PostgREST job_applications no row (0)
+ok   after local sign-out: rec_add_comment refused (500)
+ok   after local sign-out: rec_mark_application_viewed refused (500)
+ok   after local sign-out: no comment written
+ok   after local sign-out: receipt not written
+ok   other session after local sign-out: PostgREST rec_ri_candidate_view answers
+ok   other session after local sign-out: PostgREST job_applications 32 rows
+ok   third session: PostgREST rec_ri_candidate_view answers
+ok   third session: PostgREST job_applications 32 rows
+ok   global sign-out accepted
+ok   after global sign-out (signing-out session): PostgREST rec_ri_candidate_view refused (403)
+ok   after global sign-out (signing-out session): PostgREST job_applications no row (0)
+ok   after global sign-out (signing-out session): rec_add_comment refused (500)
+ok   after global sign-out (signing-out session): rec_mark_application_viewed refused (500)
+ok   after global sign-out (signing-out session): no comment written
+ok   after global sign-out (signing-out session): receipt not written
+ok   after global sign-out (other session): PostgREST rec_ri_candidate_view refused (403)
+ok   after global sign-out (other session): PostgREST job_applications no row (0)
+ok   after global sign-out (other session): rec_add_comment refused (500)
+ok   after global sign-out (other session): rec_mark_application_viewed refused (500)
+ok   after global sign-out (other session): no comment written
+ok   after global sign-out (other session): receipt not written
+ok   new sign-in after global sign-out: PostgREST rec_ri_candidate_view answers
+ok   new sign-in after global sign-out: PostgREST job_applications 32 rows
+ok   first token after the new sign-in: PostgREST rec_ri_candidate_view refused (403)
+ok   first token after the new sign-in: PostgREST job_applications no row (0)
+ok   first token after the new sign-in: rec_add_comment refused (500)
+ok   first token after the new sign-in: rec_mark_application_viewed refused (500)
+ok   first token after the new sign-in: no comment written
+ok   first token after the new sign-in: receipt not written
+ok   live session: the same write goes through
+38 passed, 0 failed

@@ -166,6 +166,10 @@ läsningar har ingen. Detta är `main`:s beteende före och efter denna slot, oc
 det inte. Att införa en sessionsregel är en säkerhetsändring med egen release och föreslås
 som separat uppgift.
 
+Uppföljning: ägaren beslutade 2026-10-16 att privata rekryteringsdata ska kräva en aktiv
+session. Det införs i den separata slotten `20270320090000`, se
+[`2026-10-16-recruitment-session-required.md`](2026-10-16-recruitment-session-required.md).
+
 ## Migrationsnummer
 
 Repot har ingen reservationsfil. Slots samordnas enligt `docs/release/release-sequence.md`

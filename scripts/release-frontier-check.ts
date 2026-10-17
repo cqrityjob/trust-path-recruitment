@@ -465,7 +465,14 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // It replaces one function body (no new object, no contract change). It comes
 // OFF this list in the same change that records its hosted installation with
 // evidence, as every earlier name did.
-const expectedPending: string[] = ["20270319090000_rec_candidate_view_shared_permissions.sql"];
+//
+// 2026-10-16 (stacked on it): the recruitment session requirement, also
+// WAITING on the owner's release decision, installed after it:
+//   20270320090000_rec_session_required
+const expectedPending: string[] = [
+  "20270319090000_rec_candidate_view_shared_permissions.sql",
+  "20270320090000_rec_session_required.sql",
+];
 
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",

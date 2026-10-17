@@ -137,6 +137,9 @@ wait_url() {
 wait_url "http://127.0.0.1:$API_GATEWAY/rest/v1/"
 [ "$RUN_MODE" != full ] || wait_url "http://127.0.0.1:$UI_GATEWAY/rest/v1/"
 stage pass gateway
+# The synthetic tokens name a live Auth session (20270320090000); the same
+# deterministic ids as sessionFor() in the API check.
+sql -d ri_p1_api_ci_test -c "INSERT INTO auth.sessions(id,user_id) SELECT ('5e550000-0000-4000-8000-'||right(id::text,12))::uuid,id FROM auth.users WHERE id IN ('ee100000-0000-4000-8000-000000000001','ee100000-0000-4000-8000-000000000002','ee100000-0000-4000-8000-000000000003','ee100000-0000-4000-8000-000000000004');" >/dev/null
 stage begin api
 RI_P1_API_URL="http://127.0.0.1:$API_GATEWAY/rest/v1" RI_P1_LOCAL_JWT_SECRET="$LOCAL_JWT_SECRET" \
  node scripts/recruiter-intelligence-p1-api-check.mjs > "$REPORT/http-api.log" 2>&1

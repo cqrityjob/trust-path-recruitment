@@ -544,12 +544,10 @@ test.describe("recruitment case", () => {
       );
     }
 
-    // A signed-out session. Auth ends the session at once. Whether the
-    // application's read still answers the unexpired token depends on how the
-    // stack signs tokens (getClaims verifies an asymmetric token locally,
-    // without asking Auth about the session) -- on main before 20270319090000
-    // this stack answered it. The slot changes neither the middleware nor any
-    // session rule, so the outcome is recorded on both sides, not asserted.
+    // A signed-out session: from 20270320090000 the database checks the
+    // session itself, so the old token is refused on its very next call
+    // through both doors. The whole decision -- other sessions, global
+    // sign-out, a new sign-in, writes -- is the next test.
     const leaving = await tokenFor("mats.medlem@nordvakt.test");
     expect((await smallFn(leaving)).status).toBe(200);
     const out = await fetch(`${API}/auth/v1/logout?scope=local`, {
@@ -557,13 +555,11 @@ test.describe("recruitment case", () => {
       headers: { apikey: ANON, Authorization: `Bearer ${leaving}` },
     });
     expect(out.status).toBeLessThan(300);
-    const user = await fetch(`${API}/auth/v1/user`, {
-      headers: { apikey: ANON, Authorization: `Bearer ${leaving}` },
-    });
-    expect(user.status, "signed out: Auth no longer knows the session").toBeGreaterThanOrEqual(400);
-    const session = `signed-out session: Auth /user ${user.status}; listRecruitmentCandidatesPage ${readsNothing(await smallFn(leaving)) ? "refused" : "still answered"}; PostgREST rec_ri_candidate_view ${refused(await view(leaving, JOB)) ? "refused" : "still answered"}`;
-    console.log(session);
-    test.info().annotations.push({ type: "signed-out-session", description: session });
+    const gone = await view(leaving, JOB);
+    expect(refused(gone), `signed out, PostgREST: ${gone.status} ${gone.text.slice(0, 120)}`).toBe(
+      true,
+    );
+    expect(readsNothing(await smallFn(leaving)), "signed out: the app reads nothing").toBe(true);
 
     // The read's time on the 5 050 case over the application's own request
     // (informational: the regression guard is the call count in the SQL
@@ -574,6 +570,214 @@ test.describe("recruitment case", () => {
     const line = `listRecruitmentCandidatesPage, 5 050 applications, 5 calls: median ${times[2]!.toFixed(0)} ms, min ${times[0]!.toFixed(0)} ms, max ${times[4]!.toFixed(0)} ms`;
     console.log(line);
     test.info().annotations.push({ type: "candidate-read-ms", description: line });
+  });
+
+  /**
+   * Owner decision 2026-10-16 (20270320090000): private recruitment data needs
+   * a live Auth session. A signed JWT stays valid until it expires, so the
+   * database checks the token's session itself -- through PostgREST directly
+   * and through the application's server functions alike, on the very next
+   * call. One synthetic member, several real GoTrue sessions.
+   */
+  test("a signed-out token is refused on its next call through both doors; another session works; a global sign-out and a new sign-in behave; a refused write leaves nothing", async ({
+    page,
+  }) => {
+    test.setTimeout(120_000);
+    expect(DB, "E2E_DATABASE_URL: the 'nothing was written' checks read the database").toBeTruthy();
+    const employerId = sql(`SELECT id FROM public.employers WHERE slug = '${SLUG}'`)!;
+    const headers = (token: string) => ({
+      apikey: ANON,
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    });
+    const rpc = (token: string, name: string, body: unknown) =>
+      fetch(`${API}/rest/v1/rpc/${name}`, {
+        method: "POST",
+        headers: headers(token),
+        body: JSON.stringify(body),
+      }).then(async (r) => ({ status: r.status, text: await r.text() }));
+    const view = (token: string) =>
+      rpc(token, "rec_ri_candidate_view", {
+        _employer_id: employerId,
+        _job_id: JOB,
+        _filters: { stage: "received" },
+        _sort: "requirements",
+        _dir: null,
+        _page: 1,
+        _size: 25,
+        _around: null,
+      });
+    const tableRows = (token: string) =>
+      fetch(`${API}/rest/v1/job_applications?select=id&job_id=eq.${JOB}`, {
+        headers: headers(token),
+      }).then(async (r) => ({ status: r.status, rows: (await r.json()) as unknown[] }));
+    const leaks = /a[67]000000-0000-4000-8000-/;
+
+    // The application's own requests, captured from the owner's browser and
+    // replayed with any token: the candidate list (a read) and the "first
+    // viewed" receipt an opened application writes. The write is captured
+    // and aborted, so the browser itself writes nothing.
+    await signIn(page, "anna.agare@nordvakt.test");
+    const target = sql(
+      `SELECT a.id FROM public.job_applications a LEFT JOIN public.recruitment_application_meta m ON m.application_id = a.id
+        WHERE a.job_id = '${BIG}' AND m.first_viewed_at IS NULL ORDER BY a.id DESC LIMIT 1`,
+    )!;
+    expect(target).toMatch(/^[0-9a-f-]{36}$/);
+    const metaBefore = sql(
+      `SELECT count(*) FROM public.recruitment_application_meta WHERE application_id = '${target}'`,
+    );
+    const firstViewed = () =>
+      sql(
+        `SELECT coalesce(first_viewed_at::text, 'never') FROM public.recruitment_application_meta WHERE application_id = '${target}'`,
+      ) || "never";
+    const replayable = (request: {
+      url: () => string;
+      method: () => string;
+      postData: () => string | null;
+      allHeaders: () => Promise<Record<string, string>>;
+    }) =>
+      request.allHeaders().then((all) => {
+        const kept = Object.fromEntries(
+          Object.entries(all).filter(
+            ([k]) => !/^(authorization|cookie|content-length|host|connection|:)/i.test(k),
+          ),
+        );
+        return async (token: string) => {
+          const r = await fetch(request.url(), {
+            method: request.method(),
+            headers: { ...kept, Authorization: `Bearer ${token}` },
+            body: request.postData() ?? undefined,
+          });
+          return { status: r.status, text: await r.text() };
+        };
+      });
+    const listRead = candidateRead(page);
+    await open(page, casePath(JOB, "?step=applications&stage=received"));
+    const listFn = await replayable((await listRead).request());
+    let captured: Parameters<typeof replayable>[0] | null = null;
+    await page.route(
+      (url) => exportOf(url.toString()) === "markApplicationViewed",
+      async (route) => {
+        captured ??= route.request();
+        await route.abort();
+      },
+    );
+    await open(page, `/employer/${SLUG}/applications/${target}`);
+    await expect.poll(() => captured !== null, { timeout: 30_000 }).toBe(true);
+    await page.unrouteAll({ behavior: "ignoreErrors" });
+    const viewedFn = await replayable(captured!);
+    expect(firstViewed(), "the browser's own receipt was aborted").toBe("never");
+
+    const email = `sara.session.${Date.now()}@nordvakt.test`;
+    const created = await fetch(`${API}/auth/v1/admin/users`, {
+      method: "POST",
+      headers: { apikey: SRK, Authorization: `Bearer ${SRK}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email,
+        email_confirm: true,
+        user_metadata: { display_name: "Sara Session" },
+      }),
+    }).then((r) => r.json() as Promise<{ id?: string }>);
+    const saraId = created.id!;
+    expect(saraId).toBeTruthy();
+    sql(
+      `INSERT INTO public.employer_memberships (employer_id, user_id, role, status) VALUES ('${employerId}', '${saraId}', 'member', 'active') RETURNING 1`,
+    );
+    const marker = `session-proof-${Date.now()}`;
+    const comments = () =>
+      sql(`SELECT count(*) FROM public.recruitment_comments WHERE body = '${marker}'`);
+    // Both doors, read side: PostgREST RPC, PostgREST table, the app's read.
+    const works = async (token: string, why: string) => {
+      const v = await view(token);
+      expect(v.status, `${why}: PostgREST rec_ri_candidate_view`).toBe(200);
+      expect(v.text, `${why}: PostgREST rec_ri_candidate_view`).toMatch(leaks);
+      const t = await tableRows(token);
+      expect(t.status, `${why}: PostgREST job_applications`).toBe(200);
+      expect(t.rows.length, `${why}: PostgREST job_applications`).toBe(32);
+      const a = await listFn(token);
+      expect(a.status, `${why}: listRecruitmentCandidatesPage`).toBe(200);
+      expect(a.text, `${why}: listRecruitmentCandidatesPage`).toMatch(leaks);
+    };
+    const refusedEverywhere = async (token: string, why: string) => {
+      const v = await view(token);
+      expect(
+        v.status,
+        `${why}: PostgREST rec_ri_candidate_view ${v.text.slice(0, 120)}`,
+      ).toBeGreaterThanOrEqual(400);
+      expect(v.text).not.toMatch(leaks);
+      const t = await tableRows(token);
+      expect(t.rows, `${why}: PostgREST job_applications reads no row`).toEqual([]);
+      const a = await listFn(token);
+      expect(a.status === 200 && leaks.test(a.text), `${why}: the app reads nothing`).toBe(false);
+      // Writes, through both doors: none goes through, none leaves a trace.
+      const c = await rpc(token, "rec_add_comment", { _application_id: target, _body: marker });
+      expect(
+        c.status,
+        `${why}: PostgREST rec_add_comment ${c.text.slice(0, 120)}`,
+      ).toBeGreaterThanOrEqual(400);
+      const m = await rpc(token, "rec_mark_application_viewed", { _application_id: target });
+      expect(m.status, `${why}: PostgREST rec_mark_application_viewed`).toBeGreaterThanOrEqual(400);
+      const w = await viewedFn(token);
+      expect(
+        w.status === 200 && /firstViewedAt/.test(w.text) && /\d{4}-\d\d-\d\dT/.test(w.text),
+        `${why}: markApplicationViewed ${w.status}`,
+      ).toBe(false);
+      expect(comments(), `${why}: no comment was written`).toBe("0");
+      expect(firstViewed(), `${why}: the receipt was not written`).toBe("never");
+    };
+    const logout = (token: string, scope: "local" | "global") =>
+      fetch(`${API}/auth/v1/logout?scope=${scope}`, {
+        method: "POST",
+        headers: { apikey: ANON, Authorization: `Bearer ${token}` },
+      }).then((r) => r.status);
+
+    try {
+      // 1. Active sessions work, through both doors.
+      const first = await tokenFor(email);
+      const second = await tokenFor(email);
+      await works(first, "active session");
+      await works(second, "a second active session");
+
+      // 2. Local sign-out of the first session: its token is refused on the
+      //    very next call, everywhere, and its writes leave nothing.
+      expect(await logout(first, "local")).toBeLessThan(300);
+      const user = await fetch(`${API}/auth/v1/user`, {
+        headers: { apikey: ANON, Authorization: `Bearer ${first}` },
+      });
+      expect(user.status, "signed out: Auth no longer knows the session").toBeGreaterThanOrEqual(
+        400,
+      );
+      await refusedEverywhere(first, "after a local sign-out");
+
+      // 3. The other session, still active, keeps working.
+      await works(second, "the other session after a local sign-out");
+
+      // 4. A global sign-out ends every session; a new sign-in works again,
+      //    and the old tokens stay refused.
+      const third = await tokenFor(email);
+      await works(third, "a third session");
+      expect(await logout(second, "global")).toBeLessThan(300);
+      await refusedEverywhere(second, "after a global sign-out (the session that signed out)");
+      await refusedEverywhere(third, "after a global sign-out (another session)");
+      const fresh = await tokenFor(email);
+      await works(fresh, "a new sign-in after the global sign-out");
+      await refusedEverywhere(first, "the first token, after the new sign-in");
+
+      // 5. The same write the refused tokens attempted goes through with the
+      //    live session: the refusals were the session's, nothing else's.
+      const w = await viewedFn(fresh);
+      expect(w.status, `live session: markApplicationViewed ${w.text.slice(0, 120)}`).toBe(200);
+      expect(firstViewed(), "live session: the receipt is written").not.toBe("never");
+    } finally {
+      sql(
+        `UPDATE public.employer_memberships SET status = 'removed' WHERE user_id = '${saraId}' RETURNING 1`,
+      );
+      if (metaBefore === "0") {
+        sql(
+          `DELETE FROM public.recruitment_application_meta WHERE application_id = '${target}' AND first_viewed_by = '${saraId}' RETURNING 1`,
+        );
+      }
+    }
   });
 
   test("previous/next walk the server's ordering across a page edge, without the list's ids", async ({

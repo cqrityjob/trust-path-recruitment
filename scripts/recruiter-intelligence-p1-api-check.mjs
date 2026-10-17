@@ -12,10 +12,14 @@ const owner = "ee100000-0000-4000-8000-000000000001",
   member = "ee100000-0000-4000-8000-000000000003",
   stranger = "ee100000-0000-4000-8000-000000000004";
 const app = (n) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
+// A signed-in user's token names its Auth session (20270320090000): the
+// runner creates the live auth.sessions row this deterministic id points to.
+const sessionFor = (sub) => `5e550000-0000-4000-8000-${sub.slice(-12)}`;
 function jwt(sub, role = "authenticated") {
   const now = Math.floor(Date.now() / 1000);
   const enc = (v) => Buffer.from(JSON.stringify(v)).toString("base64url");
-  const unsigned = `${enc({ alg: "HS256", typ: "JWT" })}.${enc({ role, ...(sub ? { sub } : {}), aud: "authenticated", iat: now, exp: now + 3600 })}`;
+  const session = sub && role === "authenticated" ? { session_id: sessionFor(sub) } : {};
+  const unsigned = `${enc({ alg: "HS256", typ: "JWT" })}.${enc({ role, ...(sub ? { sub } : {}), ...session, aud: "authenticated", iat: now, exp: now + 3600 })}`;
   return `${unsigned}.${createHmac("sha256", secret).update(unsigned).digest("base64url")}`;
 }
 async function rpc(name, data, sub = owner, role = "authenticated") {
