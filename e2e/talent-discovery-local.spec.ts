@@ -176,6 +176,10 @@ async function topOf(page: Page, selector: string): Promise<number> {
 }
 
 /** Cecilia's current CPP entry (scenario 1 creates it). */
+// A long, real-looking document name: the P2 legibility check in test 1
+// needs one that cannot fit a phone's width on one line.
+const EVIDENCE_NAME =
+  "Certified-Protection-Professional_CPP-intyg_ASIS-International_2026-05-31.pdf";
 const cppClaim = () =>
   sql(
     `select id from sp_claims where holder_user_id='${A_ID}' and credential_code='INTL_ASIS_CPP' and lifecycle_state='active' order by created_at desc limit 1`,
@@ -211,7 +215,7 @@ test("1 · A registers a credential, documents it and asks for review from the n
   await expect(page.locator("#sp-evidence-file")).toBeEnabled();
   await page
     .locator("#sp-evidence-file")
-    .setInputFiles({ name: "cpp-intyg.pdf", mimeType: "application/pdf", buffer: PDF });
+    .setInputFiles({ name: EVIDENCE_NAME, mimeType: "application/pdf", buffer: PDF });
   await expect(page.locator("[data-evidence-saved-file]").first()).toBeVisible({ timeout: 60_000 });
   await expect(next).toHaveAttribute("data-entry-next-step", "request_review", { timeout: 60_000 });
   await shot(page, "after-next-step-request-review-sv-1440");
@@ -227,6 +231,34 @@ test("1 · A registers a credential, documents it and asks for review from the n
   expect(
     sql(`select count(*) from product_metric_events where event_name='passport_review_requested'`),
   ).not.toBe("0");
+  // Independent acceptance 2026-10-17 (P2): document names hard to read on a
+  // phone. The uploaded document's name wraps at its own separators, is never
+  // split character by character and never overflows -- Swedish and English,
+  // phone and desktop.
+  const name = page.locator("[data-evidence-file-name]").first();
+  const readable = async (label: string) => {
+    await expect(name).toHaveText(EVIDENCE_NAME);
+    const m = await name.evaluate((node) => {
+      const s = getComputedStyle(node);
+      return {
+        fits: node.scrollWidth <= node.clientWidth + 1,
+        breakAll: s.wordBreak === "break-all",
+        wraps: s.overflowWrap === "anywhere",
+        page: document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1,
+      };
+    });
+    expect(m, label).toEqual({ fits: true, breakAll: false, wraps: true, page: true });
+  };
+  for (const lang of ["sv", "en"]) {
+    await page.evaluate((l) => localStorage.setItem("cqrityjob.lang", l), lang);
+    for (const width of [375, 1440]) {
+      await page.setViewportSize({ width, height: width === 375 ? 812 : 900 });
+      await page.reload();
+      await readable(`${lang} ${width}`);
+      await shot(page, `after-evidence-name-${lang}-${width}`);
+    }
+  }
+  await page.evaluate(() => localStorage.setItem("cqrityjob.lang", "sv"));
   await page.context().close();
 });
 

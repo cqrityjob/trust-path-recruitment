@@ -96,7 +96,7 @@ export function EvidenceUploadRecoveryView({
             data-upload-attempt={a.id}
             className="rounded-lg border p-3"
           >
-            <p className="break-all text-sm font-medium">{a.fileName}</p>
+            <p className="text-sm font-medium [overflow-wrap:anywhere]">{a.fileName}</p>
             <p className="mt-1 text-sm text-muted-foreground">
               {a.status === "cleanup_pending"
                 ? sv

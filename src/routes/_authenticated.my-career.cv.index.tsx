@@ -371,7 +371,12 @@ function CvListPage() {
                     className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 p-4 md:p-5"
                   >
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-foreground">{cv.title}</p>
+                      <p
+                        data-cv-list-title
+                        className="text-sm font-semibold text-foreground [overflow-wrap:anywhere]"
+                      >
+                        {cv.title}
+                      </p>
                       <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
                         <span>
                           {L(
