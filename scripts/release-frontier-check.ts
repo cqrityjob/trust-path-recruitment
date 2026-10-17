@@ -469,9 +469,13 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // 2026-10-16 (stacked on it): the recruitment session requirement, also
 // WAITING on the owner's release decision, installed after it:
 //   20270320090000_rec_session_required
+// 2026-10-17 (after the independent acceptance): the application-bound
+// Passport share's session rule, installed after them:
+//   20270321090000_sp_application_disclosure_session
 const expectedPending: string[] = [
   "20270319090000_rec_candidate_view_shared_permissions.sql",
   "20270320090000_rec_session_required.sql",
+  "20270321090000_sp_application_disclosure_session.sql",
 ];
 
 const hostedIdentities = [
