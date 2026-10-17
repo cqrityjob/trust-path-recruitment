@@ -297,6 +297,35 @@ td_fn() { sed -n "/^$2/,/$3/p" "$1" | sed '1s/^CREATE FUNCTION/CREATE OR REPLACE
 td_plant() { psql_q -d "$TEST_DB" -c "$(td_fn "$1" "$2" "$3" | sed "$4")" >/dev/null; }
 td_restore() { psql_q -d "$TEST_DB" -c "$(td_fn "$1" "$2" "$3")" >/dev/null; }
 
+# Slot 20270322090000 (2026-10-17): the holder's preview of what an employer
+# receives when the Passport is shared with an application -- the same
+# payload builder, nothing stored. Newest, so first; stood down before
+# 20270321090000.
+PV_M=supabase/migrations/20270322090000_sp_preview_application_disclosure.sql
+PV_R=supabase/rollback/20270322090000_sp_preview_application_disclosure_rollback.sql
+PV_FN='CREATE FUNCTION public.sp_preview_application_disclosure('
+echo "==> Running the application Passport preview (20270322090000)"
+td_suite sp_preview_application_disclosure_test "Application Passport preview" 9 \
+  "PV1.3 what the employer receives is exactly what the holder previewed" \
+  "PV2.1 the preview left no disclosure, access or Passport event" \
+  "PV3.1 the preview needs the holder's live session"
+td_plant "$PV_M" "$PV_FN" '^END \$\$;' "/RAISE EXCEPTION 'SP_PREVIEW_DISCARDED'/d"
+td_nc sp_preview_application_disclosure_test "PV NC1 the preview row is kept" "PV2.1"
+td_restore "$PV_M" "$PV_FN" '^END \$\$;'
+td_plant "$PV_M" "$PV_FN" '^END \$\$;' "s/(holder_user_id, package_code, token_hash, expires_at)/(holder_user_id, package_code, token_hash, expires_at, purpose)/; s/now() + interval '30 days')/now() + interval '30 days', 'preview')/"
+td_nc sp_preview_application_disclosure_test "PV NC2 the preview is not the share the employer gets" "PV1.3"
+td_restore "$PV_M" "$PV_FN" '^END \$\$;'
+# No control for the explicit session check: without it the preview row's
+# insert still meets the sp_disclosures write guard and is refused the same
+# way (SP_SESSION_REVOKED), so such a plant cannot fail PV3.1 -- by design.
+td_suite sp_preview_application_disclosure_test "Application Passport preview (after controls)" 9
+psql_q -d "$TEST_DB" -f "$PV_R" >/dev/null
+psql_q -d "$TEST_DB" -f "$PV_M" >/dev/null
+psql_q -d "$TEST_DB" -f "$PV_R" >/dev/null
+[ "$(psql_q -d "$TEST_DB" -Atc "SELECT (to_regprocedure('public.sp_preview_application_disclosure()') IS NULL)::text")" = "true" ] \
+  || { echo "FAIL: the 20270322090000 rollback left the preview function." >&2; exit 1; }
+echo "    ok  20270322090000 stood down (and re-applied once): no preview function left"
+
 # Slot 20270321090000 (2026-10-17): a Passport shared with an application
 # needs a live session on both sides -- the employer reading it, the holder
 # listing it -- while a valid public link keeps opening. The newest slot, so it
