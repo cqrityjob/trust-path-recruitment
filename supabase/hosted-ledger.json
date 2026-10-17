@@ -13,8 +13,8 @@
   ],
   "source": "Supabase connector read-only SQL, explicit project wrygicdfxwjnrugduxnt",
   "projectRef": "wrygicdfxwjnrugduxnt",
-  "readAt": "2026-10-15T18:36:45.480201+00:00",
-  "readBy": "Read-only verification 2026-10-15 after #472 (merge b8e2de81, head 1a6c2034) was installed by the official integration. Ledger 397 rows ending 20270318090000; the prior 394 rows unchanged (version+name md5 497fb4e7); all 397 md5 9a299f7a. 58 functions, 88 columns, 12 policies, RLS/grants and 11 triggers equal the strict local replay of main; new tables empty. Full capture: docs/release/2026-10-15-passport-talent-discovery-hosted-verification.json. No production fixtures or workers.",
+  "readAt": "2026-10-17T06:05:38.339739+00:00",
+  "readBy": "Read-only verification 2026-10-17 after #475 (merge 855e2629) and #476 (merge b219c685, head f77578db) were installed by the official integration. Ledger 399 rows ending 20270320090000; the prior 397 rows unchanged (version+name md5 9a299f7a); all 399 md5 dbcb16bf. 13 functions and 35 policies equal the strict local replay of main. Full capture: docs/release/2026-10-17-recruitment-session-hosted-verification.json. No production fixtures or workers.",
   "versions": [
     {
       "version": "20260716153446",
@@ -1603,6 +1603,14 @@
     {
       "version": "20270318090000",
       "name": "rec_talent_search_and_contact"
+    },
+    {
+      "version": "20270319090000",
+      "name": "rec_candidate_view_shared_permissions"
+    },
+    {
+      "version": "20270320090000",
+      "name": "rec_session_required"
     }
   ]
 }
