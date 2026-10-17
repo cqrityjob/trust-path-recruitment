@@ -1,6 +1,6 @@
 # 2026-10-17 — Förhandsvisning av Passport-delningen i ansökan (appsläpp efter `20270322090000`)
 
-**Status:** appkod, beroende av schemaslotten `20270322090000_sp_preview_application_disclosure` (#479). Den släpps först när slotten är installerad, verifierad och registrerad som `applied` i `supabase/release-state.json`. `schema-first-release:check` håller grenen röd fram till dess, med avsikt.
+**Status:** appkod som beror på schemaslotten `20270322090000_sp_preview_application_disclosure` (#479). Slotten mergades som `6d273d29` och installerades av den officiella integrationen. Den verifierades skrivskyddat och registreras i den här PR:en som `applied`: [hosted verification](2026-10-17-passport-share-preview-hosted-verification.json). Därmed är `schema-first-release:check` grön.
 
 ## Varför
 

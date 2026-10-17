@@ -13,8 +13,8 @@
   ],
   "source": "Supabase connector read-only SQL, explicit project wrygicdfxwjnrugduxnt",
   "projectRef": "wrygicdfxwjnrugduxnt",
-  "readAt": "2026-10-17T08:42:33.016505+00:00",
-  "readBy": "Read-only verification 2026-10-17 after #477 (merge d2db7eb5, head 6c1aaa19) was installed by the official integration. Ledger 400 rows ending 20270321090000; the prior 399 rows unchanged (version+name md5 dbcb16bf); all 400 md5 6b9e3f66. The two functions equal the strict local replay of main (74d2886f). Full capture: docs/release/2026-10-17-passport-share-session-hosted-verification.json. No production fixtures or workers.",
+  "readAt": "2026-10-17T09:49:56.382448+00:00",
+  "readBy": "Read-only verification 2026-10-17 after #479 (merge 6d273d29, head c7d57874) was installed by the official integration. Ledger 401 rows ending 20270322090000; the prior 400 rows unchanged (version+name md5 6b9e3f66); all 401 md5 a10f4f32. sp_preview_application_disclosure() equals the strict local replay of main. Full capture: docs/release/2026-10-17-passport-share-preview-hosted-verification.json. No production fixtures or workers.",
   "versions": [
     {
       "version": "20260716153446",
@@ -1615,6 +1615,10 @@
     {
       "version": "20270321090000",
       "name": "sp_application_disclosure_session"
+    },
+    {
+      "version": "20270322090000",
+      "name": "sp_preview_application_disclosure"
     }
   ]
 }

@@ -1,0 +1,80 @@
+{
+  "formatVersion": 1,
+  "projectRef": "wrygicdfxwjnrugduxnt",
+  "installation": "official_supabase_github_integration",
+  "readOnly": true,
+  "observedBy": "Claude session for #481 under the owner's instruction of 2026-10-17: after #479 merged, verify 20270322090000 read-only (never re-run it) and record it in #481 before the dependent application code is released. The merge of #479 was the owner's.",
+  "merges": [
+    {
+      "pr": 479,
+      "head": "c7d57874cab8a9930c74ec4c641eb7f0390cd029",
+      "mergeSha": "6d273d292038ca2ef782eb48645200ddf3e1ad7e",
+      "mergedAt": "2026-10-17T09:48:20Z",
+      "slots": ["20270322090000"],
+      "verifiedOnHead": "All 23 PR checks green on c7d57874 (Supabase Preview skipped), plus application retention and sentinel recovery dispatched on the same head and green."
+    }
+  ],
+  "migrationSha256": {
+    "20270322090000_sp_preview_application_disclosure.sql": "8c800d0702c422860c5564ba290ff2f3f63801443e6818dee9aa2d81717ebd06"
+  },
+  "ledger": {
+    "before479": {
+      "count": 400,
+      "latest": "20270321090000",
+      "versionNameNewlineMd5": "6b9e3f6664ee0c7e2c0f48879d38a82c",
+      "observedAt": "2026-10-17T09:48:34.010992+00:00 (after the merge, before the integration had installed the slot)"
+    },
+    "after479": {
+      "count": 401,
+      "latest": "20270322090000",
+      "versionNameNewlineMd5": "a10f4f3286b1ad1bc0d6b2a6b60656eb",
+      "observedAt": "2026-10-17T09:49:56.382448+00:00",
+      "newRows": ["20270322090000 sp_preview_application_disclosure"]
+    },
+    "prior400UnchangedAfter479": {
+      "count": 400,
+      "versionNameNewlineMd5": "6b9e3f6664ee0c7e2c0f48879d38a82c"
+    },
+    "formula": "md5(string_agg(version || ' ' || name, E'\\n' ORDER BY version)) over supabase_migrations.schema_migrations"
+  },
+  "notReRun": "The slot was installed by the official integration between 09:48:34Z and 09:49:56Z. Nothing was applied by this session.",
+  "localReplay": {
+    "database": "isolated local PostgreSQL 17.6, fresh database",
+    "source": "main 6d273d292038ca2ef782eb48645200ddf3e1ad7e (the merge of #479)",
+    "history": "strict replay of all 401 canonical migrations after supabase/tests/00_bootstrap.sql and the hosted privilege baseline (no EXECUTE default for authenticated/service_role), ON_ERROR_STOP"
+  },
+  "function": {
+    "signature": "public.sp_preview_application_disclosure()",
+    "hosted": {
+      "bodyMd5": "4500004c213f293dc1bf0b6c6cb3a16b",
+      "language": "plpgsql",
+      "securityDefiner": true,
+      "volatility": "volatile",
+      "searchPath": "public, pg_temp",
+      "execute": {
+        "anon": false,
+        "authenticated": true,
+        "service_role": false
+      },
+      "commentMd5": "1e20011fead1d24a780284948119ab48"
+    },
+    "localReplay": {
+      "bodyMd5": "4500004c213f293dc1bf0b6c6cb3a16b",
+      "language": "plpgsql",
+      "securityDefiner": true,
+      "volatility": "volatile",
+      "searchPath": "public, pg_temp",
+      "execute": {
+        "anon": false,
+        "authenticated": true,
+        "service_role": false
+      },
+      "commentMd5": "1e20011fead1d24a780284948119ab48"
+    }
+  },
+  "previewRowsLeft": {
+    "count": 0,
+    "note": "sp_disclosures rows with a 'preview:' token_hash; counts only. The preview row lives only inside a rolled-back sub-transaction."
+  },
+  "notRead": "No row content, address or token was read. No fixture, worker, function deployment or write was made."
+}
