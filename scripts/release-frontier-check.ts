@@ -459,24 +459,20 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // docs/release/2026-10-15-passport-talent-discovery-hosted-verification.json.
 // The hosted ledger holds 397 identities ending 20270318090000.
 //
-// 2026-10-16 (schema PR, after #473): one forward slot is genuinely WAITING
-// on the owner's release decision and the official integration:
-//   20270319090000_rec_candidate_view_shared_permissions
-// It replaces one function body (no new object, no contract change). It comes
-// OFF this list in the same change that records its hosted installation with
-// evidence, as every earlier name did.
+// 2026-10-17: #475 (20270319090000, merge 855e2629) and #476
+// (20270320090000, merge b219c685) were merged under the owner's release
+// decision and installed by the official integration; the read-only hosted
+// verification is recorded in
+// docs/release/2026-10-17-recruitment-session-hosted-verification.json.
+// The hosted ledger holds 399 identities ending 20270320090000.
 //
-// 2026-10-16 (stacked on it): the recruitment session requirement, also
-// WAITING on the owner's release decision, installed after it:
-//   20270320090000_rec_session_required
 // 2026-10-17 (after the independent acceptance): the application-bound
-// Passport share's session rule, installed after them:
+// Passport share's session rule is genuinely WAITING on the owner's release
+// decision and the official integration:
 //   20270321090000_sp_application_disclosure_session
-const expectedPending: string[] = [
-  "20270319090000_rec_candidate_view_shared_permissions.sql",
-  "20270320090000_rec_session_required.sql",
-  "20270321090000_sp_application_disclosure_session.sql",
-];
+// It comes OFF this list in the same change that records its hosted
+// installation with evidence, as every earlier name did.
+const expectedPending: string[] = ["20270321090000_sp_application_disclosure_session.sql"];
 
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",

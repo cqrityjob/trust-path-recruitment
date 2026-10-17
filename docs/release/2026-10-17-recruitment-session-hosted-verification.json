@@ -1,0 +1,167 @@
+{
+  "formatVersion": 1,
+  "projectRef": "wrygicdfxwjnrugduxnt",
+  "installation": "official_supabase_github_integration",
+  "readOnly": true,
+  "observedBy": "Claude session for #477 under the owner's instruction of 2026-10-17 to finish the chain #477-#480 schema-first: verify the actual installation of 0319-0320 and record it before dependent work is released. The merges of #475 and #476 were the owner's.",
+  "merges": [
+    {
+      "pr": 475,
+      "head": "b5a2fe0f",
+      "mergeSha": "855e262942aadc6bee16573792aa85fcec6315eb",
+      "mergedAt": "2026-10-16T17:57:16Z",
+      "slots": ["20270319090000"]
+    },
+    {
+      "pr": 476,
+      "head": "f77578db",
+      "mergeSha": "b219c685071af72a90b1d7d816a8e07872de1ea8",
+      "mergedAt": "2026-10-17T04:24:42Z",
+      "slots": ["20270320090000"],
+      "verifiedOnHead": "All 23 checks green on f77578db (Supabase Preview skipped); recruiter real CI, P1 native, OP09 native, application retention, role assessment and sentinel recovery dispatched on the same head and green."
+    }
+  ],
+  "migrationSha256": {
+    "20270319090000_rec_candidate_view_shared_permissions.sql": "f230dc2933e7aa2785032f1f09638c8c69a4cd2a6e0b00c482c6905c1f0539bf",
+    "20270320090000_rec_session_required.sql": "0b5bd9b2bfa84a714bf571c6a21e162264f3ff55b98ab1bc57f8d03b3ea68005"
+  },
+  "ledger": {
+    "before475": {
+      "count": 397,
+      "latest": "20270318090000",
+      "versionNameNewlineMd5": "9a299f7ae7f98aa325b3fcb1f4919382",
+      "observedAt": "2026-10-15T18:36:45.480201+00:00 (docs/release/2026-10-15-passport-talent-discovery-hosted-verification.json)"
+    },
+    "after476": {
+      "count": 399,
+      "latest": "20270320090000",
+      "versionNameNewlineMd5": "dbcb16bf407f8f0656316504cddf8e2a",
+      "observedAt": "2026-10-17T06:05:38.339739+00:00",
+      "newRows": [
+        "20270319090000 rec_candidate_view_shared_permissions",
+        "20270320090000 rec_session_required"
+      ]
+    },
+    "prior397UnchangedAfter476": {
+      "count": 397,
+      "versionNameNewlineMd5": "9a299f7ae7f98aa325b3fcb1f4919382"
+    },
+    "formula": "md5(string_agg(version || ' ' || name, E'\\n' ORDER BY version)) over supabase_migrations.schema_migrations"
+  },
+  "localReplay": {
+    "database": "isolated local PostgreSQL 17.6, fresh database",
+    "source": "main b219c685071af72a90b1d7d816a8e07872de1ea8 (the merge of #476)",
+    "history": "strict replay of all 399 canonical migrations after supabase/tests/00_bootstrap.sql and the hosted privilege baseline (no EXECUTE default for authenticated/service_role), ON_ERROR_STOP"
+  },
+  "fingerprints": {
+    "note": "The same read-only query on the hosted project and on the local replay: the 13 functions the two slots create or replace, and every policy on the twelve tables 0320 guards. Signatures sorted under COLLATE \"C\".",
+    "functions": {
+      "count": 13,
+      "hosted": "d958e77f6357108e41a2311d675d8fd2",
+      "localReplay": "d958e77f6357108e41a2311d675d8fd2",
+      "anonExecutable": 0,
+      "formula": "md5(string_agg(regprocedure || '|' || md5(prosrc) || '|' || prosecdef || '|' || proconfig || '|' || anon||authenticated||service_role EXECUTE, E'\\n' ORDER BY regprocedure COLLATE \"C\"))"
+    },
+    "policies": {
+      "count": 35,
+      "hosted": "0456cefe0a7c9b9d1d38c3e34c1a0635",
+      "localReplay": "0456cefe0a7c9b9d1d38c3e34c1a0635",
+      "restrictiveSessionPolicies": 12,
+      "formula": "md5(string_agg(schema.table.policy|permissive|cmd|roles|qual|with_check, E'\\n' ORDER BY 1 COLLATE \"C\")) over pg_policies on the twelve tables"
+    }
+  },
+  "functionsDetail": [
+    {
+      "function": "rec_application_employer_note(uuid)",
+      "bodyMd5": "290088a3d0ec409965da0513b1bacefe",
+      "securityDefiner": true,
+      "config": "search_path=public, pg_temp",
+      "executeAnonAuthenticatedServiceRole": "011"
+    },
+    {
+      "function": "rec_application_status_events(uuid)",
+      "bodyMd5": "524d5d67fbc80b4e24e3028afe4d7469",
+      "securityDefiner": true,
+      "config": "search_path=public, pg_temp",
+      "executeAnonAuthenticatedServiceRole": "011"
+    },
+    {
+      "function": "rec_candidate_reply_to_message(uuid,text,text)",
+      "bodyMd5": "201cad4a2952209241b13ac8aadd4b01",
+      "securityDefiner": true,
+      "config": "search_path=public, pg_temp",
+      "executeAnonAuthenticatedServiceRole": "010"
+    },
+    {
+      "function": "rec_is_member(uuid)",
+      "bodyMd5": "e6e311099fd9ca59aecb673ba213e983",
+      "securityDefiner": true,
+      "config": "search_path=public, pg_temp",
+      "executeAnonAuthenticatedServiceRole": "010"
+    },
+    {
+      "function": "rec_my_application_context()",
+      "bodyMd5": "31748671af89c65fa8e5c012d0c3c70c",
+      "securityDefiner": true,
+      "config": "search_path=public, pg_temp",
+      "executeAnonAuthenticatedServiceRole": "011"
+    },
+    {
+      "function": "rec_respond_to_booking(uuid,text)",
+      "bodyMd5": "7abd9906a74bce1d7acac86045be03d5",
+      "securityDefiner": true,
+      "config": "search_path=public, pg_temp",
+      "executeAnonAuthenticatedServiceRole": "010"
+    },
+    {
+      "function": "rec_ri_candidate_view(uuid,uuid,jsonb,text,text,integer,integer,uuid)",
+      "bodyMd5": "a9b5781d02d2b2090d35df2d2a1ad6fa",
+      "securityDefiner": true,
+      "config": "search_path=public, pg_temp",
+      "executeAnonAuthenticatedServiceRole": "010"
+    },
+    {
+      "function": "rec_ri_case_composition(uuid)",
+      "bodyMd5": "73dfb4f39eee1ea73e95f576b2357505",
+      "securityDefiner": true,
+      "config": "search_path=public, pg_temp",
+      "executeAnonAuthenticatedServiceRole": "010"
+    },
+    {
+      "function": "rec_save_vacancy_structure(uuid,jsonb,jsonb)",
+      "bodyMd5": "3bb30a789b0bdfb0a7c46831939e457b",
+      "securityDefiner": true,
+      "config": "search_path=public, pg_temp",
+      "executeAnonAuthenticatedServiceRole": "010"
+    },
+    {
+      "function": "rec_session_active()",
+      "bodyMd5": "f82facde43f29870e4b931b293855111",
+      "securityDefiner": true,
+      "config": "search_path=\"\"",
+      "executeAnonAuthenticatedServiceRole": "010"
+    },
+    {
+      "function": "recruiter_intelligence.rec_member_without_session(uuid)",
+      "bodyMd5": "25f556072399c5600d5b6d74a71c851b",
+      "securityDefiner": true,
+      "config": "search_path=public, pg_temp",
+      "executeAnonAuthenticatedServiceRole": "010"
+    },
+    {
+      "function": "scp_application_candidate(uuid)",
+      "bodyMd5": "3eeac2f882be0e69d3b29d8578805296",
+      "securityDefiner": true,
+      "config": "search_path=public, pg_temp",
+      "executeAnonAuthenticatedServiceRole": "010"
+    },
+    {
+      "function": "set_application_status(uuid,text,text)",
+      "bodyMd5": "31f5ec56dca3004a044579d25ea8d106",
+      "securityDefiner": true,
+      "config": "search_path=public",
+      "executeAnonAuthenticatedServiceRole": "010"
+    }
+  ],
+  "notRead": "No row content, address or token was read. No fixture, worker, function deployment or write was made."
+}
