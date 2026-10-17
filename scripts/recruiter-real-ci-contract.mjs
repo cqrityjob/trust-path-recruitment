@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import cp from "node:child_process";
 
-export const SCHEMA_SHA = "66c81b8190eff5f774a1a158b266e6339e37f484";
+export const SCHEMA_SHA = "eab7bcdcc49d224f50f3a8d720ed35a7d0bd057e";
 export const APP_SHA = "53659419a1c243c27a59540eb849569140b71365";
 export const PROJECT = "cqj-ri-real-20261008b";
 export const API = "http://127.0.0.1:55690";
@@ -14,7 +14,7 @@ export const EXCLUDED =
 export function requireCompleteHistory(names) {
   const files = names.filter((name) => name.endsWith(".sql")).sort();
   if (
-    files.length !== 400 ||
+    files.length !== 401 ||
     files.some((name) => !/^\d{14}_.+\.sql$/.test(name)) ||
     new Set(files.map((name) => name.slice(0, 14))).size !== files.length
   )
@@ -57,6 +57,8 @@ export function requireCompleteHistory(names) {
     throw Error("REAL_CI_SESSION_REQUIRED_FORWARD_REQUIRED");
   if (!files.some((name) => name.startsWith("20270321090000_")))
     throw Error("REAL_CI_PASSPORT_SHARE_SESSION_FORWARD_REQUIRED");
+  if (!files.some((name) => name.startsWith("20270322090000_")))
+    throw Error("REAL_CI_PASSPORT_SHARE_PREVIEW_FORWARD_REQUIRED");
   return files;
 }
 
