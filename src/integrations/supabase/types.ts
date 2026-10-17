@@ -25517,6 +25517,7 @@ export type Database = {
         }[]
       }
       sp_passport_session_active: { Args: never; Returns: boolean }
+      sp_preview_application_disclosure: { Args: never; Returns: Json }
       sp_preview_credential_disclosure_v2: {
         Args: {
           _claim_ids: string[]

@@ -694,6 +694,25 @@ test("8 · Cecilia reads who, about what and what accepting means, accepts, and 
   await expect(dialog.getByTestId("apply-passport-state")).toHaveText(
     "Ditt Security Passport delas inte med den här ansökan.",
   );
+  // Before choosing she can see exactly what the employer would read: the
+  // employer's own card, built by the database from her verified CPP, and
+  // the preview itself shares nothing -- no disclosure row, box still off.
+  const disclosures = () =>
+    sql(`select count(*) from sp_disclosures where holder_user_id='${A_ID}'`);
+  const disclosuresBefore = disclosures();
+  await dialog.getByRole("button", { name: "Förhandsvisa vad arbetsgivaren ser" }).click();
+  const preview = dialog.getByTestId("apply-passport-preview");
+  await expect(preview).toContainText(
+    "Förhandsvisningen delar ingenting. Arbetsgivaren ser exakt detta först om du kryssar i rutan och skickar ansökan.",
+  );
+  const previewCard = dialog.getByTestId("apply-passport-preview-card");
+  await expect(previewCard).toBeVisible({ timeout: 30_000 });
+  await expect(previewCard).toContainText(
+    sql(`select title from sp_claims where id='${cppClaim()}'`),
+  );
+  await expect(share).not.toBeChecked();
+  expect(disclosures()).toBe(disclosuresBefore);
+  await shot(page, "after-apply-passport-preview-sv-1440");
   await share.click();
   await expect(share).toBeChecked();
   await expect(dialog.getByTestId("apply-passport-state")).toHaveText(
@@ -714,6 +733,13 @@ test("8 · Cecilia reads who, about what and what accepting means, accepts, and 
       `select application_id is not null from rec_talent_contact_requests where holder_user_id='${A_ID}'`,
     ),
   ).toBe("t");
+  // Ticking and sending is what shares: exactly one application-bound
+  // disclosure now exists, created by the submission and not by the preview.
+  expect(
+    sql(
+      `select count(*) from sp_disclosures where holder_user_id='${A_ID}' and application_id is not null`,
+    ),
+  ).toBe("1");
   await page.context().close();
 });
 

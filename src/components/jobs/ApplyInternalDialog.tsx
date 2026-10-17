@@ -59,6 +59,7 @@ import {
 } from "@/lib/job-intelligence/applications.functions";
 import { jobApplyReturnPath } from "@/lib/job-intelligence/job-search";
 import { getApplicationPassportOffer } from "@/lib/security-passport/passport.functions";
+import { ApplicationPassportPreview } from "./ApplicationPassportPreview";
 import { listMyApplicationCvOptions } from "@/lib/professional-identity/cv/cv-store.functions";
 import type { ApplicationCvOption } from "@/lib/professional-identity/cv/cv-store.functions";
 import type { CvApplicationBlock } from "@/lib/professional-identity/cv/application-source";
@@ -1048,6 +1049,10 @@ function AccountApplyInternalDialog({
                             ))}
                           </ul>
                         ) : null}
+
+                        {/* Exactly what the employer would read, before the
+                            choice is made. Shares nothing; see the component. */}
+                        <ApplicationPassportPreview />
 
                         <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
                           <span className="font-medium">{t("jobs.apply.passport.excludes")}:</span>{" "}

@@ -633,6 +633,10 @@ for (const relPath of RECRUITMENT_SURFACES) {
       "sp_application_disclosure",
       "sp_share_passport_with_application",
       "sp_my_application_disclosures",
+      // The holder's preview in the application dialog (20270322090000): the
+      // would-be share is built and rolled back inside the database, so it
+      // reads the holder's own Passport and creates nothing.
+      "sp_preview_application_disclosure",
     ]);
     const called = [...server.matchAll(/\.rpc\(\s*["']([a-z_]+)["']/g)].map((m) => m[1]);
     for (const name of called) {
@@ -655,6 +659,9 @@ for (const relPath of RECRUITMENT_SURFACES) {
   const MAY_IMPORT_DISCLOSURE: readonly string[] = [
     HOLDER_DISCLOSURE_PANEL,
     "src/components/jobs/ApplicationPassportShare.tsx",
+    // The holder's own preview before applying: the same card the employer
+    // sees, from the holder-scoped preview function, before any share exists.
+    "src/components/jobs/ApplicationPassportPreview.tsx",
   ];
   for (const file of [
     ...walk(path.join(root, "src/components")),
