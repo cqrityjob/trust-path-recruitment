@@ -13,8 +13,8 @@
   ],
   "source": "Supabase connector read-only SQL, explicit project wrygicdfxwjnrugduxnt",
   "projectRef": "wrygicdfxwjnrugduxnt",
-  "readAt": "2026-10-17T06:05:38.339739+00:00",
-  "readBy": "Read-only verification 2026-10-17 after #475 (merge 855e2629) and #476 (merge b219c685, head f77578db) were installed by the official integration. Ledger 399 rows ending 20270320090000; the prior 397 rows unchanged (version+name md5 9a299f7a); all 399 md5 dbcb16bf. 13 functions and 35 policies equal the strict local replay of main. Full capture: docs/release/2026-10-17-recruitment-session-hosted-verification.json. No production fixtures or workers.",
+  "readAt": "2026-10-17T08:42:33.016505+00:00",
+  "readBy": "Read-only verification 2026-10-17 after #477 (merge d2db7eb5, head 6c1aaa19) was installed by the official integration. Ledger 400 rows ending 20270321090000; the prior 399 rows unchanged (version+name md5 dbcb16bf); all 400 md5 6b9e3f66. The two functions equal the strict local replay of main (74d2886f). Full capture: docs/release/2026-10-17-passport-share-session-hosted-verification.json. No production fixtures or workers.",
   "versions": [
     {
       "version": "20260716153446",
@@ -1611,6 +1611,10 @@
     {
       "version": "20270320090000",
       "name": "rec_session_required"
+    },
+    {
+      "version": "20270321090000",
+      "name": "sp_application_disclosure_session"
     }
   ]
 }
