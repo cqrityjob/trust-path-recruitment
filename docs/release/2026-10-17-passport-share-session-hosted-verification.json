@@ -1,0 +1,101 @@
+{
+  "formatVersion": 1,
+  "projectRef": "wrygicdfxwjnrugduxnt",
+  "installation": "official_supabase_github_integration",
+  "readOnly": true,
+  "observedBy": "Claude session for #479 under the owner's instruction of 2026-10-17: after #477 merged, check whether 20270321090000 is installed (never re-run it), verify it read-only against the merged migration and record the result in #479. The merge of #477 was the owner's.",
+  "merges": [
+    {
+      "pr": 477,
+      "head": "6c1aaa196badf5e5d47a9d3b7f297e230c3be37e",
+      "mergeSha": "d2db7eb57005099371458e155c75641324134464",
+      "mergedAt": "2026-10-17T08:41:08Z",
+      "slots": ["20270321090000"],
+      "verifiedOnHead": "All 21 PR checks green on 6c1aaa19 (Supabase Preview skipped); the e2e for both doors failed before the migration in real CI as its negative control (6bac9643)."
+    }
+  ],
+  "migrationSha256": {
+    "20270321090000_sp_application_disclosure_session.sql": "229198e7ac9ebb4f49d73e921d6e7f3497f983308c2d002b3cd8820df7c9223f"
+  },
+  "ledger": {
+    "before477": {
+      "count": 399,
+      "latest": "20270320090000",
+      "versionNameNewlineMd5": "dbcb16bf407f8f0656316504cddf8e2a",
+      "observedAt": "2026-10-17T08:41:28.943106+00:00 (after the merge, before the integration had installed the slot)"
+    },
+    "after477": {
+      "count": 400,
+      "latest": "20270321090000",
+      "versionNameNewlineMd5": "6b9e3f6664ee0c7e2c0f48879d38a82c",
+      "observedAt": "2026-10-17T08:42:33.016505+00:00",
+      "newRows": ["20270321090000 sp_application_disclosure_session"]
+    },
+    "prior399UnchangedAfter477": {
+      "count": 399,
+      "versionNameNewlineMd5": "dbcb16bf407f8f0656316504cddf8e2a"
+    },
+    "formula": "md5(string_agg(version || ' ' || name, E'\\n' ORDER BY version)) over supabase_migrations.schema_migrations"
+  },
+  "notReRun": "The slot was installed by the official integration between 08:41:28Z and 08:42:33Z. Nothing was applied by this session.",
+  "localReplay": {
+    "database": "isolated local PostgreSQL 17.6, fresh database",
+    "source": "main d2db7eb57005099371458e155c75641324134464 (the merge of #477)",
+    "history": "strict replay of all 400 canonical migrations after supabase/tests/00_bootstrap.sql and the hosted privilege baseline (no EXECUTE default for authenticated/service_role), ON_ERROR_STOP"
+  },
+  "fingerprints": {
+    "functions": {
+      "count": 2,
+      "hosted": "74d2886f6233b568a8856d25574e85ce",
+      "localReplay": "74d2886f6233b568a8856d25574e85ce",
+      "formula": "md5(string_agg(regprocedure || '|' || md5(prosrc) || '|' || prosecdef || '|' || language || '|' || proconfig || '|' || anon||authenticated||service_role EXECUTE, E'\\n' ORDER BY regprocedure COLLATE \"C\"))"
+    }
+  },
+  "functionsDetail": [
+    {
+      "function": "public.sp_application_disclosure(uuid)",
+      "language": "plpgsql",
+      "securityDefiner": true,
+      "searchPath": "public, pg_temp",
+      "bodyMd5": "baacd57a5645ea3eba661590e01af423",
+      "execute": {
+        "anon": false,
+        "authenticated": true,
+        "service_role": false
+      },
+      "sessionGuard": "rec_session_active() is the first statement (REC_SESSION_REVOKED)"
+    },
+    {
+      "function": "public.sp_my_application_disclosures()",
+      "language": "plpgsql",
+      "securityDefiner": true,
+      "searchPath": "public, pg_temp",
+      "bodyMd5": "24cc0f358d720192214853d15de7ee5c",
+      "execute": {
+        "anon": false,
+        "authenticated": true,
+        "service_role": false
+      },
+      "sessionGuard": "sp_assert_passport_session() is the first statement (SP_SESSION_REVOKED)"
+    }
+  ],
+  "publicLinksPreserved": {
+    "note": "The intended public share through a valid link goes through these two functions, which the slot does not touch. Both remain executable by service_role only.",
+    "functions": [
+      {
+        "function": "public.sp_get_disclosure(text)",
+        "execute": "service_role only",
+        "hostedBodyMd5": "64aa1ee35c0dc2d78b98f328abc08cda",
+        "localReplayBodyMd5": "93f52760d96bddb33360e188904ba50c",
+        "observation": "Pre-existing and unrelated to this slot: the hosted body is the local body without its SQL comments (identical after removing -- comments and collapsing whitespace; 1640 vs 1888 bytes). No change in behaviour."
+      },
+      {
+        "function": "public.sp_get_disclosure_session(text)",
+        "execute": "service_role only",
+        "hostedBodyMd5": "e78827531f10055b53bcec19c2ec6aa0",
+        "localReplayBodyMd5": "e78827531f10055b53bcec19c2ec6aa0"
+      }
+    ]
+  },
+  "notRead": "No row content, address or token was read. No fixture, worker, function deployment or write was made."
+}
