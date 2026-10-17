@@ -818,8 +818,18 @@ test.describe("recruitment case", () => {
     );
     sql(`INSERT INTO public.sp_claims (holder_user_id, claim_type, credential_code, title, claimed_issuer_name, issued_on, valid_until, assertion_level, lifecycle_state, verified_by_user_id, verified_at, jurisdiction_code)
          VALUES ('${holderId}', 'licence', 'OV', 'Ordningsvaktsförordnande', 'Polismyndigheten', current_date - 30, current_date + 365, 'verified', 'active', (SELECT id FROM auth.users WHERE email = 'anna.agare@nordvakt.test'), now(), 'SE') RETURNING 1`);
+    // One transaction, as a real submission is: the job's required questions are
+    // answered before its deferred check runs at commit.
     sql(
-      `INSERT INTO public.job_applications (id, job_id, applicant_user_id, status, cv_source, consent_given_at) VALUES ('${appId}', '${JOB}', '${holderId}', 'submitted', 'upload', now()) RETURNING 1`,
+      `BEGIN;
+       INSERT INTO public.job_applications (id, job_id, applicant_user_id, status, cv_source, consent_given_at) VALUES ('${appId}', '${JOB}', '${holderId}', 'submitted', 'upload', now());
+       INSERT INTO public.job_application_answers (application_id, question_id, employer_id, answer_kind, answer_bool, answer_text)
+         SELECT '${appId}', q.id, q.employer_id, q.answer_kind,
+                CASE WHEN q.answer_kind = 'yes_no' THEN true END,
+                CASE WHEN q.answer_kind = 'text' THEN 'Ja' END
+           FROM public.recruitment_questions q WHERE q.job_id = '${JOB}' AND q.is_required;
+       COMMIT;
+       SELECT 1`,
     );
     sql(
       `INSERT INTO public.sp_disclosures (holder_user_id, package_code, application_id, recipient_hint, expires_at) VALUES ('${holderId}', 'employer_review', '${appId}', '${employerName.replace(/'/g, "''")}', now() + interval '30 days') RETURNING 1`,
