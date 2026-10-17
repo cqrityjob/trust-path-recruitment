@@ -150,6 +150,11 @@ expect(
   /setIncludePassport\(v === true\)/.test(apply),
   `${applyPath}: the Passport checkbox must remain a real, clearable control.`,
 );
+// Off until the candidate chooses it (independent acceptance 2026-10-17).
+expect(
+  /const \[includePassport, setIncludePassport\] = useState\(false\)/.test(apply),
+  `${applyPath}: Passport sharing must start unticked -- an active choice, never a default.`,
+);
 expect(
   !/disabled=\{[^}]*!includePassport/.test(apply),
   `${applyPath}: submitting must never require including a Passport.`,

@@ -220,11 +220,11 @@ function AccountApplyInternalDialog({
   // Which source the SERVER recorded, so the confirmation describes the
   // application that exists rather than the form that was filled in.
   const [submittedSource, setSubmittedSource] = useState<CvSource>("upload");
-  // Enabled by default: a candidate who has verified records almost always
-  // wants the employer to see them, and the whole point is that including a
-  // Passport costs no extra steps. It is a plain checkbox they can clear
-  // before submitting — never a second wizard.
-  const [includePassport, setIncludePassport] = useState(true);
+  // Off by default (independent acceptance 2026-10-17): sharing the Passport
+  // is the candidate's own active choice, made with what would be shared in
+  // view -- never something they have to notice and clear. The database
+  // default is the same (sp_submit_application_with_cv_source, AC1).
+  const [includePassport, setIncludePassport] = useState(false);
   const [offer, setOffer] = useState<{
     hasPassport: boolean;
     hasShareableContent: boolean;
@@ -1013,6 +1013,15 @@ function AccountApplyInternalDialog({
                       <div id="apply-passport-detail" className="mt-2 pl-6">
                         <p className="text-sm text-muted-foreground">
                           {t("jobs.apply.passport.lede")}
+                        </p>
+                        <p
+                          className="mt-1 text-sm font-medium text-foreground"
+                          data-testid="apply-passport-state"
+                          aria-live="polite"
+                        >
+                          {includePassport
+                            ? t("jobs.apply.passport.stateOn")
+                            : t("jobs.apply.passport.stateOff")}
                         </p>
 
                         <p className="mt-2 text-sm text-foreground">

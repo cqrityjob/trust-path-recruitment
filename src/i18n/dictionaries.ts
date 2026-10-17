@@ -2865,9 +2865,11 @@ export const dictionaries = {
       "Åtkomsten gäller bara den här ansökan. Uppgifterna tillhör kandidaten och får inte spridas vidare.",
 
     // ── Candidate: including the Passport with an application ──────────
-    "jobs.apply.passport.title": "Ta med mitt verifierade Security Passport",
+    "jobs.apply.passport.title": "Dela mitt verifierade Security Passport med arbetsgivaren",
     "jobs.apply.passport.lede":
-      "Arbetsgivaren ser dina verifierade uppgifter tillsammans med ansökan.",
+      "Frivilligt. Kryssar du i rutan ser arbetsgivaren dina verifierade uppgifter tillsammans med ansökan.",
+    "jobs.apply.passport.stateOff": "Ditt Security Passport delas inte med den här ansökan.",
+    "jobs.apply.passport.stateOn": "Arbetsgivaren får se uppgifterna nedan när du skickar ansökan.",
     "jobs.apply.passport.includes": "Det här delas",
     "jobs.apply.passport.excludes": "Det här delas aldrig",
     "jobs.apply.passport.exc":
@@ -11838,9 +11840,12 @@ export const dictionaries = {
     "employer.candidate.passport.scoped":
       "Access applies to this application only. The records belong to the candidate and must not be passed on.",
 
-    "jobs.apply.passport.title": "Include my verified Security Passport",
+    "jobs.apply.passport.title": "Share my verified Security Passport with the employer",
     "jobs.apply.passport.lede":
-      "The employer sees your verified records alongside your application.",
+      "Optional. If you tick the box, the employer sees your verified records alongside your application.",
+    "jobs.apply.passport.stateOff": "Your Security Passport is not shared with this application.",
+    "jobs.apply.passport.stateOn":
+      "The employer will see the records below when you send your application.",
     "jobs.apply.passport.includes": "Shared",
     "jobs.apply.passport.excludes": "Never shared",
     "jobs.apply.passport.exc":
