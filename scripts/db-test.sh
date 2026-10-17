@@ -297,6 +297,48 @@ td_fn() { sed -n "/^$2/,/$3/p" "$1" | sed '1s/^CREATE FUNCTION/CREATE OR REPLACE
 td_plant() { psql_q -d "$TEST_DB" -c "$(td_fn "$1" "$2" "$3" | sed "$4")" >/dev/null; }
 td_restore() { psql_q -d "$TEST_DB" -c "$(td_fn "$1" "$2" "$3")" >/dev/null; }
 
+# Slot 20270321090000 (2026-10-17): a Passport shared with an application
+# needs a live session on both sides -- the employer reading it, the holder
+# listing it -- while a valid public link keeps opening. The newest slot, so it
+# runs first and is stood down before 20270320090000.
+AD_M=supabase/migrations/20270321090000_sp_application_disclosure_session.sql
+AD_R=supabase/rollback/20270321090000_sp_application_disclosure_session_rollback.sql
+AD_READ='CREATE OR REPLACE FUNCTION public.sp_application_disclosure('
+AD_LIST='CREATE OR REPLACE FUNCTION public.sp_my_application_disclosures('
+echo "==> Running the application-bound Passport session rule (20270321090000)"
+td_suite sp_application_disclosure_session_test "Application-bound Passport session" 16 \
+  "AD2.1 the signed-out employer is refused by the session rule, before anything is read" \
+  "AD2.2 nothing was recorded: access count and access log unchanged" \
+  "AD3.1 the signed-out holder cannot list the employers and jobs shared with" \
+  "AD4.2 someone else's live session id is refused, both ways" \
+  "AD5.1 a valid link opens, with the holder signed out everywhere"
+# Negative controls: each planted defect is caught by the assertion named.
+td_plant "$AD_M" "$AD_READ" '^END; \$function\$;' '/IF NOT public.rec_session_active() THEN/,/END IF;/d'
+td_nc sp_application_disclosure_session_test "AD NC1 the employer read relies on the counter's side effect again" "AD2.1"
+td_restore "$AD_M" "$AD_READ" '^END; \$function\$;'
+td_plant "$AD_M" "$AD_LIST" '^\$function\$;' '/PERFORM public.sp_assert_passport_session();/d'
+td_nc sp_application_disclosure_session_test "AD NC2 the holder list forgets the session" "AD3.1"
+td_restore "$AD_M" "$AD_LIST" '^\$function\$;'
+td_suite sp_application_disclosure_session_test "Application-bound Passport session (after controls)" 16
+# The existing application-Passport suite (34+ assertions) on the new bodies.
+set +e
+AD_SPAP_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/sp_application_passport_test.sql 2>&1)"
+AD_SPAP_RC=$?
+set -e
+AD_SPAP_N="$(echo "$AD_SPAP_OUT" | sed -n 's/.*sp_application_passport_test: \([0-9]*\) assertions.*/\1/p' | head -1)"
+if [ "$AD_SPAP_RC" -ne 0 ] || ! [ "${AD_SPAP_N:-0}" -ge 34 ]; then
+  echo "$AD_SPAP_OUT" | grep -iE "ASSERTION FAILED|ERROR:" | head -5 >&2
+  suite_failed "Security Passport application disclosure on 20270321090000"
+else
+  echo "    ok  ${AD_SPAP_N} application-disclosure assertions on the 20270321090000 bodies"
+fi
+psql_q -d "$TEST_DB" -f "$AD_R" >/dev/null
+psql_q -d "$TEST_DB" -f "$AD_M" >/dev/null
+psql_q -d "$TEST_DB" -f "$AD_R" >/dev/null
+AD_STOOD_DOWN="$(psql_q -d "$TEST_DB" -Atc "SELECT (position('rec_session_active' IN (SELECT prosrc FROM pg_proc WHERE oid = 'public.sp_application_disclosure(uuid)'::regprocedure)) = 0 AND (SELECT l.lanname FROM pg_proc p JOIN pg_language l ON l.oid = p.prolang WHERE p.oid = 'public.sp_my_application_disclosures()'::regprocedure) = 'sql')::text")"
+[ "$AD_STOOD_DOWN" = "true" ] || { echo "FAIL: the 20270321090000 rollback did not restore the previous bodies." >&2; exit 1; }
+echo "    ok  20270321090000 stood down (and re-applied once) to the previous bodies"
+
 # Slot 20270320090000 (2026-10-16): private recruitment data needs a live
 # Auth session, bound to its user (rec_session_active). The newest slot, so it
 # runs first on the full current schema and is stood down before 20270319090000,
