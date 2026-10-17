@@ -1439,7 +1439,10 @@ export function InternationalCredentialForm({
                   >
                     {copy("Välj fil", "Choose file")}
                   </button>
-                  <span className="min-w-0 break-all text-sm" data-evidence-file-name>
+                  <span
+                    className="min-w-0 text-sm [overflow-wrap:anywhere]"
+                    data-evidence-file-name
+                  >
                     {file?.name ?? copy("Ingen fil vald", "No file chosen")}
                   </span>
                   {file && (

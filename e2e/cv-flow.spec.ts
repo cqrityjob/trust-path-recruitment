@@ -448,6 +448,48 @@ test.describe("CV — English and small screens", () => {
     await expect(page.getByRole("button", { name: /Redigera texten/ })).toBeVisible();
   });
 
+  // Independent acceptance 2026-10-17 (P2): document names hard to read on a
+  // phone. A long CV name is shown whole on the saved CV and in the list --
+  // wrapped, never cut to an ellipsis -- in both languages and both widths.
+  for (const lang of ["sv", "en"] as const) {
+    test(`a long CV name stays readable at 375 and 1440 (${lang})`, async ({ page }) => {
+      const title =
+        "Väktare och ordningsvakt – CV för ansökan till Nordic Security AB, Stockholm 2026";
+      const model = new ServerModel();
+      await signedIn(page, model, lang === "en" ? { lang: "en" } : undefined);
+      await page.setViewportSize({ width: 375, height: 812 });
+      await gotoNew(page, lang === "en" ? /Create a new CV/ : /Skapa nytt CV/);
+      await page.locator("#cv-title").fill(title);
+      if (lang === "en") await createAndSave(page, /Preview CV/, /^Save CV$/);
+      else await createAndSave(page);
+
+      const readable = async (selector: string) => {
+        const el = page.locator(selector).first();
+        await expect(el).toHaveText(title);
+        const m = await el.evaluate((node) => {
+          const s = getComputedStyle(node);
+          return {
+            fits: node.scrollWidth <= node.clientWidth + 1,
+            ellipsis: s.textOverflow === "ellipsis",
+            breakAll: s.wordBreak === "break-all",
+            page: document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1,
+          };
+        });
+        expect(m).toEqual({ fits: true, ellipsis: false, breakAll: false, page: true });
+      };
+
+      for (const width of [375, 1440]) {
+        await page.setViewportSize({ width, height: width === 375 ? 812 : 900 });
+        await readable("#cv-saved-title");
+      }
+      await page.goto(`${BASE}/my-career/cv`, { waitUntil: "domcontentloaded" });
+      for (const width of [375, 1440]) {
+        await page.setViewportSize({ width, height: width === 375 ? 812 : 900 });
+        await readable("[data-cv-list-title]");
+      }
+    });
+  }
+
   test("the saved CV survives 200% zoom", async ({ page }) => {
     const model = new ServerModel();
     await signedIn(page, model);

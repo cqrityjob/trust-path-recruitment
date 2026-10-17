@@ -772,7 +772,7 @@ export function PassportReviewWorkspace() {
                               aria-hidden="true"
                               className="h-4 w-4 shrink-0 text-muted-foreground"
                             />
-                            <span className="min-w-0 flex-1 break-all text-sm text-foreground">
+                            <span className="min-w-0 flex-1 text-sm text-foreground [overflow-wrap:anywhere]">
                               {ev.fileName}
                             </span>
                             <button
