@@ -780,6 +780,184 @@ test.describe("recruitment case", () => {
     }
   });
 
+  /**
+   * 20270321090000: a Passport shared with an application needs a live
+   * session on both sides. The employer's read and the holder's list, each
+   * through PostgREST directly and through the application's own server
+   * function, answer a live session and refuse the same token after a local
+   * sign-out; another live session keeps working; a refused read records
+   * nothing. A synthetic holder, created and removed by this test.
+   */
+  test("a Passport shared with an application: the employer's read and the holder's list need a live session, through both doors", async ({
+    page,
+    browser,
+  }) => {
+    test.setTimeout(120_000);
+    expect(DB, "E2E_DATABASE_URL: the fixture and the 'nothing recorded' checks").toBeTruthy();
+    const employerId = sql(`SELECT id FROM public.employers WHERE slug = '${SLUG}'`)!;
+    const employerName = sql(`SELECT name FROM public.employers WHERE id = '${employerId}'`)!;
+    const holderName = `Paula Passport ${Date.now()}`;
+    const email = `paula.passport.${Date.now()}@test.local`;
+    const created = await fetch(`${API}/auth/v1/admin/users`, {
+      method: "POST",
+      headers: { apikey: SRK, Authorization: `Bearer ${SRK}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email,
+        email_confirm: true,
+        user_metadata: { display_name: holderName },
+      }),
+    }).then((r) => r.json() as Promise<{ id?: string }>);
+    const holderId = created.id!;
+    expect(holderId).toBeTruthy();
+    const appId = sql(`SELECT gen_random_uuid()`)!;
+    // A verified credential, an application to the 32-candidate job, and the
+    // share the holder made with it -- written as the database's own owner,
+    // exactly the rows sp_submit_application_with_passport leaves.
+    sql(
+      `INSERT INTO public.sp_passport_profiles (holder_user_id, display_name, jurisdiction_code) VALUES ('${holderId}', '${holderName}', 'SE') RETURNING 1`,
+    );
+    sql(`INSERT INTO public.sp_claims (holder_user_id, claim_type, credential_code, title, claimed_issuer_name, issued_on, valid_until, assertion_level, lifecycle_state, verified_by_user_id, verified_at, jurisdiction_code)
+         VALUES ('${holderId}', 'licence', 'OV', 'Ordningsvaktsförordnande', 'Polismyndigheten', current_date - 30, current_date + 365, 'verified', 'active', (SELECT id FROM auth.users WHERE email = 'anna.agare@nordvakt.test'), now(), 'SE') RETURNING 1`);
+    sql(
+      `INSERT INTO public.job_applications (id, job_id, applicant_user_id, status, cv_source, consent_given_at) VALUES ('${appId}', '${JOB}', '${holderId}', 'submitted', 'upload', now()) RETURNING 1`,
+    );
+    sql(
+      `INSERT INTO public.sp_disclosures (holder_user_id, package_code, application_id, recipient_hint, expires_at) VALUES ('${holderId}', 'employer_review', '${appId}', '${employerName.replace(/'/g, "''")}', now() + interval '30 days') RETURNING 1`,
+    );
+    const trace = () =>
+      sql(
+        `SELECT access_count || '/' || (SELECT count(*) FROM public.sp_disclosure_accesses x WHERE x.disclosure_id = d.id) FROM public.sp_disclosures d WHERE d.application_id = '${appId}' AND d.revoked_at IS NULL`,
+      );
+
+    const rpc = (token: string, name: string, body: unknown) =>
+      fetch(`${API}/rest/v1/rpc/${name}`, {
+        method: "POST",
+        headers: {
+          apikey: ANON,
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      }).then(async (r) => ({ status: r.status, text: await r.text() }));
+    const logout = (token: string) =>
+      fetch(`${API}/auth/v1/logout?scope=local`, {
+        method: "POST",
+        headers: { apikey: ANON, Authorization: `Bearer ${token}` },
+      }).then((r) => r.status);
+    // The application's own request, captured from a signed-in browser and
+    // replayed with any token.
+    const captureFn = async (p: Page, exportName: string, path: string) => {
+      const seen = p.waitForRequest((r) => exportOf(r.url()) === exportName, { timeout: 45_000 });
+      await open(p, path);
+      const req = await seen;
+      const kept = Object.fromEntries(
+        Object.entries(await req.allHeaders()).filter(
+          ([k]) => !/^(authorization|cookie|content-length|host|connection|:)/i.test(k),
+        ),
+      );
+      return async (token: string) => {
+        const r = await fetch(req.url(), {
+          method: req.method(),
+          headers: { ...kept, Authorization: `Bearer ${token}` },
+          body: req.postData() ?? undefined,
+        });
+        return { status: r.status, text: await r.text() };
+      };
+    };
+
+    const holderContext = await browser.newContext();
+    try {
+      await signIn(page, "anna.agare@nordvakt.test");
+      const readFn = await captureFn(
+        page,
+        "readApplicationDisclosure",
+        `/employer/${SLUG}/applications/${appId}`,
+      );
+      const holderPage = await holderContext.newPage();
+      await signIn(holderPage, email);
+      const listFn = await captureFn(
+        holderPage,
+        "listMyApplicationDisclosures",
+        "/my-career/applications",
+      );
+
+      const employer = await tokenFor("anna.agare@nordvakt.test");
+      const employerOther = await tokenFor("anna.agare@nordvakt.test");
+      const holder = await tokenFor(email);
+      const holderOther = await tokenFor(email);
+      const readApi = (t: string) =>
+        rpc(t, "sp_application_disclosure", { _application_id: appId });
+      const listApi = (t: string) => rpc(t, "sp_my_application_disclosures", {});
+
+      // Live: both sides read, through both doors.
+      for (const [why, t] of [
+        ["live", employer],
+        ["another live session", employerOther],
+      ] as const) {
+        const a = await readApi(t);
+        expect(a.status, `${why}: PostgREST sp_application_disclosure`).toBe(200);
+        expect(JSON.parse(a.text).status, `${why}: the shared Passport`).toBe("active");
+        const b = await readFn(t);
+        expect(b.status, `${why}: readApplicationDisclosure`).toBe(200);
+        expect(b.text, `${why}: the app shows the holder`).toContain(holderName);
+      }
+      for (const [why, t] of [
+        ["live", holder],
+        ["another live session", holderOther],
+      ] as const) {
+        const a = await listApi(t);
+        expect(a.status, `${why}: PostgREST sp_my_application_disclosures`).toBe(200);
+        expect(a.text, `${why}: the holder's list names the employer`).toContain(employerName);
+        const b = await listFn(t);
+        expect(b.status, `${why}: listMyApplicationDisclosures`).toBe(200);
+        expect(b.text, `${why}: the app lists the share`).toContain(employerName);
+      }
+
+      // A local sign-out on each side: the old token is refused at once,
+      // through both doors, and nothing is recorded.
+      const before = trace();
+      expect(await logout(employer)).toBeLessThan(300);
+      expect(await logout(holder)).toBeLessThan(300);
+      const a = await readApi(employer);
+      expect(
+        a.status,
+        `signed-out employer, PostgREST: ${a.text.slice(0, 120)}`,
+      ).toBeGreaterThanOrEqual(400);
+      expect(a.text).toContain("REC_SESSION_REVOKED");
+      expect(a.text).not.toContain(holderName);
+      const b = await readFn(employer);
+      expect(b.text, "signed-out employer, the app shows nothing of the Passport").not.toContain(
+        holderName,
+      );
+      const c = await listApi(holder);
+      expect(
+        c.status,
+        `signed-out holder, PostgREST: ${c.text.slice(0, 120)}`,
+      ).toBeGreaterThanOrEqual(400);
+      expect(c.text).toContain("SP_SESSION_REVOKED");
+      expect(c.text).not.toContain(employerName);
+      const d = await listFn(holder);
+      expect(
+        d.status === 200 && d.text.includes(employerName),
+        "signed-out holder, the app lists nothing",
+      ).toBe(false);
+      expect(trace(), "a refused read recorded no access").toBe(before);
+
+      // The other sessions are untouched.
+      expect(JSON.parse((await readApi(employerOther)).text).status).toBe("active");
+      expect((await listFn(holderOther)).text).toContain(employerName);
+    } finally {
+      await holderContext.close();
+      sql(
+        `DELETE FROM public.sp_disclosure_accesses WHERE disclosure_id IN (SELECT id FROM public.sp_disclosures WHERE application_id = '${appId}') RETURNING 1`,
+      );
+      sql(
+        `ALTER TABLE public.sp_disclosures DISABLE TRIGGER USER; DELETE FROM public.sp_disclosures WHERE application_id = '${appId}'; ALTER TABLE public.sp_disclosures ENABLE TRIGGER USER; SELECT 1`,
+      );
+      sql(`DELETE FROM public.job_applications WHERE id = '${appId}' RETURNING 1`);
+    }
+  });
+
   test("previous/next walk the server's ordering across a page edge, without the list's ids", async ({
     page,
   }) => {
