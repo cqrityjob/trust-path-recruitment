@@ -686,8 +686,19 @@ test("8 · Cecilia reads who, about what and what accepting means, accepts, and 
     mimeType: "application/pdf",
     buffer: PDF,
   });
-  // The Passport choice is hers: shown, and on.
-  await expect(dialog.getByText("Ta med mitt verifierade Security Passport")).toBeVisible();
+  // The Passport choice is hers: shown, off until she chooses it, and chosen.
+  const share = dialog.getByRole("checkbox", {
+    name: "Dela mitt verifierade Security Passport med arbetsgivaren",
+  });
+  await expect(share).not.toBeChecked();
+  await expect(dialog.getByTestId("apply-passport-state")).toHaveText(
+    "Ditt Security Passport delas inte med den här ansökan.",
+  );
+  await share.click();
+  await expect(share).toBeChecked();
+  await expect(dialog.getByTestId("apply-passport-state")).toHaveText(
+    "Arbetsgivaren får se uppgifterna nedan när du skickar ansökan.",
+  );
   await dialog
     .getByText("Jag samtycker till att min ansökan och mitt CV delas med arbetsgivaren.")
     .click();
