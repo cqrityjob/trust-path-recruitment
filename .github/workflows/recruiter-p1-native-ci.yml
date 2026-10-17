@@ -82,6 +82,14 @@ jobs:
             if(!["PASS","FAILED"].includes(m.result)||m.evidenceSha!==process.env.RI_P1_NATIVE_EVIDENCE_SHA)throw Error("P1_NATIVE_PUBLIC_MANIFEST_REQUIRED");
             requireWorkspaceProof(m);
             if(/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+|Bearer\s|"(?:password|access_token|refresh_token|SERVICE_ROLE_KEY|DB_URL)"\s*:/.test(JSON.stringify(m)))throw Error("P1_NATIVE_PUBLIC_SECRET_REFUSED");
+            // The failing stage and its fixed code in the ordinary log, from the
+            // manifest that has just passed the secret refusal above: the
+            // artifact store is not readable from every place a run is
+            // diagnosed. Stage names, fixed P1_NATIVE_* codes and the
+            // already-sanitized diagnostic only -- never raw output.
+            console.log(`P1_NATIVE_RESULT ${m.result}`);
+            for(const [stage,state] of Object.entries(m.stages??{}))console.log(`P1_NATIVE_STAGE ${stage} ${state}`);
+            for(const e of m.errors??[])console.log(`P1_NATIVE_ERROR ${JSON.stringify({stage:e.stage,code:e.code,...(e.diagnostic?{diagnostic:e.diagnostic}:{})})}`);
           '
       - name: Redacted native P1 evidence
         if: always() && steps.public_evidence.outcome == 'success'

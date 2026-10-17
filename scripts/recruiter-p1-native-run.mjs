@@ -168,11 +168,17 @@ async function stage(name, action) {
     console.log(`P1_NATIVE_PASS ${name}`);
   } catch (e) {
     report.stages[name] = "failed";
+    const code = /^P1_NATIVE_[A-Z0-9_]+$/.test(e?.message ?? "")
+      ? e.message
+      : "P1_NATIVE_STAGE_FAILED";
     report.errors.push({
       stage: name,
-      code: /^P1_NATIVE_[A-Z0-9_]+$/.test(e?.message ?? "") ? e.message : "P1_NATIVE_STAGE_FAILED",
+      code,
       ...(e?.safeDiagnostic ? { diagnostic: e.safeDiagnostic } : {}),
     });
+    // The stage name and the fixed code only, so a failure is readable in the
+    // ordinary log without the artifact; never the error message itself.
+    console.log(`P1_NATIVE_FAIL ${name} ${code}`);
     throw Error("P1_NATIVE_STAGE_FAILED");
   }
 }
