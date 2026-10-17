@@ -108,6 +108,32 @@ export const sharePassportWithApplication = createServerFn({ method: "POST" })
     return { disclosureId: id as unknown as string };
   });
 
+/**
+ * What the employer WOULD read if this application carried the Passport --
+ * built by the database exactly as the employer's read builds it, and shared
+ * with nobody.
+ *
+ * `sp_preview_application_disclosure` writes the would-be share inside a
+ * sub-transaction, reads it through the same payload builder and rolls the
+ * row back before returning, so the preview and the employer's view cannot
+ * drift apart and a preview leaves no disclosure, access count or link
+ * behind. Same `RecipientPayload` shape, rendered by the same card.
+ *
+ * Every failure is `unavailable`: a preview that cannot be built must never
+ * block applying, and the checkbox beside it still decides on its own.
+ */
+export const previewApplicationDisclosure = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<RecipientPayload> => {
+    const { data: payload, error } = await context.supabase.rpc(
+      "sp_preview_application_disclosure",
+    );
+    if (error) return { status: "unavailable" };
+    const p = (payload ?? {}) as { status?: string };
+    if (p.status !== "active") return { status: "unavailable" };
+    return payload as unknown as RecipientPayload;
+  });
+
 export const listMyApplicationDisclosures = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<readonly ApplicationDisclosureRecord[]> => {

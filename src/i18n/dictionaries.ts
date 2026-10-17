@@ -2885,6 +2885,13 @@ export const dictionaries = {
     "jobs.apply.passport.openPassport": "Öppna Security Passport",
     "jobs.apply.passport.sharedConfirm": "Security Passport skickades med ansökan.",
     "jobs.apply.passport.notSharedConfirm": "Ansökan skickades utan Security Passport.",
+    "jobs.apply.passport.previewShow": "Förhandsvisa vad arbetsgivaren ser",
+    "jobs.apply.passport.previewHide": "Dölj förhandsvisningen",
+    "jobs.apply.passport.previewNote":
+      "Förhandsvisningen delar ingenting. Arbetsgivaren ser exakt detta först om du kryssar i rutan och skickar ansökan.",
+    "jobs.apply.passport.previewLoading": "Hämtar förhandsvisningen …",
+    "jobs.apply.passport.previewUnavailable":
+      "Förhandsvisningen kan inte visas just nu. Ditt val ovan gäller ändå.",
 
     // ── Candidate: the application row ─────────────────────────────────
     "myapps.passport.included": "Security Passport inkluderat",
@@ -11861,6 +11868,13 @@ export const dictionaries = {
     "jobs.apply.passport.openPassport": "Open Security Passport",
     "jobs.apply.passport.sharedConfirm": "Your Security Passport was sent with the application.",
     "jobs.apply.passport.notSharedConfirm": "The application was sent without a Security Passport.",
+    "jobs.apply.passport.previewShow": "Preview what the employer sees",
+    "jobs.apply.passport.previewHide": "Hide the preview",
+    "jobs.apply.passport.previewNote":
+      "The preview shares nothing. The employer sees exactly this only if you tick the box and send the application.",
+    "jobs.apply.passport.previewLoading": "Loading the preview …",
+    "jobs.apply.passport.previewUnavailable":
+      "The preview cannot be shown right now. Your choice above still applies.",
 
     "myapps.passport.included": "Security Passport included",
     "myapps.passport.attach": "Share verified Passport with this application",
