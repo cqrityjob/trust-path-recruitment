@@ -472,12 +472,13 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // docs/release/2026-10-17-passport-share-session-hosted-verification.json.
 // The hosted ledger holds 400 identities ending 20270321090000.
 //
-// 2026-10-17: the holder's preview of an application share is genuinely
-// WAITING on the owner's release decision and the official integration:
-//   20270322090000_sp_preview_application_disclosure
-// It comes OFF this list in the same change that records its hosted
-// installation with evidence, as every earlier name did.
-const expectedPending: string[] = ["20270322090000_sp_preview_application_disclosure.sql"];
+// 2026-10-17: #479 (20270322090000, merge 6d273d29) was merged under the
+// owner's release decision and installed by the official integration; the
+// read-only hosted verification is recorded in
+// docs/release/2026-10-17-passport-share-preview-hosted-verification.json.
+// The hosted ledger holds 401 identities ending 20270322090000. Nothing is
+// pending.
+const expectedPending: string[] = [];
 
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
