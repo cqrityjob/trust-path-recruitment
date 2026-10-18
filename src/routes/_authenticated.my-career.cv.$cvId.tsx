@@ -494,7 +494,7 @@ function CvDetailPage() {
               <div className="min-w-0">
                 <h1
                   id="cv-saved-title"
-                  className="truncate text-3xl font-semibold tracking-tight text-foreground md:text-4xl"
+                  className="text-3xl font-semibold tracking-tight text-foreground [overflow-wrap:anywhere] md:text-4xl"
                   style={{ fontFamily: "var(--font-display)" }}
                 >
                   {cv.data.title}

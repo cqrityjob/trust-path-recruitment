@@ -201,7 +201,10 @@ export function EvidencePanel({
               className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-border p-3"
             >
               <FileText aria-hidden="true" className="h-4 w-4 shrink-0 text-muted-foreground" />
-              <span className="min-w-0 flex-1 break-all text-sm text-foreground">
+              <span
+                data-evidence-file-name
+                className="min-w-0 flex-1 text-sm text-foreground [overflow-wrap:anywhere]"
+              >
                 {item.fileName}
               </span>
               <span className="text-xs tabular-nums text-muted-foreground">
@@ -305,7 +308,10 @@ export function EvidencePanel({
           {/* WHICH document. "Saved" is true of any file; the holder needs to
               know it was theirs. */}
           {selectedName ? (
-            <p data-evidence-saved-file className="mt-1 break-all text-xs text-muted-foreground">
+            <p
+              data-evidence-saved-file
+              className="mt-1 text-xs text-muted-foreground [overflow-wrap:anywhere]"
+            >
               {selectedName}
             </p>
           ) : null}
@@ -338,7 +344,7 @@ export function EvidencePanel({
             <p
               data-evidence-uploading-file
               aria-live="polite"
-              className="mt-2 break-all text-xs text-muted-foreground"
+              className="mt-2 text-xs text-muted-foreground [overflow-wrap:anywhere]"
             >
               {selectedName}
             </p>
@@ -377,7 +383,7 @@ export function EvidencePanel({
         <div role="alert" data-evidence-error className="mt-3 text-sm text-destructive">
           <p>{error}</p>
           {selectedName ? (
-            <p data-evidence-error-file className="mt-1 break-all text-xs">
+            <p data-evidence-error-file className="mt-1 text-xs [overflow-wrap:anywhere]">
               {selectedName}
             </p>
           ) : null}
