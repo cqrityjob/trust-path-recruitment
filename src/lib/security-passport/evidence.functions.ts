@@ -51,6 +51,8 @@ export interface EvidenceRecord {
   readonly sizeBytes: number;
   readonly uploadedAt: string;
   readonly lifecycleState: string;
+  /** Only set on withdrawn rows: whether the server could confirm the file is gone. */
+  readonly fileDeletion?: "confirmed" | "pending";
 }
 
 type EvidenceRow = {
@@ -144,13 +146,45 @@ export const listMyEvidence = createServerFn({ method: "GET" })
     const { data, error } = await supabase
       .from("sp_evidence")
       .select(
-        "id, claim_id, period_id, file_name, mime_type, size_bytes, uploaded_at, lifecycle_state",
+        "id, claim_id, period_id, file_name, mime_type, size_bytes, uploaded_at, lifecycle_state, storage_path",
       )
       .eq("holder_user_id", userId)
       .in("lifecycle_state", ["active", "withdrawn"])
       .order("uploaded_at", { ascending: false });
     if (error) throw new Error(error.message);
-    return ((data ?? []) as EvidenceRow[]).map(toEvidence);
+    const rows = (data ?? []) as (EvidenceRow & { storage_path: string })[];
+
+    // BUG-02: whether a withdrawn file is gone used to live only in the
+    // panel's memory, so a reload always said "not yet confirmed". Work it
+    // out here instead. Storage hides every evidence object while the
+    // Passport session is inactive, so an empty listing then is NOT
+    // absence: without an active session everything stays "pending".
+    const hasWithdrawn = rows.some((row) => row.lifecycle_state === "withdrawn");
+    const session = hasWithdrawn ? await supabase.rpc("sp_passport_session_active") : null;
+    const sessionActive = session !== null && session.error === null && session.data === true;
+    const bucket = supabase.storage.from(EVIDENCE_BUCKET);
+
+    return Promise.all(
+      rows.map(async (row): Promise<EvidenceRecord> => {
+        const record = toEvidence(row);
+        if (row.lifecycle_state !== "withdrawn") return record;
+        if (!sessionActive) return { ...record, fileDeletion: "pending" };
+
+        const split = row.storage_path.lastIndexOf("/");
+        const folder = row.storage_path.slice(0, split);
+        const name = row.storage_path.slice(split + 1);
+        try {
+          const result = await bucket.list(folder, { search: name, limit: 100 });
+          const gone =
+            result.error === null &&
+            result.data !== null &&
+            !result.data.some((object) => object.name === name);
+          return { ...record, fileDeletion: gone ? "confirmed" : "pending" };
+        } catch {
+          return { ...record, fileDeletion: "pending" };
+        }
+      }),
+    );
   });
 
 /** Short-lived signed URL. Five minutes, matching the existing CV download
