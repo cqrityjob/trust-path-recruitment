@@ -46,9 +46,12 @@ Every migration is replayed in filename order, and every plain `INSERT`,
 `UPDATE … SET url` / `superseded_on` and `DELETE` on `sp_regulatory_sources`
 is applied to the list. Registering or moving a source is therefore a new
 migration — never an edit to an applied one — and reaches the monitor with no
-other change. A write the parser cannot follow (inside a `DO` block, a function,
-a `TRUNCATE`, or an `UPDATE` without `WHERE source_key = '…'`) is a hard error,
-and so is a list shorter than 20 rows.
+other change. A write the parser cannot follow is a hard error, and so is a
+list shorter than 20 rows. That covers writes inside a `DO` block or a
+function, a `TRUNCATE`, and any URL or `superseded_on` `UPDATE` other than
+`… WHERE source_key = '…'` with nothing else. A missing `WHERE`, `OR`, `IN`,
+an extra condition, `FROM` and `RETURNING` are all rejected, and so is a URL
+that is not a single literal.
 
 Until 2026-10-19 the script read only the seed block of
 `20260907090000_sp_three_market_foundation.sql`. Five registered sources were
@@ -71,7 +74,9 @@ _Status: Implemented, Tested (`scripts/regulatory-source-monitor.test.ts`, in CI
 - **Relied-upon terms** (`supabase/regulatory-source-relied-terms.json`): the
   words a market pack depends on a page saying. A reachable page missing one
   is drift. Presence proves nothing about the rule; absence is a reason to
-  read the page first.
+  read the page first. Terms are matched against the text with HTML entities
+  decoded (`r&auml;ttslig` reads as "rättslig"). The fingerprint keeps its
+  original normalisation, so accepted baselines stay comparable.
 
 The checker always identifies itself as
 `CQrityjob-regulatory-source-monitor/1.0`. It never presents itself as a

@@ -11,6 +11,7 @@ import { join } from "node:path";
 import {
   applyMigration,
   check,
+  missingTerms,
   normalise,
   registeredSources,
   run,
@@ -117,12 +118,44 @@ describe("a later migration moves, supersedes or removes a source", () => {
     expect(r.get("a_one")?.url).toBe("https://a.example/1");
   });
 
+  test("an UPDATE that moves a URL must target exactly one source_key, or it fails", () => {
+    const move = (where: string) =>
+      replay(`UPDATE public.sp_regulatory_sources SET url = 'https://x.example/'${where};`);
+    // No WHERE would move every source; OR, IN, AND and a joined FROM would
+    // move a set the monitor cannot know. None may be silently half-applied.
+    for (const where of [
+      "",
+      " WHERE source_key = 'a_one' OR source_key = 'a_two'",
+      " WHERE source_key IN ('a_one', 'a_two')",
+      " WHERE source_key = 'a_one' AND market_pack_code IS NULL",
+      " FROM other o WHERE source_key = 'a_one'",
+      " WHERE source_key = 'a_one' RETURNING id",
+    ]) {
+      expect(() => move(where), where).toThrow(/exactly one source_key/);
+    }
+    expect(() => replay(`UPDATE public.sp_regulatory_sources SET superseded_on = now();`)).toThrow(
+      /exactly one source_key/,
+    );
+    expect(() =>
+      replay(
+        `UPDATE public.sp_regulatory_sources SET url = CASE WHEN true THEN 'https://x.example/' END WHERE source_key = 'a_one';`,
+      ),
+    ).toThrow(/single https literal/);
+    // A sub-select in another column does not hide the URL move behind it.
+    const r = replay(
+      `UPDATE public.sp_regulatory_sources SET market_pack_code = (SELECT c FROM t WHERE k = 1), url = 'https://y.example/' WHERE source_key = 'a_one';`,
+    );
+    expect(r.get("a_one")?.url).toBe("https://y.example/");
+    // The supported form still applies.
+    expect(move(" WHERE source_key = 'a_two'").get("a_two")?.url).toBe("https://x.example/");
+  });
+
   test("writes it cannot follow are hard errors, not a shorter run", () => {
     expect(() =>
       replay(
         `UPDATE public.sp_regulatory_sources SET url = 'https://x.example/' WHERE jurisdiction_code = 'A';`,
       ),
-    ).toThrow(/without naming one source_key/);
+    ).toThrow(/exactly one source_key/);
     expect(() =>
       replay(
         `DO $$ BEGIN UPDATE public.sp_regulatory_sources SET url = 'https://x.example/' WHERE source_key = 'a_one'; END $$;`,
@@ -199,6 +232,28 @@ describe("fetching", () => {
     const report = readFileSync(join(root, "regulatory-source-report.md"), "utf8");
     // First run: no baseline, so the source is "new"; the reason still shows.
     expect(report).toContain("(timeout; site root: answers)");
+  });
+
+  test("relied-upon terms match through HTML entities; the fingerprint is unchanged by the decoding", async () => {
+    const encoded = page(
+      "Krav p&aring; r&auml;ttslig grund och konsekvensbed&#246;mning (&#xE5;tg&auml;rd)",
+    );
+    const r = await check(
+      { url: "https://x.example/" },
+      (async () =>
+        new Response(encoded, {
+          headers: { "content-type": "text/html" },
+        })) as unknown as typeof fetch,
+    );
+    expect(r.availability).toBe("available");
+    expect(missingTerms(r.text ?? "", ["rättslig grund", "konsekvensbedömning", "åtgärd"])).toEqual(
+      [],
+    );
+    // The fingerprint still hashes the same normalisation as before, so an
+    // accepted baseline does not turn into a false "changed".
+    expect(r.fingerprint).toBe(
+      new Bun.CryptoHasher("sha256").update(normalise(encoded)).digest("hex"),
+    );
   });
 
   test("a redirect is recorded with where it landed", async () => {

@@ -77,7 +77,7 @@ export type CheckResult = BaselineEntry & {
    *  same request. Tells a slow or missing page from a host that does not
    *  answer this checker at all. */
   hostRoot?: string;
-  /** Normalised visible text; held in memory for the term check, never written. */
+  /** Visible text with entities decoded; held in memory for the term check, never written. */
   text?: string;
 };
 export type Baseline = {
@@ -167,6 +167,49 @@ const ANY_WRITE_RE = new RegExp(
   "i",
 );
 
+/** Splits an UPDATE into its SET list and whatever follows it (WHERE, FROM,
+ *  RETURNING), ignoring keywords inside string literals and parentheses. */
+function splitUpdate(stmt: string): { set: string; rest: string } {
+  const at = /\bSET\b/i.exec(stmt);
+  if (!at) return { set: "", rest: "" };
+  const body = stmt.slice(at.index + at[0].length);
+  let inQuote = false;
+  let depth = 0;
+  for (let i = 0; i < body.length; i++) {
+    const c = body[i];
+    if (c === "'") inQuote = !inQuote;
+    else if (inQuote) continue;
+    else if (c === "(") depth++;
+    else if (c === ")") depth--;
+    // A WHERE inside a sub-select in SET belongs to the sub-select.
+    else if (depth === 0 && /^\s(WHERE|FROM|RETURNING)\b/i.test(body.slice(i))) {
+      return { set: body.slice(0, i), rest: body.slice(i) };
+    }
+  }
+  return { set: body, rest: "" };
+}
+
+/** Splits on commas outside quotes and parentheses. */
+function splitTopLevel(list: string): string[] {
+  const out: string[] = [];
+  let depth = 0;
+  let inQuote = false;
+  let start = 0;
+  for (let i = 0; i < list.length; i++) {
+    const c = list[i];
+    if (c === "'") inQuote = !inQuote;
+    else if (inQuote) continue;
+    else if (c === "(") depth++;
+    else if (c === ")") depth--;
+    else if (c === "," && depth === 0) {
+      out.push(list.slice(start, i));
+      start = i + 1;
+    }
+  }
+  out.push(list.slice(start));
+  return out.filter((a) => a.trim());
+}
+
 /** Applies one migration's writes to the registry. Exported for the tests. */
 export function applyMigration(
   registry: Map<string, Source>,
@@ -197,34 +240,40 @@ export function applyMigration(
         registry.set(sourceKey, { sourceKey, url, migration });
       }
     } else if (UPDATE_RE.test(stmt)) {
-      const set = /\bSET\b([\s\S]*?)\bWHERE\b/i.exec(stmt)?.[1] ?? "";
-      const movesUrl = /\burl\s*=/i.test(set);
-      const supersedes = /\bsuperseded_on\s*=/i.test(set);
+      const { set, rest } = splitUpdate(stmt);
+      const assignments = splitTopLevel(set).map((a) => {
+        const m = /^\s*([a-z_][a-z0-9_]*)\s*=\s*([\s\S]*?)\s*$/i.exec(a);
+        if (!m)
+          throw new Error(
+            `${migration}: cannot read the SET clause of an sp_regulatory_sources UPDATE.`,
+          );
+        return { column: m[1].toLowerCase(), value: m[2] };
+      });
+      const url = assignments.find((a) => a.column === "url");
+      const superseded = assignments.find((a) => a.column === "superseded_on");
       // Any other column (a market pack link, a fingerprint) does not change
       // which page is checked.
-      if (!movesUrl && !supersedes) continue;
-      const key = /\bWHERE\s+source_key\s*=\s*'([a-z0-9_]{3,64})'/i.exec(stmt)?.[1];
+      if (!url && !superseded) continue;
+      // The only target this monitor can follow is one named row. No WHERE,
+      // OR, IN, an extra condition, FROM or RETURNING would move a set it
+      // cannot know, and half-applying it is how the wrong URL gets watched.
+      const key = /^WHERE\s+source_key\s*=\s*'([a-z0-9_]{3,64})'$/i.exec(rest.trim())?.[1];
       if (!key)
         throw new Error(
-          `${migration}: an UPDATE moves or supersedes sp_regulatory_sources rows without ` +
-            `naming one source_key. Write it as WHERE source_key = '…' so the monitor can follow it.`,
+          `${migration}: an UPDATE that moves or supersedes sp_regulatory_sources rows must ` +
+            `target exactly one source_key: write it as … WHERE source_key = '…' and nothing else.`,
         );
       const current = registry.get(key);
       if (!current) throw new Error(`${migration}: UPDATE of unregistered source ${key}.`);
-      if (supersedes) {
-        const value = /\bsuperseded_on\s*=\s*([^,]+?)\s*(?:,|$)/i.exec(set)?.[1] ?? "";
-        if (!/^NULL$/i.test(value.trim())) {
-          registry.delete(key);
-          continue;
-        }
+      if (superseded && !/^NULL$/i.test(superseded.value)) {
+        registry.delete(key);
+        continue;
       }
-      if (movesUrl) {
-        const url = /\burl\s*=\s*'(https?:\/\/[^']+)'/i.exec(set)?.[1];
-        if (!url)
-          throw new Error(
-            `${migration}: UPDATE of ${key} sets a url that is not an https literal.`,
-          );
-        registry.set(key, { sourceKey: key, url, migration });
+      if (url) {
+        const literal = /^'(https?:\/\/[^']+)'$/.exec(url.value)?.[1];
+        if (!literal)
+          throw new Error(`${migration}: UPDATE of ${key} must set url to a single https literal.`);
+        registry.set(key, { sourceKey: key, url: literal, migration });
       }
     } else if (DELETE_RE.test(stmt)) {
       const key = /\bWHERE\s+source_key\s*=\s*'([a-z0-9_]{3,64})'\s*$/i.exec(stmt.trim())?.[1];
@@ -282,6 +331,57 @@ export function normalise(html: string): string {
     .trim();
 }
 
+const ENTITIES: Record<string, string> = {
+  amp: "&",
+  lt: "<",
+  gt: ">",
+  quot: '"',
+  apos: "'",
+  nbsp: " ",
+  shy: "",
+  auml: "ä",
+  Auml: "Ä",
+  ouml: "ö",
+  Ouml: "Ö",
+  aring: "å",
+  Aring: "Å",
+  eacute: "é",
+  Eacute: "É",
+  egrave: "è",
+  uuml: "ü",
+  Uuml: "Ü",
+  oslash: "ø",
+  aelig: "æ",
+  ndash: "–",
+  mdash: "—",
+  hellip: "…",
+  lsquo: "‘",
+  rsquo: "’",
+  ldquo: "“",
+  rdquo: "”",
+  laquo: "«",
+  raquo: "»",
+};
+
+const codePoint = (n: number) => (n > 0 && n <= 0x10ffff ? String.fromCodePoint(n) : " ");
+
+/** Visible text as a reader sees it, for the relied-upon terms. Unlike
+ *  normalise() it decodes entities, so `r&auml;ttslig grund` reads as
+ *  "rättslig grund". normalise() is left as it was: changing what the
+ *  fingerprint hashes would turn every accepted baseline into "changed". */
+export function readableText(html: string): string {
+  return html
+    .replace(/<script\b[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style\b[\s\S]*?<\/style>/gi, " ")
+    .replace(/<!--[\s\S]*?-->/g, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&#x([0-9a-f]{1,6});/gi, (_, h) => codePoint(parseInt(h, 16)))
+    .replace(/&#(\d{1,7});/g, (_, d) => codePoint(Number(d)))
+    .replace(/&([a-z]+);/gi, (m, n) => ENTITIES[n] ?? " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function failureReason(err: unknown): string {
   if (err instanceof Error && err.name === "AbortError") return "timeout";
   const code =
@@ -323,8 +423,9 @@ export async function check(
 
     if (!res.ok) return unreachable(`http_${res.status}`, finalUrl);
 
-    const text = normalise(await res.text());
-    const fingerprint = createHash("sha256").update(text).digest("hex");
+    const html = await res.text();
+    const fingerprint = createHash("sha256").update(normalise(html)).digest("hex");
+    const text = readableText(html);
     return {
       url: source.url,
       fingerprint,
