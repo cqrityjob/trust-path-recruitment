@@ -41,12 +41,42 @@ visible text, collapses whitespace and takes a SHA-256.
 human reads the page and decides. `sp_source_review_items` is the append-only
 record of those detections; nothing in it can alter a rule.
 
-The URL list is **parsed out of the migration that seeds it**, not duplicated
-in the script. Adding a source to the migration adds it to the monitor with no
-other edit, and a parse that finds fewer than 20 rows is a hard error rather
-than a quietly shorter run.
+The URL list is **read out of the migrations**, not duplicated in the script.
+Every migration is replayed in filename order, and every plain `INSERT`,
+`UPDATE … SET url` / `superseded_on` and `DELETE` on `sp_regulatory_sources`
+is applied to the list. Registering or moving a source is therefore a new
+migration — never an edit to an applied one — and reaches the monitor with no
+other change. A write the parser cannot follow (inside a `DO` block, a function,
+a `TRUNCATE`, or an `UPDATE` without `WHERE source_key = '…'`) is a hard error,
+and so is a list shorter than 20 rows.
 
-_Status: Implemented._
+Until 2026-10-19 the script read only the seed block of
+`20260907090000_sp_three_market_foundation.sql`. Five registered sources were
+never checked: `ae_moi_private_security` (the AE-AZ public pilot) and the four
+Indian sources (`in_nqr_register`, `in_ncvet_home`,
+`in_mepsc_security_standards`, `in_mha_psara`). Production holds the same 30
+rows the replay produces (read-only check, 2026-10-19).
+
+_Status: Implemented, Tested (`scripts/regulatory-source-monitor.test.ts`, in CI)._
+
+### What a run records about each source
+
+- **Unreachable, and why:** `http_<status>`, `timeout`, or `network:<code>`.
+  On a timeout or network failure one request to the site root, with the same
+  user agent, records whether the host answers this checker at all.
+- **Redirected:** where the registered URL landed. A permanent move is fixed
+  with a migration that updates the URL, after somebody has read the new page.
+- **Fingerprint:** the full current hash is in the job log, so two runs can
+  tell per-request churn from a single change.
+- **Relied-upon terms** (`supabase/regulatory-source-relied-terms.json`): the
+  words a market pack depends on a page saying. A reachable page missing one
+  is drift. Presence proves nothing about the rule; absence is a reason to
+  read the page first.
+
+The checker always identifies itself as
+`CQrityjob-regulatory-source-monitor/1.0`. It never presents itself as a
+browser to get past a refusal: a page that refuses it is reported as refusing
+it.
 
 ### What a changed fingerprint means
 
@@ -68,6 +98,11 @@ open a weekly issue — that is how a real signal becomes something nobody opens
 
 A source that was reachable and has **become** unreachable is drift, and does
 alert.
+
+A source recorded as unreachable that **answers again** is reported as drift
+too, and the baseline keeps it unreachable until a human accepts the new state.
+One answer is not verified access; the SIRA portal's limitation cannot lift
+itself.
 
 ## The weekly job
 
@@ -167,8 +202,11 @@ change and stop, not to archive the web.
 
 `supabase/regulatory-source-baseline.json` records what we last _accepted_ as
 the state of each source. It is committed, so "the law as we understood it
-changed" is reviewable in a diff. CI never writes it; a human runs
-`bun run regulatory-sources:check --update` after reading the page.
+changed" is reviewable in a diff. CI never writes it. A human accepts a
+reviewed change to it after reading the pages concerned.
+`bun run regulatory-sources:check --update` accepts **every** source at once,
+so it is only right when every source in the report has been read; otherwise
+change only the entries that were reviewed.
 
 ## Explicitly prohibited
 
