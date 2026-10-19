@@ -754,12 +754,19 @@ test("8 · Cecilia reads who, about what and what accepting means, accepts, and 
     .getByText("Jag samtycker till att min ansökan och mitt CV delas med arbetsgivaren.")
     .click();
   await shot(page, "after-apply-with-passport-choice-sv-1440");
-  await dialog.getByRole("button", { name: "Skicka ansökan", exact: true }).click();
+  // A double click is how a nervous candidate sends: it must still be one
+  // application with one disclosure, and she must see the confirmation, not
+  // a duplicate error from her own second click.
+  await dialog.getByRole("button", { name: "Skicka ansökan", exact: true }).dblclick();
   await expect
     .poll(() => sql(`select count(*) from job_applications where applicant_user_id='${A_ID}'`), {
       timeout: 60_000,
     })
     .toBe("1");
+  await expect(dialog.getByRole("heading", { name: "Ansökan skickad" })).toBeVisible({
+    timeout: 30_000,
+  });
+  await expect(dialog.getByRole("alert")).toHaveCount(0);
   expect(
     sql(
       `select application_id is not null from rec_talent_contact_requests where holder_user_id='${A_ID}'`,
