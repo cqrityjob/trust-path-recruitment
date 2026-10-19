@@ -1347,6 +1347,14 @@ jobs:
       - name: Application workflow projections
         run: bun test scripts/application-workflow.test.ts
 
+      # The regulatory source monitor against a local server: it checks every
+      # source the migrations register (not only the first seed), says why a
+      # source is unreachable, reports content drift and new failures, keeps a
+      # known limitation visible, and the weekly workflow cannot accept a
+      # baseline. No network beyond 127.0.0.1.
+      - name: Regulatory source monitor
+        run: bun test scripts/regulatory-source-monitor.test.ts
+
       # The interview composition's pure half: the core is never a subset,
       # probes follow their question, time and coverage are the pack's numbers.
       - name: Interview composition projections

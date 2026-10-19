@@ -1,0 +1,30 @@
+{
+  "$comment": "Words a market pack relies on each official page saying. The monitor reports a reachable page that no longer contains one of them (case-insensitive substring of the visible text). Presence never proves a rule is unchanged; absence is a reason to read the page before anything else. Edited by a human in a reviewed change, never by CI. Sources without an entry are fingerprinted only.",
+  "terms": {
+    "se_polisen_ordningsvakter": ["ordningsvakt", "förordna"],
+    "se_polisen_ov_utbildningar": ["ordningsvakt", "utbildning"],
+    "se_polisen_ov_fortbildning": ["fortbildning", "ordningsvakt"],
+    "se_lansstyrelsen_bevakningsforetag": [
+      "godkännande av personal",
+      "bevakningsföretag",
+      "auktorisation",
+      "väktare",
+      "skyddsvakt",
+      "länsstyrelsen"
+    ],
+    "se_lansstyrelsen_skyddsvakt": ["skyddsvakt", "godkännande"],
+    "se_imy_rekryteringssystem": ["rekrytering"],
+    "se_imy_brottsuppgifter": ["lagöverträdelser"],
+    "se_imy_rattslig_grund": ["rättslig grund"],
+    "se_imy_konsekvensbedomning": ["konsekvensbedömning"],
+    "gb_sia_need_a_licence": ["SIA licence"],
+    "gb_sia_apply": ["SIA licence"],
+    "gb_sia_training": ["training", "SIA licence"],
+    "gb_ico_recruitment": ["recruitment"],
+    "gb_ico_vetting": ["vetting"],
+    "gb_ico_criminal_offence_data": ["criminal offence data"],
+    "gb_ico_automated_decisions": ["automated decision"],
+    "ae_du_sira_cadre_card": ["cadre card"],
+    "ae_du_sira_cadre_card_individual": ["cadre card"]
+  }
+}
