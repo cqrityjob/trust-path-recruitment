@@ -73,6 +73,10 @@ export type CheckResult = BaselineEntry & {
   reason?: string;
   /** Where the request landed, when a redirect took it somewhere else. */
   finalUrl?: string;
+  /** For a timeout or network failure: how the site's own root answered the
+   *  same request. Tells a slow or missing page from a host that does not
+   *  answer this checker at all. */
+  hostRoot?: string;
   /** Normalised visible text; held in memory for the term check, never written. */
   text?: string;
 };
@@ -425,7 +429,8 @@ export function renderReport(
   const line = (k: string) => {
     const r = results[k];
     const parts = [`- \`${k}\` — ${r.url}`];
-    if (r.availability === "unreachable") parts.push(`(${r.reason ?? "unreachable"})`);
+    if (r.availability === "unreachable")
+      parts.push(`(${r.reason ?? "unreachable"}${r.hostRoot ? `; site root: ${r.hostRoot}` : ""})`);
     if (r.finalUrl) parts.push(`→ ${r.finalUrl}`);
     return parts.join(" ");
   };
@@ -532,6 +537,7 @@ export async function run(opts: {
   root: string;
   update: boolean;
   fetchImpl?: typeof fetch;
+  timeoutMs?: number;
   log?: (s: string) => void;
 }): Promise<number> {
   const log = opts.log ?? console.log;
@@ -560,13 +566,24 @@ export async function run(opts: {
   // is indistinguishable from something it should rate-limit.
   const results: Record<string, CheckResult> = {};
   for (const source of sources) {
-    const r = await check(source, opts.fetchImpl);
+    const r = await check(source, opts.fetchImpl, opts.timeoutMs);
+    if (r.availability === "unreachable" && !r.reason?.startsWith("http_")) {
+      // One request to the site root, same identity, shorter wait. Not a
+      // retry of the page and not a way round anything: it only says whether
+      // the host answers us at all.
+      const root = await check(
+        { url: new URL("/", source.url).toString() },
+        opts.fetchImpl,
+        Math.min(opts.timeoutMs ?? TIMEOUT_MS, 10_000),
+      );
+      r.hostRoot = root.availability === "available" ? "answers" : (root.reason ?? "unreachable");
+    }
     results[source.sourceKey] = r;
     const where = r.finalUrl ? ` → ${r.finalUrl}` : "";
     log(
       r.availability === "available"
         ? `  ${source.sourceKey}  available  fp=${r.fingerprint}${where}`
-        : `  ${source.sourceKey}  unreachable  ${r.reason}${where}`,
+        : `  ${source.sourceKey}  unreachable  ${r.reason}${r.hostRoot ? ` (site root: ${r.hostRoot})` : ""}${where}`,
     );
   }
 

@@ -161,6 +161,7 @@ beforeAll(() => {
       seen.push({ ua: req.headers.get("user-agent") });
       if (path === "/stable")
         return new Response(page(state.stableBody), { headers: { "content-type": "text/html" } });
+      if (path === "/") return new Response(page("Start"));
       if (path === "/forbidden") return new Response("no", { status: 403 });
       if (path === "/slow") {
         await Bun.sleep(1_000);
@@ -190,6 +191,14 @@ describe("fetching", () => {
     const dead = await check({ url: "http://127.0.0.1:1/" });
     expect(dead.availability).toBe("unreachable");
     expect(dead.reason).toStartWith("network:");
+  });
+
+  test("a timeout says whether the site itself answers", async () => {
+    const root = fixtureRepo({ watched: `${base}/stable`, slowpage: `${base}/slow` }, null);
+    await run({ root, update: false, timeoutMs: 300, log: () => {} });
+    const report = readFileSync(join(root, "regulatory-source-report.md"), "utf8");
+    // First run: no baseline, so the source is "new"; the reason still shows.
+    expect(report).toContain("(timeout; site root: answers)");
   });
 
   test("a redirect is recorded with where it landed", async () => {
