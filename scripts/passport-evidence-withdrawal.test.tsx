@@ -116,4 +116,36 @@ describe("durable withdrawal and retryable Storage deletion", () => {
       assert.ok(!html.includes(lang === "sv" ? ">Öppna<" : ">Open<"));
     }
   });
+  test("a withdrawn file the server confirmed as deleted stays confirmed after reload, SV/EN", () => {
+    for (const lang of ["sv", "en"] as const) {
+      const html = renderToStaticMarkup(
+        <I18nProvider initialLang={lang}>
+          <EvidencePanel
+            evidence={[
+              {
+                id: "withdrawn",
+                claimId: "claim",
+                periodId: null,
+                fileName: "synthetic.pdf",
+                mimeType: "application/pdf",
+                sizeBytes: 25,
+                uploadedAt: "2026-10-08",
+                lifecycleState: "withdrawn",
+                fileDeletion: "confirmed",
+              },
+            ]}
+            canAdd={false}
+            canRemove={false}
+            onOpen={async () => {}}
+            onUpload={async () => {}}
+            onWithdraw={async () => ({ accessWithdrawn: true, fileDeletion: "confirmed" })}
+          />
+        </I18nProvider>,
+      );
+      assert.ok(
+        html.includes(lang === "sv" ? "Filraderingen är bekräftad" : "File deletion confirmed"),
+      );
+      assert.ok(!html.includes(lang === "sv" ? "Försök radera filen igen" : "Retry file deletion"));
+    }
+  });
 });

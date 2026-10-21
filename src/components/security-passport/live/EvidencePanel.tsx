@@ -213,7 +213,7 @@ export function EvidencePanel({
               {item.lifecycleState === "withdrawn" ? (
                 <span role="status" className="w-full text-sm text-muted-foreground">
                   {pt(
-                    deletions[item.id] === "confirmed"
+                    (deletions[item.id] ?? item.fileDeletion) === "confirmed"
                       ? "ev.withdrawnDeleted"
                       : "ev.withdrawnPending",
                   )}
@@ -257,7 +257,7 @@ export function EvidencePanel({
                 </button>
               ) : null}
               {(canRemove || item.lifecycleState === "withdrawn") &&
-              deletions[item.id] !== "confirmed" ? (
+              (deletions[item.id] ?? item.fileDeletion) !== "confirmed" ? (
                 <button
                   type="button"
                   onClick={() => {
