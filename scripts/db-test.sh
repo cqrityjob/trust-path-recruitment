@@ -10434,6 +10434,29 @@ else
   fi
 fi
 
+echo "==> Running Security Passport setup completion assertions (BUG-04)"
+set +e
+SPCS_OUT="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/tests/sp_passport_complete_setup_test.sql 2>&1)"
+SPCS_RC=$?
+set -e
+
+echo "$SPCS_OUT" | grep -E "GROUP |ok  |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+SPCS_PASSED="$(echo "$SPCS_OUT" | grep -c "ok  " || true)"
+
+if [ "$SPCS_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the Passport setup completion suite exited with code ${SPCS_RC}." >&2
+  echo "$SPCS_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "Security Passport setup completion"
+else
+  echo "    ok  ${SPCS_PASSED} Passport setup completion assertions passed"
+  if [ "$SPCS_PASSED" -lt 19 ]; then
+    echo "FAIL: expected at least 19 Passport setup completion assertions, only ${SPCS_PASSED} ran." >&2
+    suite_failed "Security Passport setup completion (assertion shortfall: floor 19)"
+  fi
+fi
+
 echo "==> Running Security Passport number and social share races"
 SPNR_FAILED=0
 SPNR_USERS="'5e000000-0000-4000-8000-000000000001','5e000000-0000-4000-8000-000000000002','5e000000-0000-4000-8000-000000000003'"

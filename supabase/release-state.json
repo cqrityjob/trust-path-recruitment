@@ -4037,6 +4037,19 @@
           "object": "sp_preview_application_disclosure"
         }
       ]
+    },
+    {
+      "file": "20270323090000_sp_passport_complete_setup.sql",
+      "hostedState": "pending",
+      "note": "BUG-04: completing the /passport/start setup. sp_passport_complete_setup(_declared) marks the signed-in holder's profile completed and declared, requires their own declaration and at least one current merit (active claim or employment), is idempotent (a completed Passport is left as it is: same declaration date, no second event), and writes declaration_recorded and onboarding_completed events in the same transaction. It never names sp_passport_numbers: the existing sp_passport_number_on_complete_trg assigns the number, once, in that transaction. Authenticated only. The application change that calls it (a declaration box and a Complete button on the setup's last step) ships separately after installation. Install after 20270322090000.",
+      "rollback": "supabase/rollback/20270323090000_sp_passport_complete_setup_rollback.sql",
+      "verify": "Full-history replay plus supabase/tests/sp_passport_complete_setup_test.sql (19 assertions: anon, a false or missing declaration, an empty Passport and a draft-only Passport are refused and numbered nobody; a current claim or an employment alone completes and numbers the holder exactly once; a second completion keeps the same number and declaration date and logs once; the real rollback removes the function, keeps every number, and the migration re-applies) in scripts/db-test.sh. Before any production installation, reverify the exact CI head; after it, confirm the function exists with EXECUTE for authenticated only.",
+      "introduces": [
+        {
+          "kind": "function",
+          "object": "sp_passport_complete_setup"
+        }
+      ]
     }
   ],
   "policyVersion": 2, 
