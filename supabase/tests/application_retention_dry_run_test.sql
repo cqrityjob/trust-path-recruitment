@@ -26,7 +26,8 @@ UPDATE public.jobs SET status='archived' WHERE id=(SELECT job FROM rj);
 SELECT public.rec_complete_recruitment((SELECT job FROM rj),'completed',NULL,NULL);
 RESET ROLE;
 RESET request.jwt.claim.sub;
-UPDATE public.recruitment_settings SET completed_at=now()-interval '6 months' WHERE job_id=(SELECT job FROM rj);
+-- Back-date in the UTC calendar, as purge_at reads it: now()-'6 months' is session-local and an hour off across a DST change.
+UPDATE public.recruitment_settings SET completed_at=((now() AT TIME ZONE 'UTC')-interval '6 months') AT TIME ZONE 'UTC' WHERE job_id=(SELECT job FROM rj);
 :report_query
 \gset
 SELECT pg_temp.ok((:'report'::jsonb->'summary'->>'automaticEligible')::int=0,
@@ -49,7 +50,7 @@ UPDATE public.recruitment_settings SET completed_at=completed_at+interval '1 sec
 \gset
 SELECT pg_temp.ok((:'report'::jsonb->'summary'->>'automaticEligible')::int=0,
  'DR7 future by one second is excluded');
-UPDATE public.recruitment_settings SET completed_at=now()-interval '24 months' WHERE job_id=(SELECT job FROM rj);
+UPDATE public.recruitment_settings SET completed_at=((now() AT TIME ZONE 'UTC')-interval '24 months') AT TIME ZONE 'UTC' WHERE job_id=(SELECT job FROM rj);
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claim.sub='ea000000-0000-0000-0000-000000000001';
 SELECT public.rec_set_retention((SELECT employer FROM rj),24);
