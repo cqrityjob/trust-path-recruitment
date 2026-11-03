@@ -26,8 +26,20 @@ UPDATE public.jobs SET status='archived' WHERE id=(SELECT job FROM rj);
 SELECT public.rec_complete_recruitment((SELECT job FROM rj),'completed',NULL,NULL);
 RESET ROLE;
 RESET request.jwt.claim.sub;
--- Back-date in the UTC calendar, as purge_at reads it: now()-'6 months' is session-local and an hour off across a DST change.
-UPDATE public.recruitment_settings SET completed_at=((now() AT TIME ZONE 'UTC')-interval '6 months') AT TIME ZONE 'UTC' WHERE job_id=(SELECT job FROM rj);
+-- The completion exactly on the boundary, in the UTC calendar purge_at reads (a session-local now()-'6 months'
+-- is an hour off across a DST change): due now, not one second later. due_at is now(), except on a day the month
+-- six months back lacks (12-31: no 06-31); there the boundary is that shorter month's last instant, due at the
+-- end of the same day-of-month this month.
+CREATE OR REPLACE FUNCTION pg_temp.retention_boundary(_months integer,OUT completed_at timestamptz,OUT due_at timestamptz)
+LANGUAGE sql STABLE AS $$
+ SELECT c AT TIME ZONE 'UTC',
+  CASE WHEN c+make_interval(months=>_months)=n THEN now()
+   ELSE (date_trunc('month',n)+make_interval(days=>extract(day FROM c)::int)-interval '1 microsecond') AT TIME ZONE 'UTC' END
+ FROM (SELECT n,CASE WHEN n-make_interval(months=>_months)+make_interval(months=>_months)=n THEN n-make_interval(months=>_months)
+   ELSE date_trunc('month',n-make_interval(months=>_months))+interval '1 month'-interval '1 microsecond' END c
+  FROM (SELECT now() AT TIME ZONE 'UTC' n) t) b
+$$;
+UPDATE public.recruitment_settings SET completed_at=(pg_temp.retention_boundary(6)).completed_at WHERE job_id=(SELECT job FROM rj);
 :report_query
 \gset
 SELECT pg_temp.ok((:'report'::jsonb->'summary'->>'automaticEligible')::int=0,
@@ -40,7 +52,7 @@ RESET request.jwt.claim.sub;
 :report_query
 \gset
 SELECT pg_temp.ok((:'report'::jsonb->'summary'->>'automaticEligible')::int=1
- AND (:'report'::jsonb->'scopes'->0->>'purge_at')::timestamptz=now(),
+ AND (:'report'::jsonb->'scopes'->0->>'purge_at')::timestamptz=(pg_temp.retention_boundary(6)).due_at,
  'DR5 actual UTC completion includes exact six-month boundary despite session timezone');
 SELECT pg_temp.ok(jsonb_array_length(:'report'::jsonb->'automaticFirstEnqueueCandidates')=1
  AND (:'report'::jsonb->>'automaticEnabled')::boolean=false,
