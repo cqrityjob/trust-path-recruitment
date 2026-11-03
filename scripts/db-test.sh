@@ -297,10 +297,48 @@ td_fn() { sed -n "/^$2/,/$3/p" "$1" | sed '1s/^CREATE FUNCTION/CREATE OR REPLACE
 td_plant() { psql_q -d "$TEST_DB" -c "$(td_fn "$1" "$2" "$3" | sed "$4")" >/dev/null; }
 td_restore() { psql_q -d "$TEST_DB" -c "$(td_fn "$1" "$2" "$3")" >/dev/null; }
 
+# Slot 20270323090000 (2026-11-03, BUG-04): the /passport/start completion,
+# and the guard that keeps completion out of a client's own profile writes.
+# Newest, so first, against the full current schema; stood down before
+# 20270322090000.
+CS_M=supabase/migrations/20270323090000_sp_passport_complete_setup.sql
+CS_R=supabase/rollback/20270323090000_sp_passport_complete_setup_rollback.sql
+CS_FN='CREATE FUNCTION public.sp_passport_complete_setup('
+CS_GUARD='CREATE FUNCTION public.sp_passport_completion_guard('
+echo "==> Running the Passport setup completion (20270323090000)"
+td_suite sp_passport_complete_setup_test "Passport setup completion" 27 \
+  "CS1.4 an empty Passport cannot be completed" \
+  "CS1.6 a CV record that is not a Passport credential does not complete a Passport" \
+  "CS3.1 a second completion keeps the same number and declaration date" \
+  "CS4.1 a holder cannot mark their own profile completed through the Data API" \
+  "CS5.4 the migration re-applies cleanly after a rollback"
+td_plant "$CS_M" "$CS_FN" '^END \$\$;' "/RAISE EXCEPTION 'SP_NO_CURRENT_MERIT'/d"
+td_nc sp_passport_complete_setup_test "CS NC1 no merit is required" "CS1.4"
+td_restore "$CS_M" "$CS_FN" '^END \$\$;'
+td_plant "$CS_M" "$CS_FN" '^END \$\$;' "/sp_is_passport_credential/d"
+td_nc sp_passport_complete_setup_test "CS NC2 any claim counts as a merit" "CS1.6"
+td_restore "$CS_M" "$CS_FN" '^END \$\$;'
+td_plant "$CS_M" "$CS_FN" '^END \$\$;' "/IF _state = 'completed' THEN RETURN; END IF;/d"
+td_nc sp_passport_complete_setup_test "CS NC3 a completed Passport is completed again" "CS3.1"
+td_restore "$CS_M" "$CS_FN" '^END \$\$;'
+td_plant "$CS_M" "$CS_GUARD" '^END \$\$;' "/RAISE EXCEPTION 'SP_COMPLETION_RPC_ONLY'/d"
+td_nc sp_passport_complete_setup_test "CS NC4 the table takes a client-written completion" "CS4.1"
+td_restore "$CS_M" "$CS_GUARD" '^END \$\$;'
+# No control for the explicit session check: without it the completion's own
+# profile UPDATE meets sp_private_session_write and is refused the same way
+# (SP_SESSION_REVOKED), so such a plant cannot fail CS1.7 -- by design.
+td_suite sp_passport_complete_setup_test "Passport setup completion (after controls)" 27
+psql_q -d "$TEST_DB" -f "$CS_R" >/dev/null
+psql_q -d "$TEST_DB" -f "$CS_M" >/dev/null
+psql_q -d "$TEST_DB" -f "$CS_R" >/dev/null
+[ "$(psql_q -d "$TEST_DB" -Atc "SELECT (to_regprocedure('public.sp_passport_complete_setup(boolean)') IS NULL AND to_regprocedure('public.sp_passport_completion_guard()') IS NULL AND NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'sp_profile_completion_guard'))::text")" = "true" ] \
+  || { echo "FAIL: the 20270323090000 rollback left the completion or its guard." >&2; exit 1; }
+echo "    ok  20270323090000 stood down (and re-applied once): no completion or guard left"
+
 # Slot 20270322090000 (2026-10-17): the holder's preview of what an employer
 # receives when the Passport is shared with an application -- the same
-# payload builder, nothing stored. Newest, so first; stood down before
-# 20270321090000.
+# payload builder, nothing stored. Runs once 20270323090000 is stood down;
+# stood down before 20270321090000.
 PV_M=supabase/migrations/20270322090000_sp_preview_application_disclosure.sql
 PV_R=supabase/rollback/20270322090000_sp_preview_application_disclosure_rollback.sql
 PV_FN='CREATE FUNCTION public.sp_preview_application_disclosure('
@@ -10431,29 +10469,6 @@ else
   if [ "$SPNS_PASSED" -lt 90 ]; then
     echo "FAIL: expected at least 90 Passport number and social share assertions, only ${SPNS_PASSED} ran." >&2
     suite_failed "Security Passport number and social share (assertion shortfall: floor 90)"
-  fi
-fi
-
-echo "==> Running Security Passport setup completion assertions (BUG-04)"
-set +e
-SPCS_OUT="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
-  -f supabase/tests/sp_passport_complete_setup_test.sql 2>&1)"
-SPCS_RC=$?
-set -e
-
-echo "$SPCS_OUT" | grep -E "GROUP |ok  |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
-SPCS_PASSED="$(echo "$SPCS_OUT" | grep -c "ok  " || true)"
-
-if [ "$SPCS_RC" -ne 0 ]; then
-  echo ""
-  echo "FAIL: the Passport setup completion suite exited with code ${SPCS_RC}." >&2
-  echo "$SPCS_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
-  suite_failed "Security Passport setup completion"
-else
-  echo "    ok  ${SPCS_PASSED} Passport setup completion assertions passed"
-  if [ "$SPCS_PASSED" -lt 19 ]; then
-    echo "FAIL: expected at least 19 Passport setup completion assertions, only ${SPCS_PASSED} ran." >&2
-    suite_failed "Security Passport setup completion (assertion shortfall: floor 19)"
   fi
 fi
 
