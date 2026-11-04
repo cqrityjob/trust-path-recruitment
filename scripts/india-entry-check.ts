@@ -485,6 +485,16 @@ const M_LOC = "supabase/migrations/20261215090000_candidate_location_and_destina
       classifySetupCompletionFailure(new Error("500")) === "indeterminate",
     "6.23 a refusal is told from a lost response",
   );
+  const side = read("src/components/security-passport/PassportSideColumn.tsx");
+  ok(
+    /profile\.onboardingState !== "completed" &&\s*\(snapshot\.holder\.claims\.some\(\s*\(c\) => isCurrentMerit\(c\.lifecycleState\) && isPassportCredential\(c\),?\s*\) \|\|\s*snapshot\.holder\.periods\.some\(\(p\) => isCurrentMerit\(p\.lifecycleState\)\)\)/.test(
+      side,
+    ) &&
+      /\{part !== "privacy" && awaitingCompletion && \([\s\S]{0,1600}?<Link to="\/passport\/start"[^>]*data-cta="complete-setup"/.test(
+        side,
+      ),
+    "6.25 a holder stuck in the old flow (a current merit, never completed) is sent to the declaration from the Passport",
+  );
   const lost = confirm.slice(
     confirm.indexOf('if (kind === "indeterminate") {'),
     confirm.indexOf('} else if (kind === "noMerit") {'),

@@ -54,7 +54,9 @@ import {
   credentialPassportHolder,
   ENTRY_EVIDENCE_ANCHOR,
   ENTRY_VERIFICATION_ANCHOR,
+  isPassportCredential,
 } from "@/lib/security-passport/credential-passport";
+import { isCurrentMerit } from "@/lib/security-passport/types";
 import { credentialProductStatus } from "@/lib/security-passport/product-status";
 import {
   entryNextStep,
@@ -158,6 +160,17 @@ export function PassportSideColumn({
             title: picked.entry.title,
             count: picked.count,
           };
+  // A Passport that holds a current merit (sp_passport_complete_setup's rule:
+  // an active Passport credential or an active employment) but was never
+  // completed -- the old setup's dead end -- is finished on the setup's last
+  // step, with the holder's own declaration. That is the next step, before
+  // any credential's own: until then the Passport is not numbered or counted.
+  const awaitingCompletion =
+    profile.onboardingState !== "completed" &&
+    (snapshot.holder.claims.some(
+      (c) => isCurrentMerit(c.lifecycleState) && isPassportCredential(c),
+    ) ||
+      snapshot.holder.periods.some((p) => isCurrentMerit(p.lifecycleState)));
   const stepCopy =
     next.kind === "first" || next.kind === "unknown" ? null : NEXT_STEP_COPY[next.kind];
   const anchor =
@@ -198,8 +211,38 @@ export function PassportSideColumn({
       }
       className={`${part === "privacy" ? "" : "mt-5"} w-full space-y-5 ${className}`}
     >
+      {/* ── The next step: completing the Passport ────────────────────── */}
+      {part !== "privacy" && awaitingCompletion && (
+        <section
+          aria-labelledby="sp-side-next-heading"
+          data-passport-next-step="complete"
+          className="border-t border-border pt-5"
+        >
+          <h2
+            id="sp-side-next-heading"
+            className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground"
+          >
+            <Compass aria-hidden="true" className="h-3.5 w-3.5" />
+            {copy("Nästa steg", "Next step")}
+          </h2>
+          <p className="mt-3 text-base font-semibold tracking-tight text-foreground">
+            {copy("Slutför ditt Passport", "Complete your Passport")}
+          </p>
+          <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+            {copy(
+              "Granska det du har registrerat och intyga det själv. Först då är ditt Passport slutfört.",
+              "Review what you have registered and declare it yourself. Only then is your Passport complete.",
+            )}
+          </p>
+          <Link to="/passport/start" className={`${PRIMARY} mt-4`} data-cta="complete-setup">
+            {copy("Granska och slutför", "Review and complete")}
+            <ArrowRight aria-hidden="true" className="h-3.5 w-3.5" />
+          </Link>
+        </section>
+      )}
+
       {/* ── The next step ───────────────────────────────────────────── */}
-      {part !== "privacy" && (
+      {part !== "privacy" && !awaitingCompletion && (
         <section
           aria-labelledby="sp-side-next-heading"
           data-passport-next-step={next.kind}

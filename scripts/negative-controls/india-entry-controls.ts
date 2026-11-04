@@ -76,6 +76,17 @@ const MUTATIONS: readonly Mutation[] = [
     expect: "6.11 a completed Passport opens on its completion, whatever else is unanswered",
   },
   {
+    id: "INDIA-NC-STUCK-HOLDER-NOT-SENT-BACK",
+    defect:
+      "a holder with credentials who was never completed is no longer sent to the declaration",
+    file: "src/components/security-passport/PassportSideColumn.tsx",
+    find: '    profile.onboardingState !== "completed" &&\n',
+    replace: '    profile.onboardingState === "never" &&\n',
+    guard: GUARD,
+    expect:
+      "6.25 a holder stuck in the old flow (a current merit, never completed) is sent to the declaration from the Passport",
+  },
+  {
     id: "INDIA-NC-LOST-RESPONSE-AS-FAILURE",
     defect: "a lost response is reported as a failed completion without reading the database",
     file: SETUP,
