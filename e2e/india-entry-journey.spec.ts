@@ -308,9 +308,14 @@ test("India: landing → confirmed account → setup → credential → review �
   ).toBe("0");
   await shots("05-credential-saved");
 
-  // The destination checklist now appears: recorded / needed / external.
+  // The destination checklist now appears: recorded / needed / external. The
+  // Passport holds a current merit, so the last step asks for the holder's
+  // own declaration; completing is passport-setup-completion.spec.ts's.
   await page.goto(`${BASE}/passport/start`);
-  await expect(page.locator("[data-setup-complete]")).toBeVisible();
+  await expect(page.locator("[data-setup-finish]")).toHaveAttribute("data-setup-finish", "confirm");
+  await expect(page.locator("[data-summary-credentials]")).toContainText(
+    "Security Guard (MEP/Q7101)",
+  );
   const checklist = page.locator('[data-destination="AE-DU"]');
   await expect(checklist.locator('[data-checklist-group="recorded"]')).toContainText(
     "Security Guard (MEP/Q7101)",
