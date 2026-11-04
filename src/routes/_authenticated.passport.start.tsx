@@ -687,9 +687,15 @@ function FinishStep({
   // A completion the server refused for want of a merit sends the holder to
   // "add", and that screen says what happened.
   const [refusedNoMerit, setRefusedNoMerit] = useState(false);
+  // Completed DURING this visit (a click, or a lost response that had in fact
+  // committed): the completed screen takes focus when it mounts. A Passport
+  // that was already complete on arrival keeps the page's own focus.
+  const openedAs = useRef(mode).current;
   return (
     <div className="space-y-6" data-setup-finish={mode}>
-      {mode === "completed" && <CompletedPanel lang={lang} />}
+      {mode === "completed" && (
+        <CompletedPanel lang={lang} focusOnMount={openedAs !== "completed"} />
+      )}
       {mode === "add" && (
         <AddMeritPanel
           lang={lang}
@@ -820,7 +826,6 @@ function ConfirmPanel({
       await complete({ data: { declared: true } });
       await invalidatePassportAndCareer(qc);
       await onRefresh();
-      requestAnimationFrame(() => document.getElementById("setup-finish-done")?.focus());
     } catch (err) {
       const kind = classifySetupCompletionFailure(err);
       if (kind === "indeterminate") {
@@ -1045,9 +1050,17 @@ function SetupSummary({
 }
 
 /** The completed Passport: its number, read back from the database. */
-function CompletedPanel({ lang }: { lang: IndiaLang }) {
+function CompletedPanel({ lang, focusOnMount }: { lang: IndiaLang; focusOnMount: boolean }) {
   const t = (key: IndiaCopyKey) => indiaT(key, lang);
   const load = useServerFn(getMyPassportNumber);
+  // On mount, after React has committed the heading: a requestAnimationFrame
+  // scheduled by the submit handler could run before this panel existed.
+  const heading = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    if (focusOnMount) heading.current?.focus();
+    // Mount only: focus moves once, when the completion arrives.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [number, setNumber] = useState<
     { phase: "loading" } | { phase: "error" } | { phase: "ready"; value: number | null }
   >({ phase: "loading" });
@@ -1065,6 +1078,7 @@ function CompletedPanel({ lang }: { lang: IndiaLang }) {
   return (
     <section className="rounded-xl border border-border bg-card p-5 sm:p-6" data-setup-completed>
       <h2
+        ref={heading}
         id="setup-finish-done"
         tabIndex={-1}
         className="flex items-start gap-2 text-lg font-semibold text-foreground outline-none"
