@@ -66,7 +66,9 @@ export function passportSnapshot(f: HomeFixture) {
             subJurisdictionCode: null,
             workLocationConfirmedAt: "2026-01-01T00:00:00Z",
             privacyMode: "private",
-            onboardingState: "complete",
+            // The database's word (sp_passport_profiles CHECK): a finished
+            // Passport. "complete" matched nothing and read as unfinished.
+            onboardingState: "completed",
             onboardingStep: 0,
             onboardingAnswers: {},
           },
