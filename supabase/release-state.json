@@ -4037,6 +4037,23 @@
           "object": "sp_preview_application_disclosure"
         }
       ]
+    },
+    {
+      "file": "20270323090000_sp_passport_complete_setup.sql",
+      "hostedState": "pending",
+      "note": "BUG-04: completing the /passport/start setup. sp_passport_complete_setup(_declared) marks the signed-in holder's profile completed and declared. It requires a live session, their own declaration and, for a Passport not yet completed, at least one current Passport merit: an active Passport credential (sp_is_passport_credential, so a CV record on the shared claim spine does not count) or an active employment, held FOR SHARE until commit. It is idempotent and decides that first (a completed Passport is left as it is: same declaration date, no second event, whatever it holds now), creates a missing profile with sp_passport_ensure as the first-merit completion does, and writes declaration_recorded (with question_version) and onboarding_completed in the same transaction. A new BEFORE INSERT OR UPDATE OF onboarding_state trigger, sp_profile_completion_guard (sp_passport_completion_guard, SECURITY INVOKER), refuses a client role (authenticated, anon) writing a profile into or out of completed, which sp_profiles_self_update and sp_profiles_self_insert used to allow; the draft autosave, work country, basics and re-affirming a completed declaration are unchanged. Neither names sp_passport_numbers: the existing sp_passport_number_on_complete_trg assigns the number, once. Authenticated only. No table, column or existing row changes. The application change that calls it (a declaration box and a Complete button on the setup's last step) ships separately after installation. Install after 20270322090000.",
+      "rollback": "supabase/rollback/20270323090000_sp_passport_complete_setup_rollback.sql",
+      "verify": "Full-history replay plus supabase/tests/sp_passport_complete_setup_test.sql (27 assertions, every JWT naming a live auth.sessions row: anon, a false or missing declaration, an empty Passport, a draft-only Passport, a CV record that is not a Passport credential and a signed-out holder are refused, leave the profile and log untouched and number nobody; a current credential, an employment alone, or a credential saved before any profile existed completes and numbers the holder exactly once; a second completion keeps the number and the original declaration date (moved back first, as the suite shares one now()) and writes no second event, also after the merit was withdrawn; a client cannot write its profile into or out of completed while re-affirming and draft saves still work; the real rollback removes the function and the guard and keeps every number, and the migration re-applies). In scripts/db-test.sh it runs first, against the full current schema, with four negative controls (no merit check, no Passport-credential predicate, no idempotent return, no table guard) and is then stood down before 20270322090000. Before any production installation, reverify the exact CI head; after it, confirm the function exists with EXECUTE for authenticated only and that sp_profile_completion_guard is enabled on sp_passport_profiles.",
+      "introduces": [
+        {
+          "kind": "function",
+          "object": "sp_passport_complete_setup"
+        },
+        {
+          "kind": "function",
+          "object": "sp_passport_completion_guard"
+        }
+      ]
     }
   ],
   "policyVersion": 2, 
