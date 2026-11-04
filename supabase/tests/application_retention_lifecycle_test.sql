@@ -213,9 +213,21 @@ SELECT public.set_application_status(id,'rejected',NULL) FROM public.job_applica
 UPDATE public.jobs SET status='archived' WHERE id::text LIKE 'ed000000%';
 SELECT public.rec_complete_recruitment(id,'completed',NULL,NULL) FROM public.jobs WHERE id::text LIKE 'ed000000%' AND id NOT IN ('ed000000-2222-0000-0000-000000000003','ed000000-2222-0000-0000-000000000004');
 RESET ROLE;
-UPDATE public.recruitment_settings SET completed_at=now()-interval '6 months'
+-- The completion exactly on the six-month boundary: due now, not one second later. A day the month six months
+-- back lacks (12-31: no 06-31) has no now()-'6 months' that is due exactly now; that shorter month's last
+-- instant is the boundary then. Same helper as application_retention_dry_run_test.sql.
+CREATE OR REPLACE FUNCTION pg_temp.retention_boundary(_months integer,OUT completed_at timestamptz,OUT due_at timestamptz)
+LANGUAGE sql STABLE AS $$
+ SELECT c AT TIME ZONE 'UTC',
+  CASE WHEN c+make_interval(months=>_months)=n THEN now()
+   ELSE (date_trunc('month',n)+make_interval(days=>extract(day FROM c)::int)-interval '1 microsecond') AT TIME ZONE 'UTC' END
+ FROM (SELECT n,CASE WHEN n-make_interval(months=>_months)+make_interval(months=>_months)=n THEN n-make_interval(months=>_months)
+   ELSE date_trunc('month',n-make_interval(months=>_months))+interval '1 month'-interval '1 microsecond' END c
+  FROM (SELECT now() AT TIME ZONE 'UTC' n) t) b
+$$;
+UPDATE public.recruitment_settings SET completed_at=(pg_temp.retention_boundary(6)).completed_at
  WHERE job_id='ed000000-2222-0000-0000-000000000001';
-UPDATE public.recruitment_settings SET completed_at=now()-interval '6 months'+interval '1 second'
+UPDATE public.recruitment_settings SET completed_at=(pg_temp.retention_boundary(6)).completed_at+interval '1 second'
  WHERE job_id='ed000000-2222-0000-0000-000000000002';
 SELECT pg_temp.ok(timestamptz '2024-08-31 12:00:00+00'+interval '6 months'=timestamptz '2025-02-28 12:00:00+00','L37 calendar leap/month-end boundary');
 SET LOCAL ROLE service_role;
