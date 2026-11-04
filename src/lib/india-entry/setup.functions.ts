@@ -14,12 +14,16 @@
 // (savePassportBasics, setMyCurrentProfession) and the Passport by
 // ensureFirstRunPassport; this file adds no second path to any of them. And it
 // is structurally unable to touch a credential, a work country, a market or a
-// verification state: none of those tables appears below except sp_claims,
-// which is only ever READ, to list what the holder already holds.
+// verification state: none of those tables appears below except sp_claims and
+// sp_experience_periods, which are only ever READ, to list what the holder
+// already holds. Completing the setup is completePassportSetup's, in the
+// Passport's own module (security-passport/setup-completion.functions.ts).
 
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { isPassportCredential } from "@/lib/security-passport/credential-passport";
+import type { ClaimType } from "@/lib/security-passport/types";
 import { DESTINATIONS, RELOCATION_INTEREST, isResidenceCountry } from "./destinations";
 
 export interface IndiaSetupCredential {
@@ -48,6 +52,33 @@ export interface IndiaSetupState {
   } | null;
   /** The holder's CURRENT governed credentials, for the destination checklist. */
   readonly credentials: readonly IndiaSetupCredential[];
+  /** `onboarding_state = 'completed'`: the setup was completed (and, for a
+   *  numbered account, the Passport numbered). */
+  readonly completed: boolean;
+  /** What the last step summarises and what decides whether it can finish. */
+  readonly merits: IndiaSetupMerits;
+}
+
+/** The merits as sp_passport_complete_setup counts them, and the two kinds of
+ *  row it does not count, so the screen can say why a Passport cannot finish
+ *  yet instead of only that it cannot. */
+export interface IndiaSetupMerits {
+  /** ACTIVE claims that are Passport credentials (isPassportCredential, the
+   *  mirror of sp_is_passport_credential). Unlike `credentials` this does not
+   *  drop a lapsed date: the server's rule is the lifecycle state, and the
+   *  screen must not refuse what the server would accept. */
+  readonly credentials: readonly { readonly id: string; readonly title: string }[];
+  /** ACTIVE employments. An employment completes a Passport too. */
+  readonly employments: readonly {
+    readonly id: string;
+    readonly employer: string;
+    readonly role: string;
+  }[];
+  /** Begun and not finished (`draft`), claims and employments alike. */
+  readonly drafts: number;
+  /** ACTIVE claims that are CV records (a course, a degree, a skill, a
+   *  language): on the shared spine, never Passport content. */
+  readonly cvEntries: number;
 }
 
 type Row = Record<string, unknown>;
@@ -57,8 +88,12 @@ export const readIndiaSetup = createServerFn({ method: "GET" })
   .handler(async ({ context }): Promise<IndiaSetupState> => {
     const db = context.supabase;
     const me = context.userId;
-    const [passport, profile, career, location, prefs, claims] = await Promise.all([
-      db.from("sp_passport_profiles").select("display_name").eq("holder_user_id", me).maybeSingle(),
+    const [passport, profile, career, location, prefs, claims, held, periods] = await Promise.all([
+      db
+        .from("sp_passport_profiles")
+        .select("display_name,onboarding_state")
+        .eq("holder_user_id", me)
+        .maybeSingle(),
       db.from("profiles").select("display_name").eq("id", me).maybeSingle(),
       db
         .from("security_career_profiles")
@@ -84,10 +119,30 @@ export const readIndiaSetup = createServerFn({ method: "GET" })
         .eq("lifecycle_state", "active")
         .not("credential_code", "is", null)
         .order("created_at", { ascending: true }),
+      db
+        .from("sp_claims")
+        .select("id,title,claim_type,credential_code,lifecycle_state")
+        .eq("holder_user_id", me)
+        .in("lifecycle_state", ["active", "draft"])
+        .order("created_at", { ascending: true }),
+      db
+        .from("sp_experience_periods")
+        .select("id,employer_name,role_title,lifecycle_state")
+        .eq("holder_user_id", me)
+        .in("lifecycle_state", ["active", "draft"])
+        .order("started_on", { ascending: false }),
     ]);
-    for (const r of [passport, profile, career, location, prefs, claims]) {
+    for (const r of [passport, profile, career, location, prefs, claims, held, periods]) {
       if (r.error) throw new Error("INDIA_SETUP_UNAVAILABLE");
     }
+    const heldRows = (held.data ?? []) as Row[];
+    const periodRows = (periods.data ?? []) as Row[];
+    const activeHeld = heldRows.filter((c) => c.lifecycle_state === "active");
+    const isCredential = (c: Row) =>
+      isPassportCredential({
+        claimType: String(c.claim_type) as ClaimType,
+        credentialCode: (c.credential_code as string | null) ?? null,
+      });
     const codes = [
       ...new Set(((claims.data ?? []) as Row[]).map((c) => String(c.credential_code))),
     ];
@@ -137,6 +192,23 @@ export const readIndiaSetup = createServerFn({ method: "GET" })
           assertion: String(c.assertion_level),
           validUntil: (c.valid_until as string | null) ?? null,
         })),
+      completed: passport.data?.onboarding_state === "completed",
+      merits: {
+        credentials: activeHeld
+          .filter(isCredential)
+          .map((c) => ({ id: String(c.id), title: String(c.title) })),
+        employments: periodRows
+          .filter((p) => p.lifecycle_state === "active")
+          .map((p) => ({
+            id: String(p.id),
+            employer: String(p.employer_name),
+            role: String(p.role_title),
+          })),
+        drafts:
+          heldRows.filter((c) => c.lifecycle_state === "draft").length +
+          periodRows.filter((p) => p.lifecycle_state === "draft").length,
+        cvEntries: activeHeld.filter((c) => !isCredential(c)).length,
+      },
     };
   });
 

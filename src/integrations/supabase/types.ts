@@ -25509,6 +25509,7 @@ export type Database = {
           subject_kind: string
         }[]
       }
+      sp_passport_complete_setup: { Args: { _declared: boolean }; Returns: undefined }
       sp_passport_ensure: {
         Args: { _question_version?: string }
         Returns: {
