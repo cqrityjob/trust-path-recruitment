@@ -478,10 +478,12 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // docs/release/2026-10-17-passport-share-preview-hosted-verification.json.
 // The hosted ledger holds 401 identities ending 20270322090000.
 //
-// 2026-11-03 (BUG-04): the /passport/start completion, schema-first. The
-// application change that calls it ships after installation:
-//   20270323090000_sp_passport_complete_setup
-const expectedPending: string[] = ["20270323090000_sp_passport_complete_setup.sql"];
+// 2026-11-04: #489 (20270323090000) was installed by the official
+// integration after merge 1848c85e. Read-only catalog and ledger proof:
+// docs/release/2026-11-04-passport-setup-completion-hosted-verification.json.
+// The 402-row hosted ledger preserves all previous 401 entries; both
+// function bodies, grants and enabled triggers match the merged source.
+const expectedPending: string[] = [];
 
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
