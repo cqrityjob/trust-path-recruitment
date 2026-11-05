@@ -15,7 +15,88 @@ import { runControls, type Mutation } from "./runner";
 
 const GUARD = "india-entry:check";
 
+const SETUP = "src/routes/_authenticated.passport.start.tsx";
+const SETUP_STATE = "src/lib/india-entry/setup-state.ts";
+
 const MUTATIONS: readonly Mutation[] = [
+  // ── The last step: completion (BUG-04, app half) ─────────────────────
+  {
+    id: "INDIA-NC-DECLARATION-PRETICKED",
+    defect: "the declaration box is ticked for the holder",
+    file: SETUP,
+    find: "  const [declared, setDeclared] = useState(false);",
+    replace: "  const [declared, setDeclared] = useState(true);",
+    guard: GUARD,
+    expect: "6.17 the declaration box starts empty",
+  },
+  {
+    id: "INDIA-NC-DOUBLE-SUBMIT",
+    defect: "a second click starts a second completion while the first is in flight",
+    file: SETUP,
+    find: "    if (inFlight.current) return;\n    if (!declared) {",
+    replace: "    if (!declared) {",
+    guard: GUARD,
+    expect: "6.18 one completion at a time, and only after the holder ticked the box",
+  },
+  {
+    id: "INDIA-NC-COMPLETION-WITHOUT-DECLARATION",
+    defect: "the server function completes with declared: false",
+    file: "src/lib/security-passport/setup-completion.functions.ts",
+    find: "      .object({ declared: z.literal(true) })",
+    replace: "      .object({ declared: z.boolean() })",
+    guard: GUARD,
+    expect: "6.21 the server function completes only with the holder's own declaration",
+  },
+  {
+    id: "INDIA-NC-EMPTY-PASSPORT-COMPLETES",
+    defect: "an empty Passport is offered the Complete button",
+    file: SETUP_STATE,
+    find: '  return hasCurrentPassportMerit(s) ? "confirm" : "add";',
+    replace: '  return "confirm";',
+    guard: GUARD,
+    expect: "6.13 an empty Passport cannot be completed",
+  },
+  {
+    id: "INDIA-NC-CV-ENTRY-COUNTS",
+    defect: "a CV entry is counted as a Passport merit",
+    file: SETUP_STATE,
+    find: "  return s.merits.credentials.length > 0 || s.merits.employments.length > 0;",
+    replace:
+      "  return (\n    s.merits.credentials.length > 0 || s.merits.employments.length > 0 || s.merits.cvEntries > 0\n  );",
+    guard: GUARD,
+    expect: "6.14 drafts only, or CV entries only, cannot be completed",
+  },
+  {
+    id: "INDIA-NC-COMPLETED-ASKS-AGAIN",
+    defect: "a completed holder is sent back through the questions",
+    file: SETUP_STATE,
+    find: '  if (s.completed) return "done";\n',
+    replace: "",
+    guard: GUARD,
+    expect: "6.11 a completed Passport opens on its completion, whatever else is unanswered",
+  },
+  {
+    id: "INDIA-NC-STUCK-HOLDER-NOT-SENT-BACK",
+    defect:
+      "a holder with credentials who was never completed is no longer sent to the declaration",
+    file: "src/components/security-passport/PassportSideColumn.tsx",
+    find: '    profile.onboardingState !== "completed" &&\n',
+    replace: '    profile.onboardingState === "never" &&\n',
+    guard: GUARD,
+    expect:
+      "6.25 a holder stuck in the old flow (a current merit, never completed) is sent to the declaration from the Passport",
+  },
+  {
+    id: "INDIA-NC-LOST-RESPONSE-AS-FAILURE",
+    defect: "a lost response is reported as a failed completion without reading the database",
+    file: SETUP,
+    find: "          const next = await onRefresh();\n          if (next.completed)",
+    replace:
+      '          setProblem("failed");\n          const next = state;\n          if (next.completed)',
+    guard: GUARD,
+    expect: "6.24 after a lost response the screen reads what the database holds before it speaks",
+  },
+
   {
     id: "INDIA-NC-GUARANTEED-JOB",
     defect: "the landing page promises a job in Dubai",

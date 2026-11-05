@@ -132,10 +132,52 @@ const en = {
     "Choose an Indian qualification or an international certification from the catalogue. A document is optional, and HAYAT can help read it.",
   "setup.first.add": "Add a credential",
   "setup.first.skip": "Go to my Passport",
-  "setup.first.done":
-    "Your Passport is set up. You can add, correct and share credentials at any time.",
   "setup.passport.creating": "Creating your Passport…",
   "setup.passport.failed": "Your Passport could not be created. Try again.",
+  // ── The last step: review, declare, complete ─────────────────────────
+  "setup.finish.title": "Review and complete your Passport",
+  "setup.finish.lead":
+    "Check what you have registered. Your Passport is complete when you confirm it yourself.",
+  "setup.finish.summary": "What you have registered",
+  "setup.finish.summary.name": "Name",
+  "setup.finish.summary.occupation": "Current occupation",
+  "setup.finish.summary.residence": "Lives in",
+  "setup.finish.summary.destinations": "Would like to work in",
+  "setup.finish.summary.notStated": "Not stated",
+  "setup.finish.summary.credentials": "Passport credentials",
+  "setup.finish.summary.employments": "Employment",
+  "setup.finish.summary.none": "None yet",
+  "setup.finish.edit": "Change",
+  "setup.finish.declare.legend": "Your declaration",
+  "setup.finish.declare.help":
+    "Only you can make this declaration, and the box is never ticked for you. It is recorded with the date you complete.",
+  "setup.finish.declare.required": "Tick the box to make your declaration before you complete.",
+  "setup.finish.complete": "Complete my Passport",
+  "setup.finish.completing": "Completing your Passport…",
+  "setup.finish.noMerit.title": "Add a current merit to complete your Passport",
+  "setup.finish.noMerit.body":
+    "A Passport is completed with at least one current Passport credential — a certificate, a licence or a training from the catalogue — or an employment.",
+  "setup.finish.noMerit.drafts":
+    "You have unfinished drafts. A draft counts once you have finished it.",
+  "setup.finish.noMerit.cv":
+    "Entries in your CV, such as courses, education or skills, do not complete a Passport.",
+  "setup.finish.addEmployment": "Add an employment",
+  "setup.finish.error.noMerit":
+    "Your Passport has no current merit any more, so it was not completed. Add one and complete again.",
+  "setup.finish.error.signedOut": "You are signed out. Sign in again to complete your Passport.",
+  "setup.finish.error.signIn": "Sign in",
+  "setup.finish.error.failed": "Your Passport could not be completed. Try again.",
+  "setup.finish.error.unknown":
+    "We could not confirm whether your Passport was completed. Try again — a Passport is only ever completed once.",
+  "setup.finish.done.title": "Your Passport is complete",
+  "setup.finish.done.body": "You can add, correct and share credentials at any time.",
+  "setup.finish.done.number": "Your Passport number",
+  "setup.finish.done.numberNote": "The number is yours and does not change.",
+  "setup.finish.done.numberLoading": "Fetching your Passport number…",
+  "setup.finish.done.numberError": "Your Passport number could not be fetched.",
+  "setup.finish.done.noNumber":
+    "This account is not given a public Passport number, for example because it is a test or staff account.",
+  "setup.finish.done.open": "Open my Passport",
 
   // ── Destinations ─────────────────────────────────────────────────────
   "dest.IN": "India",
@@ -291,10 +333,51 @@ const sv: Record<IndiaCopyKey, string> = {
     "Välj en indisk kvalifikation eller en internationell certifiering ur katalogen. Ett dokument är valfritt, och HAYAT kan hjälpa till att läsa det.",
   "setup.first.add": "Lägg till merit",
   "setup.first.skip": "Till mitt Passport",
-  "setup.first.done":
-    "Ditt Passport är klart att använda. Du kan lägga till, rätta och dela meriter när som helst.",
   "setup.passport.creating": "Skapar ditt Passport…",
   "setup.passport.failed": "Det gick inte att skapa ditt Passport. Försök igen.",
+  "setup.finish.title": "Granska och slutför ditt Passport",
+  "setup.finish.lead":
+    "Kontrollera det du har registrerat. Ditt Passport är slutfört när du själv har intygat uppgifterna.",
+  "setup.finish.summary": "Det här har du registrerat",
+  "setup.finish.summary.name": "Namn",
+  "setup.finish.summary.occupation": "Nuvarande yrke",
+  "setup.finish.summary.residence": "Bor i",
+  "setup.finish.summary.destinations": "Vill arbeta i",
+  "setup.finish.summary.notStated": "Inte angivet",
+  "setup.finish.summary.credentials": "Passport-meriter",
+  "setup.finish.summary.employments": "Anställningar",
+  "setup.finish.summary.none": "Inga ännu",
+  "setup.finish.edit": "Ändra",
+  "setup.finish.declare.legend": "Ditt intygande",
+  "setup.finish.declare.help":
+    "Det är bara du som kan intyga detta, och rutan är aldrig ikryssad åt dig. Intygandet sparas med det datum du slutför.",
+  "setup.finish.declare.required": "Kryssa i rutan för att intyga innan du slutför.",
+  "setup.finish.complete": "Slutför mitt Passport",
+  "setup.finish.completing": "Slutför ditt Passport…",
+  "setup.finish.noMerit.title": "Lägg till en aktuell merit för att slutföra ditt Passport",
+  "setup.finish.noMerit.body":
+    "Ett Passport slutförs med minst en aktuell Passport-merit – ett certifikat, en licens eller en utbildning ur katalogen – eller en anställning.",
+  "setup.finish.noMerit.drafts":
+    "Du har utkast som inte är färdiga. Ett utkast räknas först när du har gjort klart det.",
+  "setup.finish.noMerit.cv":
+    "Poster i ditt CV, till exempel kurser, utbildningar eller färdigheter, räcker inte för att slutföra ett Passport.",
+  "setup.finish.addEmployment": "Lägg till anställning",
+  "setup.finish.error.noMerit":
+    "Ditt Passport har inte längre någon aktuell merit, så det slutfördes inte. Lägg till en och slutför igen.",
+  "setup.finish.error.signedOut": "Du är utloggad. Logga in igen för att slutföra ditt Passport.",
+  "setup.finish.error.signIn": "Logga in",
+  "setup.finish.error.failed": "Det gick inte att slutföra ditt Passport. Försök igen.",
+  "setup.finish.error.unknown":
+    "Vi kunde inte bekräfta om ditt Passport slutfördes. Försök igen – ett Passport slutförs bara en gång.",
+  "setup.finish.done.title": "Ditt Passport är slutfört",
+  "setup.finish.done.body": "Du kan lägga till, rätta och dela meriter när som helst.",
+  "setup.finish.done.number": "Ditt Passport-nummer",
+  "setup.finish.done.numberNote": "Numret är ditt och ändras inte.",
+  "setup.finish.done.numberLoading": "Hämtar ditt Passport-nummer…",
+  "setup.finish.done.numberError": "Det gick inte att hämta ditt Passport-nummer.",
+  "setup.finish.done.noNumber":
+    "Det här kontot får inget publikt Passport-nummer, till exempel för att det är ett test- eller personalkonto.",
+  "setup.finish.done.open": "Öppna mitt Passport",
   "dest.IN": "Indien",
   "dest.AE-DU": "Dubai, Förenade Arabemiraten",
   "dest.AE": "Övriga emirat, Förenade Arabemiraten",

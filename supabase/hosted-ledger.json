@@ -13,8 +13,8 @@
   ],
   "source": "Supabase connector read-only SQL, explicit project wrygicdfxwjnrugduxnt",
   "projectRef": "wrygicdfxwjnrugduxnt",
-  "readAt": "2026-10-17T09:49:56.382448+00:00",
-  "readBy": "Read-only verification 2026-10-17 after #479 (merge 6d273d29, head c7d57874) was installed by the official integration. Ledger 401 rows ending 20270322090000; the prior 400 rows unchanged (version+name md5 6b9e3f66); all 401 md5 a10f4f32. sp_preview_application_disclosure() equals the strict local replay of main. Full capture: docs/release/2026-10-17-passport-share-preview-hosted-verification.json. No production fixtures or workers.",
+  "readAt": "2026-11-04T19:21:40.251415+00:00",
+  "readBy": "Codex read-only verification after #489 merged as 1848c85e on 2026-11-04. Ledger 402 rows ending 20270323090000. The previous 401 version/name entries are unchanged, verified by live md5 a10f4f3286b1ad1bc0d6b2a6b60656eb; the new canonical row was appended and the complete snapshot matches live md5 eedafaf9c6c7ec90283e7b4dd86da01e. Both new function bodies match the merged canonical SQL byte for byte; privileges and enabled triggers verified. Full evidence: docs/release/2026-11-04-passport-setup-completion-hosted-verification.json. No production writes.",
   "versions": [
     {
       "version": "20260716153446",
@@ -1619,6 +1619,10 @@
     {
       "version": "20270322090000",
       "name": "sp_preview_application_disclosure"
+    },
+    {
+      "name": "sp_passport_complete_setup",
+      "version": "20270323090000"
     }
   ]
 }

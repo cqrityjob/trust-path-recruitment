@@ -31,7 +31,8 @@ import { INDIA_FUNNEL_EVENTS } from "../src/lib/india-entry/analytics";
 import { FUNNEL_EVENT_NAMES } from "../src/lib/career-discovery/v31-feedback.functions";
 import { safeReturnPath } from "../src/lib/auth/safe-redirect";
 import { resolveCredentialScope } from "../src/lib/security-passport/credential-shield";
-import { deriveSetupStep } from "../src/lib/india-entry/setup-state";
+import { deriveSetupStep, finishMode } from "../src/lib/india-entry/setup-state";
+import { classifySetupCompletionFailure } from "../src/lib/security-passport/setup-completion.functions";
 import { credentialMark } from "../src/lib/security-passport/credentials";
 import { langIntentFrom } from "../src/i18n/context";
 import { formatExpiry } from "../src/lib/security-passport/format";
@@ -393,6 +394,8 @@ const M_LOC = "supabase/migrations/20261215090000_candidate_location_and_destina
     location: { countryCode: "IN", locality: null },
     preferences: null,
     credentials: [],
+    completed: false,
+    merits: { credentials: [], employments: [], drafts: 0, cvEntries: 0 },
   } as const;
   ok(deriveSetupStep({ ...base, displayName: null }) === "name", "6.7 setup starts at the name");
   ok(deriveSetupStep({ ...base, location: null }) === "location", "6.8 then where they live");
@@ -401,6 +404,106 @@ const M_LOC = "supabase/migrations/20261215090000_candidate_location_and_destina
     deriveSetupStep({ ...base, preferences: { destinations: [], relocationInterest: null } }) ===
       "first",
     "6.10 a skipped destination question is not asked again",
+  );
+
+  // ── 6b. The last step completes, and only the holder completes ─────────
+  const answered = { ...base, preferences: { destinations: [], relocationInterest: null } };
+  const credential = { id: "c1", title: "Security Guard (MEP/Q7101)" };
+  const employment = { id: "p1", employer: "Example Security Ltd", role: "Security guard" };
+  ok(
+    deriveSetupStep({ ...answered, completed: true }) === "done" &&
+      deriveSetupStep({ ...answered, displayName: null, completed: true }) === "done",
+    "6.11 a completed Passport opens on its completion, whatever else is unanswered",
+  );
+  ok(
+    deriveSetupStep({ ...answered, merits: { ...answered.merits, credentials: [credential] } }) ===
+      "first",
+    "6.12 holding a merit is not completion: the last step still asks for the declaration",
+  );
+  ok(finishMode(answered) === "add", "6.13 an empty Passport cannot be completed");
+  ok(
+    finishMode({ ...answered, merits: { ...answered.merits, drafts: 2 } }) === "add" &&
+      finishMode({ ...answered, merits: { ...answered.merits, cvEntries: 3 } }) === "add",
+    "6.14 drafts only, or CV entries only, cannot be completed",
+  );
+  ok(
+    finishMode({ ...answered, merits: { ...answered.merits, credentials: [credential] } }) ===
+      "confirm" &&
+      finishMode({ ...answered, merits: { ...answered.merits, employments: [employment] } }) ===
+        "confirm",
+    "6.15 a current Passport credential, or an employment, can be completed",
+  );
+  ok(
+    finishMode({ ...answered, completed: true }) === "completed",
+    "6.16 a completed Passport shows as completed",
+  );
+  const setupSrc = read(SETUP);
+  const confirm = setupSrc.slice(
+    setupSrc.indexOf("function ConfirmPanel("),
+    setupSrc.indexOf("function SetupSummary("),
+  );
+  ok(
+    /const \[declared, setDeclared\] = useState\(false\);/.test(confirm),
+    "6.17 the declaration box starts empty",
+  );
+  ok(
+    /if \(inFlight\.current\) return;/.test(confirm) &&
+      /if \(!declared\) \{/.test(confirm) &&
+      confirm.indexOf("if (!declared) {") <
+        confirm.indexOf("complete({ data: { declared: true } })"),
+    "6.18 one completion at a time, and only after the holder ticked the box",
+  );
+  const setupCode = setupSrc.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+  ok(
+    (setupCode.match(/complete\(\{ data: \{ declared: true \} \}\)/g) ?? []).length === 1 &&
+      (setupCode.match(/completePassportSetup/g) ?? []).length === 2 &&
+      confirm.includes("useServerFn(completePassportSetup)"),
+    "6.19 the completion is called from the declaration screen only",
+  );
+  ok(
+    /passportT\("onboarding\.declaration\.checkbox", lang\)/.test(confirm),
+    "6.20 the declaration is the Passport's own statement, the one the completion records",
+  );
+  const completion = read("src/lib/security-passport/setup-completion.functions.ts");
+  ok(
+    /z\s*\.object\(\{ declared: z\.literal\(true\) \}\)\s*\.strict\(\)/.test(completion) &&
+      /rpc\("sp_passport_complete_setup", \{\s*_declared: true,?\s*\}\)/.test(completion),
+    "6.21 the server function completes only with the holder's own declaration",
+  );
+  ok(
+    !/sp_passport_numbers|sp_assign_passport_number|passport_number/.test(
+      completion.replace(/\/\/.*$/gm, ""),
+    ),
+    "6.22 no client code names or supplies a Passport number",
+  );
+  ok(
+    classifySetupCompletionFailure(new Error("SP_NO_CURRENT_MERIT")) === "noMerit" &&
+      classifySetupCompletionFailure(new Error("SP_DECLARATION_REQUIRED")) === "declaration" &&
+      classifySetupCompletionFailure(new Error("SP_SESSION_REVOKED")) === "signedOut" &&
+      classifySetupCompletionFailure(new Error("Unauthorized: Invalid token")) === "signedOut" &&
+      classifySetupCompletionFailure(new Error("Failed to fetch")) === "indeterminate" &&
+      classifySetupCompletionFailure(new Error("500")) === "indeterminate",
+    "6.23 a refusal is told from a lost response",
+  );
+  const side = read("src/components/security-passport/PassportSideColumn.tsx");
+  ok(
+    /profile\.onboardingState !== "completed" &&\s*\(snapshot\.holder\.claims\.some\(\s*\(c\) => isCurrentMerit\(c\.lifecycleState\) && isPassportCredential\(c\),?\s*\) \|\|\s*snapshot\.holder\.periods\.some\(\(p\) => isCurrentMerit\(p\.lifecycleState\)\)\)/.test(
+      side,
+    ) &&
+      /\{part !== "privacy" && awaitingCompletion && \([\s\S]{0,1600}?<Link to="\/passport\/start"[^>]*data-cta="complete-setup"/.test(
+        side,
+      ),
+    "6.25 a holder stuck in the old flow (a current merit, never completed) is sent to the declaration from the Passport",
+  );
+  const lost = confirm.slice(
+    confirm.indexOf('if (kind === "indeterminate") {'),
+    confirm.indexOf('} else if (kind === "noMerit") {'),
+  );
+  ok(
+    lost.length > 0 &&
+      /const next = await onRefresh\(\);\s*if \(next\.completed\)/.test(lost) &&
+      lost.indexOf("await onRefresh()") < lost.indexOf('setProblem("failed")'),
+    "6.24 after a lost response the screen reads what the database holds before it speaks",
   );
 }
 

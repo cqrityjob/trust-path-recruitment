@@ -1,0 +1,86 @@
+{
+  "formatVersion": 1,
+  "projectRef": "wrygicdfxwjnrugduxnt",
+  "installation": "official_supabase_github_integration",
+  "readOnly": true,
+  "observedBy": "Codex via the Supabase connector under the owner instruction to assist with the blocked Passport completion release.",
+  "observedAt": "2026-11-04T19:21:40.251415+00:00",
+  "merges": [
+    {
+      "pr": 489,
+      "head": "dc3193e8fd9f53e227895a1fc9894a3b9ff9c84b",
+      "mergeSha": "1848c85e2b8e05bbdbded3e72042aad6adbb55b7",
+      "mergedAt": "2026-11-04T18:55:15Z",
+      "slots": ["20270323090000"]
+    }
+  ],
+  "migrationSha256": {
+    "20270323090000_sp_passport_complete_setup.sql": "c9b383930cb03c9bbf91c9bfe766b2c531a22a2c0bf552d3942bed24ed3b9993"
+  },
+  "ledger": {
+    "before489Snapshot": {
+      "count": 401,
+      "latest": "20270322090000",
+      "versionNameNewlineMd5": "a10f4f3286b1ad1bc0d6b2a6b60656eb"
+    },
+    "after489": {
+      "count": 402,
+      "latest": "20270323090000",
+      "versionNameNewlineMd5": "eedafaf9c6c7ec90283e7b4dd86da01e",
+      "observedAt": "2026-11-04T19:21:40.251415+00:00",
+      "newRows": [
+        {
+          "name": "sp_passport_complete_setup",
+          "version": "20270323090000"
+        }
+      ]
+    },
+    "prior401Unchanged": true,
+    "formula": "md5(string_agg(version || ' ' || name, E'\\n' ORDER BY version))",
+    "snapshotVerification": "The prior committed 401 rows have the same digest as the live prior 401 rows. Appending the live canonical slot gives exactly the live complete 402-row digest."
+  },
+  "functions": [
+    {
+      "identity": "sp_passport_complete_setup(boolean)",
+      "securityDefiner": true,
+      "settings": ["search_path=public, pg_temp"],
+      "bodyMd5": "3aadb85f066f52d659a405f25a51f88b",
+      "canonicalBodyMd5": "3aadb85f066f52d659a405f25a51f88b",
+      "bodyMatchesCanonicalByteForByte": true,
+      "execute": {
+        "anon": false,
+        "authenticated": true,
+        "service_role": false
+      }
+    },
+    {
+      "identity": "sp_passport_completion_guard()",
+      "securityDefiner": false,
+      "settings": ["search_path=public, pg_temp"],
+      "bodyMd5": "571f94a597223b49e3df8734f17d0cfd",
+      "canonicalBodyMd5": "571f94a597223b49e3df8734f17d0cfd",
+      "bodyMatchesCanonicalByteForByte": true,
+      "execute": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": false
+      }
+    }
+  ],
+  "triggers": [
+    {
+      "name": "sp_passport_number_on_complete_trg",
+      "enabled": "O",
+      "function": "sp_passport_number_on_complete()",
+      "definition": "CREATE TRIGGER sp_passport_number_on_complete_trg AFTER INSERT OR UPDATE OF onboarding_state, declared_accurate_at ON public.sp_passport_profiles FOR EACH ROW WHEN (((new.onboarding_state = 'completed'::text) AND (new.declared_accurate_at IS NOT NULL))) EXECUTE FUNCTION sp_passport_number_on_complete()"
+    },
+    {
+      "name": "sp_profile_completion_guard",
+      "enabled": "O",
+      "function": "sp_passport_completion_guard()",
+      "definition": "CREATE TRIGGER sp_profile_completion_guard BEFORE INSERT OR UPDATE OF onboarding_state ON public.sp_passport_profiles FOR EACH ROW EXECUTE FUNCTION sp_passport_completion_guard()"
+    }
+  ],
+  "comparisonMethod": "Live pg_proc.prosrc compared byte for byte with the dollar-quoted bodies in the merged canonical migration. A local database replay was not performed by this verification session.",
+  "productionActions": "Read-only catalog and migration-ledger SELECTs. No function invocation, migration, fixture, candidate-data read, numbering, merge or publication was performed."
+}

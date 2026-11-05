@@ -19,15 +19,27 @@ import {
   saveJobPreferences,
   type IndiaSetupState,
 } from "@/lib/india-entry/setup.functions";
-import { deriveSetupStep, stepNumber, type SetupStep } from "@/lib/india-entry/setup-state";
+import {
+  deriveSetupStep,
+  finishMode,
+  stepNumber,
+  type SetupStep,
+} from "@/lib/india-entry/setup-state";
 import {
   DESTINATIONS,
   DESTINATION_LABEL_KEY,
   RELOCATION_INTEREST,
+  countryName,
   residenceOptions,
   type Destination,
   type RelocationInterest,
 } from "@/lib/india-entry/destinations";
+import {
+  classifySetupCompletionFailure,
+  completePassportSetup,
+} from "@/lib/security-passport/setup-completion.functions";
+import { getMyPassportNumber } from "@/lib/security-passport/social-share.functions";
+import { passportT } from "@/lib/security-passport/i18n";
 import { indiaT, type IndiaCopyKey, type IndiaLang } from "@/lib/india-entry/copy";
 import { trackFunnelOnce } from "@/lib/india-entry/analytics";
 import { DestinationChecklist } from "@/components/india-entry/DestinationChecklist";
@@ -138,6 +150,14 @@ function IndiaSetupRoute() {
     requestAnimationFrame(() => document.getElementById("setup-heading")?.focus());
   };
 
+  // The last step re-reads after a completion (or a refusal) and lands on
+  // whatever the database now holds; it moves focus itself.
+  const refresh = async () => {
+    const next = await reload();
+    setStep(deriveSetupStep(next));
+    return next;
+  };
+
   if (phase === "loading")
     return (
       <p role="status" className="mx-auto max-w-2xl py-10 text-sm text-muted-foreground">
@@ -207,7 +227,7 @@ function IndiaSetupRoute() {
         />
       )}
       {(step === "first" || step === "done") && (
-        <FirstCredentialStep lang={lang} state={state} onBack={() => setStep("destinations")} />
+        <FinishStep lang={lang} state={state} onEdit={setStep} onRefresh={refresh} />
       )}
     </div>
   );
@@ -630,54 +650,70 @@ function DestinationsStep({
 }
 
 /* ------------------------------------------------------------------ */
-/* 4 · The first credential, or later                                  */
+/* 4 · A current merit, the holder's own declaration, and completion   */
 /* ------------------------------------------------------------------ */
 
-function FirstCredentialStep({
+/**
+ * The last step completes the Passport, and only the holder can do it.
+ *
+ *   * The declaration box starts EMPTY on every visit, also for a holder who
+ *     declared elsewhere before: this completion is its own act, and
+ *     completePassportSetup is called only after the holder ticked it here.
+ *     The statement is the Passport's own (`onboarding.declaration.checkbox`,
+ *     question version sp-q-v1), the one the completion records.
+ *   * One completion at a time: a ref refuses a second submit while the first
+ *     is in flight, and the button is disabled. The server is idempotent as
+ *     well, so a second tab cannot complete twice either.
+ *   * The Passport number is assigned by the database when the completion
+ *     commits. The completed screen reads it back; nothing here computes one.
+ *
+ * A holder stuck in the old flow (credentials saved, never completed) lands
+ * here too, through the same summary and the same declaration.
+ */
+type FinishProblem = "declaration" | "noMerit" | "signedOut" | "failed" | "unknown";
+
+function FinishStep({
   lang,
   state,
-  onBack,
+  onEdit,
+  onRefresh,
 }: {
   lang: IndiaLang;
   state: IndiaSetupState;
-  onBack: () => void;
+  onEdit: (step: "name" | "location" | "destinations") => void;
+  onRefresh: () => Promise<IndiaSetupState>;
 }) {
-  const t = (key: IndiaCopyKey) => indiaT(key, lang);
-  // The catalogue opens on India's qualifications only when the holder LIVES
-  // in India; it is a starting filter, and every other credential is a click away.
-  const country = state.location?.countryCode === "IN" ? "IN" : undefined;
-  const hasCredential = state.credentials.length > 0;
+  const mode = finishMode(state);
+  // A completion the server refused for want of a merit sends the holder to
+  // "add", and that screen says what happened.
+  const [refusedNoMerit, setRefusedNoMerit] = useState(false);
+  // Completed DURING this visit (a click, or a lost response that had in fact
+  // committed): the completed screen takes focus when it mounts. A Passport
+  // that was already complete on arrival keeps the page's own focus.
+  const openedAs = useRef(mode).current;
   return (
-    <div className="space-y-6">
-      <section className="rounded-xl border border-border bg-card p-5 sm:p-6">
-        <h2 className="text-lg font-semibold text-foreground">{t("setup.first.title")}</h2>
-        {hasCredential ? (
-          <p className="mt-2 flex items-start gap-2 text-sm text-foreground" data-setup-complete>
-            <Check className="mt-0.5 h-4 w-4 shrink-0 text-accent" aria-hidden="true" />
-            {t("setup.first.done")}
-          </p>
-        ) : (
-          <p className="mt-2 text-sm text-muted-foreground">{t("setup.first.body")}</p>
-        )}
-        <div className="mt-5 flex flex-col gap-3 sm:flex-row">
-          <Link
-            to="/passport/credentials/new"
-            search={country ? { country } : {}}
-            className={primaryBtn}
-            data-setup-add-credential
-          >
-            {t("setup.first.add")}
-            <ArrowRight className="h-4 w-4" aria-hidden="true" />
-          </Link>
-          <Link to="/passport" className={ghostBtn}>
-            {t("setup.first.skip")}
-          </Link>
-          <button type="button" className={ghostBtn} onClick={onBack}>
-            {t("setup.back")}
-          </button>
-        </div>
-      </section>
-      {hasCredential && (
+    <div className="space-y-6" data-setup-finish={mode}>
+      {mode === "completed" && (
+        <CompletedPanel lang={lang} focusOnMount={openedAs !== "completed"} />
+      )}
+      {mode === "add" && (
+        <AddMeritPanel
+          lang={lang}
+          state={state}
+          refused={refusedNoMerit}
+          onBack={() => onEdit("destinations")}
+        />
+      )}
+      {mode === "confirm" && (
+        <ConfirmPanel
+          lang={lang}
+          state={state}
+          onEdit={onEdit}
+          onRefresh={onRefresh}
+          onNoMerit={() => setRefusedNoMerit(true)}
+        />
+      )}
+      {state.credentials.length > 0 && (
         <DestinationChecklist
           lang={lang}
           destinations={state.preferences?.destinations ?? []}
@@ -685,5 +721,410 @@ function FirstCredentialStep({
         />
       )}
     </div>
+  );
+}
+
+function AddMeritPanel({
+  lang,
+  state,
+  refused,
+  onBack,
+}: {
+  lang: IndiaLang;
+  state: IndiaSetupState;
+  refused: boolean;
+  onBack: () => void;
+}) {
+  const t = (key: IndiaCopyKey) => indiaT(key, lang);
+  // The catalogue opens on India's qualifications only when the holder LIVES
+  // in India; it is a starting filter, and every other credential is a click away.
+  const country = state.location?.countryCode === "IN" ? "IN" : undefined;
+  return (
+    <section className="rounded-xl border border-border bg-card p-5 sm:p-6" data-setup-no-merit>
+      <h2 className="text-lg font-semibold text-foreground">{t("setup.finish.noMerit.title")}</h2>
+      {refused && (
+        <p role="alert" className="mt-2 text-sm text-destructive">
+          {t("setup.finish.error.noMerit")}
+        </p>
+      )}
+      <p className="mt-2 text-sm text-muted-foreground">{t("setup.finish.noMerit.body")}</p>
+      {state.merits.drafts > 0 && (
+        <p className="mt-2 text-sm text-foreground" data-setup-drafts>
+          {t("setup.finish.noMerit.drafts")}
+        </p>
+      )}
+      {state.merits.cvEntries > 0 && (
+        <p className="mt-2 text-sm text-foreground" data-setup-cv-only>
+          {t("setup.finish.noMerit.cv")}
+        </p>
+      )}
+      <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+        <Link
+          to="/passport/credentials/new"
+          search={country ? { country } : {}}
+          className={primaryBtn}
+          data-setup-add-credential
+        >
+          {t("setup.first.add")}
+          <ArrowRight className="h-4 w-4" aria-hidden="true" />
+        </Link>
+        <Link
+          to="/my-career/cv"
+          hash="cv-content-heading"
+          className={ghostBtn}
+          data-setup-add-employment
+        >
+          {t("setup.finish.addEmployment")}
+        </Link>
+        <button type="button" className={ghostBtn} onClick={onBack}>
+          {t("setup.back")}
+        </button>
+      </div>
+      <p className="mt-3 text-center text-sm sm:text-right">
+        <Link to="/passport" className="inline-flex min-h-11 items-center text-accent underline">
+          {t("setup.later")}
+        </Link>
+      </p>
+    </section>
+  );
+}
+
+function ConfirmPanel({
+  lang,
+  state,
+  onEdit,
+  onRefresh,
+  onNoMerit,
+}: {
+  lang: IndiaLang;
+  state: IndiaSetupState;
+  onEdit: (step: "name" | "location" | "destinations") => void;
+  onRefresh: () => Promise<IndiaSetupState>;
+  onNoMerit: () => void;
+}) {
+  const t = (key: IndiaCopyKey) => indiaT(key, lang);
+  const complete = useServerFn(completePassportSetup);
+  const qc = useQueryClient();
+  // Never pre-ticked, whatever was declared before (see FinishStep).
+  const [declared, setDeclared] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [problem, setProblem] = useState<FinishProblem | null>(null);
+  const inFlight = useRef(false);
+
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (inFlight.current) return;
+    if (!declared) {
+      setProblem("declaration");
+      document.getElementById("setup-declaration")?.focus();
+      return;
+    }
+    inFlight.current = true;
+    setBusy(true);
+    setProblem(null);
+    try {
+      await complete({ data: { declared: true } });
+      await invalidatePassportAndCareer(qc);
+      await onRefresh();
+    } catch (err) {
+      const kind = classifySetupCompletionFailure(err);
+      if (kind === "indeterminate") {
+        // The completion may have committed and its response been lost. Say
+        // only what the database now holds.
+        try {
+          const next = await onRefresh();
+          if (next.completed) await invalidatePassportAndCareer(qc);
+          else setProblem("failed");
+        } catch {
+          setProblem("unknown");
+        }
+      } else if (kind === "noMerit") {
+        onNoMerit();
+        await onRefresh().catch(() => setProblem("noMerit"));
+      } else {
+        setProblem(kind);
+      }
+    } finally {
+      inFlight.current = false;
+      setBusy(false);
+    }
+  };
+
+  return (
+    <form onSubmit={(e) => void submit(e)} noValidate data-setup-confirm>
+      <StepCard title={t("setup.finish.title")}>
+        <p className="text-sm text-muted-foreground">{t("setup.finish.lead")}</p>
+        <SetupSummary lang={lang} state={state} onEdit={onEdit} disabled={busy} />
+        <fieldset className="rounded-lg border border-border p-4">
+          <legend className="px-1 text-sm font-semibold text-foreground">
+            {t("setup.finish.declare.legend")}
+          </legend>
+          <div className="flex items-start gap-3">
+            <input
+              id="setup-declaration"
+              type="checkbox"
+              data-setup-declaration
+              checked={declared}
+              disabled={busy}
+              aria-describedby="setup-declaration-help"
+              aria-invalid={problem === "declaration"}
+              onChange={(e) => {
+                setDeclared(e.target.checked);
+                if (e.target.checked && problem === "declaration") setProblem(null);
+              }}
+              className="mt-0.5 h-5 w-5 shrink-0 rounded border-input"
+            />
+            <label htmlFor="setup-declaration" className="text-sm leading-relaxed text-foreground">
+              {passportT("onboarding.declaration.checkbox", lang)}
+            </label>
+          </div>
+          <p id="setup-declaration-help" className="mt-2 text-xs text-muted-foreground">
+            {t("setup.finish.declare.help")}
+          </p>
+        </fieldset>
+        {problem && (
+          <div
+            role="alert"
+            className="space-y-2 text-sm text-destructive"
+            data-setup-problem={problem}
+          >
+            <p>
+              {t(
+                problem === "declaration"
+                  ? "setup.finish.declare.required"
+                  : problem === "noMerit"
+                    ? "setup.finish.error.noMerit"
+                    : problem === "signedOut"
+                      ? "setup.finish.error.signedOut"
+                      : problem === "unknown"
+                        ? "setup.finish.error.unknown"
+                        : "setup.finish.error.failed",
+              )}
+            </p>
+            {problem === "signedOut" && (
+              <Link
+                to="/login"
+                search={{ redirect: "/passport/start" }}
+                className="inline-flex min-h-11 items-center text-accent underline"
+              >
+                {t("setup.finish.error.signIn")}
+              </Link>
+            )}
+          </div>
+        )}
+        <p role="status" className="sr-only">
+          {busy ? t("setup.finish.completing") : ""}
+        </p>
+        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <button
+            type="button"
+            className={ghostBtn}
+            onClick={() => onEdit("destinations")}
+            disabled={busy}
+          >
+            {t("setup.back")}
+          </button>
+          <button
+            type="submit"
+            className={primaryBtn}
+            disabled={busy}
+            aria-busy={busy}
+            data-setup-complete-button
+          >
+            {busy ? t("setup.finish.completing") : t("setup.finish.complete")}
+            {!busy && <Check className="h-4 w-4" aria-hidden="true" />}
+          </button>
+        </div>
+        <p className="text-center text-sm sm:text-right">
+          <Link to="/passport" className="inline-flex min-h-11 items-center text-accent underline">
+            {t("setup.later")}
+          </Link>
+        </p>
+      </StepCard>
+    </form>
+  );
+}
+
+/** What the holder registered, read from the same rows the steps saved. */
+function SetupSummary({
+  lang,
+  state,
+  onEdit,
+  disabled,
+}: {
+  lang: IndiaLang;
+  state: IndiaSetupState;
+  onEdit: (step: "name" | "location" | "destinations") => void;
+  disabled: boolean;
+}) {
+  const t = (key: IndiaCopyKey) => indiaT(key, lang);
+  const [options, setOptions] = useState<CurrentProfessionOption[]>([]);
+  useEffect(() => {
+    let active = true;
+    listCurrentProfessionOptions()
+      .then((o) => active && setOptions(o))
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, []);
+  const option = options.find((o) => o.slug === state.professionSlug);
+  const occupation =
+    state.professionOther?.trim() ||
+    (option ? (lang === "sv" ? option.title_sv : option.title_en) : state.professionSlug) ||
+    t("setup.finish.summary.notStated");
+  const residence = state.location
+    ? [state.location.locality, countryName(state.location.countryCode, lang)]
+        .filter(Boolean)
+        .join(", ")
+    : t("setup.finish.summary.notStated");
+  const destinations = (state.preferences?.destinations ?? []).filter(
+    (d): d is Destination => d in DESTINATION_LABEL_KEY,
+  );
+  const edit = (step: "name" | "location" | "destinations") => (
+    <button
+      type="button"
+      className="inline-flex min-h-11 items-center text-sm text-accent underline disabled:opacity-60"
+      onClick={() => onEdit(step)}
+      disabled={disabled}
+    >
+      {t("setup.finish.edit")}
+    </button>
+  );
+  const row = (label: IndiaCopyKey, value: React.ReactNode, action?: React.ReactNode) => (
+    <div className="flex flex-col gap-1 py-3 sm:flex-row sm:items-start sm:gap-4">
+      <dt className="text-sm text-muted-foreground sm:w-44 sm:shrink-0">{t(label)}</dt>
+      <dd className="flex-1 text-sm text-foreground">{value}</dd>
+      {action && <dd className="sm:shrink-0">{action}</dd>}
+    </div>
+  );
+  return (
+    <section aria-labelledby="setup-summary-heading">
+      <h3 id="setup-summary-heading" className="text-sm font-semibold text-foreground">
+        {t("setup.finish.summary")}
+      </h3>
+      <dl className="mt-2 divide-y divide-border border-y border-border" data-setup-summary>
+        {row(
+          "setup.finish.summary.name",
+          state.displayName ?? t("setup.finish.summary.notStated"),
+          edit("name"),
+        )}
+        {row("setup.finish.summary.occupation", occupation, edit("name"))}
+        {row("setup.finish.summary.residence", residence, edit("location"))}
+        {row(
+          "setup.finish.summary.destinations",
+          destinations.length
+            ? destinations.map((d) => t(DESTINATION_LABEL_KEY[d])).join(", ")
+            : t("setup.finish.summary.notStated"),
+          edit("destinations"),
+        )}
+        {row(
+          "setup.finish.summary.credentials",
+          state.merits.credentials.length ? (
+            <ul className="space-y-1" data-summary-credentials>
+              {state.merits.credentials.map((c) => (
+                <li key={c.id}>{c.title}</li>
+              ))}
+            </ul>
+          ) : (
+            t("setup.finish.summary.none")
+          ),
+        )}
+        {row(
+          "setup.finish.summary.employments",
+          state.merits.employments.length ? (
+            <ul className="space-y-1" data-summary-employments>
+              {state.merits.employments.map((p) => (
+                <li key={p.id}>
+                  {p.role}, {p.employer}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            t("setup.finish.summary.none")
+          ),
+        )}
+      </dl>
+    </section>
+  );
+}
+
+/** The completed Passport: its number, read back from the database. */
+function CompletedPanel({ lang, focusOnMount }: { lang: IndiaLang; focusOnMount: boolean }) {
+  const t = (key: IndiaCopyKey) => indiaT(key, lang);
+  const load = useServerFn(getMyPassportNumber);
+  // On mount, after React has committed the heading: a requestAnimationFrame
+  // scheduled by the submit handler could run before this panel existed.
+  const heading = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    if (focusOnMount) heading.current?.focus();
+    // Mount only: focus moves once, when the completion arrives.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const [number, setNumber] = useState<
+    { phase: "loading" } | { phase: "error" } | { phase: "ready"; value: number | null }
+  >({ phase: "loading" });
+  const [attempt, setAttempt] = useState(0);
+  useEffect(() => {
+    let active = true;
+    setNumber({ phase: "loading" });
+    load()
+      .then((r) => active && setNumber({ phase: "ready", value: r.number }))
+      .catch(() => active && setNumber({ phase: "error" }));
+    return () => {
+      active = false;
+    };
+  }, [load, attempt]);
+  return (
+    <section className="rounded-xl border border-border bg-card p-5 sm:p-6" data-setup-completed>
+      <h2
+        ref={heading}
+        id="setup-finish-done"
+        tabIndex={-1}
+        className="flex items-start gap-2 text-lg font-semibold text-foreground outline-none"
+      >
+        <Check className="mt-1 h-5 w-5 shrink-0 text-accent" aria-hidden="true" />
+        {t("setup.finish.done.title")}
+      </h2>
+      <div className="mt-4" aria-live="polite">
+        {number.phase === "loading" && (
+          <p className="text-sm text-muted-foreground">{t("setup.finish.done.numberLoading")}</p>
+        )}
+        {number.phase === "error" && (
+          <div className="space-y-2">
+            <p className="text-sm text-foreground">{t("setup.finish.done.numberError")}</p>
+            <button type="button" className={ghostBtn} onClick={() => setAttempt((n) => n + 1)}>
+              {t("setup.retry")}
+            </button>
+          </div>
+        )}
+        {number.phase === "ready" && number.value !== null && (
+          <div>
+            <p className="text-sm text-muted-foreground">{t("setup.finish.done.number")}</p>
+            <p
+              className="mt-1 text-2xl font-semibold tracking-tight text-foreground"
+              data-passport-number={number.value}
+            >
+              {passportT("rec.passportNumber", lang)} #{number.value}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {t("setup.finish.done.numberNote")}
+            </p>
+          </div>
+        )}
+        {number.phase === "ready" && number.value === null && (
+          <p className="text-sm text-foreground" data-passport-number-none>
+            {t("setup.finish.done.noNumber")}
+          </p>
+        )}
+      </div>
+      <p className="mt-4 text-sm text-muted-foreground">{t("setup.finish.done.body")}</p>
+      <div className="mt-5">
+        <Link to="/passport" className={primaryBtn} data-setup-open-passport>
+          {t("setup.finish.done.open")}
+          <ArrowRight className="h-4 w-4" aria-hidden="true" />
+        </Link>
+      </div>
+    </section>
   );
 }
