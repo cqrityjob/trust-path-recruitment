@@ -58,6 +58,19 @@ function walk(dir: string, out: string[] = []): string[] {
   return out;
 }
 
+/** Every needle is present, each after the one before. A missing needle is
+ *  a failure -- `indexOf` comparisons alone pass on -1, which is how an
+ *  assertion here once went dead (found by its own negative control). */
+function ordered(text: string, ...needles: string[]): boolean {
+  let from = 0;
+  for (const needle of needles) {
+    const at = text.indexOf(needle, from);
+    if (at === -1) return false;
+    from = at + needle.length;
+  }
+  return true;
+}
+
 const MODULE = "src/lib/self-declarations";
 const SECTION_DIR = "src/components/self-declarations";
 const SECTION = `${SECTION_DIR}/SelfDeclarationsSection.tsx`;
@@ -326,18 +339,22 @@ const readFn =
 ck(
   "5.6a delivery asks the database with the caller's own session, then -- and only then -- reads",
   readFn.includes(".middleware([requireSupabaseAuth])") &&
-    readFn.includes('ctx.supabase.rpc("vsd_authorize_document_read"') &&
-    readFn.indexOf('rpc("vsd_authorize_document_read"') <
-      readFn.indexOf("readAuthorizedDocument(") &&
-    readFn.indexOf('if (error) throw refusal(error, "VSD_DOCUMENT_NOT_FOUND");') <
-      readFn.indexOf("readAuthorizedDocument(") &&
-    readFn.indexOf("readAuthorizedDocument(") > 0,
+    ordered(
+      readFn,
+      'ctx.supabase.rpc("vsd_authorize_document_read"',
+      'if (error) throw refusal(error, "VSD_DOCUMENT_NOT_FOUND");',
+      "if (!parsed.success || parsed.data.documentId !== data.documentId) {",
+      'throw new Error("VSD_DOCUMENT_NOT_FOUND");',
+      "readAuthorizedDocument(",
+    ),
 );
 ck(
   "5.6b a delivered document is never cacheable",
-  readFn.includes('setResponseHeader("Cache-Control", "no-store, private, max-age=0")') &&
-    readFn.indexOf('setResponseHeader("Cache-Control"') <
-      readFn.indexOf('rpc("vsd_authorize_document_read"'),
+  ordered(
+    readFn,
+    'setResponseHeader("Cache-Control", "no-store, private, max-age=0")',
+    'rpc("vsd_authorize_document_read"',
+  ),
 );
 ck(
   "5.6c the decision is not remembered: no cache, memo or stored grant in the module",
@@ -372,9 +389,12 @@ ck(
 );
 ck(
   "5.8a content is validated before anything is recorded or stored",
-  uploadFn.includes("validateEncodedDocument(data.contentBase64, data.mimeType)") &&
-    uploadFn.indexOf("validateEncodedDocument(") < uploadFn.indexOf('"vsd_begin_document"') &&
-    uploadFn.includes('if (!content.ok) throw new Error("VSD_FILE_REJECTED");'),
+  ordered(
+    uploadFn,
+    "validateEncodedDocument(data.contentBase64, data.mimeType)",
+    'if (!content.ok) throw new Error("VSD_FILE_REJECTED");',
+    '"vsd_begin_document"',
+  ),
 );
 const content = read(CONTENT);
 ck(
@@ -406,9 +426,9 @@ ck(
 );
 ck(
   "5.9a an attached upload returns before any step that writes or abandons",
-  upload.indexOf('if (begun.status === "attached") {') > 0 &&
-    upload.indexOf('if (begun.status === "attached") {') < upload.indexOf("steps.put(") &&
-    upload.indexOf('if (begun.status === "attached") {') < upload.indexOf("return giveUp(steps"),
+  ordered(upload, 'if (begun.status === "attached") {', "return giveUp(steps", "steps.put(") &&
+    !ordered(upload, "steps.put(", 'if (begun.status === "attached") {') &&
+    !ordered(upload, "return giveUp(steps", 'if (begun.status === "attached") {'),
 );
 ck(
   "5.9b after a failed stamp or attach the persisted state is read before anything else is done",
