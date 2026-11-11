@@ -81,6 +81,9 @@ const STORE = `${MODULE}/document-store.server.ts`;
 const CONTENT = `${MODULE}/content.ts`;
 const MODEL = `${MODULE}/model.ts`;
 const MIGRATION = "20270324090000_vsd_voluntary_self_declarations.sql";
+// The Security Passport bridge (vsd_disclosure_*): the one other migration
+// that may name a vsd_ object. Its application half ships separately.
+const BRIDGE_MIGRATION = "20270325090000_vsd_passport_disclosure.sql";
 
 // ── 1 · Isolation ─────────────────────────────────────────────────────────
 console.log("1 · isolation");
@@ -130,10 +133,11 @@ ck(
   moduleImports.map(([f, s]) => `${f} -> ${s}`).join(", "),
 );
 const otherMigrations = readdirSync(path.join(ROOT, "supabase/migrations")).filter(
-  (f) => f !== MIGRATION && /\bvsd_/.test(read(`supabase/migrations/${f}`)),
+  (f) =>
+    f !== MIGRATION && f !== BRIDGE_MIGRATION && /\bvsd_/.test(read(`supabase/migrations/${f}`)),
 );
 ck(
-  "1.4 no other migration names a vsd_ object",
+  "1.4 no migration but the collection schema and its Passport bridge names a vsd_ object",
   otherMigrations.length === 0,
   otherMigrations.join(", "),
 );

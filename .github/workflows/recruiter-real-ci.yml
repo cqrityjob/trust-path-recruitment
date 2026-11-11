@@ -21,7 +21,7 @@ jobs:
     timeout-minutes: 55
     env:
       RI_REAL_SCHEMA_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-      RI_REAL_RELEASE_SCHEMA_SHA: 5814706fa338d470aa0d70f04d46a5faad6ae165
+      RI_REAL_RELEASE_SCHEMA_SHA: e78f01daaa3b35b5d73dd9cdb2d4eb5dce124394
       RI_OPS_STACK_ROOT: ${{ github.workspace }}/real-stack
     steps:
       - name: Exact current schema and evidence code

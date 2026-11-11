@@ -297,6 +297,82 @@ td_fn() { sed -n "/^$2/,/$3/p" "$1" | sed '1s/^CREATE FUNCTION/CREATE OR REPLACE
 td_plant() { psql_q -d "$TEST_DB" -c "$(td_fn "$1" "$2" "$3" | sed "$4")" >/dev/null; }
 td_restore() { psql_q -d "$TEST_DB" -c "$(td_fn "$1" "$2" "$3")" >/dev/null; }
 
+# Slot 20270325090000 (2026-11-11): the Security Passport bridge for the
+# voluntary self-declarations (vsd_disclosure_*): a separate disclosure
+# authorization, revision-bound selections per Passport link, and a read for a
+# signed-in recipient. It replaces nothing. Newest, so first, against the full
+# current schema; stood down before 20270324090000, whose own suite rolls the
+# collection schema back. Synthetic fixtures only.
+VSDD_M=supabase/migrations/20270325090000_vsd_passport_disclosure.sql
+VSDD_R=supabase/rollback/20270325090000_vsd_passport_disclosure_rollback.sql
+VSDD_T=vsd_passport_disclosure_test
+echo "==> Running the self-declarations Passport bridge (20270325090000)"
+td_suite "$VSDD_T" "Self-declarations Passport bridge" 66 \
+  "D1.5 without a disclosure authorization a preview is refused" \
+  "D1.7 without a disclosure authorization a recipient is given nothing" \
+  "D2.1 no anonymous or public audience can be authorized" \
+  "D3.2 a statement carries exactly its six keys: no id, document, hash, path, review or provenance" \
+  "D3.5 a supporting document or its review changes nothing a recipient is given" \
+  "D4.2 a link that already existed cannot gain a statement" \
+  "D4.3 a holder cannot attach to somebody else's link, nor attach or preview somebody else's statement" \
+  "D4.7 the recipient is given exactly what the holder previewed, and only the selected statement" \
+  "D5.2 an anonymous holder of the link is refused" \
+  "D5.7 an expired share session opens nothing" \
+  "D6.2 the holder stops sharing one statement: the next read gives nothing, and the link itself still stands" \
+  "D6.7 making the statement again does not put it back on the old link" \
+  "D6.11 revoking the disclosure authorization ends disclosure at once; the holder keeps their own statement" \
+  "D6.12 a later disclosure authorization does not revive a selection made under the revoked one" \
+  "D7.1 no Passport, share, talent, application or other function or view names a vsd_ object" \
+  "D7.11 the migration re-applies cleanly after a rollback, closed again"
+VSDD_CHOICE='CREATE FUNCTION public.vsd_assert_disclosure_choice('
+td_plant "$VSDD_M" "$VSDD_CHOICE" '^END \$\$;' "/RAISE EXCEPTION 'VSD_DISCLOSURE_NOT_AUTHORIZED'/d"
+td_nc "$VSDD_T" "VSDD NC1 a collection authorization alone lets a statement be shared" "D1.5"
+td_restore "$VSDD_M" "$VSDD_CHOICE" '^END \$\$;'
+psql_q -d "$TEST_DB" -c "ALTER TABLE public.vsd_disclosure_authorizations DROP CONSTRAINT vsd_disclosure_auth_audiences_known;" >/dev/null
+td_nc "$VSDD_T" "VSDD NC2 an anonymous audience can be authorized" "D2.1"
+psql_q -d "$TEST_DB" -c "ALTER TABLE public.vsd_disclosure_authorizations ADD CONSTRAINT vsd_disclosure_auth_audiences_known CHECK (cardinality(permitted_audiences) > 0 AND permitted_audiences <@ ARRAY['signed_in_recipient']);" >/dev/null
+# The one builder starts carrying a provenance level: a reviewed document
+# would then reach a recipient as something stronger than a statement.
+VSDD_B='CREATE FUNCTION public.vsd_disclosed_statement('
+td_plant "$VSDD_M" "$VSDD_B" '^\$\$;' "s/'kind', _d.declaration_kind,/'kind', _d.declaration_kind, 'provenance', public.vsd_declaration_payload(_d) ->> 'provenance',/"
+td_nc "$VSDD_T" "VSDD NC3 a document's provenance reaches the recipient" "D3.2"
+td_restore "$VSDD_M" "$VSDD_B" '^\$\$;'
+VSDD_SEL='CREATE FUNCTION public.vsd_select_for_disclosure('
+td_plant "$VSDD_M" "$VSDD_SEL" '^END \$\$;' "/RAISE EXCEPTION 'VSD_DISCLOSURE_CLOSED_TO_SELECTION'/d"
+td_nc "$VSDD_T" "VSDD NC4 an existing link gains a statement" "D4.2"
+td_restore "$VSDD_M" "$VSDD_SEL" '^END \$\$;'
+td_plant "$VSDD_M" "$VSDD_SEL" '^END \$\$;' "s/WHERE id = _disclosure_id AND holder_user_id = _uid FOR UPDATE;/WHERE id = _disclosure_id FOR UPDATE;/"
+td_nc "$VSDD_T" "VSDD NC5 a holder attaches a statement to somebody else's link" "D4.3"
+td_restore "$VSDD_M" "$VSDD_SEL" '^END \$\$;'
+psql_q -d "$TEST_DB" -c "GRANT EXECUTE ON FUNCTION public.vsd_read_disclosed(text) TO anon;" >/dev/null
+td_nc "$VSDD_T" "VSDD NC6 the recipient read is opened to anon" "D5.2"
+psql_q -d "$TEST_DB" -c "REVOKE EXECUTE ON FUNCTION public.vsd_read_disclosed(text) FROM anon;" >/dev/null
+VSDD_READ='CREATE FUNCTION public.vsd_read_disclosed('
+td_plant "$VSDD_M" "$VSDD_READ" '^END \$\$;' "/AND ss.expires_at >= now()/d"
+td_nc "$VSDD_T" "VSDD NC7 an expired share session still opens the statement" "D5.7"
+td_restore "$VSDD_M" "$VSDD_READ" '^END \$\$;'
+# The one disclosure rule, one condition at a time.
+VSDD_RULE='CREATE FUNCTION public.vsd_selection_disclosable('
+td_plant "$VSDD_M" "$VSDD_RULE" '^\$\$;' "/AND _s.withdrawn_at IS NULL/d"
+td_nc "$VSDD_T" "VSDD NC8 a withdrawn selection is still disclosed" "D6.2"
+td_restore "$VSDD_M" "$VSDD_RULE" '^\$\$;'
+td_plant "$VSDD_M" "$VSDD_RULE" '^\$\$;' "/AND d.revision = _s.declaration_revision/d"
+td_nc "$VSDD_T" "VSDD NC9 a selection follows the statement to a new revision" "D6.7"
+td_restore "$VSDD_M" "$VSDD_RULE" '^\$\$;'
+td_plant "$VSDD_M" "$VSDD_RULE" '^\$\$;' "s/AND da.revoked_at IS NULL AND da.effective_from <= now()//"
+td_nc "$VSDD_T" "VSDD NC10 disclosure outlives its revoked authorization" "D6.11"
+td_restore "$VSDD_M" "$VSDD_RULE" '^\$\$;'
+td_plant "$VSDD_M" "$VSDD_RULE" '^\$\$;' "s/JOIN public.vsd_disclosure_authorizations da ON da.id = _s.disclosure_authorization_id/JOIN public.vsd_disclosure_authorizations da ON true/"
+td_nc "$VSDD_T" "VSDD NC11 a new authorization revives an old selection" "D6.12"
+td_restore "$VSDD_M" "$VSDD_RULE" '^\$\$;'
+td_suite "$VSDD_T" "Self-declarations Passport bridge (after controls)" 66
+psql_q -d "$TEST_DB" -f "$VSDD_R" >/dev/null
+psql_q -d "$TEST_DB" -f "$VSDD_M" >/dev/null
+psql_q -d "$TEST_DB" -f "$VSDD_R" >/dev/null
+[ "$(psql_q -d "$TEST_DB" -Atc "SELECT (NOT EXISTS (SELECT 1 FROM pg_class c WHERE c.relnamespace = 'public'::regnamespace AND c.relname LIKE 'vsd\_disclosure\_%') AND (SELECT count(*) = 30 FROM pg_proc p WHERE p.pronamespace = 'public'::regnamespace AND p.proname LIKE 'vsd\_%'))::text")" = "true" ] \
+  || { echo "FAIL: the 20270325090000 rollback left a bridge object." >&2; exit 1; }
+echo "    ok  20270325090000 stood down (and re-applied once): the collection schema is as 20270324090000 left it"
+
 # Slot 20270324090000 (2026-11-11): voluntary profile self-declarations
 # (vsd_*). Its own tables, functions and private bucket; it replaces nothing.
 # Newest, so first, against the full current schema; stood down before

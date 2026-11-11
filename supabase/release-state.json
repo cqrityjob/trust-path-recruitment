@@ -4205,6 +4205,76 @@
           "object": "vsd_authorize_document_read"
         }
       ]
+    }, 
+    {
+      "file": "20270325090000_vsd_passport_disclosure.sql", 
+      "hostedState": "pending", 
+      "evidenceSource": "Not applied. A schema-first release awaiting the owner's merge and the official Supabase GitHub integration. No hosted read or write was made for it.", 
+      "note": "The Security Passport bridge for the voluntary self-declarations (vsd_disclosure_*). Three new tables, all RLS-enabled with NO client or service-role privilege: vsd_disclosure_authorizations (the separately assessed purpose, legal basis and permitted audiences for showing one kind of statement to a recipient; written only by a reviewed migration, immutable except revocation; the only audience that exists is signed_in_recipient -- a CHECK refuses any other, so an anonymous audience is a schema change, not a row; a criminal-history row cannot rest on consent and must name its Art. 10 authority; it cannot be recorded for a revoked collection), vsd_disclosure_selections (the holder's explicit choice to let one statement, at one exact revision and wording, under one disclosure authorization, accompany one Passport token link; immutable except withdrawal) and vsd_disclosure_accesses (one row each time a signed-in recipient was actually given a statement; the holder is shown how often, never by whom). Six authenticated-only SECURITY DEFINER functions (search_path ''), each requiring a live session: vsd_my_passport_declarations (the holder's CURRENT statements for their own Passport page, read-only), vsd_preview_disclosure (exactly what a recipient would receive; stores nothing), vsd_select_for_disclosure (attach chosen statements to one link the holder owns: a token link, live, created within the last hour; made once -- a retry of the same choice changes nothing, a different one is refused), vsd_withdraw_disclosure_selection, vsd_my_disclosure_selections, and vsd_read_disclosed (the recipient's read: a signed-in caller with a live session of their own AND the link's live share session secret; every failure is the same empty answer). vsd_selection_disclosable is asked on every read and requires, as of that moment: the selection not withdrawn; the statement active, inside its retention and under a current processing authorization; the same revision and wording; the SAME disclosure authorization still current and permitting the audience; and the link the holder's, token-addressed, not revoked or expired. vsd_disclosed_statement is the one builder used by both the preview and the read: kind, jurisdiction, statement version, as-of date, the day it was made and the reviewed period -- never an id, a document, a hash, a path, a review or a provenance level. A processing (collection) authorization authorizes no disclosure. THIS MIGRATION INSERTS NO AUTHORIZATION OF EITHER KIND, so after installation nothing can be collected (as before) and nothing can be disclosed. No sp_ function, table, policy or payload changes; the new tables reference sp_disclosures and nothing references them back; no function outside the vsd_ family names a vsd_ object. It also replaces the comment on vsd_declarations. The application change that calls it ships separately after installation. Install after 20270324090000.", 
+      "rollback": "supabase/rollback/20270325090000_vsd_passport_disclosure_rollback.sql", 
+      "verify": "Full-history replay plus supabase/tests/vsd_passport_disclosure_test.sql (66 assertions, synthetic fixtures, every JWT naming a live auth.sessions row: closed by default -- a collection authorization alone makes nothing shareable, previewable, attachable or readable; no anonymous or public audience can be authorized, offence data not on consent, not for a revoked collection, immutable; the holder's Passport read returns only their current statements and a reviewed supporting document changes nothing a recipient is given; an unselected link, an older link, an application disclosure and somebody else's link carry nothing; the recipient is given exactly what the holder previewed; anon, the service role, a signed-out recipient, a guessed secret, the token hash, the stored hash, another link's session and an expired share session all get nothing; reads are recorded against the recipient and never for the holder; withdrawal of the selection, revocation and expiry of the link, withdrawal, renewal, deletion and retention of the statement, and revocation of either authorization each end disclosure at once and nothing later revives the old selection; no other function, view, table or trigger names a vsd_ object and the anonymous read of the same link carries no trace; account erasure; the real rollback and a clean re-apply). In scripts/db-test.sh it runs first, against the full current schema, with eleven negative controls, and is then stood down before 20270324090000. After installation confirm: three vsd_disclosure_ tables with RLS on and no anon, authenticated or service_role privilege; exactly six new functions executable by authenticated and none by anon or service_role; vsd_disclosure_authorizations AND vsd_processing_authorizations EMPTY.", 
+      "introduces": [
+        {
+          "kind": "table", 
+          "object": "vsd_disclosure_authorizations"
+        }, 
+        {
+          "kind": "table", 
+          "object": "vsd_disclosure_selections"
+        }, 
+        {
+          "kind": "table", 
+          "object": "vsd_disclosure_accesses"
+        }, 
+        {
+          "kind": "function", 
+          "object": "vsd_disclosure_authorization_admissible"
+        }, 
+        {
+          "kind": "function", 
+          "object": "vsd_disclosure_selection_immutable"
+        }, 
+        {
+          "kind": "function", 
+          "object": "vsd_selection_disclosable"
+        }, 
+        {
+          "kind": "function", 
+          "object": "vsd_disclosure_authorization_for"
+        }, 
+        {
+          "kind": "function", 
+          "object": "vsd_disclosed_statement"
+        }, 
+        {
+          "kind": "function", 
+          "object": "vsd_assert_disclosure_choice"
+        }, 
+        {
+          "kind": "function", 
+          "object": "vsd_my_passport_declarations"
+        }, 
+        {
+          "kind": "function", 
+          "object": "vsd_preview_disclosure"
+        }, 
+        {
+          "kind": "function", 
+          "object": "vsd_select_for_disclosure"
+        }, 
+        {
+          "kind": "function", 
+          "object": "vsd_withdraw_disclosure_selection"
+        }, 
+        {
+          "kind": "function", 
+          "object": "vsd_my_disclosure_selections"
+        }, 
+        {
+          "kind": "function", 
+          "object": "vsd_read_disclosed"
+        }
+      ]
     }
   ],
   "policyVersion": 2, 
