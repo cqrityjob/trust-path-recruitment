@@ -8,15 +8,29 @@
 // the revision are all checked there -- and are checked identically for a
 // request that never came from this screen. Nothing here grants anything.
 //
-// The one place the service key is used is erasing the caller's own queued
-// files (erasure.server.ts), because the bucket has no client DELETE at all.
-// It takes no path and no id from the request.
+// The service key is used in exactly two server-only files, never here at
+// module level: erasing the caller's own queued files (erasure.server.ts) and
+// reading the bucket for the server itself (document-store.server.ts) --
+// because the bucket has no client SELECT, UPDATE or DELETE at all. Neither
+// takes a path or an id from the request: paths come from the database, in
+// the same request, after it has authorized the caller's own session.
+//
+// ── HOW A DOCUMENT IS OPENED ────────────────────────────────────────────
+//
+// There is no link. Storage cannot serve or sign these objects for any
+// client. readSelfDeclarationDocument asks the database -- with the caller's
+// session, on EVERY request -- whether this caller may read this document
+// right now (live session, ownership or reviewer appointment, current
+// authorization, the statement's status, revision and retention, the
+// document's status), and only then reads the bytes and returns them,
+// uncacheable. So withdrawing, deleting, revoking an authorization, a passed
+// retention date, a sign-out or the end of a reviewer's appointment refuses
+// the very next request, whether or not the file has been erased yet. Bytes
+// already delivered cannot be recalled.
 //
 // ── WHAT IS NEVER SENT TO THE BROWSER ───────────────────────────────────
 //
-// The storage path and the file hash. A document is opened through a
-// five-minute signed URL that Storage issues only while the database says
-// the document is live and the caller may read it.
+// The storage path and the file hash.
 //
 // ── WHAT THIS IS NOT ────────────────────────────────────────────────────
 //
@@ -25,12 +39,12 @@
 // Passport, the CV, an application, talent search or any shared payload.
 
 import { createServerFn } from "@tanstack/react-start";
+import { setResponseHeader } from "@tanstack/react-start/server";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import {
   DECLARATION_KINDS,
   DOCUMENT_ALLOWED_MIME,
-  DOCUMENT_MAX_BYTES,
   DOCUMENT_TYPES,
   SELF_DECLARATION_JURISDICTION,
   STATEMENT_VERSIONS,
@@ -41,7 +55,13 @@ import {
   type SelfDeclarationsPayload,
   type SelfDeclarationsView,
 } from "./model";
-import { endAccessAndErase, filesOwed, uploadDeclarationDocument } from "./workflow";
+import { DOCUMENT_MAX_ENCODED_LENGTH, validateEncodedDocument } from "./content";
+import {
+  endAccessAndErase,
+  filesOwed,
+  uploadDeclarationDocument,
+  type UploadStatus,
+} from "./workflow";
 
 const BUCKET = "self-declaration-documents";
 
@@ -58,10 +78,6 @@ type CallerClient = {
         body: Uint8Array,
         options: { contentType: string; upsert: boolean },
       ) => Promise<{ error: { message: string } | null }>;
-      createSignedUrl: (
-        path: string,
-        expiresIn: number,
-      ) => Promise<{ data: { signedUrl: string } | null; error: { message: string } | null }>;
     };
   };
 };
@@ -108,14 +124,6 @@ function resultOf(payload: SelfDeclarationsPayload): SelfDeclarationsResult {
     view: buildSelfDeclarationsView(payload),
     fileDeletion: filesOwed(payload) === 0 ? "confirmed" : "pending",
   };
-}
-
-/** Find the caller's own live document; the path stays on the server. */
-function ownDocument(payload: SelfDeclarationsPayload, documentId: string) {
-  for (const d of payload.declarations) {
-    if (d.document?.id === documentId) return { declaration: d, document: d.document };
-  }
-  return null;
 }
 
 // ── Read ────────────────────────────────────────────────────────────────
@@ -238,25 +246,48 @@ const uploadInput = z
     issueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
     fileName: z.string().min(1).max(300),
     mimeType: z.enum(DOCUMENT_ALLOWED_MIME),
-    /** base64, without a data: prefix. */
-    contentBase64: z.string().min(1),
+    /** base64, without a data: prefix. Bounded here, BEFORE anything decodes it. */
+    contentBase64: z.string().min(1).max(DOCUMENT_MAX_ENCODED_LENGTH),
   })
   .strict();
+
+const UPLOAD_STATUSES: readonly UploadStatus[] = [
+  "absent",
+  "prepared",
+  "attached",
+  "erasure_pending",
+];
+function uploadStatus(value: unknown): UploadStatus {
+  const status = (value as { status?: unknown } | null)?.status;
+  if (typeof status !== "string" || !(UPLOAD_STATUSES as readonly string[]).includes(status)) {
+    throw new Error("VSD_UPLOAD_UNCONFIRMED");
+  }
+  return status as UploadStatus;
+}
 
 export const uploadSelfDeclarationDocument = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((data: unknown) => uploadInput.parse(data))
   .handler(async ({ context, data }): Promise<SelfDeclarationsResult> => {
     const ctx = ctxOf(context);
-    const bytes = Buffer.from(data.contentBase64, "base64");
-    if (bytes.byteLength === 0 || bytes.byteLength > DOCUMENT_MAX_BYTES) {
-      throw new Error("VSD_FILE_REJECTED");
-    }
+    // Strict base64, decoded size, and the file's REAL type against the
+    // declared one. Nothing is recorded or stored for a file that fails.
+    const content = validateEncodedDocument(data.contentBase64, data.mimeType);
+    if (!content.ok) throw new Error("VSD_FILE_REJECTED");
+    const bytes = content.bytes;
     const { createHash } = await import("node:crypto");
-    const sha256 = createHash("sha256").update(bytes).digest("hex");
+    const expected = {
+      sizeBytes: bytes.byteLength,
+      sha256: createHash("sha256").update(bytes).digest("hex"),
+      mimeType: data.mimeType,
+    };
+    const store = await import("./document-store.server");
 
     const outcome = await uploadDeclarationDocument({
       begin: async () => {
+        // Idempotent on the upload id: a retry finds the same row, in
+        // whatever state it reached, and a different file under the same id
+        // is refused by the database.
         const row = await call(
           ctx,
           "vsd_begin_document",
@@ -268,40 +299,55 @@ export const uploadSelfDeclarationDocument = createServerFn({ method: "POST" })
             _issue_date: data.issueDate,
             _file_name: safeDocumentName(data.fileName),
             _mime_type: data.mimeType,
-            _size_bytes: bytes.byteLength,
-            _sha256: sha256,
+            _size_bytes: expected.sizeBytes,
+            _sha256: expected.sha256,
           },
-          "VSD_UPLOAD_FAILED",
+          "VSD_UPLOAD_UNCONFIRMED",
         );
         const parsed = documentPayloadSchema.safeParse(row);
         // The path is the database's, and must be inside the caller's folder.
         if (!parsed.success || !parsed.data.storagePath.startsWith(`${ctx.userId}/`)) {
-          throw new Error("VSD_UPLOAD_FAILED");
+          throw new Error("VSD_UPLOAD_UNCONFIRMED");
         }
-        return { storagePath: parsed.data.storagePath };
+        return { status: parsed.data.status, storagePath: parsed.data.storagePath };
       },
+      // The object's actual bytes, read back by the server.
+      inspect: (storagePath) => store.inspectStoredDocument(storagePath, expected),
       put: async (storagePath) => {
+        // The caller's own client: the database's upload policy decides.
         const { error } = await ctx.supabase.storage
           .from(BUCKET)
           .upload(storagePath, bytes, { contentType: data.mimeType, upsert: false });
-        return { ok: error === null };
+        if (error) throw new Error("VSD_UPLOAD_UNCONFIRMED");
       },
+      stamp: () =>
+        store.stampDocumentContent({
+          documentId: data.uploadId,
+          holderUserId: ctx.userId,
+          expected,
+        }),
       attach: async () => {
-        await call(ctx, "vsd_attach_document", { _id: data.uploadId }, "VSD_UPLOAD_FAILED");
+        await call(ctx, "vsd_attach_document", { _id: data.uploadId }, "VSD_UPLOAD_UNCONFIRMED");
       },
-      discard: async () => {
-        await call(ctx, "vsd_discard_document", { _id: data.uploadId }, "VSD_UPLOAD_FAILED");
+      state: async () =>
+        uploadStatus(
+          await call(ctx, "vsd_upload_state", { _id: data.uploadId }, "VSD_UPLOAD_UNCONFIRMED"),
+        ),
+      // Acts on an unfinished upload only; the database ignores it otherwise.
+      abandon: async () => {
+        await call(ctx, "vsd_abandon_upload", { _id: data.uploadId }, "VSD_UPLOAD_UNCONFIRMED");
       },
     });
 
-    // Attaching replaces a previous document; a failure discards this one.
-    // Either way something may now be owed to erasure.
+    // Attaching replaces a previous document and abandoning queues this one,
+    // so something may now be owed to erasure.
     try {
       await drain(ctx);
     } catch {
       // Still owed; the reload says so.
     }
     if (outcome.status === "failed") throw new Error(outcome.code);
+    if (outcome.status === "unconfirmed") throw new Error("VSD_UPLOAD_UNCONFIRMED");
     return resultOf(await readPayload(ctx));
   });
 
@@ -323,21 +369,58 @@ export const removeSelfDeclarationDocument = createServerFn({ method: "POST" })
     return resultOf(outcome.payload);
   });
 
-/** A five-minute link to the caller's own live document. Storage decides. */
-export const getSelfDeclarationDocumentUrl = createServerFn({ method: "POST" })
+const authorizedRead = z.object({
+  documentId: z.string().uuid(),
+  as: z.enum(["holder", "reviewer"]),
+  storagePath: z.string().min(1),
+  fileName: z.string().min(1),
+  mimeType: z.enum(DOCUMENT_ALLOWED_MIME),
+  sizeBytes: z.number().int().positive(),
+  sha256: z.string().regex(/^[0-9a-f]{64}$/),
+});
+
+export type SelfDeclarationDocumentContent = {
+  readonly fileName: string;
+  readonly mimeType: (typeof DOCUMENT_ALLOWED_MIME)[number];
+  readonly contentBase64: string;
+};
+
+/**
+ * One document's bytes, for one request.
+ *
+ * Authorization is asked of the database every time, with the caller's own
+ * session, immediately before the bytes are read -- there is no link, token
+ * or cached decision to outlive a withdrawal, a revocation, a passed
+ * retention date, a sign-out or the end of a reviewer's appointment. The
+ * response must not be stored by any cache.
+ */
+export const readSelfDeclarationDocument = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((data: unknown) => documentInput.parse(data))
-  .handler(async ({ context, data }): Promise<{ url: string; expiresInSeconds: number }> => {
+  .handler(async ({ context, data }): Promise<SelfDeclarationDocumentContent> => {
     const ctx = ctxOf(context);
-    const own = ownDocument(await readPayload(ctx), data.documentId);
-    if (!own || own.declaration.status !== "active" || own.document.status !== "attached") {
+    setResponseHeader("Cache-Control", "no-store, private, max-age=0");
+    setResponseHeader("Pragma", "no-cache");
+    setResponseHeader("X-Content-Type-Options", "nosniff");
+    const { data: granted, error } = await ctx.supabase.rpc("vsd_authorize_document_read", {
+      _id: data.documentId,
+    });
+    if (error) throw refusal(error, "VSD_DOCUMENT_NOT_FOUND");
+    const parsed = authorizedRead.safeParse(granted);
+    if (!parsed.success || parsed.data.documentId !== data.documentId) {
       throw new Error("VSD_DOCUMENT_NOT_FOUND");
     }
-    const signed = await ctx.supabase.storage
-      .from(BUCKET)
-      .createSignedUrl(own.document.storagePath, 300);
-    if (signed.error || !signed.data) throw new Error("VSD_DOCUMENT_NOT_FOUND");
-    return { url: signed.data.signedUrl, expiresInSeconds: 300 };
+    const { readAuthorizedDocument } = await import("./document-store.server");
+    const bytes = await readAuthorizedDocument(parsed.data.storagePath, {
+      sizeBytes: parsed.data.sizeBytes,
+      sha256: parsed.data.sha256,
+      mimeType: parsed.data.mimeType,
+    });
+    return {
+      fileName: parsed.data.fileName,
+      mimeType: parsed.data.mimeType,
+      contentBase64: Buffer.from(bytes).toString("base64"),
+    };
   });
 
 const reviewInput = z.object({ documentId: z.string().uuid(), requested: z.boolean() }).strict();

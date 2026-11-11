@@ -172,6 +172,116 @@ test("a document makes it 'Document provided' and never more; renewing starts un
   );
 });
 
+test("a document is downloaded through the server on each press: no link, and a refusal downloads nothing", async ({
+  page,
+}) => {
+  const withDocument = withDeclarations(
+    syntheticDeclaration({ provenance: "document_provided", document: syntheticDocument() }),
+  );
+  let allow = true;
+  let asked = 0;
+  const storage: string[] = [];
+  page.on("request", (request) => {
+    if (/\/storage\/v1\//.test(request.url())) storage.push(request.url());
+  });
+  await open(page, "en", {
+    getMySelfDeclarations: ok(result(withDocument)),
+    readSelfDeclarationDocument: async (route: Route) => {
+      asked += 1;
+      if (!allow)
+        return route.fulfill({
+          status: 500,
+          contentType: "text/plain",
+          body: "VSD_DOCUMENT_NOT_FOUND",
+        });
+      await reply({
+        fileName: "SYNTHETIC-fixture.pdf",
+        mimeType: "application/pdf",
+        contentBase64: Buffer.from("%PDF-1.4\nSYNTHETIC\n%%EOF\n").toString("base64"),
+      })(route);
+    },
+  });
+  const enforcement = panel(page, "enforcement_debt_none");
+  // Nothing on the page is a link to the file.
+  await expect(enforcement.locator("a[href]")).toHaveCount(0);
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    enforcement.locator("[data-vsd-document-open]").click(),
+  ]);
+  expect(download.suggestedFilename()).toBe("SYNTHETIC-fixture.pdf");
+  expect(download.url()).toMatch(/^blob:/);
+  expect(asked).toBe(1);
+
+  // Access has since ended (withdrawn, revoked, expired, signed out...): the
+  // very next press asks again, is refused, and downloads nothing.
+  allow = false;
+  let second = false;
+  page.once("download", () => {
+    second = true;
+  });
+  await enforcement.locator("[data-vsd-document-open]").click();
+  await expect(enforcement.locator('[data-vsd-document-notice="error"]')).toContainText(
+    "no longer available",
+  );
+  expect(asked).toBe(2);
+  expect(second).toBe(false);
+  expect(storage, "the browser never talks to Storage").toEqual([]);
+  // The injected refusal is this scenario's subject, not a defect.
+  takeMountBookkeeping();
+});
+
+test("an unconfirmed upload keeps its id for the retry; a refused one gets a new id", async ({
+  page,
+}) => {
+  const declared = withDeclarations(syntheticDeclaration());
+  const withDocument = withDeclarations(
+    syntheticDeclaration({ provenance: "document_provided", document: syntheticDocument() }),
+  );
+  const ids: string[] = [];
+  let mode: "lost" | "refused" | "saved" = "lost";
+  await open(page, "en", {
+    getMySelfDeclarations: ok(result(declared)),
+    uploadSelfDeclarationDocument: async (route: Route) => {
+      const body = JSON.stringify(route.request().postDataJSON());
+      // The first uuid in the seroval body is uploadId (the first field).
+      ids.push(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/.exec(body)![0]);
+      if (mode === "lost") return route.abort("failed");
+      if (mode === "refused")
+        return route.fulfill({ status: 500, contentType: "text/plain", body: "VSD_FILE_REJECTED" });
+      await reply(result(withDocument))(route);
+    },
+  });
+  const enforcement = panel(page, "enforcement_debt_none");
+  const pdf = {
+    name: "SYNTHETIC-fixture.pdf",
+    mimeType: "application/pdf",
+    buffer: Buffer.from("%PDF-1.4\nSYNTHETIC\n%%EOF\n"),
+  };
+  const send = async () => {
+    await enforcement.locator("[data-vsd-issue-date]").fill("2026-11-08");
+    await enforcement.locator("[data-vsd-upload]").click();
+  };
+  await enforcement.locator("[data-vsd-file]").setInputFiles(pdf);
+  await send();
+  await expect(enforcement.locator('[data-vsd-document-notice="error"]')).toContainText(
+    "could not be confirmed",
+  );
+  // Same file still chosen: the retry is the SAME upload.
+  mode = "refused";
+  await send();
+  await expect(enforcement.locator('[data-vsd-document-notice="error"]')).toContainText(
+    "must be a real PDF",
+  );
+  mode = "saved";
+  await send();
+  await expect(enforcement.locator("[data-vsd-provenance]")).toHaveText("Document provided");
+  expect(ids).toHaveLength(3);
+  expect(ids[1], "an unconfirmed upload is retried under the same id").toBe(ids[0]);
+  expect(ids[2], "a refused upload is not reused").not.toBe(ids[1]);
+  // The aborted and refused requests are this scenario's subject.
+  takeMountBookkeeping();
+});
+
 test("an owed cleanup is shown and retried; 'erased' is said only when the server confirms it", async ({
   page,
 }) => {

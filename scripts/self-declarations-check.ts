@@ -14,7 +14,12 @@
  *   4  WORDING     three provenance labels and no stronger claim, in both
  *                  languages
  *   5  SERVER      every function authenticated; the service key only in the
- *                  narrowed erasure drain; no path or hash to the browser
+ *                  two narrowed server-only files; no path or hash to the
+ *                  browser; NO link to a document -- bytes are delivered per
+ *                  request after the database authorizes the caller's own
+ *                  session, and never cached; uploaded content is bounded,
+ *                  strictly decoded and recognised from its own bytes; an
+ *                  upload error never discards a document that was saved
  *   6  ERASURE     "erased"/"deleted" is said only from the server's answer
  *   7  REGISTERED  this check, its controls, tests and browser suite run in CI
  *
@@ -59,6 +64,8 @@ const SECTION = `${SECTION_DIR}/SelfDeclarationsSection.tsx`;
 const ROUTE = "src/routes/_authenticated.my-career.profile.tsx";
 const FUNCTIONS = `${MODULE}/declarations.functions.ts`;
 const ERASURE = `${MODULE}/erasure.server.ts`;
+const STORE = `${MODULE}/document-store.server.ts`;
+const CONTENT = `${MODULE}/content.ts`;
 const MODEL = `${MODULE}/model.ts`;
 const MIGRATION = "20270324090000_vsd_voluntary_self_declarations.sql";
 
@@ -272,14 +279,18 @@ ck(
   declared === 9 && guarded === declared,
   `${guarded}/${declared}`,
 );
+const serverOnly = walk(MODULE)
+  .concat(walk(SECTION_DIR))
+  .filter((f) => /supabaseAdmin|client\.server/.test(read(f)))
+  .sort();
 ck(
-  "5.2 the service key appears only in the erasure drain",
-  walk(MODULE)
-    .concat(walk(SECTION_DIR))
-    .filter((f) => /supabaseAdmin|client\.server/.test(read(f)))
-    .join(",") === ERASURE &&
-    !/^import .*erasure\.server/m.test(fns) &&
-    fns.includes('await import("./erasure.server")'),
+  "5.2 the service key appears only in the two server-only files, loaded inside handlers",
+  serverOnly.join(",") === [STORE, ERASURE].sort().join(",") &&
+    !/^import [^\n]*\.server"/m.test(fns) &&
+    fns.includes('await import("./erasure.server")') &&
+    (fns.match(/await import\("\.\/document-store\.server"\)/g) ?? []).length === 2 &&
+    !/\.server"/.test(read(SECTION)),
+  serverOnly.join(","),
 );
 const erasure = read(ERASURE);
 ck(
@@ -301,10 +312,119 @@ const viewTypes = read(MODEL)
   .split("// ── What the browser receives")[1]!
   .split("function documentView")[0]!;
 ck("5.5 the browser's view has no storage path and no hash", !/storagePath|sha256/.test(viewTypes));
+// ── No link, and a fresh authorization for every delivery ──────────────
+const moduleSource = walk(MODULE)
+  .concat(walk(SECTION_DIR))
+  .map((f) => read(f).replace(/^\s*(\/\/|\*|\/\*).*$/gm, ""))
+  .join("\n");
 ck(
-  "5.6 a document opens only through a short signed link for a live document",
-  fns.includes(".createSignedUrl(own.document.storagePath, 300)") &&
-    fns.includes('own.document.status !== "attached"'),
+  "5.6 no code path signs or builds a link to a document",
+  !/createSignedUrl|createSignedUrls|getPublicUrl|\/object\/sign|signedUrl/i.test(moduleSource),
+);
+const readFn =
+  fns.split("export const readSelfDeclarationDocument")[1]?.split("const reviewInput")[0] ?? "";
+ck(
+  "5.6a delivery asks the database with the caller's own session, then -- and only then -- reads",
+  readFn.includes(".middleware([requireSupabaseAuth])") &&
+    readFn.includes('ctx.supabase.rpc("vsd_authorize_document_read"') &&
+    readFn.indexOf('rpc("vsd_authorize_document_read"') <
+      readFn.indexOf("readAuthorizedDocument(") &&
+    readFn.indexOf('if (error) throw refusal(error, "VSD_DOCUMENT_NOT_FOUND");') <
+      readFn.indexOf("readAuthorizedDocument(") &&
+    readFn.indexOf("readAuthorizedDocument(") > 0,
+);
+ck(
+  "5.6b a delivered document is never cacheable",
+  readFn.includes('setResponseHeader("Cache-Control", "no-store, private, max-age=0")') &&
+    readFn.indexOf('setResponseHeader("Cache-Control"') <
+      readFn.indexOf('rpc("vsd_authorize_document_read"'),
+);
+ck(
+  "5.6c the decision is not remembered: no cache, memo or stored grant in the module",
+  !/new Map\(|WeakMap|memo|localStorage|sessionStorage|staleTime|queryKey: \[[^\]]*document/i.test(
+    moduleSource.replace(/useMemo/g, ""),
+  ) && !/useQuery\([^)]*readSelfDeclarationDocument/s.test(read(SECTION)),
+);
+const store = read(STORE);
+ck(
+  "5.6d the server's bucket access takes only a database path of the exact shape, one bucket, no table",
+  store.includes("function assertPath(storagePath: string): void") &&
+    (store.match(/assertPath\(storagePath\);/g) ?? []).length === 1 &&
+    /async function download\(storagePath: string\)[^}]*assertPath\(storagePath\);/s.test(store) &&
+    !/\.from\("(?!")[a-z_]+"\)/.test(store) &&
+    (store.match(/\.from\(BUCKET\)/g) ?? []).length === 2 &&
+    !/\.remove\(|\.upload\(|\.move\(|\.copy\(|createSigned/.test(store),
+);
+ck(
+  "5.6e delivered bytes must still be the verified bytes",
+  /readAuthorizedDocument[\s\S]*if \(bytes === null \|\| !matches\(bytes, expected\)\) throw new Error\("VSD_DOCUMENT_NOT_FOUND"\)/.test(
+    store,
+  ) && /sniffDocumentMime\(bytes\) === expected\.mimeType/.test(store),
+);
+
+// ── Uploaded content ────────────────────────────────────────────────────
+const uploadFn =
+  fns.split("export const uploadSelfDeclarationDocument")[1]?.split("const documentInput")[0] ?? "";
+ck(
+  "5.8 the encoded body is bounded by the schema, before anything decodes it",
+  /contentBase64: z\.string\(\)\.min\(1\)\.max\(DOCUMENT_MAX_ENCODED_LENGTH\)/.test(fns) &&
+    !/Buffer\.from\(data\.contentBase64/.test(fns),
+);
+ck(
+  "5.8a content is validated before anything is recorded or stored",
+  uploadFn.includes("validateEncodedDocument(data.contentBase64, data.mimeType)") &&
+    uploadFn.indexOf("validateEncodedDocument(") < uploadFn.indexOf('"vsd_begin_document"') &&
+    uploadFn.includes('if (!content.ok) throw new Error("VSD_FILE_REJECTED");'),
+);
+const content = read(CONTENT);
+ck(
+  "5.8b decoding is strict and canonical, and the type comes from the bytes",
+  content.includes('if (bytes.toString("base64") !== text) return null;') &&
+    content.includes("text.length % 4 !== 0") &&
+    content.includes("actual !== declaredMime") &&
+    !/fileName|\.name\b|endsWith\(/.test(content),
+);
+ck(
+  "5.8c the server vouches only for bytes it read back itself",
+  uploadFn.includes(
+    "inspect: (storagePath) => store.inspectStoredDocument(storagePath, expected)",
+  ) &&
+    uploadFn.includes("store.stampDocumentContent({") &&
+    store.includes('"vsd_stamp_document_content"'),
+);
+
+// ── An upload error never discards a saved document ─────────────────────
+const upload = read(`${MODULE}/workflow.ts`)
+  .split("/** Give up on an upload KNOWN to be unfinished.")[1]!
+  .split("export type EndAccessSteps")[0]!;
+ck(
+  "5.9 the upload's only compensation is abandon, which the database limits to unfinished uploads",
+  !/discard/.test(upload.replace(/^\s*\/\/.*$/gm, "")) &&
+    !/vsd_discard_document/.test(uploadFn) &&
+    uploadFn.includes('"vsd_abandon_upload"') &&
+    (upload.match(/steps\.abandon/g) ?? []).length === 1,
+);
+ck(
+  "5.9a an attached upload returns before any step that writes or abandons",
+  upload.indexOf('if (begun.status === "attached") {') > 0 &&
+    upload.indexOf('if (begun.status === "attached") {') < upload.indexOf("steps.put(") &&
+    upload.indexOf('if (begun.status === "attached") {') < upload.indexOf("return giveUp(steps"),
+);
+ck(
+  "5.9b after a failed stamp or attach the persisted state is read before anything else is done",
+  /status = await steps\.state\(\);[\s\S]*if \(status === "attached"\) return \{ status: "attached" \};[\s\S]*giveUp\(steps, code\)/.test(
+    upload,
+  ),
+);
+ck(
+  "5.9c the stored bytes are inspected again after every put, whatever it reported",
+  /await quietly\(\(\) => steps\.put\(begun\.storagePath\)\);\s*try \{\s*stored = await steps\.inspect\(begun\.storagePath\);/.test(
+    upload,
+  ),
+);
+ck(
+  "5.9d the screen keeps the upload id when the result is unconfirmed",
+  section.includes("if (!unconfirmed) setUploadId(crypto.randomUUID());"),
 );
 ck(
   "5.7 a refusal reaches the browser as a code, never a raw database message",
@@ -368,7 +488,7 @@ ck(
 ck(
   "7.4 the database suite is registered with its negative controls",
   read("scripts/db-test.sh").includes("VSD_T=vsd_voluntary_self_declarations_test") &&
-    (read("scripts/db-test.sh").match(/td_nc "\$VSD_T"/g) ?? []).length === 8,
+    (read("scripts/db-test.sh").match(/td_nc "\$VSD_T"/g) ?? []).length === 13,
 );
 
 console.log(

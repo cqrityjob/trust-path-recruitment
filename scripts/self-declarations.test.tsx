@@ -20,6 +20,13 @@ import {
   uploadDeclarationDocument,
 } from "../src/lib/self-declarations/workflow";
 import {
+  DOCUMENT_MAX_ENCODED_LENGTH,
+  checkDocumentBytes,
+  decodeStrictBase64,
+  sniffDocumentMime,
+  validateEncodedDocument,
+} from "../src/lib/self-declarations/content";
+import {
   CLOSED_PAYLOAD,
   CRIMINAL_AUTHORIZED_PAYLOAD,
   OPEN_PAYLOAD,
@@ -205,64 +212,340 @@ describe("what reaches the browser", () => {
   });
 });
 
-describe("uploading a document", () => {
-  function steps(fail: Partial<Record<"begin" | "put" | "attach" | "discard", boolean | string>>) {
-    const calls: string[] = [];
-    return {
-      calls,
-      steps: {
-        begin: async () => {
-          calls.push("begin");
-          if (fail.begin) throw new Error(String(fail.begin));
-          return { storagePath: "holder/doc.pdf" };
-        },
-        put: async (path: string) => {
-          calls.push(`put:${path}`);
-          return { ok: !fail.put };
-        },
-        attach: async () => {
-          calls.push("attach");
-          if (fail.attach) throw new Error(String(fail.attach));
-        },
-        discard: async () => {
-          calls.push("discard");
-          if (fail.discard) throw new Error("discard failed");
-        },
-      },
+describe("uploading a document: nothing is assumed failed, nothing saved is destroyed", () => {
+  type Status = "absent" | "prepared" | "attached" | "erasure_pending";
+  type Stored = "absent" | "matching" | "different";
+  /**
+   * A small faithful model of the two stores. `row` is what the database
+   * holds for this upload id and `object` what Storage holds at its path.
+   * `lose` makes a step COMMIT and then throw, as a lost acknowledgement does;
+   * `refuse` makes it throw without doing anything.
+   */
+  function world(init: { row?: Status; object?: Stored } = {}) {
+    const w = {
+      row: init.row ?? ("absent" as Status),
+      object: init.object ?? ("absent" as Stored),
+      calls: [] as string[],
+      lose: new Set<string>(),
+      refuse: new Map<string, string>(),
+      putWrites: "matching" as Stored,
     };
+    const step = async (name: string, commit: () => void) => {
+      w.calls.push(name);
+      const refusal = w.refuse.get(name);
+      if (refusal !== undefined) throw new Error(refusal);
+      commit();
+      if (w.lose.has(name)) throw new Error("network: acknowledgement lost");
+    };
+    const steps = {
+      begin: async () => {
+        await step("begin", () => {
+          if (w.row === "absent") w.row = "prepared";
+        });
+        return { status: w.row, storagePath: "holder/doc.pdf" };
+      },
+      inspect: async () => {
+        w.calls.push("inspect");
+        if (w.refuse.has("inspect")) throw new Error("VSD_STORAGE_UNAVAILABLE");
+        return w.object;
+      },
+      put: () =>
+        step("put", () => {
+          if (w.object !== "absent") throw new Error("object already exists");
+          w.object = w.putWrites;
+        }),
+      stamp: () =>
+        step("stamp", () => {
+          if (w.object !== "matching") throw new Error("VSD_CONTENT_MISMATCH");
+        }),
+      attach: () =>
+        step("attach", () => {
+          w.row = "attached";
+        }),
+      state: async () => {
+        w.calls.push("state");
+        if (w.refuse.has("state")) throw new Error("network");
+        return w.row;
+      },
+      // The database's rule: only an unfinished upload can be abandoned.
+      abandon: () =>
+        step("abandon", () => {
+          if (w.row === "prepared") w.row = "erasure_pending";
+        }),
+    };
+    return { w, steps };
   }
 
-  test("begin, write to exactly the database's path, attach", async () => {
-    const s = steps({});
-    assert.deepEqual(await uploadDeclarationDocument(s.steps), { status: "attached" });
-    assert.deepEqual(s.calls, ["begin", "put:holder/doc.pdf", "attach"]);
+  test("the plain path: begin, look, write, look again, stamp, attach", async () => {
+    const { w, steps } = world();
+    assert.deepEqual(await uploadDeclarationDocument(steps), { status: "attached" });
+    assert.deepEqual(w.calls, ["begin", "inspect", "put", "inspect", "stamp", "attach"]);
+    assert.equal(w.row, "attached");
   });
 
-  test("a refused intention writes nothing and discards nothing", async () => {
-    const s = steps({ begin: "boom VSD_PROCESSING_NOT_AUTHORIZED boom" });
-    assert.deepEqual(await uploadDeclarationDocument(s.steps), {
+  test("a lost PUT acknowledgement: the bytes landed, so the upload completes and is not discarded", async () => {
+    const { w, steps } = world();
+    w.lose.add("put");
+    assert.deepEqual(await uploadDeclarationDocument(steps), { status: "attached" });
+    assert.equal(w.calls.includes("abandon"), false);
+    assert.equal(w.row, "attached");
+  });
+
+  test("a lost ATTACH acknowledgement: the document is attached, reported as saved, and never abandoned", async () => {
+    const { w, steps } = world();
+    w.lose.add("attach");
+    assert.deepEqual(await uploadDeclarationDocument(steps), { status: "attached" });
+    assert.deepEqual(w.calls.slice(-2), ["attach", "state"]);
+    assert.equal(w.calls.includes("abandon"), false);
+    assert.equal(w.row, "attached");
+    assert.equal(w.object, "matching");
+  });
+
+  test("the final response was lost: the same upload id again is a success that rewrites and deletes nothing", async () => {
+    const { w, steps } = world();
+    assert.deepEqual(await uploadDeclarationDocument(steps), { status: "attached" });
+    w.calls.length = 0;
+    assert.deepEqual(await uploadDeclarationDocument(steps), { status: "attached" });
+    assert.deepEqual(w.calls, ["begin", "inspect"]);
+    assert.equal(w.row, "attached");
+    assert.equal(w.object, "matching");
+  });
+
+  test("a retry after the bytes landed but before the attach: resumes without writing again", async () => {
+    const { w, steps } = world({ row: "prepared", object: "matching" });
+    assert.deepEqual(await uploadDeclarationDocument(steps), { status: "attached" });
+    assert.deepEqual(w.calls, ["begin", "inspect", "stamp", "attach"]);
+  });
+
+  test("an already-attached upload is never abandoned, even when every later step would fail", async () => {
+    const { w, steps } = world({ row: "attached", object: "matching" });
+    w.refuse.set("put", "boom");
+    w.refuse.set("attach", "VSD_STALE_REVISION");
+    assert.deepEqual(await uploadDeclarationDocument(steps), { status: "attached" });
+    assert.equal(w.row, "attached");
+  });
+
+  test("an attached upload whose stored bytes differ is reported, and still not deleted", async () => {
+    const { w, steps } = world({ row: "attached", object: "different" });
+    assert.deepEqual(await uploadDeclarationDocument(steps), {
       status: "failed",
-      code: "VSD_PROCESSING_NOT_AUTHORIZED",
+      code: "VSD_CONTENT_MISMATCH",
     });
-    assert.deepEqual(s.calls, ["begin"]);
+    assert.equal(w.calls.includes("abandon"), false);
+    assert.equal(w.row, "attached");
   });
 
-  test("a failed write is discarded and never attached", async () => {
-    const s = steps({ put: true });
-    assert.deepEqual(await uploadDeclarationDocument(s.steps), {
+  test("the bytes in Storage are not the declared ones: refused before any stamp, the unfinished upload abandoned", async () => {
+    const { w, steps } = world();
+    w.putWrites = "different";
+    assert.deepEqual(await uploadDeclarationDocument(steps), {
+      status: "failed",
+      code: "VSD_CONTENT_MISMATCH",
+    });
+    assert.equal(w.calls.includes("stamp"), false);
+    assert.equal(w.calls.includes("attach"), false);
+    assert.equal(w.row, "erasure_pending");
+  });
+
+  test("different bytes already at the path of a retried upload are not accepted", async () => {
+    const { w, steps } = world({ row: "prepared", object: "different" });
+    assert.deepEqual(await uploadDeclarationDocument(steps), {
+      status: "failed",
+      code: "VSD_CONTENT_MISMATCH",
+    });
+    assert.equal(w.calls.includes("put"), false);
+    assert.equal(w.calls.includes("attach"), false);
+  });
+
+  test("a put that really failed: nothing stored, the unfinished upload abandoned", async () => {
+    const { w, steps } = world();
+    w.refuse.set("put", "storage said no");
+    assert.deepEqual(await uploadDeclarationDocument(steps), {
       status: "failed",
       code: "VSD_UPLOAD_FAILED",
     });
-    assert.deepEqual(s.calls, ["begin", "put:holder/doc.pdf", "discard"]);
+    assert.equal(w.row, "erasure_pending");
   });
 
-  test("a refused attach is discarded, and a failing discard still reports the failure", async () => {
-    const s = steps({ attach: "VSD_STALE_REVISION", discard: true });
-    assert.deepEqual(await uploadDeclarationDocument(s.steps), {
+  test("a mismatched file under a used upload id is refused by begin and destroys nothing", async () => {
+    const { w, steps } = world({ row: "attached", object: "matching" });
+    w.refuse.set("begin", "VSD_UPLOAD_INTENT_MISMATCH");
+    assert.deepEqual(await uploadDeclarationDocument(steps), {
+      status: "failed",
+      code: "VSD_UPLOAD_INTENT_MISMATCH",
+    });
+    assert.deepEqual(w.calls, ["begin"]);
+    assert.equal(w.row, "attached");
+  });
+
+  test("a stale revision is still refused: at begin with nothing touched, at attach with the unfinished upload abandoned", async () => {
+    const first = world({ row: "attached", object: "matching" });
+    first.w.refuse.set("begin", "VSD_STALE_REVISION");
+    assert.deepEqual(await uploadDeclarationDocument(first.steps), {
       status: "failed",
       code: "VSD_STALE_REVISION",
     });
-    assert.deepEqual(s.calls, ["begin", "put:holder/doc.pdf", "attach", "discard"]);
+    assert.equal(first.w.row, "attached");
+
+    const second = world();
+    second.w.refuse.set("attach", "VSD_STALE_REVISION");
+    assert.deepEqual(await uploadDeclarationDocument(second.steps), {
+      status: "failed",
+      code: "VSD_STALE_REVISION",
+    });
+    assert.deepEqual(second.w.calls.slice(-3), ["attach", "state", "abandon"]);
+    assert.equal(second.w.row, "erasure_pending");
+  });
+
+  test("when the state cannot be determined nothing is destroyed and the outcome is unconfirmed", async () => {
+    const blind = world();
+    blind.w.refuse.set("inspect", "x");
+    assert.deepEqual(await uploadDeclarationDocument(blind.steps), { status: "unconfirmed" });
+    assert.equal(blind.w.calls.includes("abandon"), false);
+
+    const lost = world();
+    lost.w.lose.add("attach");
+    lost.w.refuse.set("state", "x");
+    assert.deepEqual(await uploadDeclarationDocument(lost.steps), { status: "unconfirmed" });
+    assert.equal(lost.w.calls.includes("abandon"), false);
+    assert.equal(lost.w.row, "attached");
+
+    const begin = world();
+    begin.w.lose.add("begin");
+    assert.deepEqual(await uploadDeclarationDocument(begin.steps), { status: "unconfirmed" });
+    assert.equal(begin.w.calls.includes("abandon"), false);
+    // ...and the same id then simply resumes.
+    begin.w.lose.clear();
+    assert.deepEqual(await uploadDeclarationDocument(begin.steps), { status: "attached" });
+  });
+
+  test("an ambiguous attach failure on a still-unfinished upload leaves it resumable, not abandoned", async () => {
+    const { w, steps } = world();
+    w.refuse.set("attach", "network: connection reset");
+    assert.deepEqual(await uploadDeclarationDocument(steps), { status: "unconfirmed" });
+    assert.equal(w.calls.includes("abandon"), false);
+    assert.equal(w.row, "prepared");
+    w.refuse.clear();
+    w.calls.length = 0;
+    assert.deepEqual(await uploadDeclarationDocument(steps), { status: "attached" });
+    assert.deepEqual(w.calls, ["begin", "inspect", "stamp", "attach"]);
+  });
+
+  test("an upload that was abandoned cannot be revived under the same id", async () => {
+    const { w, steps } = world({ row: "erasure_pending" });
+    assert.deepEqual(await uploadDeclarationDocument(steps), {
+      status: "failed",
+      code: "VSD_DOCUMENT_ERASURE_FENCED",
+    });
+    assert.deepEqual(w.calls, ["begin"]);
+  });
+});
+
+describe("what an uploaded file actually is", () => {
+  const b64 = (bytes: Uint8Array | string) => Buffer.from(bytes).toString("base64");
+  const pdf = Buffer.from("%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n", "latin1");
+  const png = Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    Buffer.from([0, 0, 0, 13]),
+    Buffer.from("IHDR"),
+    Buffer.alloc(17),
+    Buffer.from([0, 0, 0, 0]),
+    Buffer.from("IEND"),
+    Buffer.from([0xae, 0x42, 0x60, 0x82]),
+  ]);
+  const jpeg = Buffer.concat([
+    Buffer.from([0xff, 0xd8, 0xff, 0xe0]),
+    Buffer.alloc(20),
+    Buffer.from([0xff, 0xd9]),
+  ]);
+
+  test("real PDF, PNG and JPEG bytes are recognised from their own signatures", () => {
+    assert.equal(sniffDocumentMime(pdf), "application/pdf");
+    assert.equal(sniffDocumentMime(png), "image/png");
+    assert.equal(sniffDocumentMime(jpeg), "image/jpeg");
+    assert.equal(validateEncodedDocument(b64(pdf), "application/pdf").ok, true);
+    assert.equal(validateEncodedDocument(b64(png), "image/png").ok, true);
+    assert.equal(validateEncodedDocument(b64(jpeg), "image/jpeg").ok, true);
+  });
+
+  test("a spoofed MIME type is refused: the declared type must be what the bytes are", () => {
+    const reason = (content: Uint8Array | string, mime: string) => {
+      const r = validateEncodedDocument(b64(content), mime);
+      return r.ok ? "ok" : r.reason;
+    };
+    assert.equal(reason(pdf, "image/png"), "type_mismatch");
+    assert.equal(reason(png, "application/pdf"), "type_mismatch");
+    assert.equal(reason(jpeg, "image/png"), "type_mismatch");
+    assert.equal(
+      reason("<html><script>alert(1)</script></html>", "application/pdf"),
+      "unrecognised",
+    );
+    assert.equal(reason("MZ\u0090\u0000 this is an executable", "image/jpeg"), "unrecognised");
+    assert.equal(reason(pdf, "image/heic"), "type_mismatch");
+    assert.equal(reason(pdf, "text/html"), "type_mismatch");
+  });
+
+  test("malformed content is refused: a header alone is not a file", () => {
+    const sniff = (bytes: Uint8Array) => sniffDocumentMime(bytes);
+    assert.equal(sniff(Buffer.from("%PDF-1.4\nno end marker")), null);
+    assert.equal(sniff(Buffer.from("%PDF-x.y\n%%EOF")), null);
+    assert.equal(sniff(Buffer.from(" %PDF-1.4\n%%EOF")), null);
+    assert.equal(sniff(png.subarray(0, 12)), null);
+    assert.equal(sniff(png.subarray(0, png.length - 1)), null);
+    assert.equal(sniff(Buffer.from([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3])), null);
+    assert.equal(sniff(Buffer.from([0xff, 0xd8, 0xff, 0x00, 0xff, 0xd9])), null);
+    assert.equal(sniff(new Uint8Array(0)), null);
+  });
+
+  test("only strict, canonical base64 is decoded", () => {
+    const good = b64(pdf);
+    assert.notEqual(decodeStrictBase64(good), null);
+    for (const bad of [
+      "",
+      good.slice(0, -1),
+      `${good}\n`,
+      ` ${good}`,
+      good.replace(/\+/g, "-").replace(/\//g, "_") + "-_-_",
+      `data:application/pdf;base64,${good}`,
+      "====",
+      "QUJD=", // wrong length
+      "QUJ=RA==", // padding in the middle
+      "QUJDRA=",
+    ]) {
+      assert.equal(decodeStrictBase64(bad), null, JSON.stringify(bad.slice(0, 24)));
+    }
+    assert.deepEqual(Array.from(decodeStrictBase64("QUI=")!), [0x41, 0x42]);
+    // "QUJ=" decodes leniently to "AB" but is not the canonical encoding of it.
+    assert.equal(decodeStrictBase64("QUJ="), null);
+  });
+
+  test("the encoded size is bounded before anything is decoded, and the decoded size after", () => {
+    const tooLong = "A".repeat(DOCUMENT_MAX_ENCODED_LENGTH + 4);
+    const r = validateEncodedDocument(tooLong, "application/pdf");
+    assert.deepEqual(r, { ok: false, reason: "encoded_too_large" });
+    assert.equal(DOCUMENT_MAX_ENCODED_LENGTH, Math.ceil(DOCUMENT_MAX_BYTES / 3) * 4);
+    assert.deepEqual(
+      checkDocumentBytes(new Uint8Array(DOCUMENT_MAX_BYTES + 1), "application/pdf"),
+      {
+        ok: false,
+        reason: "too_large",
+      },
+    );
+    assert.deepEqual(checkDocumentBytes(new Uint8Array(0), "application/pdf"), {
+      ok: false,
+      reason: "empty",
+    });
+    assert.deepEqual(validateEncodedDocument("", "application/pdf"), {
+      ok: false,
+      reason: "empty",
+    });
+  });
+
+  test("a body that is not base64 at all is refused without being interpreted", () => {
+    assert.deepEqual(validateEncodedDocument("%PDF-1.4 raw bytes, not base64", "application/pdf"), {
+      ok: false,
+      reason: "not_base64",
+    });
   });
 });
 

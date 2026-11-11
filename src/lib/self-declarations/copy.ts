@@ -211,7 +211,7 @@ export const DOCUMENT = {
   uploading: c("Bifogar…", "Attaching…"),
   attached: c("Dokumentet är bifogat.", "The document is attached."),
   issued: c("daterat {0}", "dated {0}"),
-  open: c("Öppna", "Open"),
+  download: c("Ladda ner", "Download"),
   removeDoc: c("Ta bort dokumentet", "Remove document"),
   removeDocConfirm: c(
     "Ta bort dokumentet? Filen raderas.",
@@ -311,9 +311,25 @@ export const ERRORS: Readonly<Partial<Record<SelfDeclarationError, Copy>>> = {
     "Dokumentet kunde inte bifogas. Inget dokument har sparats.",
     "The document could not be attached. No document was stored.",
   ),
+  VSD_UPLOAD_UNCONFIRMED: c(
+    "Det gick inte att bekräfta om dokumentet sparades. Försök igen med samma fil, så fortsätter uppladdningen där den var.",
+    "It could not be confirmed whether the document was saved. Try again with the same file and the upload continues where it was.",
+  ),
+  VSD_CONTENT_MISMATCH: c(
+    "Filen som togs emot stämde inte med den du valde. Inget dokument har bifogats.",
+    "The file that arrived did not match the one you chose. No document was attached.",
+  ),
+  VSD_CONTENT_UNVERIFIED: c(
+    "Filens innehåll kunde inte kontrolleras. Inget dokument har bifogats.",
+    "The file's content could not be checked. No document was attached.",
+  ),
+  VSD_DOCUMENT_ERASURE_FENCED: c(
+    "Den uppladdningen har avbrutits. Välj filen igen för att börja om.",
+    "That upload was cancelled. Choose the file again to start over.",
+  ),
   VSD_FILE_REJECTED: c(
-    "Filen kunde inte tas emot. Kontrollera typ och storlek.",
-    "The file was not accepted. Check its type and size.",
+    "Filen kunde inte tas emot. Den måste vara en riktig PDF, JPG eller PNG på högst 8 MB.",
+    "The file was not accepted. It must be a real PDF, JPG or PNG of at most 8 MB.",
   ),
   VSD_REVIEW_UNAVAILABLE: c(
     "Granskning går inte att begära för den här uppgiften.",

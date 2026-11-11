@@ -21,6 +21,9 @@ const FUNCTIONS = "src/lib/self-declarations/declarations.functions.ts";
 const ERASURE = "src/lib/self-declarations/erasure.server.ts";
 const SECTION = "src/components/self-declarations/SelfDeclarationsSection.tsx";
 const IDENTITY = "src/lib/professional-identity/identity.functions.ts";
+const WORKFLOW = "src/lib/self-declarations/workflow.ts";
+const STORE = "src/lib/self-declarations/document-store.server.ts";
+const CONTENT = "src/lib/self-declarations/content.ts";
 
 const MUTATIONS: readonly Mutation[] = [
   {
@@ -100,6 +103,95 @@ const MUTATIONS: readonly Mutation[] = [
     replace: 'confirm === "delete"',
     guard: GUARD,
     expect: "6.3 the screen says 'deleted' and 'erased' only on a confirmed answer",
+  },
+  // ---- Review corrections (2026-11-11) --------------------------------------
+  {
+    id: "VSD-NC-DISCARD-ON-ERROR",
+    defect:
+      "a lost attach acknowledgement is treated as a failure again: the persisted state is not consulted, so a saved document is abandoned",
+    file: WORKFLOW,
+    find: '  if (status === "attached") return { status: "attached" };\n',
+    replace: "",
+    guard: GUARD,
+    expect: "5.9b after a failed stamp or attach the persisted state is read",
+  },
+  {
+    id: "VSD-NC-COMPENSATE-BY-DISCARD",
+    defect:
+      "the upload compensates with the holder's document removal instead of abandon, which erases an attached document on retry",
+    file: FUNCTIONS,
+    find: 'await call(ctx, "vsd_abandon_upload", { _id: data.uploadId }, "VSD_UPLOAD_UNCONFIRMED");',
+    replace:
+      'await call(ctx, "vsd_discard_document", { _id: data.uploadId }, "VSD_UPLOAD_UNCONFIRMED");',
+    guard: GUARD,
+    expect: "5.9 the upload's only compensation is abandon",
+  },
+  {
+    id: "VSD-NC-PUT-TRUSTED",
+    defect:
+      "the stored bytes are not read back after the write, so whatever put() reported is believed",
+    file: WORKFLOW,
+    find: "    await quietly(() => steps.put(begun.storagePath));\n    try {\n      stored = await steps.inspect(begun.storagePath);",
+    replace:
+      '    await quietly(() => steps.put(begun.storagePath));\n    try {\n      stored = "matching";',
+    guard: GUARD,
+    expect: "5.9c the stored bytes are inspected again after every put",
+  },
+  {
+    id: "VSD-NC-SIGNED-LINK-RETURNS",
+    defect:
+      "a signed Storage link is issued for a document again: a link that outlives withdrawal, revocation and sign-out",
+    file: STORE,
+    find: "  const file = await supabaseAdmin.storage.from(BUCKET).download(storagePath);",
+    replace:
+      "  await supabaseAdmin.storage.from(BUCKET).createSignedUrl(storagePath, 300);\n  const file = await supabaseAdmin.storage.from(BUCKET).download(storagePath);",
+    guard: GUARD,
+    expect: "5.6 no code path signs or builds a link to a document",
+  },
+  {
+    id: "VSD-NC-DELIVERY-UNAUTHORIZED-ERROR-IGNORED",
+    defect: "delivery reads the bytes even when the database refused the caller",
+    file: FUNCTIONS,
+    find: '    if (error) throw refusal(error, "VSD_DOCUMENT_NOT_FOUND");\n    const parsed = authorizedRead.safeParse(granted);',
+    replace: "    const parsed = authorizedRead.safeParse(granted);",
+    guard: GUARD,
+    expect: "5.6a delivery asks the database with the caller's own session",
+  },
+  {
+    id: "VSD-NC-DELIVERY-CACHEABLE",
+    defect: "a delivered document may be stored by a cache",
+    file: FUNCTIONS,
+    find: '    setResponseHeader("Cache-Control", "no-store, private, max-age=0");\n',
+    replace: "",
+    guard: GUARD,
+    expect: "5.6b a delivered document is never cacheable",
+  },
+  {
+    id: "VSD-NC-ENCODED-UNBOUNDED",
+    defect: "the encoded body is no longer bounded before it is decoded",
+    file: FUNCTIONS,
+    find: "contentBase64: z.string().min(1).max(DOCUMENT_MAX_ENCODED_LENGTH),",
+    replace: "contentBase64: z.string().min(1),",
+    guard: GUARD,
+    expect: "5.8 the encoded body is bounded by the schema",
+  },
+  {
+    id: "VSD-NC-MIME-TRUSTED",
+    defect: "the declared MIME type is accepted without comparing it to what the bytes are",
+    file: CONTENT,
+    find: "    !(DOCUMENT_ALLOWED_MIME as readonly string[]).includes(declaredMime) ||\n    actual !== declaredMime\n",
+    replace: "    !(DOCUMENT_ALLOWED_MIME as readonly string[]).includes(declaredMime)\n",
+    guard: GUARD,
+    expect: "5.8b decoding is strict and canonical, and the type comes from the bytes",
+  },
+  {
+    id: "VSD-NC-ANY-PATH",
+    defect: "the server's bucket reader accepts any path it is handed",
+    file: STORE,
+    find: "  assertPath(storagePath);\n  const slash",
+    replace: "  const slash",
+    guard: GUARD,
+    expect: "5.6d the server's bucket access takes only a database path",
   },
 ];
 

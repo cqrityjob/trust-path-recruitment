@@ -39,7 +39,7 @@ import {
 import {
   deleteSelfDeclaration,
   getMySelfDeclarations,
-  getSelfDeclarationDocumentUrl,
+  readSelfDeclarationDocument,
   removeSelfDeclarationDocument,
   retrySelfDeclarationCleanup,
   saveSelfDeclaration,
@@ -628,7 +628,7 @@ function DocumentArea({
 }) {
   const upload = useServerFn(uploadSelfDeclarationDocument);
   const removeDocument = useServerFn(removeSelfDeclarationDocument);
-  const openDocument = useServerFn(getSelfDeclarationDocumentUrl);
+  const readDocument = useServerFn(readSelfDeclarationDocument);
   const setReview = useServerFn(setSelfDeclarationReviewRequest);
   const [file, setFile] = useState<File | null>(null);
   const [issueDate, setIssueDate] = useState("");
@@ -665,10 +665,12 @@ function DocumentArea({
       setNotice(done ? { tone: "ok", text: done } : null);
     } catch (error) {
       const code = selfDeclarationErrorCode(error instanceof Error ? error.message : "");
-      setNotice({
-        tone: "error",
-        text: errorCopy(code === "VSD_WRITE_FAILED" ? "VSD_UPLOAD_FAILED" : code),
-      });
+      // No answer, or an answer that could not confirm: the upload may have
+      // been saved. Keep the same upload id, so trying again resumes it
+      // rather than starting a second one. A definite refusal ends this id.
+      const unconfirmed = code === "VSD_WRITE_FAILED" || code === "VSD_UPLOAD_UNCONFIRMED";
+      if (!unconfirmed) setUploadId(crypto.randomUUID());
+      setNotice({ tone: "error", text: errorCopy(unconfirmed ? "VSD_UPLOAD_UNCONFIRMED" : code) });
       // Whatever happened, show what is really stored.
       refetch();
     } finally {
@@ -714,15 +716,32 @@ function DocumentArea({
     );
   }
 
-  async function open() {
+  // There is no link to the file. Each press asks the server, which asks the
+  // database whether this document may be read right now, and the bytes are
+  // handed to the browser as a download that lives only in this page.
+  async function download() {
     if (!document) return;
+    setBusy(true);
     setNotice(null);
     try {
-      const { url } = await openDocument({ data: { documentId: document.id } });
-      window.open(url, "_blank", "noopener,noreferrer");
+      const file = await readDocument({ data: { documentId: document.id } });
+      const binary = atob(file.contentBase64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+      const url = URL.createObjectURL(new Blob([bytes], { type: file.mimeType }));
+      const link = window.document.createElement("a");
+      link.href = url;
+      link.download = file.fileName;
+      link.rel = "noopener";
+      window.document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 10_000);
     } catch {
       setNotice({ tone: "error", text: errorCopy("VSD_DOCUMENT_NOT_FOUND") });
       refetch();
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -749,10 +768,10 @@ function DocumentArea({
               type="button"
               className={SECONDARY}
               disabled={busy}
-              onClick={() => void open()}
+              onClick={() => void download()}
               data-vsd-document-open
             >
-              {L(DOCUMENT.open, l)}
+              {L(DOCUMENT.download, l)}
             </button>
             <button
               type="button"
