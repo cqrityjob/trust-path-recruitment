@@ -4055,6 +4055,135 @@
           "object": "sp_passport_completion_guard"
         }
       ]
+    },
+    {
+      "file": "20270324090000_vsd_voluntary_self_declarations.sql",
+      "hostedState": "pending",
+      "note": "Voluntary profile self-declarations (vsd_*): a holder's own dated affirmation of a fixed, versioned statement on /my-career/profile -- no current enforcement-authority debts, no current payment remarks, or a criminal-history statement -- kept apart from the Security Passport. Five new tables (vsd_processing_authorizations, vsd_declarations, vsd_documents, vsd_document_reviewers, vsd_document_reviews), all RLS-enabled with NO client privilege; every read and write is one of twelve authenticated-only SECURITY DEFINER functions (search_path ''), each requiring a live session and ownership. Every write requires a current row in vsd_processing_authorizations naming the operator, purpose, legal basis, retention and permitted operations; THIS MIGRATION INSERTS NONE, so after installation every kind is closed and collects nothing until a later reviewed migration records an authorization. A criminal-history authorization cannot rest on consent and must name its Art. 10 authority and period (table CHECK). Optional documents live in a new private bucket, self-declaration-documents (10 MB; pdf/jpeg/png), behind policies that admit only the holder's prepared upload and the holder's own live document (or an appointed reviewer's read of a document the holder asked to have reviewed); restrictive fences close UPDATE, DELETE and anon. A document is bound to the exact declaration revision; changing, renewing, replacing, withdrawing or deleting moves it to erasure_pending and writes the existing storage_erasure_queue in the same transaction, and the row leaves only once the object is absent from storage.objects. Reviewers are appointed per authorization in vsd_document_reviewers; Passport verifiers and platform admins are not reviewers. Account erasure reaches the tables through the existing catalogue-driven cascade and a BEFORE DELETE manifest queues the files. vsd_purge_due() (service_role only) exists for a retention scheduler that is not wired. No existing table, function, policy or row changes; nothing is written to any sp_* object. No worker, cron, mail, AI, OCR or provider call. The application change that calls it ships separately after installation. Install after 20270323090000.",
+      "rollback": "supabase/rollback/20270324090000_vsd_voluntary_self_declarations_rollback.sql",
+      "verify": "Full-history replay plus supabase/tests/vsd_voluntary_self_declarations_test.sql (88 assertions, synthetic fixtures, every JWT naming a live auth.sessions row: closed by default for all three kinds including a direct Storage insert; the authorization table refuses a consent-based or incomplete criminal-history row and any disclosure operation; save/reload/change/renew with affirmation, duplicate and stale-revision refusals and cross-user denial; documents only where permitted, bound to the exact revision, duplicate refused, replacement and change send the old file to erasure with access removed in the same transaction; a Passport verifier and a platform admin are not reviewers and a review never survives a change or replacement; withdrawal and deletion queue the file, a failed cleanup stays visible and a deletion is reported only once the object is absent; retention expiry and a revoked authorization end a statement; account erasure queues the file; no other function, view or table names a vsd_ object; the real rollback and a clean re-apply). In scripts/db-test.sh it runs first, against the full current schema, with eight negative controls, and is then stood down before 20270323090000. After installation confirm: five vsd_ tables with RLS on and no anon/authenticated privilege, twelve functions executable by authenticated and none by anon, vsd_processing_authorizations EMPTY, the bucket private, and seven vsd_documents_* policies on storage.objects.",
+      "introduces": [
+        {
+          "kind": "table",
+          "object": "vsd_processing_authorizations"
+        },
+        {
+          "kind": "table",
+          "object": "vsd_declarations"
+        },
+        {
+          "kind": "table",
+          "object": "vsd_documents"
+        },
+        {
+          "kind": "table",
+          "object": "vsd_document_reviewers"
+        },
+        {
+          "kind": "table",
+          "object": "vsd_document_reviews"
+        },
+        {
+          "kind": "function",
+          "object": "vsd_authorization_immutable"
+        },
+        {
+          "kind": "function",
+          "object": "vsd_assert_caller"
+        },
+        {
+          "kind": "function",
+          "object": "vsd_current_authorization"
+        },
+        {
+          "kind": "function",
+          "object": "vsd_queue_document_erasure"
+        },
+        {
+          "kind": "function",
+          "object": "vsd_queue_declaration_documents"
+        },
+        {
+          "kind": "function",
+          "object": "vsd_reconcile"
+        },
+        {
+          "kind": "function",
+          "object": "vsd_document_erasure_manifest"
+        },
+        {
+          "kind": "function",
+          "object": "vsd_document_intent_immutable"
+        },
+        {
+          "kind": "function",
+          "object": "vsd_review_available"
+        },
+        {
+          "kind": "function",
+          "object": "vsd_is_reviewer_for"
+        },
+        {
+          "kind": "function",
+          "object": "vsd_document_payload"
+        },
+        {
+          "kind": "function",
+          "object": "vsd_declaration_payload"
+        },
+        {
+          "kind": "function",
+          "object": "vsd_my_declarations"
+        },
+        {
+          "kind": "function",
+          "object": "vsd_save_declaration"
+        },
+        {
+          "kind": "function",
+          "object": "vsd_withdraw_declaration"
+        },
+        {
+          "kind": "function",
+          "object": "vsd_delete_declaration"
+        },
+        {
+          "kind": "function",
+          "object": "vsd_begin_document"
+        },
+        {
+          "kind": "function",
+          "object": "vsd_attach_document"
+        },
+        {
+          "kind": "function",
+          "object": "vsd_discard_document"
+        },
+        {
+          "kind": "function",
+          "object": "vsd_set_document_review_request"
+        },
+        {
+          "kind": "function",
+          "object": "vsd_reviewer_queue"
+        },
+        {
+          "kind": "function",
+          "object": "vsd_reviewer_record_review"
+        },
+        {
+          "kind": "function",
+          "object": "vsd_purge_due"
+        },
+        {
+          "kind": "function",
+          "object": "vsd_document_storage_writable"
+        },
+        {
+          "kind": "function",
+          "object": "vsd_document_storage_readable"
+        }
+      ]
     }
   ],
   "policyVersion": 2, 
