@@ -483,7 +483,12 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // docs/release/2026-11-04-passport-setup-completion-hosted-verification.json.
 // The 402-row hosted ledger preserves all previous 401 entries; both
 // function bodies, grants and enabled triggers match the merged source.
-const expectedPending: string[] = [];
+//
+// 2026-11-11: 20270324090000 (voluntary profile self-declarations, vsd_*) is
+// a schema-first release awaiting the owner's merge and the official
+// integration. It is additive, records no processing authorization and is
+// called by no merged application code.
+const expectedPending: string[] = ["20270324090000_vsd_voluntary_self_declarations.sql"];
 
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",

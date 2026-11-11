@@ -70,6 +70,14 @@ mission and outside this document.**
 
 _Status: Implemented (absence + two narrow-result credentials), Tested._
 
+> **Not an exception to the above (2026-11-11).** The voluntary profile
+> self-declarations (`vsd_*`, `docs/legal/voluntary-self-declarations-processing.md`)
+> are a separate module, outside the Security Passport. No `sp_*` table or
+> Passport payload holds or reads them, and the Passport's refusal stands
+> unchanged. That module collects nothing of any kind until its own
+> processing authorization is recorded, and a criminal-history authorization
+> there requires exactly the separately approved basis this section names.
+
 ### The narrow-result mechanism
 
 `sp_credential_types.narrow_result_only = true` makes the claim trigger refuse:

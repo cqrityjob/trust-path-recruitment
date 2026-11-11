@@ -297,10 +297,100 @@ td_fn() { sed -n "/^$2/,/$3/p" "$1" | sed '1s/^CREATE FUNCTION/CREATE OR REPLACE
 td_plant() { psql_q -d "$TEST_DB" -c "$(td_fn "$1" "$2" "$3" | sed "$4")" >/dev/null; }
 td_restore() { psql_q -d "$TEST_DB" -c "$(td_fn "$1" "$2" "$3")" >/dev/null; }
 
+# Slot 20270324090000 (2026-11-11): voluntary profile self-declarations
+# (vsd_*). Its own tables, functions and private bucket; it replaces nothing.
+# Newest, so first, against the full current schema; stood down before
+# 20270323090000. Synthetic fixtures only; the suite rolls its own back.
+VSD_M=supabase/migrations/20270324090000_vsd_voluntary_self_declarations.sql
+VSD_R=supabase/rollback/20270324090000_vsd_voluntary_self_declarations_rollback.sql
+VSD_T=vsd_voluntary_self_declarations_test
+echo "==> Running voluntary self-declarations (20270324090000)"
+td_suite "$VSD_T" "Voluntary self-declarations" 111 \
+  "V1.2 without an authorization a financial statement is refused" \
+  "V1.3 without an authorization a criminal-history statement is refused" \
+  "V1.5 a direct Storage upload into the bucket is refused" \
+  "V2.1 a criminal-history authorization cannot rest on consent" \
+  "V3.1 nothing is stored without the holder's own affirmation" \
+  "V4.9a uploaded bytes cannot be attached until the server has verified them" \
+  "V4.11a no client reads the bucket directly -- not even the holder -- so Storage can neither serve nor sign the object" \
+  "V4.11b abandoning an upload never touches a document that was in fact attached" \
+  "V4.16 the replaced file is queued for erasure and can no longer be opened, in the same transaction" \
+  "V5.4 a Passport verifier and a platform admin are not reviewers here" \
+  "V5.11 a changed or renewed statement inherits neither the document nor its review" \
+  "V6.6 a deletion is not reported complete while files remain" \
+  "V7.3 past retention the holder is refused the document at once, before any reconciliation" \
+  "V7.4 past retention the reviewer can neither open, list nor review it" \
+  "V7.9 a reviewer whose appointment ended is refused at once; the holder is not" \
+  "V7.12 under a revoked authorization the holder is refused the document at once, before any reconciliation" \
+  "V7.13 under a revoked authorization the reviewer can neither open, list nor review it" \
+  "V9.1 no other function in the database names a vsd_ object" \
+  "V9.12 the migration re-applies cleanly after a rollback, closed again"
+VSD_SAVE='CREATE FUNCTION public.vsd_save_declaration('
+td_plant "$VSD_M" "$VSD_SAVE" '^END \$\$;' "/RAISE EXCEPTION 'VSD_PROCESSING_NOT_AUTHORIZED'/d"
+td_nc "$VSD_T" "VSD NC1 a statement is taken without an authorization" "V1.2"
+td_restore "$VSD_M" "$VSD_SAVE" '^END \$\$;'
+td_plant "$VSD_M" "$VSD_SAVE" '^END \$\$;' "/RAISE EXCEPTION 'VSD_AFFIRMATION_REQUIRED'/d"
+td_nc "$VSD_T" "VSD NC2 a statement is stored without the holder's affirmation" "V3.1"
+td_restore "$VSD_M" "$VSD_SAVE" '^END \$\$;'
+psql_q -d "$TEST_DB" -c "ALTER TABLE public.vsd_processing_authorizations DROP CONSTRAINT vsd_auth_criminal_needs_reviewed_basis;" >/dev/null
+td_nc "$VSD_T" "VSD NC3 consent authorizes criminal-history processing" "V2.1"
+psql_q -d "$TEST_DB" -c "ALTER TABLE public.vsd_processing_authorizations ADD CONSTRAINT vsd_auth_criminal_needs_reviewed_basis CHECK (declaration_kind <> 'criminal_history' OR (legal_basis <> 'consent' AND offence_data_authority IS NOT NULL AND statement_period IS NOT NULL));" >/dev/null
+VSD_W='CREATE FUNCTION public.vsd_document_storage_writable('
+td_plant "$VSD_M" "$VSD_W" '^END \$\$;' "s/IF NOT FOUND OR _doc.status <> 'prepared' THEN RETURN false; END IF;//"
+td_nc "$VSD_T" "VSD NC4 a path owed to erasure takes an upload" "V4.17"
+td_restore "$VSD_M" "$VSD_W" '^END \$\$;'
+VSD_AR='CREATE FUNCTION public.vsd_authorize_document_read('
+td_plant "$VSD_M" "$VSD_AR" '^END \$\$;' "s/ELSIF _row.review_requested_at IS NOT NULL AND public.vsd_is_reviewer_for/ELSIF public.vsd_is_reviewer_for/"
+td_nc "$VSD_T" "VSD NC5 a reviewer opens a document nobody asked to have reviewed" "V5.2"
+td_restore "$VSD_M" "$VSD_AR" '^END \$\$;'
+VSD_REV='CREATE FUNCTION public.vsd_is_reviewer_for('
+td_plant "$VSD_M" "$VSD_REV" '^\$\$;' "s/SELECT auth.uid() IS NOT NULL AND EXISTS (/SELECT public.sp_is_verifier(auth.uid()) OR EXISTS (/"
+td_nc "$VSD_T" "VSD NC6 a Passport verifier or admin inherits review access" "V5.4"
+td_restore "$VSD_M" "$VSD_REV" '^\$\$;'
+VSD_Q='CREATE FUNCTION public.vsd_queue_document_erasure('
+td_plant "$VSD_M" "$VSD_Q" '^END \$\$;' "/DELETE FROM public.vsd_document_reviews WHERE document_id = _doc.id;/d"
+td_nc "$VSD_T" "VSD NC7 a replaced document keeps its review" "V5.9"
+td_restore "$VSD_M" "$VSD_Q" '^END \$\$;'
+VSD_REC='CREATE FUNCTION public.vsd_reconcile('
+td_plant "$VSD_M" "$VSD_REC" '^END \$\$;' "s/AND name = _doc.storage_path) THEN/AND name = _doc.storage_path AND false) THEN/"
+# V4.16 is the first assertion that needs the owed row to still be there.
+td_nc "$VSD_T" "VSD NC8 a file is reported erased while it still exists" "V4.16"
+td_restore "$VSD_M" "$VSD_REC" '^END \$\$;'
+# The lifecycle rule loses its retention deadline: access would then end only
+# when something happened to reconcile the row.
+VSD_CUR='CREATE FUNCTION public.vsd_declaration_current('
+td_plant "$VSD_M" "$VSD_CUR" '^\$\$;' "/AND _d.retain_until > now()/d"
+td_nc "$VSD_T" "VSD NC9 access outlives the retention deadline until a reconciliation" "V7.3"
+td_restore "$VSD_M" "$VSD_CUR" '^\$\$;'
+# ...and its authorization check: V7.3 still holds, V7.12 must not.
+td_plant "$VSD_M" "$VSD_CUR" '^\$\$;' "s/AND a.revoked_at IS NULL AND a.effective_from <= now())/)/"
+td_nc "$VSD_T" "VSD NC10 access outlives a revoked authorization until a reconciliation" "V7.12"
+td_restore "$VSD_M" "$VSD_CUR" '^\$\$;'
+VSD_AT='CREATE FUNCTION public.vsd_attach_document('
+td_plant "$VSD_M" "$VSD_AT" '^END \$\$;' "/RAISE EXCEPTION 'VSD_CONTENT_UNVERIFIED'/d"
+td_nc "$VSD_T" "VSD NC11 bytes are attached under a hash nobody verified" "V4.9a"
+td_restore "$VSD_M" "$VSD_AT" '^END \$\$;'
+VSD_AB='CREATE FUNCTION public.vsd_abandon_upload('
+td_plant "$VSD_M" "$VSD_AB" '^END \$\$;' "s/IF _row.status = 'prepared' THEN/IF true THEN/"
+td_nc "$VSD_T" "VSD NC12 a retry's compensation erases an attached document" "V4.11b"
+td_restore "$VSD_M" "$VSD_AB" '^END \$\$;'
+# A client read policy returns to the bucket: Storage could then serve and
+# sign the object with no lifecycle check at all.
+psql_q -d "$TEST_DB" -c "DROP POLICY vsd_documents_select_fence ON storage.objects; CREATE POLICY vsd_documents_nc_select ON storage.objects FOR SELECT TO authenticated USING (bucket_id = 'self-declaration-documents' AND (storage.foldername(name))[1] = auth.uid()::text);" >/dev/null
+td_nc "$VSD_T" "VSD NC13 the holder can read the bucket directly" "V4.11a"
+psql_q -d "$TEST_DB" -c "DROP POLICY vsd_documents_nc_select ON storage.objects; CREATE POLICY vsd_documents_select_fence ON storage.objects AS RESTRICTIVE FOR SELECT TO authenticated USING (bucket_id <> 'self-declaration-documents');" >/dev/null
+td_suite "$VSD_T" "Voluntary self-declarations (after controls)" 111
+psql_q -d "$TEST_DB" -f "$VSD_R" >/dev/null
+psql_q -d "$TEST_DB" -f "$VSD_M" >/dev/null
+psql_q -d "$TEST_DB" -f "$VSD_R" >/dev/null
+[ "$(psql_q -d "$TEST_DB" -Atc "SELECT (NOT EXISTS (SELECT 1 FROM pg_class c WHERE c.relnamespace = 'public'::regnamespace AND c.relname LIKE 'vsd\_%') AND NOT EXISTS (SELECT 1 FROM pg_proc p WHERE p.pronamespace = 'public'::regnamespace AND p.proname LIKE 'vsd\_%'))::text")" = "true" ] \
+  || { echo "FAIL: the 20270324090000 rollback left a vsd_ object." >&2; exit 1; }
+echo "    ok  20270324090000 stood down (and re-applied once): no vsd_ object left"
+
 # Slot 20270323090000 (2026-11-03, BUG-04): the /passport/start completion,
 # and the guard that keeps completion out of a client's own profile writes.
-# Newest, so first, against the full current schema; stood down before
-# 20270322090000.
+# Runs once 20270324090000 is stood down, against the schema it shipped on;
+# stood down before 20270322090000.
 CS_M=supabase/migrations/20270323090000_sp_passport_complete_setup.sql
 CS_R=supabase/rollback/20270323090000_sp_passport_complete_setup_rollback.sql
 CS_FN='CREATE FUNCTION public.sp_passport_complete_setup('
