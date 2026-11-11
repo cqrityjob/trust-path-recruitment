@@ -318,8 +318,8 @@ ck(
 );
 ck(
   "5.4 the drain takes its user from the verified session, never from the request",
-  fns.includes("await drainOwnSelfDeclarationErasures(ctx.userId);") &&
-    !/drainOwnSelfDeclarationErasures\(data\./.test(fns),
+  fns.includes("drainOwnSelfDeclarationErasures(ctx.userId);") &&
+    (fns.match(/drainOwnSelfDeclarationErasures\(/g) ?? []).length === 1,
 );
 const viewTypes = read(MODEL)
   .split("// ── What the browser receives")[1]!
@@ -474,6 +474,13 @@ ck(
     ) &&
     (section.match(/PANEL\.removed/g) ?? []).length === 1 &&
     (section.match(/CLEANUP\.done/g) ?? []).length === 1,
+);
+ck(
+  "6.3a erasing is bounded in time, so a silent Storage cannot stall an access decision",
+  /const DRAIN_BUDGET_MS = \d[\d_]*;/.test(fns) &&
+    fns.includes("await Promise.race([attempt, budget]);") &&
+    fns.includes("await drainOwnSelfDeclarationErasures(ctx.userId)") === false &&
+    fns.includes("const attempt = drainOwnSelfDeclarationErasures(ctx.userId);"),
 );
 ck(
   "6.4 an owed cleanup is rendered with a retry",

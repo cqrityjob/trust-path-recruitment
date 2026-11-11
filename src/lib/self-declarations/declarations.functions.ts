@@ -108,9 +108,28 @@ async function readPayload(ctx: Ctx): Promise<SelfDeclarationsPayload> {
   return parsed.data;
 }
 
+/**
+ * Erasing bytes must never hold up the answer to an access decision that has
+ * already been made. If Storage does not answer within this budget the
+ * request goes on: the file stays queued, is shown as owed, and can be
+ * retried. The abandoned attempt records its own outcome on the queue row.
+ */
+const DRAIN_BUDGET_MS = 8_000;
+
 async function drain(ctx: Ctx): Promise<void> {
   const { drainOwnSelfDeclarationErasures } = await import("./erasure.server");
-  await drainOwnSelfDeclarationErasures(ctx.userId);
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const budget = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error("VSD_STORAGE_UNAVAILABLE")), DRAIN_BUDGET_MS);
+  });
+  const attempt = drainOwnSelfDeclarationErasures(ctx.userId);
+  // If the budget wins, the attempt is left to finish or fail on its own.
+  attempt.catch(() => undefined);
+  try {
+    await Promise.race([attempt, budget]);
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 export type SelfDeclarationsResult = {
