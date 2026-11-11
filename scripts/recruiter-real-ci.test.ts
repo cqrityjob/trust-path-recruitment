@@ -198,9 +198,17 @@ describe("native mobile preset validation", () => {
 describe("official real Supabase CI target", () => {
   test("the revised application pin is exact and old native evidence cannot stand in for it", () => {
     expect(APP_SHA).toBe("53659419a1c243c27a59540eb849569140b71365");
-    // The schema witness moved to the Passport setup completion slot (402 files);
+    // The schema witness moved to the voluntary self-declarations slot (403 files);
     // the application under this regression stays the reviewed 53659419.
-    expect(SCHEMA_SHA).toBe("4ab6a6f0931dd695ba2f217bffb44cd0d69c7a5d");
+    expect(SCHEMA_SHA).toBe("89b46e3211ac2f89de2ea74788595a1914990261");
+    // Nor the Passport setup completion slot before the self-declarations (4ab6a6f0).
+    expect(() =>
+      validateTarget(
+        { ...env, RI_REAL_RELEASE_SCHEMA_SHA: "4ab6a6f0931dd695ba2f217bffb44cd0d69c7a5d" },
+        env.RI_REAL_SCHEMA_SHA,
+        APP_SHA,
+      ),
+    ).toThrow("REAL_CI_UNREVIEWED_RELEASE_SCHEMA");
     expect(() =>
       validateTarget(
         { ...env, RI_REAL_RELEASE_SCHEMA_SHA: "53659419a1c243c27a59540eb849569140b71365" },
@@ -308,7 +316,7 @@ describe("official real Supabase CI target", () => {
     ).toThrow("UNREVIEWED_APP_HEAD");
   });
   test("release schema binding is separate from test code and requires a full SHA", () => {
-    const release = "4ab6a6f0931dd695ba2f217bffb44cd0d69c7a5d";
+    const release = "89b46e3211ac2f89de2ea74788595a1914990261";
     const context = validateTarget(
       { ...env, RI_REAL_RELEASE_SCHEMA_SHA: release },
       env.RI_REAL_SCHEMA_SHA,
@@ -463,7 +471,7 @@ describe("real CI execution and publication cannot silently narrow", () => {
     expect(job["runs-on"]).toBe("ubuntu-latest");
     expect(job.if).toBeUndefined();
     expect(job["continue-on-error"]).toBeUndefined();
-    expect(job.env.RI_REAL_RELEASE_SCHEMA_SHA).toBe("4ab6a6f0931dd695ba2f217bffb44cd0d69c7a5d");
+    expect(job.env.RI_REAL_RELEASE_SCHEMA_SHA).toBe("89b46e3211ac2f89de2ea74788595a1914990261");
     expect(job.steps[0].with["fetch-depth"]).toBe(0);
     expect(job.steps.every((step: { [key: string]: unknown }) => !step["continue-on-error"])).toBe(
       true,
@@ -559,8 +567,9 @@ describe("real CI execution and publication cannot silently narrow", () => {
       "20270321090000_passport_share_session.sql",
       "20270322090000_passport_share_preview.sql",
       "20270323090000_passport_setup_completion.sql",
+      "20270324090000_self_declarations.sql",
     );
-    expect(requireCompleteHistory(files)).toHaveLength(402);
+    expect(requireCompleteHistory(files)).toHaveLength(403);
     expect(() => requireCompleteHistory(files.slice(0, -2))).toThrow(
       "COMPLETE_CANONICAL_HISTORY_REQUIRED",
     );
@@ -632,6 +641,13 @@ describe("real CI execution and publication cannot silently narrow", () => {
       expect(() => requireCompleteHistory(omitted)).toThrow("COMPLETE_CANONICAL_HISTORY_REQUIRED");
       expect(() => requireCompleteHistory([...omitted, "20270324100000_other.sql"])).toThrow(
         "PASSPORT_SETUP_COMPLETION_FORWARD_REQUIRED",
+      );
+    }
+    {
+      const omitted = files.filter((name) => !name.startsWith("20270324090000_"));
+      expect(() => requireCompleteHistory(omitted)).toThrow("COMPLETE_CANONICAL_HISTORY_REQUIRED");
+      expect(() => requireCompleteHistory([...omitted, "20270325100000_other.sql"])).toThrow(
+        "SELF_DECLARATIONS_FORWARD_REQUIRED",
       );
     }
     expect(() => requireCompleteHistory(files.slice(0, -1))).toThrow();

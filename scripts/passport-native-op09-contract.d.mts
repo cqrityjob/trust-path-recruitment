@@ -1,7 +1,7 @@
 import type { BinaryLike } from "node:crypto";
 
 /** Test-only native runner exports. Parsed private JSON remains unknown. */
-export const SCHEMA_SHA: "4ab6a6f0931dd695ba2f217bffb44cd0d69c7a5d";
+export const SCHEMA_SHA: "89b46e3211ac2f89de2ea74788595a1914990261";
 export const APP_SHA: "53659419a1c243c27a59540eb849569140b71365";
 export const PROJECT: "cqj-ri-native-op09-20261008";
 export const API: "http://127.0.0.1:55820";
