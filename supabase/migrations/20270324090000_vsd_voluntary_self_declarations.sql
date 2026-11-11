@@ -985,7 +985,13 @@ GRANT EXECUTE ON FUNCTION public.vsd_document_storage_readable(text) TO authenti
 
 -- A rollback leaves the bucket closed behind this policy; re-applying opens
 -- it again through the policies below.
-DROP POLICY IF EXISTS vsd_documents_closed ON storage.objects;
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'storage' AND tablename = 'objects'
+                AND policyname = 'vsd_documents_closed') THEN
+    DROP POLICY vsd_documents_closed ON storage.objects;
+  END IF;
+END $$;
 
 CREATE POLICY vsd_documents_insert ON storage.objects FOR INSERT TO authenticated
   WITH CHECK (bucket_id = 'self-declaration-documents' AND public.vsd_document_storage_writable(name));

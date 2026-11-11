@@ -23,7 +23,13 @@ DROP POLICY IF EXISTS vsd_documents_select ON storage.objects;
 DROP POLICY IF EXISTS vsd_documents_insert ON storage.objects;
 
 -- With the fences gone the bucket must not fall open to a broader policy.
-DROP POLICY IF EXISTS vsd_documents_closed ON storage.objects;
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'storage' AND tablename = 'objects'
+                AND policyname = 'vsd_documents_closed') THEN
+    DROP POLICY vsd_documents_closed ON storage.objects;
+  END IF;
+END $$;
 CREATE POLICY vsd_documents_closed ON storage.objects AS RESTRICTIVE FOR ALL TO public
   USING (bucket_id <> 'self-declaration-documents')
   WITH CHECK (bucket_id <> 'self-declaration-documents');
