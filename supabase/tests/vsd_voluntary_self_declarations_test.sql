@@ -11,7 +11,10 @@
 --   GROUP V3  save, reload, change, renew: the holder's own affirmation is
 --             required every time; one statement per kind; a stale screen
 --             cannot renew; a signed-out or other user reaches nothing
---   GROUP V4  documents: only where the authorization permits storing one,
+--   GROUP V4  documents: no client ever reads the bucket directly; bytes are
+--             attached only after the server's content stamp; an unfinished
+--             upload can be abandoned but an attached one cannot be;
+--             only where the authorization permits storing one,
 --             only its permitted type, only the prepared path, bound to the
 --             exact revision; a duplicate is refused; replacing or changing
 --             sends the old file to erasure
@@ -23,7 +26,9 @@
 --             transaction, the file is queued, a failed cleanup stays
 --             visible, and a row is reported deleted only once its object is
 --             really absent
---   GROUP V7  retention and revocation end a statement without the holder
+--   GROUP V7  retention and revocation end ACCESS at once -- before any
+--             reconciliation, profile read or purge has run -- for the
+--             holder, the reviewer, another user and a signed-out session
 --   GROUP V8  account erasure queues the files and leaves no row
 --   GROUP V9  isolation and privileges: no other function, view or table in
 --             the database names a vsd_ object; no score, rank or free-text
@@ -106,6 +111,26 @@ LANGUAGE sql AS $$
     'INSERT INTO storage.objects (bucket_id, name) VALUES (''self-declaration-documents'', %L)', _path))
 $$;
 
+-- The server's content verification, as the service role would record it
+-- after reading the object back: this row's own declared values.
+CREATE OR REPLACE FUNCTION pg_temp.stamp(_doc uuid) RETURNS text
+LANGUAGE plpgsql AS $$
+BEGIN
+  PERFORM public.vsd_stamp_document_content(x.id, x.holder_user_id, x.size_bytes, x.sha256, x.mime_type)
+     FROM public.vsd_documents x WHERE x.id = _doc;
+  RETURN 'ok';
+EXCEPTION WHEN OTHERS THEN RETURN 'err:' || SQLERRM;
+END $$;
+
+-- Whether the application server would be allowed to deliver the bytes to
+-- this caller right now. This is the ONLY way to a document.
+CREATE OR REPLACE FUNCTION pg_temp.can_open(_uid uuid, _doc uuid, _live boolean DEFAULT true) RETURNS boolean
+LANGUAGE sql AS $$
+  SELECT pg_temp.run(_uid, format('SELECT public.vsd_authorize_document_read(%L)::text', _doc), _live)
+         NOT LIKE 'err:%'
+$$;
+
+-- A direct Storage read (what a download, a listing or a signed link needs).
 CREATE OR REPLACE FUNCTION pg_temp.can_read(_uid uuid, _path text) RETURNS boolean
 LANGUAGE sql AS $$
   SELECT pg_temp.run(_uid, format(
@@ -369,17 +394,64 @@ SELECT pg_temp.ok(
   pg_temp.put(:A, '5e000000-0000-4000-8000-0000000000a1/5e000000-0000-4000-8000-00000000d001.pdf') = 'rows:1',
   'V4.9 the holder uploads the prepared document');
 SELECT pg_temp.ok(
+  pg_temp.run(:A, 'SELECT public.vsd_attach_document(''5e000000-0000-4000-8000-00000000d001'')::text') = 'err:VSD_CONTENT_UNVERIFIED',
+  'V4.9a uploaded bytes cannot be attached until the server has verified them');
+SELECT pg_temp.ok(
+  pg_temp.run(:A, 'SELECT public.vsd_stamp_document_content(''5e000000-0000-4000-8000-00000000d001'', ''5e000000-0000-4000-8000-0000000000a1'', 1024, repeat(''a'', 64), ''application/pdf'')')
+    LIKE 'err:permission denied%'
+  AND NOT has_function_privilege('authenticated', 'public.vsd_stamp_document_content(uuid,uuid,integer,text,text)', 'EXECUTE')
+  AND has_function_privilege('service_role', 'public.vsd_stamp_document_content(uuid,uuid,integer,text,text)', 'EXECUTE'),
+  'V4.9b no client can vouch for its own bytes: the content stamp is for the service role only');
+DO $$
+DECLARE _msg text;
+BEGIN
+  BEGIN
+    PERFORM public.vsd_stamp_document_content('5e000000-0000-4000-8000-00000000d001', '5e000000-0000-4000-8000-0000000000a1', 1024, repeat('9', 64), 'application/pdf');
+    _msg := 'stamped';
+  EXCEPTION WHEN OTHERS THEN _msg := SQLERRM; END;
+  PERFORM pg_temp.ok(_msg = 'VSD_CONTENT_MISMATCH', 'V4.9c bytes whose real hash differs from the declared one are not stamped');
+  BEGIN
+    PERFORM public.vsd_stamp_document_content('5e000000-0000-4000-8000-00000000d001', '5e000000-0000-4000-8000-0000000000a2', 1024, repeat('a', 64), 'application/pdf');
+    _msg := 'stamped';
+  EXCEPTION WHEN OTHERS THEN _msg := SQLERRM; END;
+  PERFORM pg_temp.ok(_msg = 'VSD_DOCUMENT_NOT_FOUND', 'V4.9d a stamp for another holder is refused');
+END $$;
+SELECT pg_temp.ok(
+  pg_temp.run(:A, 'SELECT public.vsd_attach_document(''5e000000-0000-4000-8000-00000000d001'')::text') = 'err:VSD_CONTENT_UNVERIFIED'
+  AND pg_temp.stamp('5e000000-0000-4000-8000-00000000d001') = 'ok',
+  'V4.9e the server stamps the content it verified');
+SELECT pg_temp.ok(
   (pg_temp.run(:A, 'SELECT public.vsd_attach_document(''5e000000-0000-4000-8000-00000000d001'')::text')::jsonb)
     ->> 'status' = 'attached'
   AND pg_temp.decl(:A, 'enforcement_debt_none') ->> 'provenance' = 'document_provided'
   AND pg_temp.decl(:A, 'enforcement_debt_none') -> 'document' ->> 'declarationRevision' = '1',
   'V4.10 an attached document makes the statement "document provided", at that revision');
 SELECT pg_temp.ok(
-  pg_temp.can_read(:A, '5e000000-0000-4000-8000-0000000000a1/5e000000-0000-4000-8000-00000000d001.pdf')
+  pg_temp.can_open(:A, '5e000000-0000-4000-8000-00000000d001')
+  AND NOT pg_temp.can_open(:B, '5e000000-0000-4000-8000-00000000d001')
+  AND NOT pg_temp.can_open(:ADMIN, '5e000000-0000-4000-8000-00000000d001')
+  AND NOT pg_temp.can_open(:VERIFIER, '5e000000-0000-4000-8000-00000000d001')
+  AND NOT pg_temp.can_open(:A, '5e000000-0000-4000-8000-00000000d001', false),
+  'V4.11 only the holder, signed in, is authorized to open the file: not another user, an administrator or a Passport verifier');
+SELECT pg_temp.ok(
+  NOT pg_temp.can_read(:A, '5e000000-0000-4000-8000-0000000000a1/5e000000-0000-4000-8000-00000000d001.pdf')
   AND NOT pg_temp.can_read(:B, '5e000000-0000-4000-8000-0000000000a1/5e000000-0000-4000-8000-00000000d001.pdf')
   AND NOT pg_temp.can_read(:ADMIN, '5e000000-0000-4000-8000-0000000000a1/5e000000-0000-4000-8000-00000000d001.pdf')
-  AND NOT pg_temp.can_read(:VERIFIER, '5e000000-0000-4000-8000-0000000000a1/5e000000-0000-4000-8000-00000000d001.pdf'),
-  'V4.11 only the holder reads the file: not another user, an administrator or a Passport verifier');
+  AND pg_temp.run(:A, 'SELECT count(*)::text FROM storage.objects WHERE bucket_id = ''self-declaration-documents''') = '0'
+  AND (SELECT count(*) = 1 FROM storage.objects WHERE bucket_id = 'self-declaration-documents'),
+  'V4.11a no client reads the bucket directly -- not even the holder -- so Storage can neither serve nor sign the object');
+SELECT pg_temp.ok(
+  (pg_temp.run(:A, 'SELECT public.vsd_abandon_upload(''5e000000-0000-4000-8000-00000000d001'')::text')::jsonb) = '{"status": "attached"}'::jsonb
+  AND pg_temp.q($q$SELECT status = 'attached' FROM public.vsd_documents WHERE id = '5e000000-0000-4000-8000-00000000d001'$q$)
+  AND pg_temp.q($q$SELECT count(*) = 0 FROM public.storage_erasure_queue WHERE bucket_id = 'self-declaration-documents'$q$),
+  'V4.11b abandoning an upload never touches a document that was in fact attached');
+SELECT pg_temp.ok(
+  (pg_temp.run(:A, 'SELECT public.vsd_upload_state(''5e000000-0000-4000-8000-00000000d001'')::text')::jsonb)
+    @> '{"status": "attached", "bytesMatched": true, "declarationRevision": 1}'::jsonb
+  AND (pg_temp.run(:B, 'SELECT public.vsd_upload_state(''5e000000-0000-4000-8000-00000000d001'')::text')::jsonb) = '{"status": "absent"}'::jsonb
+  AND (pg_temp.begin_doc(:A, '5e000000-0000-4000-8000-00000000d001', (SELECT v FROM ids WHERE k = 'enf_a'), 1,
+                         'enforcement_authority_statement', repeat('a', 64))::jsonb) ->> 'status' = 'attached',
+  'V4.11c a retry of a completed upload finds it attached, and another user finds nothing');
 SELECT pg_temp.ok(
   pg_temp.run(:A, 'UPDATE storage.objects SET name = name || ''x'' WHERE bucket_id = ''self-declaration-documents''') = 'rows:0'
   AND pg_temp.run(:A, 'DELETE FROM storage.objects WHERE bucket_id = ''self-declaration-documents''') = 'rows:0'
@@ -399,6 +471,7 @@ SELECT pg_temp.ok(
   (pg_temp.begin_doc(:A, '5e000000-0000-4000-8000-00000000d002', (SELECT v FROM ids WHERE k = 'enf_a'), 1,
                      'enforcement_authority_statement', repeat('b', 64))::jsonb) ->> 'status' = 'prepared'
   AND pg_temp.put(:A, '5e000000-0000-4000-8000-0000000000a1/5e000000-0000-4000-8000-00000000d002.pdf') = 'rows:1'
+  AND pg_temp.stamp('5e000000-0000-4000-8000-00000000d002') = 'ok'
   AND (pg_temp.run(:A, 'SELECT public.vsd_attach_document(''5e000000-0000-4000-8000-00000000d002'')::text')::jsonb)
         ->> 'status' = 'attached',
   'V4.15 a replacement document is attached');
@@ -409,8 +482,8 @@ SELECT pg_temp.ok(
           AND object_path = '5e000000-0000-4000-8000-0000000000a1/5e000000-0000-4000-8000-00000000d001.pdf'
           AND reason = 'self_declaration_document_replaced'
           AND subject_user_id = :A)
-  AND NOT pg_temp.can_read(:A, '5e000000-0000-4000-8000-0000000000a1/5e000000-0000-4000-8000-00000000d001.pdf'),
-  'V4.16 the replaced file is queued for erasure and no longer readable, in the same transaction');
+  AND NOT pg_temp.can_open(:A, '5e000000-0000-4000-8000-00000000d001'),
+  'V4.16 the replaced file is queued for erasure and can no longer be opened, in the same transaction');
 SELECT pg_temp.ok(
   pg_temp.put(:A, '5e000000-0000-4000-8000-0000000000a1/5e000000-0000-4000-8000-00000000d001.pdf')
     LIKE 'err:%row-level security%',
@@ -430,7 +503,7 @@ SELECT :REVIEWER, id, 'SYNTHETIC Appointer', current_date
 
 SELECT pg_temp.ok(
   pg_temp.run(:REVIEWER, 'SELECT public.vsd_reviewer_queue()::text') = '[]'
-  AND NOT pg_temp.can_read(:REVIEWER, '5e000000-0000-4000-8000-0000000000a1/5e000000-0000-4000-8000-00000000d002.pdf')
+  AND NOT pg_temp.can_open(:REVIEWER, '5e000000-0000-4000-8000-00000000d002')
   AND pg_temp.run(:REVIEWER, 'SELECT public.vsd_reviewer_record_review(''5e000000-0000-4000-8000-00000000d002'', 1, ''matches_declared_details'')::text')
     = 'err:VSD_DOCUMENT_NOT_FOUND',
   'V5.2 an appointed reviewer sees and decides nothing the holder has not asked to have reviewed');
@@ -441,8 +514,8 @@ SELECT pg_temp.ok(
 SELECT pg_temp.ok(
   pg_temp.run(:VERIFIER, 'SELECT public.vsd_reviewer_queue()::text') = '[]'
   AND pg_temp.run(:ADMIN, 'SELECT public.vsd_reviewer_queue()::text') = '[]'
-  AND NOT pg_temp.can_read(:VERIFIER, '5e000000-0000-4000-8000-0000000000a1/5e000000-0000-4000-8000-00000000d002.pdf')
-  AND NOT pg_temp.can_read(:ADMIN, '5e000000-0000-4000-8000-0000000000a1/5e000000-0000-4000-8000-00000000d002.pdf')
+  AND NOT pg_temp.can_open(:VERIFIER, '5e000000-0000-4000-8000-00000000d002')
+  AND NOT pg_temp.can_open(:ADMIN, '5e000000-0000-4000-8000-00000000d002')
   AND pg_temp.run(:VERIFIER, 'SELECT public.vsd_reviewer_record_review(''5e000000-0000-4000-8000-00000000d002'', 1, ''matches_declared_details'')::text')
     = 'err:VSD_DOCUMENT_NOT_FOUND'
   AND pg_temp.run(:ADMIN, 'SELECT public.vsd_reviewer_record_review(''5e000000-0000-4000-8000-00000000d002'', 1, ''matches_declared_details'')::text')
@@ -450,8 +523,10 @@ SELECT pg_temp.ok(
   'V5.4 a Passport verifier and a platform admin are not reviewers here');
 SELECT pg_temp.ok(
   jsonb_array_length(pg_temp.run(:REVIEWER, 'SELECT public.vsd_reviewer_queue()::text')::jsonb) = 1
-  AND pg_temp.can_read(:REVIEWER, '5e000000-0000-4000-8000-0000000000a1/5e000000-0000-4000-8000-00000000d002.pdf')
-  AND NOT pg_temp.can_read(:REVIEWER, '5e000000-0000-4000-8000-0000000000a1/5e000000-0000-4000-8000-00000000d001.pdf'),
+  AND pg_temp.can_open(:REVIEWER, '5e000000-0000-4000-8000-00000000d002')
+  AND NOT pg_temp.can_open(:REVIEWER, '5e000000-0000-4000-8000-00000000d001')
+  AND NOT pg_temp.can_open(:REVIEWER, '5e000000-0000-4000-8000-00000000d002', false)
+  AND NOT pg_temp.can_read(:REVIEWER, '5e000000-0000-4000-8000-0000000000a1/5e000000-0000-4000-8000-00000000d002.pdf'),
   'V5.5 the appointed reviewer sees the requested document, and only that one');
 SELECT pg_temp.ok(
   pg_temp.run(:REVIEWER, 'SELECT public.vsd_reviewer_record_review(''5e000000-0000-4000-8000-00000000d002'', 4, ''matches_declared_details'')::text')
@@ -474,6 +549,7 @@ SELECT pg_temp.ok(
   (pg_temp.begin_doc(:A, '5e000000-0000-4000-8000-00000000d003', (SELECT v FROM ids WHERE k = 'enf_a'), 1,
                      'enforcement_authority_statement', repeat('c', 64))::jsonb) ->> 'status' = 'prepared'
   AND pg_temp.put(:A, '5e000000-0000-4000-8000-0000000000a1/5e000000-0000-4000-8000-00000000d003.pdf') = 'rows:1'
+  AND pg_temp.stamp('5e000000-0000-4000-8000-00000000d003') = 'ok'
   AND (pg_temp.run(:A, 'SELECT public.vsd_attach_document(''5e000000-0000-4000-8000-00000000d003'')::text')::jsonb)
         ->> 'status' = 'attached'
   AND pg_temp.decl(:A, 'enforcement_debt_none') ->> 'provenance' = 'document_provided'
@@ -490,7 +566,7 @@ SELECT pg_temp.ok(
     @> '{"revision": 2, "provenance": "self_declared", "document": null}'::jsonb
   AND pg_temp.q('SELECT count(*) = 0 FROM public.vsd_document_reviews')
   AND pg_temp.q($q$SELECT status = 'erasure_pending' FROM public.vsd_documents WHERE id = '5e000000-0000-4000-8000-00000000d003'$q$)
-  AND NOT pg_temp.can_read(:REVIEWER, '5e000000-0000-4000-8000-0000000000a1/5e000000-0000-4000-8000-00000000d003.pdf')
+  AND NOT pg_temp.can_open(:REVIEWER, '5e000000-0000-4000-8000-00000000d003')
   AND pg_temp.run(:REVIEWER, 'SELECT public.vsd_reviewer_queue()::text') = '[]',
   'V5.11 a changed or renewed statement inherits neither the document nor its review');
 
@@ -500,6 +576,7 @@ SELECT pg_temp.ok(
 SELECT pg_temp.begin_doc(:A, '5e000000-0000-4000-8000-00000000d004', (SELECT v FROM ids WHERE k = 'enf_a'), 2,
                          'enforcement_authority_statement', repeat('d', 64));
 SELECT pg_temp.put(:A, '5e000000-0000-4000-8000-0000000000a1/5e000000-0000-4000-8000-00000000d004.pdf');
+SELECT pg_temp.stamp('5e000000-0000-4000-8000-00000000d004');
 SELECT pg_temp.run(:A, 'SELECT public.vsd_attach_document(''5e000000-0000-4000-8000-00000000d004'')::text');
 
 SELECT pg_temp.ok(
@@ -529,7 +606,7 @@ SELECT pg_temp.ok(
 SELECT pg_temp.ok(
   (pg_temp.run(:A, format('SELECT public.vsd_withdraw_declaration(%L)::text', (SELECT v FROM ids WHERE k = 'enf_a')))::jsonb)
     @> '{"status": "withdrawn", "provenance": null, "document": null, "revision": 3}'::jsonb
-  AND NOT pg_temp.can_read(:A, '5e000000-0000-4000-8000-0000000000a1/5e000000-0000-4000-8000-00000000d004.pdf')
+  AND NOT pg_temp.can_open(:A, '5e000000-0000-4000-8000-00000000d004')
   AND pg_temp.q($q$SELECT count(*) = 1 FROM public.storage_erasure_queue
         WHERE object_path = '5e000000-0000-4000-8000-0000000000a1/5e000000-0000-4000-8000-00000000d004.pdf'
           AND reason = 'self_declaration_withdrawn' AND completed_at IS NULL$q$),
@@ -587,7 +664,7 @@ SELECT pg_temp.ok(
         = '{"erased": true}',
   'V6.11 an abandoned upload is discarded and its path closed');
 
--- ══ GROUP V7 · retention and revocation ═══════════════════════════════════
+-- ══ GROUP V7 · retention and revocation end access at once ═══════════════
 
 UPDATE public.vsd_declarations SET retain_until = now() - interval '1 second'
  WHERE holder_user_id = :B AND declaration_kind = 'payment_remarks_none';
@@ -596,30 +673,112 @@ SELECT pg_temp.ok(
   AND pg_temp.q($q$SELECT NOT EXISTS (SELECT 1 FROM public.vsd_declarations WHERE holder_user_id = '5e000000-0000-4000-8000-0000000000a2')$q$),
   'V7.1 a statement past its retention is gone on the next read');
 
+-- A live, reviewed-on-request document (d007) and an unfinished upload (d008).
 SELECT pg_temp.begin_doc(:A, '5e000000-0000-4000-8000-00000000d007', (SELECT v FROM ids WHERE k = 'enf_a'), 1,
                          'enforcement_authority_statement', repeat('1', 64));
 SELECT pg_temp.put(:A, '5e000000-0000-4000-8000-0000000000a1/5e000000-0000-4000-8000-00000000d007.pdf');
+SELECT pg_temp.stamp('5e000000-0000-4000-8000-00000000d007');
 SELECT pg_temp.run(:A, 'SELECT public.vsd_attach_document(''5e000000-0000-4000-8000-00000000d007'')::text');
+SELECT pg_temp.run(:A, 'SELECT public.vsd_set_document_review_request(''5e000000-0000-4000-8000-00000000d007'', true)::text');
 SELECT pg_temp.begin_doc(:A, '5e000000-0000-4000-8000-00000000d008', (SELECT v FROM ids WHERE k = 'enf_a'), 1,
                          'enforcement_authority_statement', repeat('2', 64));
 
+SELECT pg_temp.ok(
+  pg_temp.can_open(:A, '5e000000-0000-4000-8000-00000000d007') AND pg_temp.can_open(:REVIEWER, '5e000000-0000-4000-8000-00000000d007')
+  AND NOT pg_temp.can_open(:B, '5e000000-0000-4000-8000-00000000d007') AND NOT pg_temp.can_open(:A, '5e000000-0000-4000-8000-00000000d007', false)
+  AND jsonb_array_length(pg_temp.run(:REVIEWER, 'SELECT public.vsd_reviewer_queue()::text')::jsonb) = 1,
+  'V7.2 control: while the statement is current the holder and the appointed reviewer may open the document');
+
+-- RETENTION PASSES. Nothing reconciles: no profile read, no purge, no write.
+UPDATE public.vsd_declarations SET retain_until = now() - interval '1 second'
+ WHERE id = (SELECT v FROM ids WHERE k = 'enf_a');
+SELECT pg_temp.ok(
+  NOT pg_temp.can_open(:A, '5e000000-0000-4000-8000-00000000d007'),
+  'V7.3 past retention the holder is refused the document at once, before any reconciliation');
+SELECT pg_temp.ok(
+  NOT pg_temp.can_open(:REVIEWER, '5e000000-0000-4000-8000-00000000d007')
+  AND pg_temp.run(:REVIEWER, 'SELECT public.vsd_reviewer_queue()::text') = '[]'
+  AND pg_temp.run(:REVIEWER, 'SELECT public.vsd_reviewer_record_review(''5e000000-0000-4000-8000-00000000d007'', 1, ''matches_declared_details'')::text')
+        = 'err:VSD_DOCUMENT_NOT_FOUND',
+  'V7.4 past retention the reviewer can neither open, list nor review it');
+SELECT pg_temp.ok(
+  NOT pg_temp.can_open(:B, '5e000000-0000-4000-8000-00000000d007') AND NOT pg_temp.can_open(:ADMIN, '5e000000-0000-4000-8000-00000000d007')
+  AND NOT pg_temp.can_open(:A, '5e000000-0000-4000-8000-00000000d007', false) AND NOT pg_temp.can_open(:REVIEWER, '5e000000-0000-4000-8000-00000000d007', false)
+  AND NOT pg_temp.can_read(:A, '5e000000-0000-4000-8000-0000000000a1/5e000000-0000-4000-8000-00000000d007.pdf') AND NOT pg_temp.can_read(:REVIEWER, '5e000000-0000-4000-8000-0000000000a1/5e000000-0000-4000-8000-00000000d007.pdf'),
+  'V7.5 past retention: another user, an administrator, signed-out sessions and direct Storage reads are all refused');
+SELECT pg_temp.ok(
+  pg_temp.put(:A, '5e000000-0000-4000-8000-0000000000a1/5e000000-0000-4000-8000-00000000d008.pdf') LIKE 'err:%row-level security%'
+  AND pg_temp.begin_doc(:A, '5e000000-0000-4000-8000-00000000d0e1', (SELECT v FROM ids WHERE k = 'enf_a'), 1,
+                        'enforcement_authority_statement', repeat('4', 64)) = 'err:VSD_PROCESSING_NOT_AUTHORIZED'
+  AND pg_temp.run(:A, 'SELECT public.vsd_set_document_review_request(''5e000000-0000-4000-8000-00000000d007'', true)::text')
+        = 'err:VSD_PROCESSING_NOT_AUTHORIZED',
+  'V7.6 past retention no upload, new document or review request is accepted');
+SELECT pg_temp.ok(
+  (SELECT status = 'active' FROM public.vsd_declarations WHERE id = (SELECT v FROM ids WHERE k = 'enf_a'))
+  AND (SELECT status = 'attached' FROM public.vsd_documents WHERE id = '5e000000-0000-4000-8000-00000000d007')
+  AND (SELECT count(*) = 1 FROM storage.objects WHERE name = '5e000000-0000-4000-8000-0000000000a1/5e000000-0000-4000-8000-00000000d007.pdf'),
+  'V7.7 and all of that held while the rows and the object were still exactly as they were: nothing had reconciled');
+
+-- Back inside retention: access returns, so it was the deadline that refused.
+UPDATE public.vsd_declarations SET retain_until = now() + interval '30 days'
+ WHERE id = (SELECT v FROM ids WHERE k = 'enf_a');
+SELECT pg_temp.ok(
+  pg_temp.can_open(:A, '5e000000-0000-4000-8000-00000000d007') AND pg_temp.can_open(:REVIEWER, '5e000000-0000-4000-8000-00000000d007'),
+  'V7.8 control: inside retention again, access returns');
+
+-- THE REVIEWER'S APPOINTMENT ENDS.
+UPDATE public.vsd_document_reviewers SET revoked_at = now() WHERE user_id = :REVIEWER;
+SELECT pg_temp.ok(
+  NOT pg_temp.can_open(:REVIEWER, '5e000000-0000-4000-8000-00000000d007') AND pg_temp.can_open(:A, '5e000000-0000-4000-8000-00000000d007')
+  AND pg_temp.run(:REVIEWER, 'SELECT public.vsd_reviewer_queue()::text') = '[]',
+  'V7.9 a reviewer whose appointment ended is refused at once; the holder is not');
+UPDATE public.vsd_document_reviewers SET revoked_at = NULL WHERE user_id = :REVIEWER;
+
+-- THE HOLDER TAKES THE REQUEST BACK.
+SELECT pg_temp.run(:A, 'SELECT public.vsd_set_document_review_request(''5e000000-0000-4000-8000-00000000d007'', false)::text');
+SELECT pg_temp.ok(
+  NOT pg_temp.can_open(:REVIEWER, '5e000000-0000-4000-8000-00000000d007'),
+  'V7.10 a reviewer is refused as soon as the holder takes the review request back');
+SELECT pg_temp.run(:A, 'SELECT public.vsd_set_document_review_request(''5e000000-0000-4000-8000-00000000d007'', true)::text');
+SELECT pg_temp.ok(pg_temp.can_open(:REVIEWER, '5e000000-0000-4000-8000-00000000d007'), 'V7.11 control: with the request standing the reviewer may open it again');
+
+-- THE AUTHORIZATION IS REVOKED. Again nothing reconciles first.
 UPDATE public.vsd_processing_authorizations SET revoked_at = now()
  WHERE declaration_kind = 'enforcement_debt_none';
 SELECT pg_temp.ok(
-  pg_temp.put(:A, '5e000000-0000-4000-8000-0000000000a1/5e000000-0000-4000-8000-00000000d008.pdf') LIKE 'err:%'
+  NOT pg_temp.can_open(:A, '5e000000-0000-4000-8000-00000000d007'),
+  'V7.12 under a revoked authorization the holder is refused the document at once, before any reconciliation');
+SELECT pg_temp.ok(
+  NOT pg_temp.can_open(:REVIEWER, '5e000000-0000-4000-8000-00000000d007')
+  AND pg_temp.run(:REVIEWER, 'SELECT public.vsd_reviewer_queue()::text') = '[]'
+  AND pg_temp.run(:REVIEWER, 'SELECT public.vsd_reviewer_record_review(''5e000000-0000-4000-8000-00000000d007'', 1, ''matches_declared_details'')::text')
+        = 'err:VSD_DOCUMENT_NOT_FOUND',
+  'V7.13 under a revoked authorization the reviewer can neither open, list nor review it');
+SELECT pg_temp.ok(
+  NOT pg_temp.can_open(:B, '5e000000-0000-4000-8000-00000000d007') AND NOT pg_temp.can_open(:ADMIN, '5e000000-0000-4000-8000-00000000d007')
+  AND NOT pg_temp.can_open(:A, '5e000000-0000-4000-8000-00000000d007', false)
+  AND NOT pg_temp.can_read(:A, '5e000000-0000-4000-8000-0000000000a1/5e000000-0000-4000-8000-00000000d007.pdf'),
+  'V7.14 under a revoked authorization: another user, an administrator, a signed-out session and direct Storage are refused');
+SELECT pg_temp.ok(
+  pg_temp.put(:A, '5e000000-0000-4000-8000-0000000000a1/5e000000-0000-4000-8000-00000000d008.pdf') LIKE 'err:%row-level security%'
+  AND pg_temp.stamp('5e000000-0000-4000-8000-00000000d008') LIKE 'err:%'
   AND pg_temp.save(:A, 'enforcement_debt_none', 'se-enforcement-v1', 1) = 'err:VSD_PROCESSING_NOT_AUTHORIZED',
-  'V7.2 a revoked authorization stops uploads and statements at once');
+  'V7.15 a revoked authorization stops uploads, content stamps and statements at once');
+SELECT pg_temp.ok(
+  (SELECT status = 'active' FROM public.vsd_declarations WHERE id = (SELECT v FROM ids WHERE k = 'enf_a'))
+  AND (SELECT status = 'attached' FROM public.vsd_documents WHERE id = '5e000000-0000-4000-8000-00000000d007'),
+  'V7.16 and all of that held before anything had reconciled the rows');
 SELECT pg_temp.ok(
   pg_temp.decl(:A, 'enforcement_debt_none') ->> 'status' = 'deletion_pending'
-  AND NOT pg_temp.can_read(:A, '5e000000-0000-4000-8000-0000000000a1/5e000000-0000-4000-8000-00000000d007.pdf')
+  AND NOT pg_temp.can_open(:A, '5e000000-0000-4000-8000-00000000d007')
   AND pg_temp.q($q$SELECT count(*) = 1 FROM public.storage_erasure_queue
         WHERE object_path = '5e000000-0000-4000-8000-0000000000a1/5e000000-0000-4000-8000-00000000d007.pdf'
           AND reason = 'self_declaration_retention_ended' AND completed_at IS NULL$q$),
-  'V7.3 what was collected under a revoked authorization is deleted and its file queued');
+  'V7.17 the next read then deletes what was collected under it and queues the file');
 SELECT pg_temp.ok(
   pg_temp.run(:A, 'SELECT public.vsd_purge_due()::text') LIKE 'err:permission denied%'
   AND has_function_privilege('service_role', 'public.vsd_purge_due()', 'EXECUTE'),
-  'V7.4 the retention purge is for the service role only');
+  'V7.18 the retention purge is for the service role only');
 
 -- ══ GROUP V8 · a properly reviewed criminal-history authorization, and account erasure ══
 
@@ -631,6 +790,7 @@ INSERT INTO ids VALUES ('crim', ((pg_temp.save(:ERASED, 'criminal_history', 'se-
 SELECT pg_temp.begin_doc(:ERASED, '5e000000-0000-4000-8000-00000000d009', (SELECT v FROM ids WHERE k = 'crim'), 1,
                          'police_extract', repeat('3', 64));
 SELECT pg_temp.put(:ERASED, '5e000000-0000-4000-8000-0000000000a6/5e000000-0000-4000-8000-00000000d009.pdf');
+SELECT pg_temp.stamp('5e000000-0000-4000-8000-00000000d009');
 SELECT pg_temp.ok(
   (pg_temp.run(:ERASED, 'SELECT public.vsd_attach_document(''5e000000-0000-4000-8000-00000000d009'')::text')::jsonb)
     ->> 'status' = 'attached'
@@ -696,11 +856,22 @@ SELECT pg_temp.ok(
   (SELECT array_agg(p.proname::text ORDER BY p.proname) FROM pg_proc p
     WHERE p.pronamespace = 'public'::regnamespace AND p.proname LIKE 'vsd\_%'
       AND has_function_privilege('authenticated', p.oid, 'EXECUTE'))
-  = ARRAY['vsd_attach_document', 'vsd_begin_document', 'vsd_delete_declaration', 'vsd_discard_document',
-          'vsd_document_storage_readable', 'vsd_document_storage_writable', 'vsd_my_declarations',
-          'vsd_reviewer_queue', 'vsd_reviewer_record_review', 'vsd_save_declaration',
-          'vsd_set_document_review_request', 'vsd_withdraw_declaration'],
-  'V9.6 a signed-in user executes exactly the twelve client functions');
+  = ARRAY['vsd_abandon_upload', 'vsd_attach_document', 'vsd_authorize_document_read', 'vsd_begin_document',
+          'vsd_delete_declaration', 'vsd_discard_document', 'vsd_document_storage_writable',
+          'vsd_my_declarations', 'vsd_reviewer_queue', 'vsd_reviewer_record_review',
+          'vsd_save_declaration', 'vsd_set_document_review_request', 'vsd_upload_state',
+          'vsd_withdraw_declaration'],
+  'V9.6 a signed-in user executes exactly the fourteen client functions');
+SELECT pg_temp.ok(
+  NOT EXISTS (SELECT 1 FROM pg_policies
+               WHERE schemaname = 'storage' AND tablename = 'objects' AND permissive = 'PERMISSIVE'
+                 AND cmd <> 'INSERT' AND coalesce(qual, '') || coalesce(with_check, '') LIKE '%self-declaration-documents%')
+  AND (SELECT count(*) = 1 FROM pg_policies
+        WHERE schemaname = 'storage' AND tablename = 'objects' AND permissive = 'PERMISSIVE'
+          AND policyname LIKE 'vsd\_%')
+  AND (SELECT qual = '(bucket_id <> ''self-declaration-documents''::text)' FROM pg_policies
+        WHERE schemaname = 'storage' AND policyname = 'vsd_documents_select_fence'),
+  'V9.6a the bucket''s only permissive policy is the upload; no policy lets a client read, sign, overwrite or delete');
 SELECT pg_temp.ok(
   NOT EXISTS (
     SELECT 1 FROM pg_class c

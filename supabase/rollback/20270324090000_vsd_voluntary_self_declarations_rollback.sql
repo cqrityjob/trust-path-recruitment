@@ -19,7 +19,6 @@ DROP POLICY IF EXISTS vsd_documents_delete_fence ON storage.objects;
 DROP POLICY IF EXISTS vsd_documents_update_fence ON storage.objects;
 DROP POLICY IF EXISTS vsd_documents_select_fence ON storage.objects;
 DROP POLICY IF EXISTS vsd_documents_insert_fence ON storage.objects;
-DROP POLICY IF EXISTS vsd_documents_select ON storage.objects;
 DROP POLICY IF EXISTS vsd_documents_insert ON storage.objects;
 
 -- With the fences gone the bucket must not fall open to a broader policy.
@@ -34,12 +33,15 @@ CREATE POLICY vsd_documents_closed ON storage.objects AS RESTRICTIVE FOR ALL TO 
   USING (bucket_id <> 'self-declaration-documents')
   WITH CHECK (bucket_id <> 'self-declaration-documents');
 
-DROP FUNCTION IF EXISTS public.vsd_document_storage_readable(text);
 DROP FUNCTION IF EXISTS public.vsd_document_storage_writable(text);
 DROP FUNCTION IF EXISTS public.vsd_purge_due();
 DROP FUNCTION IF EXISTS public.vsd_reviewer_record_review(uuid, integer, text);
 DROP FUNCTION IF EXISTS public.vsd_reviewer_queue();
 DROP FUNCTION IF EXISTS public.vsd_set_document_review_request(uuid, boolean);
+DROP FUNCTION IF EXISTS public.vsd_authorize_document_read(uuid);
+DROP FUNCTION IF EXISTS public.vsd_stamp_document_content(uuid, uuid, integer, text, text);
+DROP FUNCTION IF EXISTS public.vsd_upload_state(uuid);
+DROP FUNCTION IF EXISTS public.vsd_abandon_upload(uuid);
 DROP FUNCTION IF EXISTS public.vsd_discard_document(uuid);
 DROP FUNCTION IF EXISTS public.vsd_attach_document(uuid);
 DROP FUNCTION IF EXISTS public.vsd_begin_document(uuid, uuid, integer, text, date, text, text, integer, text);
@@ -54,6 +56,8 @@ DROP FUNCTION IF EXISTS public.vsd_review_available(uuid);
 DROP FUNCTION IF EXISTS public.vsd_reconcile(uuid);
 DROP FUNCTION IF EXISTS public.vsd_queue_declaration_documents(uuid, text);
 DROP FUNCTION IF EXISTS public.vsd_queue_document_erasure(uuid, text);
+DROP FUNCTION IF EXISTS public.vsd_document_current(public.vsd_documents);
+DROP FUNCTION IF EXISTS public.vsd_declaration_current(public.vsd_declarations);
 DROP FUNCTION IF EXISTS public.vsd_current_authorization(text, text);
 DROP FUNCTION IF EXISTS public.vsd_assert_caller();
 
