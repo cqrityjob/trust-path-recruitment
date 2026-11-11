@@ -305,16 +305,24 @@ VSD_M=supabase/migrations/20270324090000_vsd_voluntary_self_declarations.sql
 VSD_R=supabase/rollback/20270324090000_vsd_voluntary_self_declarations_rollback.sql
 VSD_T=vsd_voluntary_self_declarations_test
 echo "==> Running voluntary self-declarations (20270324090000)"
-td_suite "$VSD_T" "Voluntary self-declarations" 88 \
+td_suite "$VSD_T" "Voluntary self-declarations" 111 \
   "V1.2 without an authorization a financial statement is refused" \
   "V1.3 without an authorization a criminal-history statement is refused" \
   "V1.5 a direct Storage upload into the bucket is refused" \
   "V2.1 a criminal-history authorization cannot rest on consent" \
   "V3.1 nothing is stored without the holder's own affirmation" \
-  "V4.16 the replaced file is queued for erasure and no longer readable, in the same transaction" \
+  "V4.9a uploaded bytes cannot be attached until the server has verified them" \
+  "V4.11a no client reads the bucket directly -- not even the holder -- so Storage can neither serve nor sign the object" \
+  "V4.11b abandoning an upload never touches a document that was in fact attached" \
+  "V4.16 the replaced file is queued for erasure and can no longer be opened, in the same transaction" \
   "V5.4 a Passport verifier and a platform admin are not reviewers here" \
   "V5.11 a changed or renewed statement inherits neither the document nor its review" \
   "V6.6 a deletion is not reported complete while files remain" \
+  "V7.3 past retention the holder is refused the document at once, before any reconciliation" \
+  "V7.4 past retention the reviewer can neither open, list nor review it" \
+  "V7.9 a reviewer whose appointment ended is refused at once; the holder is not" \
+  "V7.12 under a revoked authorization the holder is refused the document at once, before any reconciliation" \
+  "V7.13 under a revoked authorization the reviewer can neither open, list nor review it" \
   "V9.1 no other function in the database names a vsd_ object" \
   "V9.12 the migration re-applies cleanly after a rollback, closed again"
 VSD_SAVE='CREATE FUNCTION public.vsd_save_declaration('
@@ -331,10 +339,10 @@ VSD_W='CREATE FUNCTION public.vsd_document_storage_writable('
 td_plant "$VSD_M" "$VSD_W" '^END \$\$;' "s/IF NOT FOUND OR _doc.status <> 'prepared' THEN RETURN false; END IF;//"
 td_nc "$VSD_T" "VSD NC4 a path owed to erasure takes an upload" "V4.17"
 td_restore "$VSD_M" "$VSD_W" '^END \$\$;'
-VSD_RD='CREATE FUNCTION public.vsd_document_storage_readable('
-td_plant "$VSD_M" "$VSD_RD" '^\$\$;' "s/x.status IN ('prepared', 'attached')/true/"
-td_nc "$VSD_T" "VSD NC5 a file owed to erasure is still readable" "V4.16"
-td_restore "$VSD_M" "$VSD_RD" '^\$\$;'
+VSD_AR='CREATE FUNCTION public.vsd_authorize_document_read('
+td_plant "$VSD_M" "$VSD_AR" '^END \$\$;' "s/ELSIF _row.review_requested_at IS NOT NULL AND public.vsd_is_reviewer_for/ELSIF public.vsd_is_reviewer_for/"
+td_nc "$VSD_T" "VSD NC5 a reviewer opens a document nobody asked to have reviewed" "V5.2"
+td_restore "$VSD_M" "$VSD_AR" '^END \$\$;'
 VSD_REV='CREATE FUNCTION public.vsd_is_reviewer_for('
 td_plant "$VSD_M" "$VSD_REV" '^\$\$;' "s/SELECT auth.uid() IS NOT NULL AND EXISTS (/SELECT public.sp_is_verifier(auth.uid()) OR EXISTS (/"
 td_nc "$VSD_T" "VSD NC6 a Passport verifier or admin inherits review access" "V5.4"
@@ -348,7 +356,30 @@ td_plant "$VSD_M" "$VSD_REC" '^END \$\$;' "s/AND name = _doc.storage_path) THEN/
 # V4.16 is the first assertion that needs the owed row to still be there.
 td_nc "$VSD_T" "VSD NC8 a file is reported erased while it still exists" "V4.16"
 td_restore "$VSD_M" "$VSD_REC" '^END \$\$;'
-td_suite "$VSD_T" "Voluntary self-declarations (after controls)" 88
+# The lifecycle rule loses its retention deadline: access would then end only
+# when something happened to reconcile the row.
+VSD_CUR='CREATE FUNCTION public.vsd_declaration_current('
+td_plant "$VSD_M" "$VSD_CUR" '^\$\$;' "/AND _d.retain_until > now()/d"
+td_nc "$VSD_T" "VSD NC9 access outlives the retention deadline until a reconciliation" "V7.3"
+td_restore "$VSD_M" "$VSD_CUR" '^\$\$;'
+# ...and its authorization check: V7.3 still holds, V7.12 must not.
+td_plant "$VSD_M" "$VSD_CUR" '^\$\$;' "s/AND a.revoked_at IS NULL AND a.effective_from <= now())/)/"
+td_nc "$VSD_T" "VSD NC10 access outlives a revoked authorization until a reconciliation" "V7.12"
+td_restore "$VSD_M" "$VSD_CUR" '^\$\$;'
+VSD_AT='CREATE FUNCTION public.vsd_attach_document('
+td_plant "$VSD_M" "$VSD_AT" '^END \$\$;' "/RAISE EXCEPTION 'VSD_CONTENT_UNVERIFIED'/d"
+td_nc "$VSD_T" "VSD NC11 bytes are attached under a hash nobody verified" "V4.9a"
+td_restore "$VSD_M" "$VSD_AT" '^END \$\$;'
+VSD_AB='CREATE FUNCTION public.vsd_abandon_upload('
+td_plant "$VSD_M" "$VSD_AB" '^END \$\$;' "s/IF _row.status = 'prepared' THEN/IF true THEN/"
+td_nc "$VSD_T" "VSD NC12 a retry's compensation erases an attached document" "V4.11b"
+td_restore "$VSD_M" "$VSD_AB" '^END \$\$;'
+# A client read policy returns to the bucket: Storage could then serve and
+# sign the object with no lifecycle check at all.
+psql_q -d "$TEST_DB" -c "DROP POLICY vsd_documents_select_fence ON storage.objects; CREATE POLICY vsd_documents_nc_select ON storage.objects FOR SELECT TO authenticated USING (bucket_id = 'self-declaration-documents' AND (storage.foldername(name))[1] = auth.uid()::text);" >/dev/null
+td_nc "$VSD_T" "VSD NC13 the holder can read the bucket directly" "V4.11a"
+psql_q -d "$TEST_DB" -c "DROP POLICY vsd_documents_nc_select ON storage.objects; CREATE POLICY vsd_documents_select_fence ON storage.objects AS RESTRICTIVE FOR SELECT TO authenticated USING (bucket_id <> 'self-declaration-documents');" >/dev/null
+td_suite "$VSD_T" "Voluntary self-declarations (after controls)" 111
 psql_q -d "$TEST_DB" -f "$VSD_R" >/dev/null
 psql_q -d "$TEST_DB" -f "$VSD_M" >/dev/null
 psql_q -d "$TEST_DB" -f "$VSD_R" >/dev/null

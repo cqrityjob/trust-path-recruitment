@@ -65,14 +65,56 @@ file to erasure and removes its review. There is no "verified clean record" or
 
 | Who | What |
 |---|---|
-| Holder (live session) | Everything about their own rows, through twelve functions. No table access. |
+| Holder (live session) | Everything about their own rows, through the `vsd_` functions. No table access, and no direct Storage read. |
 | Appointed reviewer | One document, only while its holder has asked for a review, only under the authorization they were appointed for. |
 | Passport verifier, platform admin, superadmin, employer | Nothing. |
-| `service_role` | `storage_erasure_queue` (existing) and `vsd_purge_due()`. No table privilege on `vsd_*`. |
+| `service_role` (application server only) | `storage_erasure_queue` (existing), `vsd_purge_due()`, `vsd_stamp_document_content()`, and reading or removing an object at a path the database has just authorized. No table privilege on `vsd_*`. |
 
 A reviewer is a row in `vsd_document_reviewers`, written only by a reviewed
 migration. There is no reviewer workspace in the application yet, so "Document
 reviewed" is unreachable in practice until one is built.
+
+## How a document's bytes are reached
+
+Storage never serves a document to a client. The bucket has no client
+SELECT, UPDATE or DELETE policy, so nobody — not the holder, a reviewer or an
+administrator — can download an object or have Storage sign a link to one.
+
+A document is delivered by the application server, one request at a time:
+
+1. the server calls `vsd_authorize_document_read()` **with the caller's own
+   session**. As of that moment it checks the live session, ownership (or a
+   reviewer's appointment under the document's own authorization, while the
+   holder's request stands), that the document is attached, and that its
+   statement is active, inside its retention, at the document's revision,
+   under an authorization that is still current;
+2. only then does the server read that exact object, check its hash against
+   the row, and return the bytes with `Cache-Control: no-store`.
+
+There is no link to keep. Withdrawing or deleting, revoking the
+authorization, passing the retention date, ending the session, ending a
+reviewer's appointment or taking back a review request all refuse the very
+next request, whether or not the file has been physically erased yet and
+whether or not anything has reconciled the rows. Bytes a person has already
+downloaded cannot be recalled.
+
+## How a document is accepted
+
+1. The server bounds the encoded size, strictly decodes the base64, and
+   checks the real content is a PDF, JPEG or PNG matching the declared type.
+2. `vsd_begin_document()` records the intention (size, SHA-256, type).
+3. The bytes are written to exactly the recorded path.
+4. The server reads the object back, recomputes size, hash and type, and
+   records the match with `vsd_stamp_document_content()` — a `service_role`
+   function no client can call. `vsd_attach_document()` refuses without it,
+   so a direct RPC or Storage call cannot attach bytes under a hash of the
+   caller's choosing.
+
+Every step is safe to repeat. A retry of a completed upload finds it attached
+and changes nothing; a lost acknowledgement is resolved by reading what was
+persisted (`vsd_upload_state()`), never by assuming failure. The only
+compensation, `vsd_abandon_upload()`, acts on an unfinished upload and cannot
+touch an attached document.
 
 ## Erasure
 
@@ -106,7 +148,8 @@ statement version, and who approved it when.
 
 - Every write function and both Storage policies require a current row.
   Without one, the screen, the Data API and a direct Storage upload are all
-  refused (V1.2–V1.5).
+  refused (V1.2–V1.5). Document operations ask again every time they run
+  (V7.3–V7.16), so access ends with the authorization, not with a cleanup.
 - No client role and no function can write the table. A row is immutable; it
   can only be revoked, which stops collection at once and deletes what was
   collected under it.
@@ -161,8 +204,8 @@ VALUES
 
 ## Tests
 
-- `supabase/tests/vsd_voluntary_self_declarations_test.sql` — 88 assertions,
-  eight negative controls in `scripts/db-test.sh`.
+- `supabase/tests/vsd_voluntary_self_declarations_test.sql` — 111 assertions,
+  thirteen negative controls in `scripts/db-test.sh`.
 - `scripts/self-declarations-check.ts`, `scripts/self-declarations.test.tsx`,
   `scripts/negative-controls/self-declarations-controls.ts`.
 - `e2e/self-declarations.spec.ts` — Swedish and English, desktop and mobile.

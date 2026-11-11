@@ -40,8 +40,8 @@
 --
 -- vsd_processing_authorizations records, per kind and jurisdiction, the
 -- actual operator, purpose, legal basis, retention and permitted operations.
--- EVERY write below requires a current row there, and the Storage policies
--- require it too, so a direct Data API or Storage call is refused exactly as
+-- EVERY write below requires a current row there, and the Storage upload
+-- policy requires it too, so a direct Data API or Storage call is refused exactly as
 -- the screen is.
 --
 -- THIS MIGRATION INSERTS NO AUTHORIZATION. No legal assessment exists in this
@@ -62,6 +62,21 @@
 -- replacing the document, sends the old file to erasure, and a review is a
 -- row about ONE document at ONE revision -- so an old review cannot be
 -- inherited.
+--
+-- BYTES ARE NEVER SERVED BY STORAGE TO A CLIENT. The bucket has no client
+-- SELECT, UPDATE or DELETE policy at all, so no client can download an object
+-- or have Storage sign a link to one. A document is delivered only by the
+-- application server, per request, after vsd_authorize_document_read() has
+-- checked -- at that moment -- the live session, ownership or reviewer
+-- appointment, the current processing authorization, the declaration's
+-- status, revision and retention, and the document's status. Revoking an
+-- authorization or passing a retention date therefore ends access at once;
+-- nothing waits for a read of the profile, a reconciliation or a purge.
+--
+-- A document can only be attached after the server has verified the object's
+-- actual bytes against the declared size, hash and type and recorded that
+-- with vsd_stamp_document_content() (service_role only). A direct RPC or
+-- Storage call cannot attach bytes under a hash of the caller's choosing.
 --
 -- Provenance is derived, never stored: self_declared, document_provided, or
 -- document_reviewed (only when an appointed reviewer has recorded that the
@@ -248,6 +263,10 @@ CREATE TABLE public.vsd_documents (
   sha256               text NOT NULL CHECK (sha256 ~ '^[0-9a-f]{64}$'),
   status               text NOT NULL DEFAULT 'prepared'
     CHECK (status IN ('prepared', 'attached', 'erasure_pending')),
+  -- Set only by the server, after it has read the stored object back and
+  -- found its real size, SHA-256 and file type equal to this row's. Without
+  -- it the document cannot be attached.
+  bytes_matched_at  timestamptz,
   review_requested_at  timestamptz,
   erasure_requested_at timestamptz,
   created_at           timestamptz NOT NULL DEFAULT now(),
@@ -337,6 +356,39 @@ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = '' AS $$
      AND a.revoked_at IS NULL AND a.effective_from <= now()
 $$;
 REVOKE ALL ON FUNCTION public.vsd_current_authorization(text, text) FROM PUBLIC, anon, authenticated, service_role;
+
+-- THE ONE LIFECYCLE RULE. A statement is "current" only while it is active,
+-- inside its retention, and under the same authorization it was made under,
+-- which must itself still be current. Every document operation asks this at
+-- the moment it runs; none relies on vsd_reconcile having run first.
+CREATE FUNCTION public.vsd_declaration_current(_d public.vsd_declarations)
+RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = '' AS $$
+  SELECT _d.id IS NOT NULL
+     AND _d.status = 'active'
+     AND _d.retain_until > now()
+     AND EXISTS (
+       SELECT 1 FROM public.vsd_processing_authorizations a
+        WHERE a.id = _d.authorization_id
+          AND a.declaration_kind = _d.declaration_kind AND a.jurisdiction = _d.jurisdiction
+          AND a.revoked_at IS NULL AND a.effective_from <= now())
+$$;
+REVOKE ALL ON FUNCTION public.vsd_declaration_current(public.vsd_declarations) FROM PUBLIC, anon, authenticated, service_role;
+
+-- A document may be processed only for a current statement, at the exact
+-- revision it names, while storing that type of document is still permitted.
+CREATE FUNCTION public.vsd_document_current(_x public.vsd_documents)
+RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = '' AS $$
+  SELECT _x.id IS NOT NULL AND EXISTS (
+    SELECT 1 FROM public.vsd_declarations d
+      JOIN public.vsd_processing_authorizations a ON a.id = d.authorization_id
+     WHERE d.id = _x.declaration_id
+       AND d.holder_user_id = _x.holder_user_id
+       AND d.revision = _x.declaration_revision
+       AND public.vsd_declaration_current(d)
+       AND 'store_document' = ANY (a.permitted_operations)
+       AND _x.document_type = ANY (a.permitted_document_types))
+$$;
+REVOKE ALL ON FUNCTION public.vsd_document_current(public.vsd_documents) FROM PUBLIC, anon, authenticated, service_role;
 
 -- The file is owed to the erasure queue from this statement on.
 CREATE FUNCTION public.vsd_queue_document_erasure(_document_id uuid, _reason text)
@@ -481,6 +533,7 @@ RETURNS jsonb LANGUAGE sql STABLE SECURITY DEFINER SET search_path = '' AS $$
     'sizeBytes', _doc.size_bytes, 'sha256', _doc.sha256, 'status', _doc.status,
     'declarationRevision', _doc.declaration_revision, 'storagePath', _doc.storage_path,
     'reviewRequestedAt', _doc.review_requested_at, 'createdAt', _doc.created_at,
+    'bytesMatched', _doc.bytes_matched_at IS NOT NULL,
     'review', (SELECT jsonb_build_object('outcome', r.outcome, 'reviewedAt', r.reviewed_at,
                                          'declarationRevision', r.declaration_revision)
                  FROM public.vsd_document_reviews r WHERE r.document_id = _doc.id))
@@ -714,7 +767,8 @@ BEGIN
     RAISE EXCEPTION 'VSD_STALE_REVISION' USING ERRCODE = '23514';
   END IF;
   _auth := public.vsd_current_authorization(_decl.declaration_kind, _decl.jurisdiction);
-  IF _auth.id IS NULL OR _auth.id <> _decl.authorization_id
+  IF NOT public.vsd_declaration_current(_decl)
+     OR _auth.id IS NULL OR _auth.id <> _decl.authorization_id
      OR NOT ('store_document' = ANY (_auth.permitted_operations))
      OR _document_type IS NULL OR NOT (_document_type = ANY (_auth.permitted_document_types)) THEN
     RAISE EXCEPTION 'VSD_PROCESSING_NOT_AUTHORIZED' USING ERRCODE = '42501';
@@ -768,7 +822,6 @@ DECLARE
   _uid uuid := public.vsd_assert_caller();
   _row public.vsd_documents;
   _decl public.vsd_declarations;
-  _auth public.vsd_processing_authorizations;
   _old uuid;
 BEGIN
   SELECT * INTO _row FROM public.vsd_documents WHERE id = _id AND holder_user_id = _uid;
@@ -785,15 +838,18 @@ BEGIN
   IF _decl.status <> 'active' OR _decl.revision <> _row.declaration_revision THEN
     RAISE EXCEPTION 'VSD_STALE_REVISION' USING ERRCODE = '23514';
   END IF;
-  _auth := public.vsd_current_authorization(_decl.declaration_kind, _decl.jurisdiction);
-  IF _auth.id IS NULL OR _auth.id <> _decl.authorization_id
-     OR NOT ('store_document' = ANY (_auth.permitted_operations))
-     OR NOT (_row.document_type = ANY (_auth.permitted_document_types)) THEN
+  -- Authorization, retention, revision and type, as of now.
+  IF NOT public.vsd_document_current(_row) THEN
     RAISE EXCEPTION 'VSD_PROCESSING_NOT_AUTHORIZED' USING ERRCODE = '42501';
   END IF;
   IF NOT EXISTS (SELECT 1 FROM storage.objects
                   WHERE bucket_id = 'self-declaration-documents' AND name = _row.storage_path) THEN
     RAISE EXCEPTION 'VSD_OBJECT_NOT_FOUND' USING ERRCODE = '23514';
+  END IF;
+  -- The bytes must be the bytes that were declared: only the server can say
+  -- so, and it says so by reading the object back (vsd_stamp_document_content).
+  IF _row.bytes_matched_at IS NULL THEN
+    RAISE EXCEPTION 'VSD_CONTENT_UNVERIFIED' USING ERRCODE = '23514';
   END IF;
   FOR _old IN SELECT id FROM public.vsd_documents
                WHERE declaration_id = _decl.id AND status = 'attached' AND id <> _row.id LOOP
@@ -826,6 +882,124 @@ END $$;
 REVOKE ALL ON FUNCTION public.vsd_discard_document(uuid) FROM PUBLIC, anon, service_role;
 GRANT EXECUTE ON FUNCTION public.vsd_discard_document(uuid) TO authenticated;
 
+-- Compensation for an upload that did not complete. It acts ONLY on an
+-- unfinished (prepared) upload: an attached document is never touched, so a
+-- retry or a lost acknowledgement can never erase a document that was in
+-- fact saved. Removing an attached document is vsd_discard_document, and is
+-- only ever the holder's own explicit act.
+CREATE FUNCTION public.vsd_abandon_upload(_id uuid)
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
+DECLARE _uid uuid := public.vsd_assert_caller(); _row public.vsd_documents;
+BEGIN
+  SELECT * INTO _row FROM public.vsd_documents WHERE id = _id AND holder_user_id = _uid;
+  IF NOT FOUND THEN RETURN jsonb_build_object('status', 'absent'); END IF;
+  PERFORM 1 FROM public.vsd_declarations WHERE id = _row.declaration_id FOR UPDATE;
+  SELECT * INTO _row FROM public.vsd_documents WHERE id = _id FOR UPDATE;
+  IF _row.status = 'prepared' THEN
+    PERFORM public.vsd_queue_document_erasure(_id, 'self_declaration_upload_abandoned');
+    PERFORM public.vsd_reconcile(_uid);
+    RETURN jsonb_build_object('status', 'abandoned');
+  END IF;
+  RETURN jsonb_build_object('status', _row.status);
+END $$;
+REVOKE ALL ON FUNCTION public.vsd_abandon_upload(uuid) FROM PUBLIC, anon, service_role;
+GRANT EXECUTE ON FUNCTION public.vsd_abandon_upload(uuid) TO authenticated;
+
+-- What became of one upload, for a caller whose acknowledgement was lost.
+-- Read-only; reconciles nothing.
+CREATE FUNCTION public.vsd_upload_state(_id uuid)
+RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = '' AS $$
+DECLARE _uid uuid := public.vsd_assert_caller(); _row public.vsd_documents;
+BEGIN
+  SELECT * INTO _row FROM public.vsd_documents WHERE id = _id AND holder_user_id = _uid;
+  IF NOT FOUND THEN RETURN jsonb_build_object('status', 'absent'); END IF;
+  RETURN jsonb_build_object(
+    'status', _row.status, 'declarationId', _row.declaration_id,
+    'declarationRevision', _row.declaration_revision, 'documentType', _row.document_type,
+    'issueDate', _row.issue_date, 'mimeType', _row.mime_type, 'sizeBytes', _row.size_bytes,
+    'sha256', _row.sha256, 'storagePath', _row.storage_path,
+    'bytesMatched', _row.bytes_matched_at IS NOT NULL);
+END $$;
+REVOKE ALL ON FUNCTION public.vsd_upload_state(uuid) FROM PUBLIC, anon, service_role;
+GRANT EXECUTE ON FUNCTION public.vsd_upload_state(uuid) TO authenticated;
+
+-- The server's record that it read the stored object back and found its
+-- real size, SHA-256 and file type equal to what this upload declared.
+-- service_role ONLY: no client can call it, so no client can vouch for its
+-- own bytes. It checks the row itself rather than trusting its caller: the
+-- holder, the unfinished status, the declared values and the object's
+-- existence must all agree, and the statement must still be current.
+CREATE FUNCTION public.vsd_stamp_document_content(
+  _id uuid, _holder uuid, _size_bytes integer, _sha256 text, _mime_type text)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
+DECLARE _row public.vsd_documents;
+BEGIN
+  SELECT * INTO _row FROM public.vsd_documents WHERE id = _id FOR UPDATE;
+  IF NOT FOUND OR _holder IS NULL OR _row.holder_user_id <> _holder THEN
+    RAISE EXCEPTION 'VSD_DOCUMENT_NOT_FOUND' USING ERRCODE = '42501';
+  END IF;
+  IF _row.status = 'erasure_pending' THEN
+    RAISE EXCEPTION 'VSD_DOCUMENT_ERASURE_FENCED' USING ERRCODE = '23514';
+  END IF;
+  IF (_row.size_bytes, _row.sha256, _row.mime_type) IS DISTINCT FROM (_size_bytes, _sha256, _mime_type) THEN
+    RAISE EXCEPTION 'VSD_CONTENT_MISMATCH' USING ERRCODE = '23514';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM storage.objects
+                  WHERE bucket_id = 'self-declaration-documents' AND name = _row.storage_path) THEN
+    RAISE EXCEPTION 'VSD_OBJECT_NOT_FOUND' USING ERRCODE = '23514';
+  END IF;
+  IF NOT public.vsd_document_current(_row) THEN
+    RAISE EXCEPTION 'VSD_PROCESSING_NOT_AUTHORIZED' USING ERRCODE = '42501';
+  END IF;
+  IF _row.bytes_matched_at IS NULL THEN
+    UPDATE public.vsd_documents SET bytes_matched_at = now(), updated_at = now() WHERE id = _id;
+  END IF;
+END $$;
+REVOKE ALL ON FUNCTION public.vsd_stamp_document_content(uuid, uuid, integer, text, text) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.vsd_stamp_document_content(uuid, uuid, integer, text, text) TO service_role;
+
+-- THE ONLY WAY TO A DOCUMENT'S BYTES. Called by the application server with
+-- the CALLER'S OWN session for every single delivery, immediately before it
+-- reads the object. Everything is decided as of now:
+--
+--   * a live session;
+--   * the holder of the document -- or an appointed reviewer under the
+--     document's own authorization, never the holder themself, and only
+--     while the holder's review request stands;
+--   * the document is attached (not unfinished, not owed to erasure);
+--   * its statement is active, inside its retention, at the document's own
+--     revision, under an authorization that is still current and still
+--     permits storing this type of document.
+--
+-- Anything else is the same refusal, so nothing is learned from it.
+CREATE FUNCTION public.vsd_authorize_document_read(_id uuid)
+RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = '' AS $$
+DECLARE
+  _uid uuid := public.vsd_assert_caller();
+  _row public.vsd_documents;
+  _decl public.vsd_declarations;
+  _as text;
+BEGIN
+  SELECT * INTO _row FROM public.vsd_documents WHERE id = _id;
+  IF NOT FOUND OR _row.status <> 'attached' OR NOT public.vsd_document_current(_row) THEN
+    RAISE EXCEPTION 'VSD_DOCUMENT_NOT_FOUND' USING ERRCODE = '42501';
+  END IF;
+  SELECT * INTO _decl FROM public.vsd_declarations WHERE id = _row.declaration_id;
+  IF _row.holder_user_id = _uid THEN
+    _as := 'holder';
+  ELSIF _row.review_requested_at IS NOT NULL AND public.vsd_is_reviewer_for(_decl.authorization_id) THEN
+    _as := 'reviewer';
+  ELSE
+    RAISE EXCEPTION 'VSD_DOCUMENT_NOT_FOUND' USING ERRCODE = '42501';
+  END IF;
+  RETURN jsonb_build_object(
+    'documentId', _row.id, 'as', _as, 'storagePath', _row.storage_path,
+    'fileName', _row.file_name, 'mimeType', _row.mime_type,
+    'sizeBytes', _row.size_bytes, 'sha256', _row.sha256);
+END $$;
+REVOKE ALL ON FUNCTION public.vsd_authorize_document_read(uuid) FROM PUBLIC, anon, service_role;
+GRANT EXECUTE ON FUNCTION public.vsd_authorize_document_read(uuid) TO authenticated;
+
 -- The holder asks for (or takes back) a human review of one document. Only
 -- this opens the file to an appointed reviewer.
 CREATE FUNCTION public.vsd_set_document_review_request(_id uuid, _requested boolean)
@@ -840,6 +1014,9 @@ BEGIN
   IF _requested IS TRUE THEN
     IF _decl.status <> 'active' OR _decl.revision <> _row.declaration_revision THEN
       RAISE EXCEPTION 'VSD_STALE_REVISION' USING ERRCODE = '23514';
+    END IF;
+    IF NOT public.vsd_document_current(_row) THEN
+      RAISE EXCEPTION 'VSD_PROCESSING_NOT_AUTHORIZED' USING ERRCODE = '42501';
     END IF;
     IF NOT public.vsd_review_available(_decl.authorization_id) THEN
       RAISE EXCEPTION 'VSD_REVIEW_UNAVAILABLE' USING ERRCODE = '42501';
@@ -865,13 +1042,13 @@ BEGIN
     SELECT jsonb_agg(jsonb_build_object(
              'documentId', x.id, 'kind', d.declaration_kind, 'jurisdiction', d.jurisdiction,
              'documentType', x.document_type, 'issueDate', x.issue_date, 'asOfDate', d.as_of_date,
-             'declarationRevision', d.revision, 'storagePath', x.storage_path,
+             'declarationRevision', d.revision,
              'mimeType', x.mime_type, 'requestedAt', x.review_requested_at)
            ORDER BY x.review_requested_at, x.id)
       FROM public.vsd_documents x
       JOIN public.vsd_declarations d ON d.id = x.declaration_id
      WHERE x.status = 'attached' AND x.review_requested_at IS NOT NULL
-       AND d.status = 'active' AND d.revision = x.declaration_revision
+       AND public.vsd_document_current(x)
        AND d.holder_user_id <> _uid
        AND public.vsd_is_reviewer_for(d.authorization_id)
        AND NOT EXISTS (SELECT 1 FROM public.vsd_document_reviews r WHERE r.document_id = x.id)), '[]'::jsonb);
@@ -892,6 +1069,11 @@ BEGIN
   SELECT * INTO _doc FROM public.vsd_documents WHERE id = _document_id FOR UPDATE;
   IF NOT public.vsd_is_reviewer_for(_decl.authorization_id) OR _decl.holder_user_id = _uid
      OR _doc.status <> 'attached' OR _doc.review_requested_at IS NULL THEN
+    RAISE EXCEPTION 'VSD_DOCUMENT_NOT_FOUND' USING ERRCODE = '42501';
+  END IF;
+  -- A statement past its retention or under a revoked authorization is not
+  -- reviewed, whether or not anything has reconciled it yet.
+  IF _decl.revision = _doc.declaration_revision AND NOT public.vsd_document_current(_doc) THEN
     RAISE EXCEPTION 'VSD_DOCUMENT_NOT_FOUND' USING ERRCODE = '42501';
   END IF;
   -- The decision is bound to the statement the reviewer was looking at.
@@ -937,12 +1119,12 @@ GRANT EXECUTE ON FUNCTION public.vsd_purge_due() TO service_role;
 -- ── 11 · Storage: the bucket obeys the same gate ────────────────────────
 
 -- A write is the upload of one prepared document, by its holder, while the
--- statement it was begun for still stands and its processing is authorized.
--- The row lock is held through Storage's own transaction, so an erasure
--- request either sees the object or refuses the write.
+-- statement it was begun for is still current and storing is still
+-- authorized. The row lock is held through Storage's own transaction, so an
+-- erasure request either sees the object or refuses the write.
 CREATE FUNCTION public.vsd_document_storage_writable(_path text)
 RETURNS boolean LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path = '' AS $$
-DECLARE _doc public.vsd_documents; _decl public.vsd_declarations; _auth public.vsd_processing_authorizations;
+DECLARE _doc public.vsd_documents;
 BEGIN
   IF auth.uid() IS NULL OR auth.role() IS DISTINCT FROM 'authenticated'
      OR NOT public.sp_passport_session_active()
@@ -952,36 +1134,10 @@ BEGIN
   SELECT * INTO _doc FROM public.vsd_documents
    WHERE holder_user_id = auth.uid() AND storage_path = _path FOR UPDATE;
   IF NOT FOUND OR _doc.status <> 'prepared' THEN RETURN false; END IF;
-  SELECT * INTO _decl FROM public.vsd_declarations WHERE id = _doc.declaration_id;
-  IF _decl.status <> 'active' OR _decl.revision <> _doc.declaration_revision THEN RETURN false; END IF;
-  _auth := public.vsd_current_authorization(_decl.declaration_kind, _decl.jurisdiction);
-  RETURN _auth.id IS NOT NULL AND _auth.id = _decl.authorization_id
-     AND 'store_document' = ANY (_auth.permitted_operations)
-     AND _doc.document_type = ANY (_auth.permitted_document_types);
+  RETURN public.vsd_document_current(_doc);
 END $$;
 REVOKE ALL ON FUNCTION public.vsd_document_storage_writable(text) FROM PUBLIC, anon, service_role;
 GRANT EXECUTE ON FUNCTION public.vsd_document_storage_writable(text) TO authenticated;
-
--- A read is the holder's own live document, or -- for an appointed reviewer
--- only -- a document whose holder has asked for the review. A file owed to
--- erasure is readable by nobody.
-CREATE FUNCTION public.vsd_document_storage_readable(_path text)
-RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = '' AS $$
-  SELECT auth.uid() IS NOT NULL
-     AND auth.role() = 'authenticated'
-     AND public.sp_passport_session_active()
-     AND EXISTS (
-       SELECT 1 FROM public.vsd_documents x
-         JOIN public.vsd_declarations d ON d.id = x.declaration_id
-        WHERE x.storage_path = _path
-          AND ((x.holder_user_id = auth.uid() AND x.status IN ('prepared', 'attached'))
-            OR (x.status = 'attached' AND x.review_requested_at IS NOT NULL
-                AND d.status = 'active' AND d.revision = x.declaration_revision
-                AND x.holder_user_id <> auth.uid()
-                AND public.vsd_is_reviewer_for(d.authorization_id))))
-$$;
-REVOKE ALL ON FUNCTION public.vsd_document_storage_readable(text) FROM PUBLIC, anon, service_role;
-GRANT EXECUTE ON FUNCTION public.vsd_document_storage_readable(text) TO authenticated;
 
 -- A rollback leaves the bucket closed behind this policy; re-applying opens
 -- it again through the policies below.
@@ -993,18 +1149,24 @@ BEGIN
   END IF;
 END $$;
 
+-- The ONE client operation on this bucket: the holder's upload of a prepared
+-- document.
 CREATE POLICY vsd_documents_insert ON storage.objects FOR INSERT TO authenticated
   WITH CHECK (bucket_id = 'self-declaration-documents' AND public.vsd_document_storage_writable(name));
-CREATE POLICY vsd_documents_select ON storage.objects FOR SELECT TO authenticated
-  USING (bucket_id = 'self-declaration-documents' AND public.vsd_document_storage_readable(name));
 
 -- Restrictive fences, so no broader policy on storage.objects -- present or
--- future -- can open this bucket. There is no client UPDATE or DELETE at
--- all: bytes leave through the erasure queue only. anon is closed outright.
+-- future -- can open this bucket.
+--
+-- There is NO client SELECT. Storage downloads, lists and signs links with
+-- the caller's own role, so with no row visible it can do none of them for
+-- any client: not the holder, not a reviewer, not an administrator. Bytes
+-- are delivered by the application server only, per request, after
+-- vsd_authorize_document_read. There is no client UPDATE or DELETE either:
+-- bytes leave through the erasure queue only. anon is closed outright.
 CREATE POLICY vsd_documents_insert_fence ON storage.objects AS RESTRICTIVE FOR INSERT TO authenticated
   WITH CHECK (bucket_id <> 'self-declaration-documents' OR public.vsd_document_storage_writable(name));
 CREATE POLICY vsd_documents_select_fence ON storage.objects AS RESTRICTIVE FOR SELECT TO authenticated
-  USING (bucket_id <> 'self-declaration-documents' OR public.vsd_document_storage_readable(name));
+  USING (bucket_id <> 'self-declaration-documents');
 CREATE POLICY vsd_documents_update_fence ON storage.objects AS RESTRICTIVE FOR UPDATE TO authenticated
   USING (bucket_id <> 'self-declaration-documents')
   WITH CHECK (bucket_id <> 'self-declaration-documents');
@@ -1036,6 +1198,13 @@ BEGIN
       RAISE EXCEPTION 'VSD_POSTFLIGHT: anon can execute %.', _f.proname;
     END IF;
   END LOOP;
+
+  -- No policy may let a client read this bucket's objects.
+  IF EXISTS (SELECT 1 FROM pg_policies
+              WHERE schemaname = 'storage' AND tablename = 'objects' AND permissive = 'PERMISSIVE'
+                AND cmd IN ('SELECT', 'ALL') AND qual LIKE '%self-declaration-documents%') THEN
+    RAISE EXCEPTION 'VSD_POSTFLIGHT: a policy lets a client read the document bucket.';
+  END IF;
 
   -- Nothing is authorized by installing this.
   IF EXISTS (SELECT 1 FROM public.vsd_processing_authorizations) THEN
