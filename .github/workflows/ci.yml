@@ -548,6 +548,20 @@ jobs:
       - name: Profile section navigation check
         run: bun run profile-section-navigation:check
 
+      # VOLUNTARY SELF-DECLARATIONS. A holder's own dated statement on the
+      # Profile: self-declaration, never verification. From source: nothing
+      # outside the module and the Profile route names it (so no public,
+      # card, CV, talent, application or sharing surface can read it), no
+      # criminal-history wording exists, nothing is pre-selected, the copy
+      # claims no verified or clean status in either language, the service
+      # key is confined to the narrowed erasure drain, and "erased" is said
+      # only from the server's answer. Then the pure rules as unit tests.
+      - name: Voluntary self-declarations check
+        run: bun run self-declarations:check
+
+      - name: Voluntary self-declarations unit tests
+        run: bun run self-declarations:test
+
       # The guided experience, asserted against rendered markup rather than
       # source: exactly one recommendation is marked primary and it is the one
       # the ranking engine returned, the rest stay reachable, no call to action
@@ -2317,6 +2331,13 @@ jobs:
       # write and re-reads, and claims nothing about persistence.
       - name: Profile, CV and Passport surfaces browser suite
         run: bun run e2e:surfaces
+
+      # Voluntary self-declarations in the browser, Swedish and English, at
+      # desktop and 375: closed by default with no control at all, nothing
+      # pre-selected, the three provenance labels, and an owed or failed
+      # file cleanup that stays visible and is never called erased early.
+      - name: Voluntary self-declarations browser suite
+        run: bun run e2e:self-declarations
 
       - name: Server log
         if: failure()

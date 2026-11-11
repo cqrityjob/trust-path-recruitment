@@ -1,0 +1,672 @@
+{
+  "formatVersion": 1,
+  "projectRef": "wrygicdfxwjnrugduxnt",
+  "installation": "official_supabase_github_integration",
+  "readOnly": true,
+  "observedBy": "Claude Code via the Supabase connector, SELECT statements only, after the owner reported that #492 was merged.",
+  "observedAt": "2026-11-11T18:22:17.812013+00:00",
+  "merges": [
+    {
+      "pr": 492,
+      "head": "22f2dcc639fb75d1ed77eed698b35c8aef9cbb5a",
+      "mergeSha": "82a28c3b19b905aa1c83f9b20c051629aa230579",
+      "mergedAt": "2026-11-11T18:21:06Z",
+      "slots": [
+        "20270324090000"
+      ]
+    }
+  ],
+  "migrationSha256": {
+    "20270324090000_vsd_voluntary_self_declarations.sql": "ee561d84180c65138e79a9aa9acb544f39179c64bf22ea110b20557b06751878"
+  },
+  "ledger": {
+    "before492Snapshot": {
+      "count": 402,
+      "latest": "20270323090000",
+      "versionNameNewlineMd5": "eedafaf9c6c7ec90283e7b4dd86da01e"
+    },
+    "after492": {
+      "count": 403,
+      "latest": "20270324090000",
+      "versionNameNewlineMd5": "0ddf24b33ae137ddf6a91d934de3b912",
+      "observedAt": "2026-11-11T18:22:17.812013+00:00",
+      "newRows": [
+        {
+          "name": "vsd_voluntary_self_declarations",
+          "version": "20270324090000"
+        }
+      ]
+    },
+    "prior402Unchanged": true,
+    "formula": "md5(string_agg(version || ' ' || name, E'\\n' ORDER BY version))",
+    "snapshotVerification": "The live rows below 20270324090000 number 402 and have the same digest as the committed 402-row snapshot. The one new row is the canonical slot."
+  },
+  "tables": [
+    {
+      "name": "vsd_declarations",
+      "rowLevelSecurity": true,
+      "policies": 0,
+      "anyPrivilege": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": false
+      }
+    },
+    {
+      "name": "vsd_document_reviewers",
+      "rowLevelSecurity": true,
+      "policies": 0,
+      "anyPrivilege": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": false
+      }
+    },
+    {
+      "name": "vsd_document_reviews",
+      "rowLevelSecurity": true,
+      "policies": 0,
+      "anyPrivilege": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": false
+      }
+    },
+    {
+      "name": "vsd_documents",
+      "rowLevelSecurity": true,
+      "policies": 0,
+      "anyPrivilege": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": false
+      }
+    },
+    {
+      "name": "vsd_processing_authorizations",
+      "rowLevelSecurity": true,
+      "policies": 0,
+      "anyPrivilege": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": false
+      }
+    }
+  ],
+  "rows": {
+    "vsd_processing_authorizations": 0,
+    "vsd_declarations": 0,
+    "vsd_documents": 0,
+    "vsd_document_reviewers": 0
+  },
+  "collectionClosed": "vsd_processing_authorizations is EMPTY: no kind of self-declaration can be collected. No authorization was inserted by this verification or by anything else.",
+  "constraints": {
+    "vsd_auth_criminal_needs_reviewed_basis": true
+  },
+  "columns": {
+    "vsd_documents.bytes_matched_at": true
+  },
+  "bucket": {
+    "id": "self-declaration-documents",
+    "public": false,
+    "fileSizeLimit": 10485760,
+    "allowedMimeTypes": [
+      "application/pdf",
+      "image/jpeg",
+      "image/png"
+    ],
+    "objects": 0
+  },
+  "storagePolicies": [
+    {
+      "name": "vsd_documents_anon_fence",
+      "permissive": "RESTRICTIVE",
+      "cmd": "ALL",
+      "roles": [
+        "anon"
+      ]
+    },
+    {
+      "name": "vsd_documents_delete_fence",
+      "permissive": "RESTRICTIVE",
+      "cmd": "DELETE",
+      "roles": [
+        "authenticated"
+      ]
+    },
+    {
+      "name": "vsd_documents_insert",
+      "permissive": "PERMISSIVE",
+      "cmd": "INSERT",
+      "roles": [
+        "authenticated"
+      ]
+    },
+    {
+      "name": "vsd_documents_insert_fence",
+      "permissive": "RESTRICTIVE",
+      "cmd": "INSERT",
+      "roles": [
+        "authenticated"
+      ]
+    },
+    {
+      "name": "vsd_documents_select_fence",
+      "permissive": "RESTRICTIVE",
+      "cmd": "SELECT",
+      "roles": [
+        "authenticated"
+      ]
+    },
+    {
+      "name": "vsd_documents_update_fence",
+      "permissive": "RESTRICTIVE",
+      "cmd": "UPDATE",
+      "roles": [
+        "authenticated"
+      ]
+    }
+  ],
+  "otherStoragePoliciesNamingTheBucket": 0,
+  "triggers": [
+    {
+      "name": "vsd_authorization_immutable",
+      "table": "vsd_processing_authorizations",
+      "enabled": true
+    },
+    {
+      "name": "vsd_document_erasure_manifest",
+      "table": "vsd_documents",
+      "enabled": true
+    },
+    {
+      "name": "vsd_document_intent_immutable",
+      "table": "vsd_documents",
+      "enabled": true
+    }
+  ],
+  "functions": [
+    {
+      "name": "vsd_abandon_upload",
+      "securityDefiner": true,
+      "settings": [
+        "search_path=\"\""
+      ],
+      "bodyMd5": "2c31b3a9fcdfd588d2d839e6fddc396b",
+      "canonicalBodyMd5": "2c31b3a9fcdfd588d2d839e6fddc396b",
+      "bodyMatchesCanonicalByteForByte": true,
+      "execute": {
+        "anon": false,
+        "public": false,
+        "authenticated": true,
+        "service_role": false
+      }
+    },
+    {
+      "name": "vsd_assert_caller",
+      "securityDefiner": true,
+      "settings": [
+        "search_path=\"\""
+      ],
+      "bodyMd5": "e07fc666e9cf45ab4688899f23b24c46",
+      "canonicalBodyMd5": "e07fc666e9cf45ab4688899f23b24c46",
+      "bodyMatchesCanonicalByteForByte": true,
+      "execute": {
+        "anon": false,
+        "public": false,
+        "authenticated": false,
+        "service_role": false
+      }
+    },
+    {
+      "name": "vsd_attach_document",
+      "securityDefiner": true,
+      "settings": [
+        "search_path=\"\""
+      ],
+      "bodyMd5": "b85252e6991f28b77e939d255a41784f",
+      "canonicalBodyMd5": "b85252e6991f28b77e939d255a41784f",
+      "bodyMatchesCanonicalByteForByte": true,
+      "execute": {
+        "anon": false,
+        "public": false,
+        "authenticated": true,
+        "service_role": false
+      }
+    },
+    {
+      "name": "vsd_authorization_immutable",
+      "securityDefiner": false,
+      "settings": [
+        "search_path=\"\""
+      ],
+      "bodyMd5": "364e1b9624c2a3ce7ae3d5ce619e2eea",
+      "canonicalBodyMd5": "364e1b9624c2a3ce7ae3d5ce619e2eea",
+      "bodyMatchesCanonicalByteForByte": true,
+      "execute": {
+        "anon": false,
+        "public": false,
+        "authenticated": false,
+        "service_role": false
+      }
+    },
+    {
+      "name": "vsd_authorize_document_read",
+      "securityDefiner": true,
+      "settings": [
+        "search_path=\"\""
+      ],
+      "bodyMd5": "9d7000a95c5f373cb0dc533ea837e58e",
+      "canonicalBodyMd5": "9d7000a95c5f373cb0dc533ea837e58e",
+      "bodyMatchesCanonicalByteForByte": true,
+      "execute": {
+        "anon": false,
+        "public": false,
+        "authenticated": true,
+        "service_role": false
+      }
+    },
+    {
+      "name": "vsd_begin_document",
+      "securityDefiner": true,
+      "settings": [
+        "search_path=\"\""
+      ],
+      "bodyMd5": "e6bbc1b5eed5a9a80805275fea55277b",
+      "canonicalBodyMd5": "e6bbc1b5eed5a9a80805275fea55277b",
+      "bodyMatchesCanonicalByteForByte": true,
+      "execute": {
+        "anon": false,
+        "public": false,
+        "authenticated": true,
+        "service_role": false
+      }
+    },
+    {
+      "name": "vsd_current_authorization",
+      "securityDefiner": true,
+      "settings": [
+        "search_path=\"\""
+      ],
+      "bodyMd5": "454aa55d471e31d9e6752c44ed22ac5c",
+      "canonicalBodyMd5": "454aa55d471e31d9e6752c44ed22ac5c",
+      "bodyMatchesCanonicalByteForByte": true,
+      "execute": {
+        "anon": false,
+        "public": false,
+        "authenticated": false,
+        "service_role": false
+      }
+    },
+    {
+      "name": "vsd_declaration_current",
+      "securityDefiner": true,
+      "settings": [
+        "search_path=\"\""
+      ],
+      "bodyMd5": "ddad2118bc6bf6be6bb59bfebc72797d",
+      "canonicalBodyMd5": "ddad2118bc6bf6be6bb59bfebc72797d",
+      "bodyMatchesCanonicalByteForByte": true,
+      "execute": {
+        "anon": false,
+        "public": false,
+        "authenticated": false,
+        "service_role": false
+      }
+    },
+    {
+      "name": "vsd_declaration_payload",
+      "securityDefiner": true,
+      "settings": [
+        "search_path=\"\""
+      ],
+      "bodyMd5": "5f8f419e5819a50cfd49aecca9f39a2f",
+      "canonicalBodyMd5": "5f8f419e5819a50cfd49aecca9f39a2f",
+      "bodyMatchesCanonicalByteForByte": true,
+      "execute": {
+        "anon": false,
+        "public": false,
+        "authenticated": false,
+        "service_role": false
+      }
+    },
+    {
+      "name": "vsd_delete_declaration",
+      "securityDefiner": true,
+      "settings": [
+        "search_path=\"\""
+      ],
+      "bodyMd5": "bde6eda1efcf027f6ea21d363875942e",
+      "canonicalBodyMd5": "bde6eda1efcf027f6ea21d363875942e",
+      "bodyMatchesCanonicalByteForByte": true,
+      "execute": {
+        "anon": false,
+        "public": false,
+        "authenticated": true,
+        "service_role": false
+      }
+    },
+    {
+      "name": "vsd_discard_document",
+      "securityDefiner": true,
+      "settings": [
+        "search_path=\"\""
+      ],
+      "bodyMd5": "d9c806f905d54a73627e9776524dedc4",
+      "canonicalBodyMd5": "d9c806f905d54a73627e9776524dedc4",
+      "bodyMatchesCanonicalByteForByte": true,
+      "execute": {
+        "anon": false,
+        "public": false,
+        "authenticated": true,
+        "service_role": false
+      }
+    },
+    {
+      "name": "vsd_document_current",
+      "securityDefiner": true,
+      "settings": [
+        "search_path=\"\""
+      ],
+      "bodyMd5": "d99778d7d5efa15a1c8315925d3105ef",
+      "canonicalBodyMd5": "d99778d7d5efa15a1c8315925d3105ef",
+      "bodyMatchesCanonicalByteForByte": true,
+      "execute": {
+        "anon": false,
+        "public": false,
+        "authenticated": false,
+        "service_role": false
+      }
+    },
+    {
+      "name": "vsd_document_erasure_manifest",
+      "securityDefiner": true,
+      "settings": [
+        "search_path=\"\""
+      ],
+      "bodyMd5": "faccbd73898f625d73c06073aa0ebdfd",
+      "canonicalBodyMd5": "faccbd73898f625d73c06073aa0ebdfd",
+      "bodyMatchesCanonicalByteForByte": true,
+      "execute": {
+        "anon": false,
+        "public": false,
+        "authenticated": false,
+        "service_role": false
+      }
+    },
+    {
+      "name": "vsd_document_intent_immutable",
+      "securityDefiner": false,
+      "settings": [
+        "search_path=\"\""
+      ],
+      "bodyMd5": "fc4bb0be14dac637807e2ae730b8f00c",
+      "canonicalBodyMd5": "fc4bb0be14dac637807e2ae730b8f00c",
+      "bodyMatchesCanonicalByteForByte": true,
+      "execute": {
+        "anon": false,
+        "public": false,
+        "authenticated": false,
+        "service_role": false
+      }
+    },
+    {
+      "name": "vsd_document_payload",
+      "securityDefiner": true,
+      "settings": [
+        "search_path=\"\""
+      ],
+      "bodyMd5": "ac1b5652165b920cdc3e8462bc6ae982",
+      "canonicalBodyMd5": "ac1b5652165b920cdc3e8462bc6ae982",
+      "bodyMatchesCanonicalByteForByte": true,
+      "execute": {
+        "anon": false,
+        "public": false,
+        "authenticated": false,
+        "service_role": false
+      }
+    },
+    {
+      "name": "vsd_document_storage_writable",
+      "securityDefiner": true,
+      "settings": [
+        "search_path=\"\""
+      ],
+      "bodyMd5": "b9baaf9c09a951eb0bd6a1131e3d1fd0",
+      "canonicalBodyMd5": "b9baaf9c09a951eb0bd6a1131e3d1fd0",
+      "bodyMatchesCanonicalByteForByte": true,
+      "execute": {
+        "anon": false,
+        "public": false,
+        "authenticated": true,
+        "service_role": false
+      }
+    },
+    {
+      "name": "vsd_is_reviewer_for",
+      "securityDefiner": true,
+      "settings": [
+        "search_path=\"\""
+      ],
+      "bodyMd5": "6a48851bb1dddf46f02ea42c9ba4ea2c",
+      "canonicalBodyMd5": "6a48851bb1dddf46f02ea42c9ba4ea2c",
+      "bodyMatchesCanonicalByteForByte": true,
+      "execute": {
+        "anon": false,
+        "public": false,
+        "authenticated": false,
+        "service_role": false
+      }
+    },
+    {
+      "name": "vsd_my_declarations",
+      "securityDefiner": true,
+      "settings": [
+        "search_path=\"\""
+      ],
+      "bodyMd5": "0bbecb0bafba30aa33cf8a56b929e28f",
+      "canonicalBodyMd5": "0bbecb0bafba30aa33cf8a56b929e28f",
+      "bodyMatchesCanonicalByteForByte": true,
+      "execute": {
+        "anon": false,
+        "public": false,
+        "authenticated": true,
+        "service_role": false
+      }
+    },
+    {
+      "name": "vsd_purge_due",
+      "securityDefiner": true,
+      "settings": [
+        "search_path=\"\""
+      ],
+      "bodyMd5": "a6d6d759efd1611d7d6a8fa553f978be",
+      "canonicalBodyMd5": "a6d6d759efd1611d7d6a8fa553f978be",
+      "bodyMatchesCanonicalByteForByte": true,
+      "execute": {
+        "anon": false,
+        "public": false,
+        "authenticated": false,
+        "service_role": true
+      }
+    },
+    {
+      "name": "vsd_queue_declaration_documents",
+      "securityDefiner": true,
+      "settings": [
+        "search_path=\"\""
+      ],
+      "bodyMd5": "8efd4e2af3a7bd4344aac52528a9f8af",
+      "canonicalBodyMd5": "8efd4e2af3a7bd4344aac52528a9f8af",
+      "bodyMatchesCanonicalByteForByte": true,
+      "execute": {
+        "anon": false,
+        "public": false,
+        "authenticated": false,
+        "service_role": false
+      }
+    },
+    {
+      "name": "vsd_queue_document_erasure",
+      "securityDefiner": true,
+      "settings": [
+        "search_path=\"\""
+      ],
+      "bodyMd5": "e2750dc6451bdffd64b34b263e7e5c8a",
+      "canonicalBodyMd5": "e2750dc6451bdffd64b34b263e7e5c8a",
+      "bodyMatchesCanonicalByteForByte": true,
+      "execute": {
+        "anon": false,
+        "public": false,
+        "authenticated": false,
+        "service_role": false
+      }
+    },
+    {
+      "name": "vsd_reconcile",
+      "securityDefiner": true,
+      "settings": [
+        "search_path=\"\""
+      ],
+      "bodyMd5": "2d3b798b48947afdd1fd5cab9731db78",
+      "canonicalBodyMd5": "2d3b798b48947afdd1fd5cab9731db78",
+      "bodyMatchesCanonicalByteForByte": true,
+      "execute": {
+        "anon": false,
+        "public": false,
+        "authenticated": false,
+        "service_role": false
+      }
+    },
+    {
+      "name": "vsd_review_available",
+      "securityDefiner": true,
+      "settings": [
+        "search_path=\"\""
+      ],
+      "bodyMd5": "cc972fd60ee9b10bd07e6238b878849d",
+      "canonicalBodyMd5": "cc972fd60ee9b10bd07e6238b878849d",
+      "bodyMatchesCanonicalByteForByte": true,
+      "execute": {
+        "anon": false,
+        "public": false,
+        "authenticated": false,
+        "service_role": false
+      }
+    },
+    {
+      "name": "vsd_reviewer_queue",
+      "securityDefiner": true,
+      "settings": [
+        "search_path=\"\""
+      ],
+      "bodyMd5": "6d30454746b57d143407f598e1f6a45c",
+      "canonicalBodyMd5": "6d30454746b57d143407f598e1f6a45c",
+      "bodyMatchesCanonicalByteForByte": true,
+      "execute": {
+        "anon": false,
+        "public": false,
+        "authenticated": true,
+        "service_role": false
+      }
+    },
+    {
+      "name": "vsd_reviewer_record_review",
+      "securityDefiner": true,
+      "settings": [
+        "search_path=\"\""
+      ],
+      "bodyMd5": "bc837578969f02fa8800531bd7256bbb",
+      "canonicalBodyMd5": "bc837578969f02fa8800531bd7256bbb",
+      "bodyMatchesCanonicalByteForByte": true,
+      "execute": {
+        "anon": false,
+        "public": false,
+        "authenticated": true,
+        "service_role": false
+      }
+    },
+    {
+      "name": "vsd_save_declaration",
+      "securityDefiner": true,
+      "settings": [
+        "search_path=\"\""
+      ],
+      "bodyMd5": "59853e839b171255115fb8641b733406",
+      "canonicalBodyMd5": "59853e839b171255115fb8641b733406",
+      "bodyMatchesCanonicalByteForByte": true,
+      "execute": {
+        "anon": false,
+        "public": false,
+        "authenticated": true,
+        "service_role": false
+      }
+    },
+    {
+      "name": "vsd_set_document_review_request",
+      "securityDefiner": true,
+      "settings": [
+        "search_path=\"\""
+      ],
+      "bodyMd5": "b9d90d4177ccdd7b0d367bb9042084f2",
+      "canonicalBodyMd5": "b9d90d4177ccdd7b0d367bb9042084f2",
+      "bodyMatchesCanonicalByteForByte": true,
+      "execute": {
+        "anon": false,
+        "public": false,
+        "authenticated": true,
+        "service_role": false
+      }
+    },
+    {
+      "name": "vsd_stamp_document_content",
+      "securityDefiner": true,
+      "settings": [
+        "search_path=\"\""
+      ],
+      "bodyMd5": "074ba1298dddbcee4e570022ae783829",
+      "canonicalBodyMd5": "074ba1298dddbcee4e570022ae783829",
+      "bodyMatchesCanonicalByteForByte": true,
+      "execute": {
+        "anon": false,
+        "public": false,
+        "authenticated": false,
+        "service_role": true
+      }
+    },
+    {
+      "name": "vsd_upload_state",
+      "securityDefiner": true,
+      "settings": [
+        "search_path=\"\""
+      ],
+      "bodyMd5": "d9283575bb444c12b825b01bef73bf5f",
+      "canonicalBodyMd5": "d9283575bb444c12b825b01bef73bf5f",
+      "bodyMatchesCanonicalByteForByte": true,
+      "execute": {
+        "anon": false,
+        "public": false,
+        "authenticated": true,
+        "service_role": false
+      }
+    },
+    {
+      "name": "vsd_withdraw_declaration",
+      "securityDefiner": true,
+      "settings": [
+        "search_path=\"\""
+      ],
+      "bodyMd5": "464ef161b00e16308df741ea2d8bc621",
+      "canonicalBodyMd5": "464ef161b00e16308df741ea2d8bc621",
+      "bodyMatchesCanonicalByteForByte": true,
+      "execute": {
+        "anon": false,
+        "public": false,
+        "authenticated": true,
+        "service_role": false
+      }
+    }
+  ],
+  "comparisonMethod": "md5(pg_proc.prosrc) on the hosted database against md5 of each function body (the text between AS $$ and $$;) in supabase/migrations/20270324090000_vsd_voluntary_self_declarations.sql at merge 82a28c3b. All 30 match.",
+  "productionActions": "None. Two SELECT statements were run. No migration was run or re-run, no row was written, no authorization was recorded and no object was stored."
+}

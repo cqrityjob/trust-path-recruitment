@@ -372,6 +372,25 @@ export function repliesFor(f: HomeFixture): Record<string, Reply> {
     // The Profile's residence card (any country). Unstated by default; a
     // scenario that states one overrides it.
     readCurrentLocation: ok(null),
+    // The Profile's voluntary self-declarations. A fresh installation has no
+    // processing authorization, so every kind is closed; a scenario that
+    // opens one overrides this.
+    getMySelfDeclarations: ok({
+      view: {
+        panels: ["enforcement_debt_none", "payment_remarks_none", "criminal_history"].map(
+          (kind) => ({
+            kind,
+            state: "closed",
+            authorization: null,
+            declaration: null,
+            cleanups: [],
+            deletionPending: false,
+          }),
+        ),
+        cleanupOwed: false,
+      },
+      fileDeletion: "confirmed",
+    }),
   };
 }
 
