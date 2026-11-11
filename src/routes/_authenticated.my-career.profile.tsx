@@ -44,6 +44,15 @@
 //
 // Everything on this page. The header says so, and the career profile card
 // repeats it beside its own save. Verification is the Passport's word.
+//
+// ── VOLUNTARY SELF-DECLARATIONS (2026-11-11) ───────────────────────────
+//
+// One more section the Profile owns, and the only one with its own storage:
+// SelfDeclarationsSection reads and writes the vsd_ tables through
+// src/lib/self-declarations and nothing else on this page touches them. It
+// is optional and private to the holder. It is NOT part of the professional
+// identity, of completeness, of the CV or of the Passport, so it is not in
+// SECTION_DESTINATIONS and is never listed under "missing".
 
 import { useEffect } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
@@ -66,6 +75,7 @@ import {
 } from "@/lib/professional-identity/profile-destinations";
 import { ProfileBasicsSection } from "@/components/professional-identity/ProfileBasicsSection";
 import { ScrollToHashOnceReady } from "@/components/security-passport/ScrollToHashOnceReady";
+import { SelfDeclarationsSection } from "@/components/self-declarations/SelfDeclarationsSection";
 import {
   EDUCATION_CLAIM_TYPES,
   LANGUAGE_CLAIM_TYPES,
@@ -329,6 +339,16 @@ function ProfilePage() {
               </div>
             </div>
           </section>
+
+          {/* ── VOLUNTARY SELF-DECLARATIONS ─────────────────────────────
+              Optional, private to the holder, and outside everything else
+              on this page: it adds nothing to completeness, the CV or the
+              Passport, and it owns its own reads and writes. Mounted
+              unconditionally; a kind that is not authorized renders as
+              closed and collects nothing. */}
+          <div id="profile-self-declarations" className="scroll-mt-24">
+            <SelfDeclarationsSection />
+          </div>
 
           {/* ── THE OTHER TWO SURFACES ──────────────────────────────────
               Summaries with one way in each. Nothing is editable here, and
