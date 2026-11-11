@@ -484,11 +484,14 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // The 402-row hosted ledger preserves all previous 401 entries; both
 // function bodies, grants and enabled triggers match the merged source.
 //
-// 2026-11-11: 20270324090000 (voluntary profile self-declarations, vsd_*) is
-// a schema-first release awaiting the owner's merge and the official
-// integration. It is additive, records no processing authorization and is
-// called by no merged application code.
-const expectedPending: string[] = ["20270324090000_vsd_voluntary_self_declarations.sql"];
+// 2026-11-11: #492 (20270324090000, voluntary profile self-declarations) was
+// installed by the official integration after merge 82a28c3b. Read-only
+// catalog and ledger proof:
+// docs/release/2026-11-11-self-declarations-hosted-verification.json.
+// The 403-row hosted ledger preserves all previous 402 entries; all 30
+// function bodies, privileges, storage policies and triggers match the
+// merged source, and vsd_processing_authorizations is empty.
+const expectedPending: string[] = [];
 
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
