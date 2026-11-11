@@ -200,7 +200,7 @@ describe("official real Supabase CI target", () => {
     expect(APP_SHA).toBe("53659419a1c243c27a59540eb849569140b71365");
     // The schema witness moved to the voluntary self-declarations slot (403 files);
     // the application under this regression stays the reviewed 53659419.
-    expect(SCHEMA_SHA).toBe("89b46e3211ac2f89de2ea74788595a1914990261");
+    expect(SCHEMA_SHA).toBe("5814706fa338d470aa0d70f04d46a5faad6ae165");
     // Nor the Passport setup completion slot before the self-declarations (4ab6a6f0).
     expect(() =>
       validateTarget(
@@ -316,7 +316,7 @@ describe("official real Supabase CI target", () => {
     ).toThrow("UNREVIEWED_APP_HEAD");
   });
   test("release schema binding is separate from test code and requires a full SHA", () => {
-    const release = "89b46e3211ac2f89de2ea74788595a1914990261";
+    const release = "5814706fa338d470aa0d70f04d46a5faad6ae165";
     const context = validateTarget(
       { ...env, RI_REAL_RELEASE_SCHEMA_SHA: release },
       env.RI_REAL_SCHEMA_SHA,
@@ -471,7 +471,7 @@ describe("real CI execution and publication cannot silently narrow", () => {
     expect(job["runs-on"]).toBe("ubuntu-latest");
     expect(job.if).toBeUndefined();
     expect(job["continue-on-error"]).toBeUndefined();
-    expect(job.env.RI_REAL_RELEASE_SCHEMA_SHA).toBe("89b46e3211ac2f89de2ea74788595a1914990261");
+    expect(job.env.RI_REAL_RELEASE_SCHEMA_SHA).toBe("5814706fa338d470aa0d70f04d46a5faad6ae165");
     expect(job.steps[0].with["fetch-depth"]).toBe(0);
     expect(job.steps.every((step: { [key: string]: unknown }) => !step["continue-on-error"])).toBe(
       true,
