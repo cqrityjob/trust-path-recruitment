@@ -22,6 +22,12 @@
  *                  upload error never discards a document that was saved
  *   6  ERASURE     "erased"/"deleted" is said only from the server's answer
  *   7  REGISTERED  this check, its controls, tests and browser suite run in CI
+ *   8  THE BRIDGE  the ONE authorized way out: the Security Passport. Named
+ *                  files only; a self-declared shield that no document can
+ *                  upgrade; nothing pre-selected; only what was previewed is
+ *                  attached, to one new link; a recipient reads through a
+ *                  separate, authenticated call; nothing reaches the social
+ *                  image, the page head, a download or any other surface
  *
  * Run: bun run self-declarations:check
  */
@@ -34,6 +40,7 @@ import {
   STATEMENT_VERSIONS,
   buildSelfDeclarationsView,
 } from "../src/lib/self-declarations/model";
+import * as bridge from "../src/lib/self-declarations/passport-bridge";
 import {
   CRIMINAL_AUTHORIZED_PAYLOAD,
   OPEN_PAYLOAD,
@@ -81,9 +88,30 @@ const STORE = `${MODULE}/document-store.server.ts`;
 const CONTENT = `${MODULE}/content.ts`;
 const MODEL = `${MODULE}/model.ts`;
 const MIGRATION = "20270324090000_vsd_voluntary_self_declarations.sql";
-// The Security Passport bridge (vsd_disclosure_*): the one other migration
-// that may name a vsd_ object. Its application half ships separately.
+
+// ── The Security Passport bridge (20270325090000) ─────────────────────────
+// The ONLY files outside the module that may name the self-declarations.
+// Anything else -- a card, the wallet, the social flow, an export, a
+// catalogue, search -- still fails 1.1.
 const BRIDGE_MIGRATION = "20270325090000_vsd_passport_disclosure.sql";
+const BRIDGE_DIR = "src/components/security-passport/self-declarations";
+const BRIDGE_SHIELD = `${BRIDGE_DIR}/SelfDeclarationShield.tsx`;
+const BRIDGE_PASSPORT = `${BRIDGE_DIR}/PassportSelfDeclarations.tsx`;
+const BRIDGE_SHARE = `${BRIDGE_DIR}/ShareSelfDeclarations.tsx`;
+const BRIDGE_RECIPIENT = `${BRIDGE_DIR}/RecipientSelfDeclarations.tsx`;
+const BRIDGE_MODEL = `${MODULE}/passport-bridge.ts`;
+const BRIDGE_FUNCTIONS = `${MODULE}/passport-bridge.functions.ts`;
+const BRIDGE_RECIPIENT_FN = "src/lib/security-passport/self-declarations-bridge.functions.ts";
+const PASSPORT_ROUTE = "src/routes/_authenticated.passport.index.tsx";
+const SHARE_ROUTE = "src/routes/_authenticated.passport.share.tsx";
+const RECIPIENT_ROUTE = "src/routes/p.$token.tsx";
+const BRIDGE_MOUNTS = [PASSPORT_ROUTE, SHARE_ROUTE, RECIPIENT_ROUTE];
+const BRIDGE_FILES = [BRIDGE_RECIPIENT_FN, ...BRIDGE_MOUNTS];
+/** Source without comments, so a rule about code is not met by prose. */
+const code = (rel: string) =>
+  read(rel)
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/^\s*\/\/.*$/gm, "");
 
 // ── 1 · Isolation ─────────────────────────────────────────────────────────
 console.log("1 · isolation");
@@ -92,12 +120,14 @@ const outside = walk("src").filter(
   (f) =>
     !f.startsWith(`${MODULE}/`) &&
     !f.startsWith(`${SECTION_DIR}/`) &&
+    !f.startsWith(`${BRIDGE_DIR}/`) &&
+    !BRIDGE_FILES.includes(f) &&
     f !== ROUTE &&
     f !== "src/routeTree.gen.ts" &&
     NAMES.test(read(f)),
 );
 ck(
-  "1.1 no file outside the module, its section and the Profile route names self-declarations",
+  "1.1 no file outside the module, its section, the Profile route and the named Passport bridge names self-declarations",
   outside.length === 0,
   outside.join(", "),
 );
@@ -520,6 +550,369 @@ ck(
   "7.4 the database suite is registered with its negative controls",
   read("scripts/db-test.sh").includes("VSD_T=vsd_voluntary_self_declarations_test") &&
     (read("scripts/db-test.sh").match(/td_nc "\$VSD_T"/g) ?? []).length === 13,
+);
+
+// ── 8 · The Security Passport bridge ──────────────────────────────────────
+console.log("8 · the Security Passport bridge");
+const SYN = {
+  kind: "enforcement_debt_none",
+  jurisdiction: "SE",
+  statementVersion: "se-enforcement-v1",
+  asOfDate: "2026-11-11",
+  declaredOn: "2026-11-11",
+  statementPeriod: null,
+} as const;
+const SYN_ID = "0d000000-0000-4000-8000-000000000001";
+
+// The only self-declaration imports a mount or a bridge file may make.
+const importsOf = (rel: string) =>
+  [...read(rel).matchAll(/from "(@\/[^"]+)"/g)].map((m) => m[1]!).filter((x) => NAMES.test(x));
+const MOUNT_MAY_IMPORT = new Set([
+  "@/components/security-passport/self-declarations/PassportSelfDeclarations",
+  "@/components/security-passport/self-declarations/ShareSelfDeclarations",
+  "@/components/security-passport/self-declarations/RecipientSelfDeclarations",
+  "@/lib/self-declarations/passport-bridge",
+  "@/lib/self-declarations/passport-bridge.functions",
+  "@/lib/security-passport/self-declarations-bridge.functions",
+]);
+const strayMountImports = BRIDGE_MOUNTS.flatMap((f) =>
+  importsOf(f)
+    .filter((x) => !MOUNT_MAY_IMPORT.has(x))
+    .map((x) => `${f} -> ${x}`),
+);
+ck(
+  "8.1 the three Passport routes reach the self-declarations only through the bridge: never the Profile's editor, its documents or its model",
+  strayMountImports.length === 0 &&
+    BRIDGE_MOUNTS.every((f) => importsOf(f).length > 0) &&
+    BRIDGE_MOUNTS.every(
+      (f) => !/\bvsd_|declarations\.functions|document-store|erasure\.server/.test(read(f)),
+    ),
+  strayMountImports.join(", "),
+);
+const BRIDGE_MAY_IMPORT =
+  /^@\/lib\/self-declarations\/(copy|model|passport-bridge)$|^@\/components\/security-passport\/CredentialShield$|^@\/components\/professional-identity\/copy$|^@\/hooks\/useSignedIn$/;
+const strayBridgeImports = walk(BRIDGE_DIR).flatMap((f) =>
+  [...read(f).matchAll(/from "(@\/[^"]+)"/g)]
+    .map((m) => m[1]!)
+    .filter((x) => !BRIDGE_MAY_IMPORT.test(x))
+    .map((x) => `${f} -> ${x}`),
+);
+ck(
+  "8.2 the bridge components import only the shield primitive, the copy and the narrowed bridge model: no claim, card, CV, social or server module",
+  strayBridgeImports.length === 0 &&
+    walk(BRIDGE_DIR).every((f) => !/@tanstack\/react-start|supabase|\.server"/.test(code(f))),
+  strayBridgeImports.join(", "),
+);
+
+// ── The shield ──────────────────────────────────────────────────────────
+const shield = code(BRIDGE_SHIELD);
+ck(
+  "8.3 the shield is drawn only in the self-declared treatment: no prop, document or review selects another",
+  (shield.match(/<ShieldMark /g) ?? []).length === 1 &&
+    shield.includes('<ShieldMark state="self_declared" size={36} />') &&
+    !/state=\{/.test(shield) &&
+    !/"verified"|"document_provided"|"document_reviewed"|CredentialShield\b(?!")|Check\b|BadgeCheck|ShieldCheck/.test(
+      shield.replace('from "@/components/security-passport/CredentialShield"', ""),
+    ),
+);
+const labelFn =
+  shield.split("export function selfDeclarationShieldLabel")[1]?.split("export function")[0] ?? "";
+ck(
+  "8.3a its label is the subject and 'Självdeklarerat' / 'Self-declared', never a provenance level",
+  labelFn.includes("SHIELD_SUBJECT[statement.kind]") &&
+    labelFn.includes("SHIELD.selfDeclared") &&
+    !/PROVENANCE/.test(labelFn) &&
+    copy.SHIELD.selfDeclared.sv === "Självdeklarerat" &&
+    copy.SHIELD.selfDeclared.en === "Self-declared" &&
+    `${copy.SHIELD_SUBJECT.enforcement_debt_none.sv} · ${copy.SHIELD.selfDeclared.sv}` ===
+      "Kronofogden · Självdeklarerat" &&
+    `${copy.SHIELD_SUBJECT.payment_remarks_none.sv} · ${copy.SHIELD.selfDeclared.sv}` ===
+      "Betalningsanmärkningar · Självdeklarerat" &&
+    `${copy.SHIELD_SUBJECT.criminal_history.sv} · ${copy.SHIELD.selfDeclared.sv}` ===
+      "Brottshistorik · Självdeklarerat",
+);
+ck(
+  "8.3b an opened shield always shows the exact statement, its date, jurisdiction, scope and that CQrityjob has not verified it",
+  ordered(
+    shield,
+    "{open ? (",
+    "Lf(wording.statement, lang, statement.asOfDate)",
+    "{statement.asOfDate}",
+    "L(SHIELD.jurisdiction, lang)",
+    "L(wording.scope, lang)",
+    "{L(SHIELD.notVerified, lang)}",
+  ) &&
+    // Unconditional inside the opened panel: no branch stands between them.
+    !/\? \(\s*<p[^>]*data-vsd-shield-unverified/.test(shield) &&
+    copy.SHIELD.notVerified.sv ===
+      "Uppgiften är lämnad av personen själv och har inte verifierats av CQrityjob." &&
+    /has not been verified by CQrityjob/.test(copy.SHIELD.notVerified.en),
+);
+ck(
+  "8.3c a document's provenance is described to the holder only, in the existing precise words, and never to a recipient",
+  shield.includes('holderProvenance && holderProvenance !== "self_declared"') &&
+    shield.includes("L(PROVENANCE[holderProvenance].hint, lang)") &&
+    !/holderProvenance/.test(code(BRIDGE_RECIPIENT)) &&
+    !/holderProvenance/.test(code(BRIDGE_SHARE)) &&
+    (code(BRIDGE_PASSPORT).match(/holderProvenance=/g) ?? []).length === 1,
+);
+ck(
+  "8.3d a statement whose wording the application does not hold draws nothing",
+  shield.includes("const wording = STATEMENTS[statement.statementVersion];") &&
+    shield.includes("if (!wording) return null;"),
+);
+
+// ── What can be shown at all ────────────────────────────────────────────
+ck(
+  "8.4 a disclosed statement is exactly six fields, strictly: no document, hash, path, review, provenance or id can pass",
+  JSON.stringify(Object.keys(bridge.disclosedStatementSchema.shape).sort()) ===
+    JSON.stringify(
+      [
+        "asOfDate",
+        "declaredOn",
+        "jurisdiction",
+        "kind",
+        "statementPeriod",
+        "statementVersion",
+      ].sort(),
+    ) &&
+    bridge.toDisclosedStatements({ items: [SYN] }).length === 1 &&
+    bridge.toDisclosedStatements({ items: [{ ...SYN, provenance: "document_reviewed" }] })
+      .length === 0 &&
+    bridge.toDisclosedStatements({ items: [{ ...SYN, sha256: "a".repeat(64) }] }).length === 0 &&
+    bridge.toDisclosedStatements({ items: [{ ...SYN, id: SYN_ID }] }).length === 0 &&
+    bridge.toDisclosedStatements(null).length === 0,
+);
+ck(
+  "8.4a criminal history, or any wording the application does not hold, is dropped whatever the database returns",
+  bridge.toDisclosedStatements({
+    items: [{ ...SYN, kind: "criminal_history", statementVersion: "se-criminal-synthetic-v1" }],
+  }).length === 0 &&
+    bridge.toDisclosedStatements({ items: [{ ...SYN, statementVersion: "se-enforcement-v2" }] })
+      .length === 0,
+);
+const closedView = bridge.buildPassportDeclarationsView({ open: [], declarations: [] });
+const criminalView = bridge.buildPassportDeclarationsView({
+  open: [
+    { kind: "criminal_history", jurisdiction: "SE", statementVersion: "se-criminal-synthetic-v1" },
+  ],
+  declarations: [
+    {
+      id: SYN_ID,
+      revision: 1,
+      statement: { ...SYN, kind: "criminal_history", statementVersion: "se-criminal-synthetic-v1" },
+      provenance: "document_reviewed",
+      shareable: true,
+    },
+  ],
+});
+ck(
+  "8.5 closed processing produces no shield: 'not activated', and the same for a criminal-history row or a failed read",
+  closedView.state === "not_activated" &&
+    closedView.declarations.length === 0 &&
+    criminalView.state === "not_activated" &&
+    criminalView.declarations.length === 0 &&
+    bridge.CLOSED_PASSPORT_DECLARATIONS.state === "not_activated" &&
+    bridge.parsePassportDeclarations({ open: [], declarations: [{}] }) === null &&
+    /if \(error\) return CLOSED_PASSPORT_DECLARATIONS;/.test(read(BRIDGE_FUNCTIONS)),
+);
+ck(
+  "8.5a the holder's view has no state for a missing, withdrawn or expired statement, and the copy infers nothing adverse",
+  /readonly state: "not_activated" \| "none" \| "declared";/.test(read(BRIDGE_MODEL)) &&
+    !/saknas|missing|inte godkänd|not approved|har skulder|has debts|anmärkning finns|underkänd|failed/i.test(
+      [copy.PASSPORT_SECTION, copy.SHARE, copy.RECIPIENT, copy.SHIELD]
+        .flatMap((group) => Object.values(group))
+        .map((p) => `${p.sv} ${p.en}`)
+        .join(" "),
+    ),
+);
+
+// ── The holder's Passport ───────────────────────────────────────────────
+const passportRoute = read(PASSPORT_ROUTE);
+const wallet = passportRoute.split("<CredentialWallet")[1]?.split("\n        />")[0] ?? "";
+ck(
+  "8.6 the Passport page mounts the section once, beside the wallet, and gives the wallet, the side column and the attention panel nothing of it",
+  (passportRoute.match(/<PassportSelfDeclarations /g) ?? []).length === 1 &&
+    wallet.length > 0 &&
+    !NAMES.test(wallet) &&
+    (passportRoute.match(/loadSelfDeclarations/g) ?? []).length === 2 &&
+    !NAMES.test(read("src/components/security-passport/CredentialWallet.tsx")) &&
+    !NAMES.test(read("src/components/security-passport/PassportSideColumn.tsx")),
+);
+ck(
+  "8.6a the section edits nothing: it links to the Profile's existing editor",
+  code(BRIDGE_PASSPORT).includes(
+    '<Link to="/my-career/profile" hash="profile-self-declarations"',
+  ) &&
+    !/<input|<form|<select|<textarea|onSubmit/.test(code(BRIDGE_PASSPORT)) &&
+    read(ROUTE).includes('<div id="profile-self-declarations"'),
+);
+
+// ── The share step ──────────────────────────────────────────────────────
+const share = code(BRIDGE_SHARE);
+ck(
+  "8.7 nothing is pre-selected and nothing is offered while disclosure is closed",
+  share.includes("useState<ReadonlySet<string>>(new Set())") &&
+    share.includes("checked={ticked.has(declaration.id)}") &&
+    !/defaultChecked|checked=\{true\}|checked\s*\/>|selectAll|SelectAllBox/.test(share) &&
+    share.includes("(query.data?.declarations ?? []).filter((d) => d.shareable)") &&
+    share.includes("if (shareable.length === 0) return null;"),
+);
+const TICKED = [
+  { id: SYN_ID, revision: 2, statement: SYN, provenance: "self_declared", shareable: true },
+] as const;
+ck(
+  "8.8 only what the server's preview returned can be attached; the preview renders through the recipient's own component",
+  share.includes(
+    "const confirmed = useMemo(() => confirmedChoices(chosen, previewed), [chosen, previewed]);",
+  ) &&
+    bridge.confirmedChoices(TICKED, []).length === 0 &&
+    bridge.confirmedChoices(TICKED, [{ ...SYN, asOfDate: "2026-11-10" }]).length === 0 &&
+    JSON.stringify(bridge.confirmedChoices(TICKED, [SYN])) ===
+      JSON.stringify([{ declarationId: SYN_ID, revision: 2 }]) &&
+    (share.match(/<RecipientSelfDeclarationList/g) ?? []).length === 1 &&
+    share.includes('previewState === "failed"'),
+);
+const shareRoute = read(SHARE_ROUTE);
+ck(
+  "8.9 the choice goes to one place: the attach call after a link is created. Never the social image, a preview payload or a reissue",
+  (shareRoute.match(/selfDeclarationChoices\b/g) ?? []).length === 3 &&
+    ordered(
+      shareRoute,
+      "const result = await doCreate({",
+      "if (selfDeclarationChoices.length > 0) {",
+      "await attachSelfDeclarations(result.disclosureId, selfDeclarationChoices),",
+      "setSelfDeclarationChoices([]);",
+    ) &&
+    (shareRoute.match(/attachSelfDeclarations\(/g) ?? []).length === 1 &&
+    (shareRoute.match(/<ShareSelfDeclarationChoices/g) ?? []).length === 1 &&
+    /\{via === "link" && outcome \? \(\s*<ShareSelfDeclarationResult/.test(shareRoute) &&
+    !NAMES.test(read("src/components/security-passport/live/SocialShareFlow.tsx")) &&
+    !NAMES.test(read("src/lib/security-passport/credential-sharing.functions.ts")) &&
+    !NAMES.test(read("src/lib/security-passport/share-image.ts")) &&
+    !NAMES.test(read("src/lib/security-passport/social-export.ts")),
+);
+ck(
+  "8.9a a failed attach is said plainly, and a reissued link is never said to carry a statement",
+  /does not carry it/.test(copy.SHARE.attachFailed.en) &&
+    /innehåller den inte/.test(copy.SHARE.attachFailed.sv) &&
+    ordered(
+      shareRoute,
+      "async function onReissue(",
+      "setSelfDeclarationOutcome(null);",
+      "replaceShare(",
+    ) &&
+    share.includes('return "failed";'),
+);
+
+// ── The recipient ───────────────────────────────────────────────────────
+const recipientFn = read(BRIDGE_RECIPIENT_FN);
+ck(
+  "8.10 the recipient's read is a separate call that requires a signed-in caller AND the link's share session from the server-read cookie",
+  (recipientFn.match(/createServerFn\(/g) ?? []).length === 1 &&
+    ordered(
+      recipientFn,
+      'createServerFn({ method: "POST" })',
+      ".middleware([requireSupabaseAuth])",
+      "shareSessionFromCookieHeader(",
+      "if (!session) return [];",
+      'client.rpc("vsd_read_disclosed", {',
+      "if (error) return [];",
+      "return toDisclosedStatements(payload);",
+    ) &&
+    !/supabaseAdmin|client\.server|public-disclosure\.server|shareTokenFromCookieHeader/.test(
+      recipientFn,
+    ) &&
+    recipientFn.includes('setResponseHeader("Cache-Control", "no-store, private, max-age=0")') &&
+    !/session/.test(
+      recipientFn.split(".validator(")[1]!.split(".handler(")[0]!.replace("navigationId", ""),
+    ),
+);
+ck(
+  "8.10a the anonymous recipient call, its server module and its payload types are untouched by it",
+  !NAMES.test(read("src/lib/security-passport/public-disclosure.functions.ts")) &&
+    !NAMES.test(read("src/lib/security-passport/public-disclosure.server.ts")) &&
+    !NAMES.test(read("src/lib/security-passport/packages.ts")) &&
+    !NAMES.test(read("src/lib/security-passport/recipient-presentation.ts")) &&
+    !NAMES.test(read("src/components/security-passport/live/RecipientPassportView.tsx")) &&
+    !NAMES.test(read("src/components/security-passport/live/RecipientPassportCard.tsx")),
+);
+const recipient = code(BRIDGE_RECIPIENT);
+ck(
+  "8.10b a visitor who is not signed in triggers no call and is shown nothing: no placeholder, count or hint",
+  ordered(recipient, "if (signedIn !== true) {", "setStatements([]);", "return;", "void read({") &&
+    recipient.includes("if (statements.length === 0) return null;") &&
+    !/sign in|logga in|signup|login/i.test(recipient) &&
+    !/sign in to see|logga in för att se/i.test(
+      Object.values(copy.RECIPIENT)
+        .map((p) => `${p.sv} ${p.en}`)
+        .join(" "),
+    ),
+);
+const recipientRoute = read(RECIPIENT_ROUTE);
+const head = recipientRoute.split("export const Route")[1]?.split("component:")[0] ?? "";
+ck(
+  "8.11 nothing of it reaches the recipient page's head, title or social image, or the social share and OG routes",
+  head.length > 200 &&
+    !NAMES.test(head) &&
+    (recipientRoute.match(/<RecipientSelfDeclarations\b/g) ?? []).length === 2 &&
+    !NAMES.test(read("src/routes/s.$publicId.tsx")) &&
+    !NAMES.test(read("src/routes/og.share.$publicId.ts")) &&
+    !NAMES.test(read("src/lib/security-passport/og-image/render.ts")),
+);
+
+// ── The holder's functions ──────────────────────────────────────────────
+const bridgeFns = read(BRIDGE_FUNCTIONS);
+ck(
+  "8.12 every holder bridge function requires a signed-in caller, uses the caller's own client and no service key",
+  (bridgeFns.match(/createServerFn\(/g) ?? []).length === 5 &&
+    (
+      bridgeFns.match(
+        /createServerFn\(\{ method: "(GET|POST)" \}\)\s*\.middleware\(\[requireSupabaseAuth\]\)/g,
+      ) ?? []
+    ).length === 5 &&
+    !/supabaseAdmin|client\.server|\.server"/.test(bridgeFns) &&
+    !/throw new Error\(error\.message\)/.test(bridgeFns) &&
+    [...bridgeFns.matchAll(/rpc\(\s*"([a-z_]+)"/g)]
+      .map((m) => m[1])
+      .sort()
+      .join(",") ===
+      "vsd_my_disclosure_selections,vsd_my_disclosure_selections,vsd_my_passport_declarations,vsd_preview_disclosure,vsd_select_for_disclosure,vsd_withdraw_disclosure_selection",
+);
+ck(
+  "8.12a the holder is told how often a statement was read, never by whom",
+  !/recipient|readBy|userId/i.test(
+    read(BRIDGE_MODEL)
+      .split("const selectionRowSchema")[1]!
+      .split("export function toSharedSelections")[0]!,
+  ) && /accessCount: z\.number\(\)/.test(read(BRIDGE_MODEL)),
+);
+
+// ── Registered ──────────────────────────────────────────────────────────
+ck(
+  "8.13 the bridge's database suite is registered with its eleven negative controls, ahead of the collection suite",
+  ordered(
+    read("scripts/db-test.sh"),
+    "VSDD_T=vsd_passport_disclosure_test",
+    'td_suite "$VSDD_T" "Self-declarations Passport bridge (after controls)"',
+    "VSD_T=vsd_voluntary_self_declarations_test",
+  ) && (read("scripts/db-test.sh").match(/td_nc "\$VSDD_T"/g) ?? []).length === 11,
+);
+ck(
+  "8.13a the bridge's browser suite runs with the self-declarations suite, at desktop and 375",
+  /"e2e:self-declarations": "playwright test e2e\/self-declarations\.spec\.ts e2e\/self-declarations-passport\.spec\.ts --project=chromium --project=mobile-375"/.test(
+    pkg,
+  ) && ci.includes("bun run e2e:self-declarations"),
+);
+ck(
+  "8.14 the bridge migration records no authorization and names no anonymous audience",
+  !/INSERT INTO public\.vsd_(processing|disclosure)_authorizations/.test(
+    read(`supabase/migrations/${BRIDGE_MIGRATION}`),
+  ) &&
+    read(`supabase/migrations/${BRIDGE_MIGRATION}`).includes(
+      "permitted_audiences <@ ARRAY['signed_in_recipient']",
+    ) &&
+    bridge.DISCLOSURE_AUDIENCE === "signed_in_recipient",
 );
 
 console.log(

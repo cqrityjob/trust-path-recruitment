@@ -35,6 +35,21 @@ import {
   withDeclarations,
 } from "../src/lib/self-declarations/fixtures/self-declaration-fixtures";
 import { STATEMENTS } from "../src/lib/self-declarations/copy";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import {
+  CLOSED_PASSPORT_DECLARATIONS,
+  buildPassportDeclarationsView,
+  confirmedChoices,
+  isHeldStatement,
+  parsePassportDeclarations,
+  toDisclosedStatements,
+  toSharedSelections,
+} from "../src/lib/self-declarations/passport-bridge";
+import {
+  SelfDeclarationShield,
+  selfDeclarationShieldLabel,
+} from "../src/components/security-passport/self-declarations/SelfDeclarationShield";
 
 const panelOf = (payload: Parameters<typeof buildSelfDeclarationsView>[0], kind: string) =>
   buildSelfDeclarationsView(payload).panels.find((p) => p.kind === kind)!;
@@ -634,5 +649,283 @@ describe("input rules", () => {
     assert.equal(selfDeclarationErrorCode("xx VSD_STALE_REVISION yy"), "VSD_STALE_REVISION");
     assert.equal(selfDeclarationErrorCode("permission denied for table"), "VSD_WRITE_FAILED");
     assert.equal(selfDeclarationErrorCode(undefined), "VSD_WRITE_FAILED");
+  });
+});
+
+// ── The Security Passport bridge ───────────────────────────────────────────
+//
+// The pure rules of passport-bridge.ts and the shield's markup. The database
+// half is supabase/tests/vsd_passport_disclosure_test.sql.
+
+const BRIDGE_STATEMENT = {
+  kind: "enforcement_debt_none",
+  jurisdiction: "SE",
+  statementVersion: "se-enforcement-v1",
+  asOfDate: "2026-11-11",
+  declaredOn: "2026-11-11",
+  statementPeriod: null,
+} as const;
+const BRIDGE_ID = "0d000000-0000-4000-8000-0000000000e1";
+const bridgeDeclaration = (over: Record<string, unknown> = {}) => ({
+  id: BRIDGE_ID,
+  revision: 2,
+  statement: BRIDGE_STATEMENT,
+  provenance: "self_declared" as const,
+  shareable: false,
+  ...over,
+});
+
+describe("the Passport bridge: what the holder's Passport may show", () => {
+  test("closed authorization: not activated, and no shield", () => {
+    const view = buildPassportDeclarationsView({ open: [], declarations: [] });
+    assert.equal(view.state, "not_activated");
+    assert.deepEqual(view.declarations, []);
+    assert.equal(CLOSED_PASSPORT_DECLARATIONS.state, "not_activated");
+  });
+
+  test("open but nothing declared is neutral, never 'missing'", () => {
+    const view = buildPassportDeclarationsView({
+      open: [
+        { kind: "payment_remarks_none", jurisdiction: "SE", statementVersion: "se-remarks-v1" },
+      ],
+      declarations: [],
+    });
+    assert.equal(view.state, "none");
+    assert.deepEqual(view.declarations, []);
+  });
+
+  test("an eligible current declaration: its subject, its date and whether it may be shared", () => {
+    const view = buildPassportDeclarationsView({
+      open: [],
+      declarations: [bridgeDeclaration({ shareable: true })],
+    });
+    assert.equal(view.state, "declared");
+    assert.equal(view.declarations.length, 1);
+    assert.equal(view.declarations[0]!.statement.kind, "enforcement_debt_none");
+    assert.equal(view.declarations[0]!.statement.asOfDate, "2026-11-11");
+    assert.equal(view.declarations[0]!.revision, 2);
+    assert.equal(view.declarations[0]!.shareable, true);
+  });
+
+  test("criminal history draws nothing even when the database returns a statement for it", () => {
+    const criminal = {
+      ...BRIDGE_STATEMENT,
+      kind: "criminal_history" as const,
+      statementVersion: "se-criminal-synthetic-v1",
+      statementPeriod: "SYNTHETIC last five years",
+    };
+    const view = buildPassportDeclarationsView({
+      open: [
+        {
+          kind: "criminal_history",
+          jurisdiction: "SE",
+          statementVersion: criminal.statementVersion,
+        },
+      ],
+      declarations: [bridgeDeclaration({ statement: criminal, shareable: true })],
+    });
+    assert.equal(view.state, "not_activated");
+    assert.deepEqual(view.declarations, []);
+    assert.deepEqual(toDisclosedStatements({ items: [criminal] }), []);
+  });
+
+  test("a payload that is not exactly the expected shape is refused whole", () => {
+    assert.equal(parsePassportDeclarations(null), null);
+    assert.equal(parsePassportDeclarations({ open: [], declarations: [{ id: BRIDGE_ID }] }), null);
+    assert.equal(
+      parsePassportDeclarations({
+        open: [],
+        declarations: [{ ...bridgeDeclaration(), storagePath: "x/y.pdf" }],
+      }),
+      null,
+    );
+  });
+});
+
+describe("the Passport bridge: what a recipient may be given", () => {
+  test("exactly the six statement fields", () => {
+    assert.deepEqual(
+      toDisclosedStatements({ audience: "signed_in_recipient", items: [BRIDGE_STATEMENT] }),
+      [BRIDGE_STATEMENT],
+    );
+  });
+
+  test("a supporting document, a review, a hash, a path or an id cannot ride along", () => {
+    for (const extra of [
+      { provenance: "document_reviewed" },
+      { document: { fileName: "SYNTHETIC.pdf" } },
+      { sha256: "a".repeat(64) },
+      { storagePath: "u/d.pdf" },
+      { id: BRIDGE_ID },
+      { holderUserId: BRIDGE_ID },
+      { verified: true },
+    ]) {
+      assert.deepEqual(toDisclosedStatements({ items: [{ ...BRIDGE_STATEMENT, ...extra }] }), []);
+    }
+  });
+
+  test("another audience, a fourth item or a malformed payload gives nothing", () => {
+    assert.deepEqual(
+      toDisclosedStatements({ audience: "anonymous_link", items: [BRIDGE_STATEMENT] }),
+      [],
+    );
+    assert.deepEqual(toDisclosedStatements({ items: Array(4).fill(BRIDGE_STATEMENT) }), []);
+    assert.deepEqual(toDisclosedStatements({ items: "x" }), []);
+    assert.deepEqual(toDisclosedStatements(undefined), []);
+  });
+
+  test("wording the application does not hold is dropped", () => {
+    assert.equal(isHeldStatement(BRIDGE_STATEMENT), true);
+    assert.equal(
+      isHeldStatement({ kind: "enforcement_debt_none", statementVersion: "se-enforcement-v2" }),
+      false,
+    );
+    assert.equal(
+      isHeldStatement({ kind: "criminal_history", statementVersion: "se-enforcement-v1" }),
+      false,
+    );
+  });
+});
+
+describe("the Passport bridge: selection", () => {
+  const ticked = [bridgeDeclaration({ shareable: true })] as never;
+
+  test("unchecked: nothing ticked means nothing to attach", () => {
+    assert.deepEqual(confirmedChoices([], [BRIDGE_STATEMENT]), []);
+  });
+
+  test("ticked but not previewed is not attached", () => {
+    assert.deepEqual(confirmedChoices(ticked, []), []);
+  });
+
+  test("a preview of a different statement or date does not confirm the tick", () => {
+    assert.deepEqual(
+      confirmedChoices(ticked, [{ ...BRIDGE_STATEMENT, asOfDate: "2026-11-01" }]),
+      [],
+    );
+    assert.deepEqual(
+      confirmedChoices(ticked, [
+        { ...BRIDGE_STATEMENT, kind: "payment_remarks_none", statementVersion: "se-remarks-v1" },
+      ]),
+      [],
+    );
+  });
+
+  test("ticked and previewed: the exact declaration and the revision on screen", () => {
+    assert.deepEqual(confirmedChoices(ticked, [BRIDGE_STATEMENT]), [
+      { declarationId: BRIDGE_ID, revision: 2 },
+    ]);
+  });
+
+  test("the holder's list carries how often a statement was read and never who read it", () => {
+    const rows = toSharedSelections([
+      {
+        id: BRIDGE_ID,
+        disclosureId: BRIDGE_ID,
+        kind: "enforcement_debt_none",
+        jurisdiction: "SE",
+        statementVersion: "se-enforcement-v1",
+        createdAt: "2026-11-11T09:00:00Z",
+        withdrawnAt: null,
+        disclosable: true,
+        accessCount: 3,
+        lastAccessedAt: "2026-11-11T10:00:00Z",
+      },
+    ]);
+    assert.equal(rows.length, 1);
+    assert.deepEqual(Object.keys(rows[0]!).sort(), [
+      "accessCount",
+      "createdAt",
+      "disclosable",
+      "disclosureId",
+      "id",
+      "kind",
+    ]);
+    assert.deepEqual(toSharedSelections([{ id: BRIDGE_ID, recipientUserId: BRIDGE_ID }]), []);
+  });
+});
+
+describe("the self-declared shield", () => {
+  const render = (props: Record<string, unknown>) =>
+    renderToStaticMarkup(
+      createElement(SelfDeclarationShield, {
+        statement: BRIDGE_STATEMENT,
+        lang: "sv",
+        defaultOpen: true,
+        ...props,
+      } as never),
+    );
+
+  test("Swedish: subject, 'Självdeklarerat', the date, the exact statement and that it is unverified", () => {
+    const html = render({});
+    assert.match(html, /Kronofogden · Självdeklarerat/);
+    assert.match(html, /data-shield-mark="self_declared"/);
+    assert.match(html, /2026-11-11/);
+    assert.ok(
+      html.includes(STATEMENTS["se-enforcement-v1"]!.statement.sv.replace("{0}", "2026-11-11")),
+    );
+    assert.match(html, /Sverige/);
+    assert.match(
+      html,
+      /Uppgiften är lämnad av personen själv och har inte verifierats av CQrityjob\./,
+    );
+    assert.match(html, /aria-expanded="true"/);
+    assert.match(html, /role="region"/);
+  });
+
+  test("English equivalents", () => {
+    const html = render({ lang: "en" });
+    assert.match(html, /Swedish Enforcement Authority · Self-declared/);
+    assert.match(html, /has not been verified by CQrityjob/);
+    assert.match(html, /Sweden/);
+    assert.equal(
+      selfDeclarationShieldLabel(
+        { ...BRIDGE_STATEMENT, kind: "payment_remarks_none", statementVersion: "se-remarks-v1" },
+        "en",
+      ),
+      "Payment remarks · Self-declared",
+    );
+    assert.equal(
+      selfDeclarationShieldLabel({ ...BRIDGE_STATEMENT, kind: "criminal_history" }, "sv"),
+      "Brottshistorik · Självdeklarerat",
+    );
+  });
+
+  test("a reviewed supporting document never upgrades the shield", () => {
+    for (const provenance of ["document_provided", "document_reviewed"] as const) {
+      const html = render({ holderProvenance: provenance });
+      assert.match(html, /Kronofogden · Självdeklarerat/);
+      assert.match(html, /data-shield-mark="self_declared"/);
+      assert.doesNotMatch(html, /data-shield-mark="(verified|document_provided)"/);
+      assert.match(html, /har inte verifierats av CQrityjob/);
+      // Described precisely, in the existing words -- and never as verified.
+      assert.match(html, /Dokument (bifogat|granskat)/);
+      assert.doesNotMatch(html, /skuldfri|verifierad uppgift|godkänd|debt-free/i);
+    }
+    // A recipient is given no provenance, so the line cannot appear for them.
+    assert.doesNotMatch(render({}), /Underlag|Dokument granskat|Dokument bifogat/);
+  });
+
+  test("collapsed by default: a button that says so, and no statement in the markup", () => {
+    const html = render({ defaultOpen: false });
+    assert.match(html, /<button[^>]*aria-expanded="false"/);
+    assert.doesNotMatch(html, /Jag uppger/);
+  });
+
+  test("wording the application does not hold draws nothing", () => {
+    assert.equal(
+      render({ statement: { ...BRIDGE_STATEMENT, statementVersion: "se-unknown-v9" } }),
+      "",
+    );
+    assert.equal(
+      render({
+        statement: {
+          ...BRIDGE_STATEMENT,
+          kind: "criminal_history",
+          statementVersion: "se-criminal-synthetic-v1",
+        },
+      }),
+      "",
+    );
   });
 });

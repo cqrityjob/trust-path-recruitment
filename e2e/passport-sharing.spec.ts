@@ -559,12 +559,18 @@ async function mount(page: Page, urlPath: string, scenario: Scenario) {
             : SNAPSHOT,
         );
 
+      // The self-declarations bridge: closed, as production is (20270325090000).
+      case "getMyPassportSelfDeclarations":
+        return ok(route, { state: "not_activated", declarations: [] });
       case "listMyUploadAttempts":
         return ok(route, []);
       case "listMyVerificationRequests":
         if (scenario.reviewFails) return boom(route, "verification read failed");
         return ok(route, { requests: [], decisions: [] });
 
+      // The self-declarations bridge: closed, as production is (20270325090000).
+      case "listMySharedSelfDeclarations":
+        return ok(route, []);
       case "listMyShares":
         if (scenario.sharesFail) return boom(route, "share read failed");
         return ok(route, scenario.shares ?? []);
@@ -686,6 +692,9 @@ async function mount(page: Page, urlPath: string, scenario: Scenario) {
         return ok(route, { ok: true });
       }
 
+      // The self-declarations bridge: closed, as production is (20270325090000).
+      case "readSharedSelfDeclarations":
+        return ok(route, []);
       case "getPublicDisclosureFromCookie":
         return ok(route, scenario.publicPayload ?? { status: "unavailable" });
 

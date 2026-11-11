@@ -14,6 +14,9 @@
 //     why it is closed.
 //   * Nothing asks for an explanation, an offence, a creditor, an amount or
 //     a personal identity number, and no control is pre-selected.
+//   * On the Security Passport and to a recipient the label is always
+//     "Självdeklarerat" / "Self-declared", whatever document exists, and the
+//     sentence saying CQrityjob has not verified it is always shown.
 
 import { c, type Copy } from "@/components/professional-identity/copy";
 import type {
@@ -35,8 +38,8 @@ export const SECTION = {
     "What you record here is your own statement. It is not verification, an identity check, security vetting or approval for employment.",
   ),
   privacy: c(
-    "Bara du ser det. Det visas inte i din offentliga profil, i delningar, i ditt CV, i ansökningar eller för arbetsgivare, och det används inte för att ranka eller bedöma dig.",
-    "Only you can see it. It is not shown in your public profile, in shares, in your CV, in applications or to employers, and it is never used to rank or assess you.",
+    "Bara du ser det, om du inte själv väljer att bifoga en uppgift till en viss delning av ditt Security Passport. Det visas aldrig i din offentliga profil, i ditt CV, i ansökningar, i sökningar eller i bilder, och det används inte för att ranka eller bedöma dig.",
+    "Only you can see it, unless you yourself choose to include a statement in a particular share of your Security Passport. It is never shown in your public profile, your CV, applications, search or images, and it is never used to rank or assess you.",
   ),
   loading: c("Läser in…", "Loading…"),
   loadFailed: c(
@@ -341,3 +344,120 @@ export const ERRORS: Readonly<Partial<Record<SelfDeclarationError, Copy>>> = {
 export function errorCopy(code: SelfDeclarationError): Copy {
   return ERRORS[code] ?? GENERIC;
 }
+
+// ── The Security Passport bridge ─────────────────────────────────────────
+//
+// The words of the shield, the holder's Passport section, the share step and
+// the recipient's view (src/components/security-passport/self-declarations).
+
+/** The shield's subject. Short, and never a claim about the person. */
+export const SHIELD_SUBJECT: Readonly<Record<DeclarationKind, Copy>> = {
+  enforcement_debt_none: c("Kronofogden", "Swedish Enforcement Authority"),
+  payment_remarks_none: c("Betalningsanmärkningar", "Payment remarks"),
+  criminal_history: c("Brottshistorik", "Criminal history"),
+};
+
+export const SHIELD = {
+  /** The one label a shield carries, whatever supports the statement. */
+  selfDeclared: c("Självdeklarerat", "Self-declared"),
+  /** Always shown when a shield is opened. */
+  notVerified: c(
+    "Uppgiften är lämnad av personen själv och har inte verifierats av CQrityjob.",
+    "This statement was made by the person themself and has not been verified by CQrityjob.",
+  ),
+  show: c("Visa uppgiften", "Show the statement"),
+  hide: c("Dölj uppgiften", "Hide the statement"),
+  about: c("Uppgiften gäller den {0}", "Statement about {0}"),
+  statementDate: c("Uppgiften gäller den", "The statement is about"),
+  madeOn: c("Lämnad den", "Made on"),
+  jurisdiction: c("Jurisdiktion", "Jurisdiction"),
+  scope: c("Omfattning", "Scope"),
+  period: c("Granskad period", "Reviewed period"),
+  support: c("Underlag", "Supporting material"),
+} as const;
+
+export const JURISDICTION_NAME: Readonly<Record<string, Copy>> = {
+  SE: c("Sverige", "Sweden"),
+};
+
+export const PASSPORT_SECTION = {
+  lede: c(
+    "Dina egna uppgifter. De är inte meriter, räknas inte in i ditt Security Passport och visas inte för någon annan om du inte själv väljer det för en viss delning.",
+    "Your own statements. They are not credentials, do not count toward your Security Passport, and are shown to nobody else unless you choose it for a particular share.",
+  ),
+  notActivated: c(
+    "Funktionen är inte aktiverad. Inget samlas in och inget visas här.",
+    "This feature is not activated. Nothing is collected and nothing is shown here.",
+  ),
+  none: c(
+    "Du har inte lämnat någon självdeklaration. Det är helt frivilligt och påverkar ingenting annat.",
+    "You have not made any self-declaration. It is entirely voluntary and affects nothing else.",
+  ),
+  manage: c("Hantera i din profil", "Manage in your profile"),
+  readMore: c("Läs mer i din profil", "Read more in your profile"),
+  shareable: c(
+    "Kan bifogas en delning om du väljer det.",
+    "Can accompany a share if you choose it.",
+  ),
+  notShareable: c(
+    "Kan inte delas: delning är inte aktiverad.",
+    "Cannot be shared: sharing is not activated.",
+  ),
+} as const;
+
+export const SHARE = {
+  heading: c("Självdeklarationer (valfritt)", "Self-declarations (optional)"),
+  lede: c(
+    "Inget är förvalt. Kryssa bara i det du vill att just den här länken ska innehålla. Bara en mottagare som är inloggad hos CQrityjob kan se uppgiften; alla andra som öppnar länken ser ditt Security Passport utan den.",
+    "Nothing is pre-selected. Tick only what you want this particular link to carry. Only a recipient who is signed in to CQrityjob can see the statement; anyone else who opens the link sees your Security Passport without it.",
+  ),
+  fixed: c(
+    "Valet gäller bara den här länken och kan inte utökas i efterhand. Dina befintliga länkar ändras inte. Du kan när som helst sluta dela en uppgift.",
+    "The choice applies to this link only and cannot be widened afterwards. Your existing links do not change. You can stop sharing a statement at any time.",
+  ),
+  notElsewhere: c(
+    "Självdeklarationer följer aldrig med i bilder, förhandsvisningar i sociala medier, ditt CV eller nedladdningar.",
+    "Self-declarations never appear in images, social media previews, your CV or downloads.",
+  ),
+  include: c("Bifoga: {0}", "Include: {0}"),
+  previewHeading: c(
+    "Exakt det här får en inloggad mottagare se, utöver ditt Security Passport",
+    "Exactly this is what a signed-in recipient will see, in addition to your Security Passport",
+  ),
+  previewLoading: c("Hämtar förhandsvisningen…", "Loading the preview…"),
+  previewFailed: c(
+    "Förhandsvisningen kunde inte läsas. Ingen självdeklaration bifogas förrän du har kunnat se den.",
+    "The preview could not be loaded. No self-declaration is attached until you have been able to see it.",
+  ),
+  attached: c(
+    "Självdeklarationen följer med den här länken, för inloggade mottagare.",
+    "The self-declaration accompanies this link, for signed-in recipients.",
+  ),
+  attachFailed: c(
+    "Länken skapades, men självdeklarationen kunde inte bifogas. Länken innehåller den inte.",
+    "The link was created, but the self-declaration could not be attached. The link does not carry it.",
+  ),
+  listHeading: c("Självdeklarationer i dina länkar", "Self-declarations on your links"),
+  listLede: c(
+    "En länk som du skapar på nytt innehåller ingen självdeklaration.",
+    "A link that you issue again carries no self-declaration.",
+  ),
+  linkCreated: c("Länk skapad {0}", "Link created {0}"),
+  active: c("Delas med inloggade mottagare", "Shared with signed-in recipients"),
+  ended: c("Delas inte längre", "No longer shared"),
+  opened: c("Öppnad {0} gånger", "Opened {0} times"),
+  stop: c("Sluta dela", "Stop sharing"),
+  stopping: c("Slutar dela…", "Stopping…"),
+  stopFailed: c(
+    "Det gick inte att sluta dela just nu. Uppgiften delas fortfarande. Försök igen.",
+    "Sharing could not be stopped just now. The statement is still shared. Try again.",
+  ),
+} as const;
+
+export const RECIPIENT = {
+  heading: c("Personens egna uppgifter", "The person's own statements"),
+  lede: c(
+    "Personen har valt att dela följande med dig. Det är självdeklarationer: inte meriter och inte kontrollerade uppgifter.",
+    "The person chose to share the following with you. These are self-declarations: not credentials and not checked facts.",
+  ),
+} as const;

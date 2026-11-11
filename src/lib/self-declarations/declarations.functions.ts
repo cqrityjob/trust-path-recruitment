@@ -36,7 +36,10 @@
 //
 // Self-declaration is not verification. No function here returns, computes
 // or stores a score, a rank, a risk level or a decision, and none feeds the
-// Passport, the CV, an application, talent search or any shared payload.
+// CV, an application, talent search or any shared payload. The one way a
+// statement leaves this screen is the Security Passport bridge, which has
+// its own narrowed functions (passport-bridge.functions.ts) and reads
+// nothing from here.
 
 import { createServerFn } from "@tanstack/react-start";
 import { setResponseHeader } from "@tanstack/react-start/server";

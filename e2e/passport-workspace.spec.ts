@@ -609,6 +609,9 @@ async function mount(
 
       // /passport/share — the holder's own list of links. The sharing screen
       // reads this one now (PR #197); the old package list is gone.
+      // The self-declarations bridge: closed, as production is (20270325090000).
+      case "listMySharedSelfDeclarations":
+        return ok(route, []);
       case "listMyShares":
         return ok(route, []);
       // The public-share studio on the same screen.
@@ -626,6 +629,9 @@ async function mount(
         return ok(route, []);
 
       // /passport/entry/$kind/$entryId
+      // The self-declarations bridge: closed, as production is (20270325090000).
+      case "getMyPassportSelfDeclarations":
+        return ok(route, { state: "not_activated", declarations: [] });
       case "listMyUploadAttempts":
       case "listMyEvidence":
         return ok(route, []);

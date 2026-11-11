@@ -101,6 +101,8 @@ async function mount(page: Page, path: string, lang: "sv" | "en" = "en", empty =
       : snapshot,
     getInternationalPassportMetadata: metadata,
     listMyVerificationRequests: { requests: [], decisions: [] },
+    // The self-declarations bridge: closed, as production is (20270325090000).
+    listMySharedSelfDeclarations: [],
     listMyShares: [],
     getMyPassportNumber: { number: null, designation: null },
     listMySocialShares: [],
@@ -112,6 +114,8 @@ async function mount(page: Page, path: string, lang: "sv" | "en" = "en", empty =
     listMyEmployerWorkspaces: [],
     trackV31FunnelEvent: { recorded: false },
     listMyEvidence: [],
+    // The self-declarations bridge: closed, as production is (20270325090000).
+    getMyPassportSelfDeclarations: { state: "not_activated", declarations: [] },
     listMyUploadAttempts: [],
     listClaimVersions: [],
     getCredentialPrivateFields: { credentialReference: null, holderNote: null },

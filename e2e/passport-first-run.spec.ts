@@ -516,6 +516,9 @@ async function mount(page: Page, path: string, lang: "sv" | "en" = "sv") {
       }
 
       // Reads the Passport overview makes once the first run is over.
+      // The self-declarations bridge: closed, as production is (20270325090000).
+      case "getMyPassportSelfDeclarations":
+        return ok(route, { state: "not_activated", declarations: [] });
       case "listMyUploadAttempts":
         return ok(route, []);
       case "listMyVerificationRequests":

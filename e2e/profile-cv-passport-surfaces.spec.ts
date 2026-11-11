@@ -686,11 +686,15 @@ function passportOverrides() {
     getMyPassport: ok(snap),
     getInternationalPassportMetadata: ok(METADATA),
     listMyVerificationRequests: ok({ requests: [], decisions: [] }),
+    // The self-declarations bridge: closed, as production is (20270325090000).
+    listMySharedSelfDeclarations: ok([]),
     listMyShares: ok([]),
     getMyPassportNumber: ok({ number: null, designation: null }),
     listMySocialShares: ok([]),
     previewCredentialShare: ok({ status: "unavailable" }),
     listMyEvidence: ok([]),
+    // The self-declarations bridge: closed, as production is (20270325090000).
+    getMyPassportSelfDeclarations: ok({ state: "not_activated", declarations: [] }),
     listMyUploadAttempts: ok([]),
     listClaimVersions: ok([]),
     listMyCredentialDrafts: ok([]),

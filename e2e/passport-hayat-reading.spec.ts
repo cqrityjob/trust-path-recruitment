@@ -104,6 +104,8 @@ async function mount(
     // the Passport and talent suites against a database.
     listMyNotices: { installed: false },
     getReviewThread: { installed: false },
+    // The self-declarations bridge: closed, as production is (20270325090000).
+    listMySharedSelfDeclarations: [],
     listMyShares: [],
     getMyPassportNumber: { number: null, designation: null },
     listMySocialShares: [],
@@ -127,6 +129,8 @@ async function mount(
     assessSavedCredential: { decision: unverifiable, recorded: true },
     ...over,
     listMyEvidence: [],
+    // The self-declarations bridge: closed, as production is (20270325090000).
+    getMyPassportSelfDeclarations: { state: "not_activated", declarations: [] },
     listMyUploadAttempts: [],
     listClaimVersions: [],
     getCredentialPrivateFields: { credentialReference: null, holderNote: null },

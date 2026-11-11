@@ -50,6 +50,13 @@ import { CredentialVerificationPage } from "@/components/security-passport/live/
 import { PassportLangProvider } from "@/lib/security-passport/use-passport-copy";
 import { publicShareOrigin } from "@/lib/security-passport/public-origin";
 
+// The one authorized bridge to the voluntary self-declarations. It makes its
+// OWN authenticated call, for a signed-in recipient only; the anonymous
+// payload this page reads above never carries a statement, and nothing of it
+// reaches this route's head, title or social image.
+import { RecipientSelfDeclarations } from "@/components/security-passport/self-declarations/RecipientSelfDeclarations";
+import { readSharedSelfDeclarations } from "@/lib/security-passport/self-declarations-bridge.functions";
+
 export const Route = createFileRoute("/p/$token")({
   ssr: false,
   head: ({ params }) => ({
@@ -123,6 +130,7 @@ function RecipientRoute() {
   // single-cookie version had. See share-transport.ts.
   const { token: navigationId } = useParams({ from: "/p/$token" });
   const read = useServerFn(getPublicDisclosureFromCookie);
+  const readSelfDeclarations = useServerFn(readSharedSelfDeclarations);
 
   const [payload, setPayload] = useState<RecipientPayload | null>(null);
 
@@ -229,6 +237,13 @@ function RecipientRoute() {
     return (
       <PassportLangProvider lang={lang}>
         <CredentialShare presentation={presentation} verifyUrl={shareUrl} />
+        <div className="px-4 pb-10">
+          <RecipientSelfDeclarations
+            navigationId={navigationId}
+            lang={lang}
+            read={readSelfDeclarations}
+          />
+        </div>
       </PassportLangProvider>
     );
   }
@@ -236,6 +251,11 @@ function RecipientRoute() {
   return (
     <main className="px-4 py-8 sm:py-10">
       <RecipientPassportView presentation={presentation} lang={lang} verifyUrl={shareUrl} />
+      <RecipientSelfDeclarations
+        navigationId={navigationId}
+        lang={lang}
+        read={readSelfDeclarations}
+      />
     </main>
   );
 }

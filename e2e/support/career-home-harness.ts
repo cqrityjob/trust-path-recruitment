@@ -274,6 +274,8 @@ export function repliesFor(f: HomeFixture): Record<string, Reply> {
           ),
     // Absent means the holder has created no link — which is what almost
     // every fixture is. A fixture that has shares declares them.
+    // The self-declarations bridge: closed, as production is (20270325090000).
+    listMySharedSelfDeclarations: [],
     listMyShares: src(i.shares ?? { state: "ready", rows: [] }),
     getV31Availability: ok({ available: i.careerDiscoveryOpen === true }),
     getV31TesterStatus: ok({ allowed: i.careerDiscoveryOpen === true }),
@@ -318,6 +320,8 @@ export function repliesFor(f: HomeFixture): Record<string, Reply> {
       report: null,
     }),
     getMyPassport: ok(passportSnapshot(f)),
+    // The self-declarations bridge: closed, as production is (20270325090000).
+    getMyPassportSelfDeclarations: ok({ state: "not_activated", declarations: [] }),
     listMyUploadAttempts: ok([]),
     listMyEntries:
       i.identity.state === "ready"

@@ -562,6 +562,9 @@ async function mount(
           },
           eventCount: 2,
         });
+      // The self-declarations bridge: closed, as production is (20270325090000).
+      case "getMyPassportSelfDeclarations":
+        return ok(route, { state: "not_activated", declarations: [] });
       case "listMyUploadAttempts":
         return ok(route, []);
       case "listMyVerificationRequests":

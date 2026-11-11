@@ -88,6 +88,8 @@ async function openDetailsStep(page: Page, lang: "sv" | "en") {
     // the Passport and talent suites against a database.
     listMyNotices: { installed: false },
     getReviewThread: { installed: false },
+    // The self-declarations bridge: closed, as production is (20270325090000).
+    listMySharedSelfDeclarations: [],
     listMyShares: [],
     getMyPassportNumber: { number: null, designation: null },
     listMySocialShares: [],
@@ -99,6 +101,8 @@ async function openDetailsStep(page: Page, lang: "sv" | "en") {
     listMyEmployerWorkspaces: [],
     trackV31FunnelEvent: { recorded: false },
     listMyEvidence: [],
+    // The self-declarations bridge: closed, as production is (20270325090000).
+    getMyPassportSelfDeclarations: { state: "not_activated", declarations: [] },
     listMyUploadAttempts: [],
     listClaimVersions: [],
     listMyCredentialDrafts: [],
