@@ -52,7 +52,7 @@ data, usable only by the substitute gateway. No hosted Auth user is created.
 
 Override the five distinct ports with `RI_P1_API_REST_PORT`,
 `RI_P1_API_GATEWAY_PORT`, `RI_P1_UI_REST_PORT`, `RI_P1_UI_GATEWAY_PORT`, and
-`RI_P1_APP_PORT`. Defaults are 54391–54394 and 3139. The authenticator password
+`RI_P1_APP_PORT`. Defaults are 24391–24394 and 3139 (below the ephemeral port range, so no client socket can be handed one). The authenticator password
 is a cluster role property: use a separate disposable cluster, or explicitly
 set `RI_P1_AUTHENTICATOR_PASSWORD` to the value already used by other local
 stacks. The baseline auth harness is adapted only to one exact P1 database

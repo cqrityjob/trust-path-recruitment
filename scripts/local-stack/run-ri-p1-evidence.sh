@@ -32,8 +32,14 @@ AUTH_PASSWORD="${RI_P1_AUTHENTICATOR_PASSWORD:-localp1authenticator}"
 [[ "$AUTH_PASSWORD" =~ ^[A-Za-z0-9_-]+$ ]] || fail "synthetic authenticator password contains unsupported characters"
 export LOCAL_JWT_SECRET="${RI_P1_LOCAL_JWT_SECRET:-ri-p1-evidence-local-only-0123456789abcdef}"
 [ "${#LOCAL_JWT_SECRET}" -ge 32 ] || fail "synthetic JWT secret too short"
-API_REST="${RI_P1_API_REST_PORT:-54391}" API_GATEWAY="${RI_P1_API_GATEWAY_PORT:-54392}"
-UI_REST="${RI_P1_UI_REST_PORT:-54393}" UI_GATEWAY="${RI_P1_UI_GATEWAY_PORT:-54394}" APP_PORT="${RI_P1_APP_PORT:-3139}"
+# The defaults sit BELOW the kernel's ephemeral range (Linux 32768-60999). The
+# earlier 5439x defaults were inside it, so any loopback client in this job --
+# the replay alone opens hundreds of psql connections to 127.0.0.1 -- could be
+# handed one of them as its source port, and the gateway then died at listen()
+# with EADDRINUSE while every other hop was healthy. That is the "local service
+# not ready" failure that passed on a re-run (CI run on c490dafe, 2026-11-12).
+API_REST="${RI_P1_API_REST_PORT:-24391}" API_GATEWAY="${RI_P1_API_GATEWAY_PORT:-24392}"
+UI_REST="${RI_P1_UI_REST_PORT:-24393}" UI_GATEWAY="${RI_P1_UI_GATEWAY_PORT:-24394}" APP_PORT="${RI_P1_APP_PORT:-3139}"
 for port in "$API_REST" "$API_GATEWAY" "$UI_REST" "$UI_GATEWAY" "$APP_PORT"; do
  [[ "$port" =~ ^[0-9]+$ ]] && [ "$port" -ge 1024 ] && [ "$port" -le 65535 ] || fail "invalid local port"
 done
@@ -146,6 +152,14 @@ service_diagnostics() {
    echo "log $(basename "$log"):"
    tail -n 20 "$log" | sed "$redact"
   done
+  # Who holds each port: a gateway that could not bind shows up here as a
+  # socket owned by something else.
+  if command -v ss >/dev/null 2>&1; then
+   for port in "$API_REST" "$API_GATEWAY" "$UI_REST" "$UI_GATEWAY"; do
+    echo "sockets on :$port: $(ss -Htanp 2>/dev/null | awk -v p=":$port" '$4 ~ p"$" || $5 ~ p"$"' | head -5 | tr '\n' ';' | sed "$redact")"
+   done
+   echo "ephemeral range: $(cat /proc/sys/net/ipv4/ip_local_port_range 2>/dev/null | tr '\t' '-')"
+  fi
   echo "hop gateway  $API_GATEWAY /rest/v1/: HTTP $(curl --silent --max-time 5 --output /dev/null --write-out '%{http_code}' "http://127.0.0.1:$API_GATEWAY/rest/v1/" 2>/dev/null || true)"
   echo "hop postgrest $API_REST /: HTTP $(curl --silent --max-time 5 --output /dev/null --write-out '%{http_code}' "http://127.0.0.1:$API_REST/" 2>/dev/null || true)"
   echo "hop postgres $PGPORT as authenticator: $(PGPASSWORD="$AUTH_PASSWORD" psql -h 127.0.0.1 -p "$PGPORT" -U authenticator -d ri_p1_api_ci_test -tAc 'SELECT 1' 2>&1 | head -1 | sed "$redact")"

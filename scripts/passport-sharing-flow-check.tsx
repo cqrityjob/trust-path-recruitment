@@ -135,7 +135,9 @@ ck(
 
 ck(
   "1.6 the primary action is refused until something is chosen",
-  /disabled=\{creating \|\| selectedCount === 0\}/.test(route),
+  // The self-declaration offer may refuse it for longer (a ticked statement
+  // whose preview has not been read back); it can never enable it sooner.
+  /disabled=\{creating \|\| selectedCount === 0 \|\| !selfDeclarationOffer\.ready\}/.test(route),
 );
 
 // The pilot's three periods, and no permanent link hiding among them.
