@@ -756,7 +756,7 @@ test("human decisions preserve explicit NO, actual missing sources and checked e
 test("history/count contracts fail closed on missing full schema, skipped or flaky browser evidence", () => {
   const files = fs.readdirSync(path.join(root, "supabase/migrations"));
   assert.equal(APP_SHA, "53659419a1c243c27a59540eb849569140b71365");
-  assert.equal(SCHEMA_SHA, "e78f01daaa3b35b5d73dd9cdb2d4eb5dce124394");
+  assert.equal(SCHEMA_SHA, "d7fca67d8636cdb0b0c0ae652c616cd58083fb0b");
   assert.equal(history(files).length, 404);
   assert.throws(
     () =>
