@@ -10,7 +10,8 @@
 DROP FUNCTION IF EXISTS public.vsd_read_disclosed(text);
 DROP FUNCTION IF EXISTS public.vsd_my_disclosure_selections();
 DROP FUNCTION IF EXISTS public.vsd_withdraw_disclosure_selection(uuid);
-DROP FUNCTION IF EXISTS public.vsd_select_for_disclosure(uuid, uuid[], integer[]);
+DROP FUNCTION IF EXISTS public.vsd_share_operation(uuid);
+DROP FUNCTION IF EXISTS public.vsd_create_credential_share(uuid[], text[], integer, text, uuid, uuid[], integer[]);
 DROP FUNCTION IF EXISTS public.vsd_preview_disclosure(uuid[], integer[]);
 DROP FUNCTION IF EXISTS public.vsd_my_passport_declarations();
 DROP FUNCTION IF EXISTS public.vsd_assert_disclosure_choice(uuid, uuid[], integer[]);
@@ -20,9 +21,13 @@ DROP FUNCTION IF EXISTS public.vsd_selection_disclosable(public.vsd_disclosure_s
 
 DROP TABLE IF EXISTS public.vsd_disclosure_accesses;
 DROP TABLE IF EXISTS public.vsd_disclosure_selections;
+DROP TABLE IF EXISTS public.vsd_disclosure_choices;
 DROP TABLE IF EXISTS public.vsd_disclosure_authorizations;
 
 DROP FUNCTION IF EXISTS public.vsd_disclosure_selection_immutable();
+DROP FUNCTION IF EXISTS public.vsd_disclosure_selection_within_seal();
+DROP FUNCTION IF EXISTS public.vsd_disclosure_choice_at_creation();
+DROP FUNCTION IF EXISTS public.vsd_choice_digest(uuid[], integer[]);
 DROP FUNCTION IF EXISTS public.vsd_disclosure_authorization_admissible();
 
 COMMENT ON TABLE public.vsd_declarations IS

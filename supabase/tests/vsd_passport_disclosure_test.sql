@@ -11,9 +11,13 @@
 --   GROUP D3  the holder's Passport read: only current statements, only
 --             their own, and a supporting document changes nothing a
 --             recipient is given
---   GROUP D4  selection: explicit, per link, once; a link that was not
---             selected for, an older link, an application disclosure and
---             somebody else's link carry nothing; the preview is exactly what
+--   GROUP D4  the choice belongs to the link's creation: one transaction
+--             creates the link and seals the choice (also an empty one); an
+--             older link, an opened link, a reissued link, a link the
+--             Passport created by itself, an application disclosure and
+--             somebody else's link can never gain a statement -- not through
+--             a function and not through a direct write; a retry changes
+--             nothing; a refusal leaves no link; the preview is exactly what
 --             a recipient receives
 --   GROUP D5  the recipient: signed in AND holding the link's live share
 --             session, or nothing; anon, the service role, a signed-out
@@ -34,6 +38,9 @@
 SET client_min_messages TO NOTICE;
 
 BEGIN;
+
+-- Each holder's one verified credential (filled with the fixtures).
+CREATE TEMP TABLE vsdd_claims (holder uuid PRIMARY KEY, claim_id uuid NOT NULL) ON COMMIT DROP;
 
 CREATE OR REPLACE FUNCTION pg_temp.ok(cond boolean, label text) RETURNS void
 LANGUAGE plpgsql AS $$
@@ -97,13 +104,49 @@ LANGUAGE sql VOLATILE AS $$
     (SELECT array_agg((pg_temp.decl(_uid, k)).revision ORDER BY o) FROM unnest(_kinds) WITH ORDINALITY x(k, o))))
 $$;
 
-CREATE OR REPLACE FUNCTION pg_temp.choose(_uid uuid, _link uuid, _kinds text[], _owner uuid DEFAULT NULL)
+-- Create ONE credential link together with a choice of statements, as the
+-- holder. The holder's fixture credential is the link's content.
+CREATE OR REPLACE FUNCTION pg_temp.share(_uid uuid, _key uuid, _kinds text[], _owner uuid DEFAULT NULL,
+                                         _fields text[] DEFAULT '{}')
 RETURNS text LANGUAGE sql VOLATILE AS $$
-  SELECT pg_temp.run(_uid, format('SELECT public.vsd_select_for_disclosure(%L, %L::uuid[], %L::integer[])::text',
-    _link,
-    (SELECT array_agg((pg_temp.decl(coalesce(_owner, _uid), k)).id ORDER BY o) FROM unnest(_kinds) WITH ORDINALITY x(k, o)),
-    (SELECT array_agg((pg_temp.decl(coalesce(_owner, _uid), k)).revision ORDER BY o) FROM unnest(_kinds) WITH ORDINALITY x(k, o))))
+  SELECT pg_temp.run(_uid, format(
+    'SELECT public.vsd_create_credential_share(ARRAY[%L]::uuid[], %L::text[], 7, ''sv'', %L, %L::uuid[], %L::integer[])::text',
+    (SELECT claim_id FROM vsdd_claims WHERE holder = _uid), _fields, _key,
+    coalesce((SELECT array_agg((pg_temp.decl(coalesce(_owner, _uid), k)).id ORDER BY o)
+                FROM unnest(_kinds) WITH ORDINALITY x(k, o)), '{}'::uuid[]),
+    coalesce((SELECT array_agg((pg_temp.decl(coalesce(_owner, _uid), k)).revision ORDER BY o)
+                FROM unnest(_kinds) WITH ORDINALITY x(k, o)), '{}'::integer[])))
 $$;
+
+-- A result as jsonb; an error is an empty object, so an assertion names it.
+CREATE OR REPLACE FUNCTION pg_temp.j(_r text) RETURNS jsonb
+LANGUAGE sql IMMUTABLE AS $$ SELECT CASE WHEN _r LIKE '{%' THEN _r::jsonb ELSE '{}'::jsonb END $$;
+
+-- A DIRECT write, as the table owner, bypassing every function: seal a
+-- choice for a link / add a selection to a link.
+CREATE OR REPLACE FUNCTION pg_temp.seal(_link uuid, _holder uuid) RETURNS text
+LANGUAGE plpgsql AS $$
+BEGIN
+  INSERT INTO public.vsd_disclosure_choices (disclosure_id, holder_user_id, request_key, choice_count, choice_digest)
+  SELECT x.id, _holder, x.request_key, 1, repeat('0', 64) FROM public.sp_disclosures x WHERE x.id = _link;
+  IF NOT FOUND THEN RETURN 'err:no link'; END IF;
+  RETURN 'ok';
+EXCEPTION WHEN OTHERS THEN RETURN 'err:' || SQLERRM;
+END $$;
+CREATE OR REPLACE FUNCTION pg_temp.attach(_link uuid, _holder uuid, _kind text) RETURNS text
+LANGUAGE plpgsql AS $$
+DECLARE _d public.vsd_declarations := pg_temp.decl(_holder, _kind);
+BEGIN
+  INSERT INTO public.vsd_disclosure_selections
+    (holder_user_id, disclosure_id, declaration_id, declaration_revision, statement_version,
+     disclosure_authorization_id, audience)
+  SELECT _holder, _link, _d.id, _d.revision, _d.statement_version, da.id, 'signed_in_recipient'
+    FROM public.vsd_disclosure_authorizations da
+   WHERE da.authorization_id = _d.authorization_id AND da.revoked_at IS NULL;
+  IF NOT FOUND THEN RETURN 'err:no authorization'; END IF;
+  RETURN 'ok';
+EXCEPTION WHEN OTHERS THEN RETURN 'err:' || SQLERRM;
+END $$;
 
 -- What a caller is given for a share session secret: the items, as jsonb.
 CREATE OR REPLACE FUNCTION pg_temp.given(_uid uuid, _secret text, _live boolean DEFAULT true) RETURNS jsonb
@@ -130,14 +173,20 @@ BEGIN
   RETURN _r;
 END $$;
 
+-- A link that exists WITHOUT having been created through the bridge: its own
+-- request key, and (with a secret) a recipient's share session.
 CREATE OR REPLACE FUNCTION pg_temp.link(_id uuid, _holder uuid, _secret text) RETURNS void
 LANGUAGE plpgsql AS $$
 BEGIN
-  INSERT INTO public.sp_disclosures (id, holder_user_id, package_code, token_hash, expires_at)
-  VALUES (_id, _holder, 'selected_merits', 'vsd-suite-' || _id::text, now() + interval '7 days');
+  INSERT INTO public.sp_disclosures (id, holder_user_id, package_code, token_hash, expires_at, request_key)
+  VALUES (_id, _holder, 'selected_merits', 'vsd-suite-' || _id::text, now() + interval '7 days', gen_random_uuid());
+  IF _secret IS NOT NULL THEN PERFORM pg_temp.session(_id, _secret); END IF;
+END $$;
+CREATE OR REPLACE FUNCTION pg_temp.session(_id uuid, _secret text) RETURNS void
+LANGUAGE sql AS $$
   INSERT INTO public.sp_share_sessions (disclosure_id, session_hash, expires_at)
   VALUES (_id, encode(sha256(convert_to(_secret, 'UTF8')), 'hex'), now() + interval '30 minutes');
-END $$;
+$$;
 
 CREATE OR REPLACE FUNCTION pg_temp.disclosure_auth(_kind text, _basis text, _authority text, _audiences text[])
 RETURNS text LANGUAGE plpgsql AS $$
@@ -172,23 +221,49 @@ SELECT id, id FROM auth.users WHERE email LIKE 'vsdd-%@test.invalid';
 \set B '''5d000000-0000-4000-8000-0000000000d2'''
 \set R '''5d000000-0000-4000-8000-0000000000d3'''
 \set STRANGER '''5d000000-0000-4000-8000-0000000000d4'''
--- Links: L1 carries A's selection, L2 is A's link nothing was selected for,
--- LOLD is a link A already had, LB is B's.
-\set L1 '''5d000000-0000-4000-8000-000000000011'''
+-- Links that exist without the bridge: L2 is A's and in a recipient's hands,
+-- LOLD is one A already had, LOPEN one somebody has opened, LB is B's. (L1,
+-- the link that carries A's selection, is created in D4 through the bridge.)
 \set L2 '''5d000000-0000-4000-8000-000000000012'''
 \set LOLD '''5d000000-0000-4000-8000-000000000013'''
 \set LB '''5d000000-0000-4000-8000-000000000014'''
 \set LAPP '''5d000000-0000-4000-8000-000000000015'''
+\set LOPEN '''5d000000-0000-4000-8000-000000000016'''
+-- B's, and in nobody's hands: only its holder distinguishes it.
+\set LB2 '''5d000000-0000-4000-8000-000000000018'''
+-- Creation operations (request keys): K1 A's link with a statement, K2 a link
+-- the Passport creates by itself, K3 a reissue, K4 an empty choice, KX
+-- attempts that must leave nothing, KB B's.
+\set K1 '''5d000000-0000-4000-8000-0000000000a1'''
+\set K2 '''5d000000-0000-4000-8000-0000000000a2'''
+\set K3 '''5d000000-0000-4000-8000-0000000000a3'''
+\set K4 '''5d000000-0000-4000-8000-0000000000a4'''
+\set KX '''5d000000-0000-4000-8000-0000000000af'''
+\set KB '''5d000000-0000-4000-8000-0000000000ab'''
+\set S3 '''5555555555555555555555555555555555555555555555555555555555555555'''
+\set S4 '''6666666666666666666666666666666666666666666666666666666666666666'''
 \set S1 '''1111111111111111111111111111111111111111111111111111111111111111'''
 \set S2 '''2222222222222222222222222222222222222222222222222222222222222222'''
 \set SOLD '''3333333333333333333333333333333333333333333333333333333333333333'''
 \set SB '''4444444444444444444444444444444444444444444444444444444444444444'''
 
-SELECT pg_temp.link(:L1, :A, :S1);
 SELECT pg_temp.link(:L2, :A, :S2);
-SELECT pg_temp.link(:LOLD, :A, :SOLD);
+SELECT pg_temp.link(:LOLD, :A, NULL);
+SELECT pg_temp.link(:LOPEN, :A, NULL);
 SELECT pg_temp.link(:LB, :B, :SB);
-UPDATE public.sp_disclosures SET created_at = now() - interval '2 hours' WHERE id = :LOLD;
+SELECT pg_temp.link(:LB2, :B, NULL);
+-- LOLD differs from a link being created only in WHEN it was created (one
+-- second is enough: no window is consulted); LOPEN only in having been opened.
+UPDATE public.sp_disclosures SET created_at = now() - interval '1 second' WHERE id = :LOLD;
+UPDATE public.sp_disclosures SET access_count = 1 WHERE id = :LOPEN;
+
+-- A verified credential each, so the Passport's own function can create a
+-- credential link for them.
+INSERT INTO public.sp_passport_profiles (holder_user_id, privacy_mode)
+VALUES (:A, 'full_name'), (:B, 'full_name') ON CONFLICT DO NOTHING;
+INSERT INTO vsdd_claims
+SELECT u, pg_temp.run(u, $q$SELECT public.sp_save_international_credential('{"definition_code":"INTL_ASIS_CPP","identifier":"SYNTHETIC-1"}')::text$q$)::uuid
+  FROM unnest(ARRAY[:A, :B]::uuid[]) u;
 
 -- ══ GROUP D1 · closed by default ══════════════════════════════════════════
 
@@ -230,11 +305,12 @@ SELECT pg_temp.ok(
   pg_temp.preview(:A, ARRAY['enforcement_debt_none']) = 'err:VSD_DISCLOSURE_NOT_AUTHORIZED',
   'D1.5 without a disclosure authorization a preview is refused');
 SELECT pg_temp.ok(
-  pg_temp.choose(:A, :L1, ARRAY['enforcement_debt_none']) = 'err:VSD_DISCLOSURE_NOT_AUTHORIZED'
-  AND pg_temp.q('NOT EXISTS (SELECT 1 FROM public.vsd_disclosure_selections)'),
-  'D1.6 without a disclosure authorization nothing can be attached to a link');
+  pg_temp.share(:A, :KX, ARRAY['enforcement_debt_none']) = 'err:VSD_DISCLOSURE_NOT_AUTHORIZED'
+  AND pg_temp.q('NOT EXISTS (SELECT 1 FROM public.vsd_disclosure_selections)')
+  AND pg_temp.q(format('NOT EXISTS (SELECT 1 FROM public.sp_disclosures WHERE request_key = %L)', :KX)),
+  'D1.6 without a disclosure authorization no link is created with a statement, and none is left behind');
 SELECT pg_temp.ok(
-  pg_temp.given(:R, :S1) = '[]'::jsonb,
+  pg_temp.given(:R, :S2) = '[]'::jsonb,
   'D1.7 without a disclosure authorization a recipient is given nothing');
 
 -- ══ GROUP D2 · the disclosure authorization table ═════════════════════════
@@ -304,6 +380,8 @@ SELECT pg_temp.ok(
   AND pg_temp.run(:A, 'SELECT count(*)::text FROM public.vsd_disclosure_authorizations') LIKE 'err:%permission denied%'
   AND pg_temp.run(:A, 'SELECT count(*)::text FROM public.vsd_disclosure_selections') LIKE 'err:%permission denied%'
   AND pg_temp.run(:A, 'SELECT count(*)::text FROM public.vsd_disclosure_accesses') LIKE 'err:%permission denied%'
+  AND pg_temp.run(:A, 'SELECT count(*)::text FROM public.vsd_disclosure_choices') LIKE 'err:%permission denied%'
+  AND pg_temp.run(NULL, 'SELECT count(*)::text FROM public.vsd_disclosure_choices', true, 'service_role') LIKE 'err:%permission denied%'
   AND pg_temp.run(NULL, 'SELECT count(*)::text FROM public.vsd_disclosure_selections', true, 'anon') LIKE 'err:%permission denied%'
   AND pg_temp.run(NULL, 'SELECT count(*)::text FROM public.vsd_disclosure_selections', true, 'service_role') LIKE 'err:%permission denied%',
   'D2.8 no client or service role reads or writes the disclosure tables');
@@ -366,32 +444,63 @@ SELECT pg_temp.ok(
   AND pg_temp.preview(:A, ARRAY['enforcement_debt_none']) !~* 'document|review|verified|provenance|sha256|storage|fixture\.pdf',
   'D3.5 a supporting document or its review changes nothing a recipient is given');
 
--- ══ GROUP D4 · selection ══════════════════════════════════════════════════
+-- ══ GROUP D4 · the choice belongs to the link's creation ══════════════════
 
 SELECT pg_temp.ok(
-  pg_temp.given(:R, :S1) = '[]'::jsonb AND pg_temp.given(:R, :S2) = '[]'::jsonb
+  pg_temp.given(:R, :S2) = '[]'::jsonb AND pg_temp.given(:R, :SB) = '[]'::jsonb
   AND pg_temp.q('NOT EXISTS (SELECT 1 FROM public.vsd_disclosure_selections)'),
-  'D4.1 an authorized, shareable statement is on no link until its holder selects it');
+  'D4.1 an authorized, shareable statement is on no link until its holder creates a link with it');
 SELECT pg_temp.ok(
-  pg_temp.choose(:A, :LOLD, ARRAY['enforcement_debt_none']) = 'err:VSD_DISCLOSURE_CLOSED_TO_SELECTION'
-  AND pg_temp.given(:R, :SOLD) = '[]'::jsonb,
-  'D4.2 a link that already existed cannot gain a statement');
+  NOT EXISTS (SELECT 1 FROM pg_proc p WHERE p.pronamespace = 'public'::regnamespace
+               AND p.proname = 'vsd_select_for_disclosure')
+  AND (SELECT array_agg(p.proname::text ORDER BY p.proname) FROM pg_proc p
+        WHERE p.pronamespace = 'public'::regnamespace
+          AND p.prosrc ~* 'insert\s+into\s+public\.vsd_disclosure_(selections|choices)')
+      = ARRAY['vsd_create_credential_share'],
+  'D4.2 no function takes an existing link: the only writer of a choice or a selection is the one that creates the link');
 SELECT pg_temp.ok(
-  pg_temp.choose(:A, :LB, ARRAY['enforcement_debt_none']) = 'err:VSD_DISCLOSURE_NOT_FOUND'
-  AND pg_temp.choose(:B, :LB, ARRAY['enforcement_debt_none'], :A) = 'err:VSD_DECLARATION_NOT_FOUND'
+  pg_temp.seal(:LOLD, :A) = 'err:VSD_DISCLOSURE_CHOICE_SEALED'
+  AND pg_temp.attach(:LOLD, :A, 'enforcement_debt_none') = 'err:VSD_DISCLOSURE_CHOICE_SEALED'
+  AND pg_temp.q('NOT EXISTS (SELECT 1 FROM public.vsd_disclosure_selections)'),
+  'D4.3 a link that already existed cannot gain a statement, even by a direct write, however recent it is');
+SELECT pg_temp.ok(
+  pg_temp.seal(:LOPEN, :A) = 'err:VSD_DISCLOSURE_CHOICE_SEALED'
+  AND pg_temp.seal(:L2, :A) = 'err:VSD_DISCLOSURE_CHOICE_SEALED'
+  AND pg_temp.attach(:L2, :A, 'enforcement_debt_none') = 'err:VSD_DISCLOSURE_CHOICE_SEALED'
+  AND pg_temp.given(:R, :S2) = '[]'::jsonb,
+  'D4.4 a link a recipient has opened, or holds a session for, cannot gain a statement');
+SELECT pg_temp.ok(
+  pg_temp.seal(:LB2, :A) = 'err:VSD_DISCLOSURE_CHOICE_SEALED'
+  AND pg_temp.share(:B, :KB, ARRAY['enforcement_debt_none'], :A) = 'err:VSD_DECLARATION_NOT_FOUND'
+  AND pg_temp.q(format('NOT EXISTS (SELECT 1 FROM public.sp_disclosures WHERE request_key = %L)', :KB))
   AND pg_temp.run(:B, format('SELECT public.vsd_preview_disclosure(ARRAY[%L]::uuid[], ARRAY[1])::text',
         (pg_temp.decl(:A, 'enforcement_debt_none')).id)) = 'err:VSD_DECLARATION_NOT_FOUND',
-  'D4.3 a holder cannot attach to somebody else''s link, nor attach or preview somebody else''s statement');
+  'D4.5 a choice cannot be sealed for somebody else''s link, and nobody shares or previews somebody else''s statement');
 SELECT pg_temp.ok(
-  pg_temp.run(:A, format('SELECT public.vsd_select_for_disclosure(%L, ARRAY[%L]::uuid[], ARRAY[%s])::text',
-        :L1, (pg_temp.decl(:A, 'enforcement_debt_none')).id,
-        (pg_temp.decl(:A, 'enforcement_debt_none')).revision + 1)) = 'err:VSD_STALE_REVISION'
-  AND pg_temp.run(:A, format('SELECT public.vsd_select_for_disclosure(%L, ''{}''::uuid[], ''{}''::integer[])::text', :L1))
-        = 'err:VSD_INVALID_INPUT'
-  AND pg_temp.run(:A, format('SELECT public.vsd_select_for_disclosure(%L, ARRAY[%L, %L]::uuid[], ARRAY[1, 1])::text',
-        :L1, (pg_temp.decl(:A, 'enforcement_debt_none')).id, (pg_temp.decl(:A, 'enforcement_debt_none')).id))
-        = 'err:VSD_INVALID_INPUT',
-  'D4.4 a selection must name the revision on screen, at least one statement, and each only once');
+  pg_temp.run(:A, format(
+    'SELECT public.vsd_create_credential_share(ARRAY[%L]::uuid[], ''{}'', 7, ''sv'', %L, ARRAY[%L]::uuid[], ARRAY[%s])::text',
+    (SELECT claim_id FROM vsdd_claims WHERE holder = :A), :KX, (pg_temp.decl(:A, 'enforcement_debt_none')).id,
+    (pg_temp.decl(:A, 'enforcement_debt_none')).revision + 1)) = 'err:VSD_STALE_REVISION'
+  AND pg_temp.run(:A, format(
+    'SELECT public.vsd_create_credential_share(ARRAY[%L]::uuid[], ''{}'', 7, ''sv'', %L, ARRAY[%L, %L]::uuid[], ARRAY[1, 1])::text',
+    (SELECT claim_id FROM vsdd_claims WHERE holder = :A), :KX, (pg_temp.decl(:A, 'enforcement_debt_none')).id,
+    (pg_temp.decl(:A, 'enforcement_debt_none')).id)) = 'err:VSD_INVALID_INPUT'
+  AND pg_temp.run(:A, format(
+    'SELECT public.vsd_create_credential_share(ARRAY[%L]::uuid[], ''{}'', 7, ''sv'', %L, ARRAY[%L]::uuid[], ''{}'')::text',
+    (SELECT claim_id FROM vsdd_claims WHERE holder = :A), :KX, (pg_temp.decl(:A, 'enforcement_debt_none')).id))
+    = 'err:VSD_INVALID_INPUT'
+  AND pg_temp.run(:A, format(
+    'SELECT public.vsd_create_credential_share(ARRAY[%L]::uuid[], ''{}'', 7, ''sv'', NULL, ''{}'', ''{}'')::text',
+    (SELECT claim_id FROM vsdd_claims WHERE holder = :A))) = 'err:VSD_INVALID_INPUT'
+  AND pg_temp.q(format('NOT EXISTS (SELECT 1 FROM public.sp_disclosures WHERE request_key = %L)', :KX)),
+  'D4.6 a refused choice -- a stale revision, a repeated statement, no operation key -- creates no link at all');
+SELECT pg_temp.ok(
+  pg_temp.run(:A, format(
+    'SELECT public.vsd_create_credential_share(ARRAY[%L]::uuid[], ''{}'', 7, ''sv'', %L, ''{}'', ''{}'')::text',
+    gen_random_uuid(), :KX)) LIKE 'err:SP_%'
+  AND pg_temp.q(format('NOT EXISTS (SELECT 1 FROM public.sp_disclosures WHERE request_key = %L)', :KX))
+  AND pg_temp.q(format('NOT EXISTS (SELECT 1 FROM public.vsd_disclosure_choices WHERE request_key = %L)', :KX)),
+  'D4.7 a share the Passport itself refuses seals nothing');
 
 SAVEPOINT d4_application;
 -- A synthetic application address: the foreign key is dropped, and the
@@ -406,41 +515,126 @@ BEGIN
   EXECUTE format('ALTER TABLE public.sp_disclosures DROP CONSTRAINT %I', _c);
 END $$;
 ALTER TABLE public.sp_disclosures DISABLE TRIGGER sp_application_verified_content;
-INSERT INTO public.sp_disclosures (id, holder_user_id, package_code, token_hash, application_id, expires_at)
-VALUES (:LAPP, :A, 'employer_review', NULL, gen_random_uuid(), now() + interval '7 days');
+INSERT INTO public.sp_disclosures (id, holder_user_id, package_code, token_hash, application_id, expires_at, request_key)
+VALUES (:LAPP, :A, 'employer_review', NULL, gen_random_uuid(), now() + interval '7 days', gen_random_uuid());
 SELECT pg_temp.ok(
-  pg_temp.choose(:A, :LAPP, ARRAY['enforcement_debt_none']) = 'err:VSD_DISCLOSURE_NOT_FOUND',
-  'D4.5 an application disclosure cannot carry a statement');
+  pg_temp.seal(:LAPP, :A) = 'err:VSD_DISCLOSURE_CHOICE_SEALED',
+  'D4.8 an application disclosure cannot carry a statement');
 ROLLBACK TO SAVEPOINT d4_application;
 
 CREATE TEMP TABLE d4_preview ON COMMIT DROP AS
   SELECT pg_temp.preview(:A, ARRAY['enforcement_debt_none'])::jsonb AS preview;
+CREATE TEMP TABLE d4_created ON COMMIT DROP AS
+  SELECT pg_temp.j(pg_temp.share(:A, :K1, ARRAY['enforcement_debt_none'])) AS r;
+SELECT quote_literal(coalesce((SELECT r ->> 'disclosure_id' FROM d4_created), '00000000-0000-4000-8000-000000000000')) AS "L1" \gset
 SELECT pg_temp.ok(
-  pg_temp.choose(:A, :L1, ARRAY['enforcement_debt_none'])::jsonb = '{"status": "selected", "count": 1}'::jsonb,
-  'D4.6 the holder attaches one chosen statement to the link they just created');
+  (SELECT r ->> 'status' = 'created' AND r ->> 'declarations' = '1' AND length(r ->> 'token') > 20 FROM d4_created)
+  AND (SELECT count(*) = 1 FROM public.sp_disclosures WHERE id = :L1 AND holder_user_id = :A AND request_key = :K1)
+  AND (SELECT count(*) = 1 FROM public.vsd_disclosure_choices
+        WHERE disclosure_id = :L1 AND request_key = :K1 AND choice_count = 1)
+  AND (SELECT count(*) = 1 FROM public.vsd_disclosure_selections WHERE disclosure_id = :L1),
+  'D4.9 one call creates the link, seals the choice and records the one chosen statement');
+SELECT pg_temp.session(:L1, :S1);
 SELECT pg_temp.ok(
   pg_temp.given(:R, :S1) = (SELECT preview -> 'items' FROM d4_preview)
   AND pg_temp.kinds(pg_temp.given(:R, :S1)) = 'enforcement_debt_none',
-  'D4.7 the recipient is given exactly what the holder previewed, and only the selected statement');
+  'D4.10 the recipient is given exactly what the holder previewed, and only the selected statement');
 SELECT pg_temp.ok(
-  pg_temp.given(:R, :S2) = '[]'::jsonb AND pg_temp.given(:R, :SOLD) = '[]'::jsonb
-  AND pg_temp.given(:R, :SB) = '[]'::jsonb,
-  'D4.8 the holder''s other links, and every other link, still carry nothing');
+  pg_temp.given(:R, :S2) = '[]'::jsonb AND pg_temp.given(:R, :SB) = '[]'::jsonb,
+  'D4.11 the holder''s other links, and every other link, still carry nothing');
 SELECT pg_temp.ok(
-  pg_temp.choose(:A, :L1, ARRAY['enforcement_debt_none'])::jsonb ->> 'status' = 'already_selected'
-  AND pg_temp.choose(:A, :L1, ARRAY['enforcement_debt_none', 'payment_remarks_none'])
-        = 'err:VSD_DISCLOSURE_ALREADY_SELECTED'
-  AND pg_temp.choose(:A, :L1, ARRAY['payment_remarks_none']) = 'err:VSD_DISCLOSURE_ALREADY_SELECTED'
+  (SELECT r ->> 'status' = 'already_created' AND r ->> 'declarations' = '1' AND NOT (r ? 'token')
+          AND r ->> 'disclosure_id' = :L1
+     FROM (SELECT pg_temp.j(pg_temp.share(:A, :K1, ARRAY['enforcement_debt_none'])) AS r) x)
+  AND (SELECT r ->> 'status' = 'already_created'
+     FROM (SELECT pg_temp.j(pg_temp.share(:A, :K1, ARRAY['enforcement_debt_none'])) AS r) x)
+  AND pg_temp.q(format('(SELECT count(*) = 1 FROM public.vsd_disclosure_selections WHERE disclosure_id = %L)', :L1))
+  AND pg_temp.q(format('(SELECT count(*) = 1 FROM public.sp_disclosures WHERE request_key = %L)', :K1))
   AND pg_temp.kinds(pg_temp.given(:R, :S1)) = 'enforcement_debt_none',
-  'D4.9 a link''s selection is made once: a retry changes nothing and it cannot be widened');
+  'D4.12 a retry of the same operation, repeated, creates no second link, changes nothing and returns no address');
+SELECT pg_temp.ok(
+  pg_temp.share(:A, :K1, ARRAY['enforcement_debt_none', 'payment_remarks_none']) = 'err:VSD_DISCLOSURE_CHOICE_SEALED'
+  AND pg_temp.share(:A, :K1, ARRAY['payment_remarks_none']) = 'err:VSD_DISCLOSURE_CHOICE_SEALED'
+  AND pg_temp.share(:A, :K1, '{}') = 'err:VSD_DISCLOSURE_CHOICE_SEALED'
+  AND pg_temp.attach(:L1, :A, 'payment_remarks_none') = 'err:VSD_DISCLOSURE_CHOICE_SEALED'
+  AND pg_temp.kinds(pg_temp.given(:R, :S1)) = 'enforcement_debt_none',
+  'D4.13 the sealed choice cannot be widened, swapped or emptied -- by a retry or by a direct write');
+SELECT pg_temp.ok(
+  pg_temp.share(:A, :K1, ARRAY['enforcement_debt_none'], NULL, ARRAY['holder_name']) LIKE 'err:SP_REQUEST_KEY_CONFLICT%'
+  AND pg_temp.kinds(pg_temp.given(:R, :S1)) = 'enforcement_debt_none',
+  'D4.14 the same key for a different share is refused by the Passport, and nothing changes');
 DO $$
 BEGIN
   UPDATE public.vsd_disclosure_selections SET declaration_revision = declaration_revision + 1;
-  RAISE EXCEPTION 'ASSERTION FAILED: D4.10 a selection cannot be re-pointed at another revision';
+  RAISE EXCEPTION 'ASSERTION FAILED: D4.15 a selection cannot be re-pointed at another revision';
 EXCEPTION WHEN check_violation THEN
   IF SQLERRM <> 'VSD_DISCLOSURE_SELECTION_IMMUTABLE' THEN RAISE; END IF;
-  RAISE NOTICE 'ok  D4.10 a selection cannot be re-pointed at another revision';
+  RAISE NOTICE 'ok  D4.15 a selection cannot be re-pointed at another revision';
 END $$;
+DO $$
+BEGIN
+  UPDATE public.vsd_disclosure_choices SET choice_count = 3;
+  RAISE EXCEPTION 'ASSERTION FAILED: D4.16 a sealed choice cannot be changed';
+EXCEPTION WHEN check_violation THEN
+  IF SQLERRM <> 'VSD_DISCLOSURE_CHOICE_SEALED' THEN RAISE; END IF;
+  RAISE NOTICE 'ok  D4.16 a sealed choice cannot be changed';
+END $$;
+
+-- An EMPTY choice is sealed too: that link never carries a statement.
+CREATE TEMP TABLE d4_empty ON COMMIT DROP AS
+  SELECT pg_temp.j(pg_temp.share(:A, :K4, '{}')) AS r;
+SELECT quote_literal(coalesce((SELECT r ->> 'disclosure_id' FROM d4_empty), '00000000-0000-4000-8000-000000000000')) AS "L4" \gset
+SELECT pg_temp.session(:L4, :S4) WHERE EXISTS (SELECT 1 FROM public.sp_disclosures WHERE id = :L4);
+SELECT pg_temp.ok(
+  (SELECT r ->> 'status' = 'created' AND r ->> 'declarations' = '0' AND length(r ->> 'token') > 20 FROM d4_empty)
+  AND (SELECT count(*) = 1 FROM public.vsd_disclosure_choices WHERE disclosure_id = :L4 AND choice_count = 0)
+  AND pg_temp.j(pg_temp.share(:A, :K4, '{}')) ->> 'status' = 'already_created'
+  AND pg_temp.share(:A, :K4, ARRAY['enforcement_debt_none']) = 'err:VSD_DISCLOSURE_CHOICE_SEALED'
+  AND pg_temp.attach(:L4, :A, 'enforcement_debt_none') = 'err:VSD_DISCLOSURE_CHOICE_SEALED'
+  AND pg_temp.q(format('NOT EXISTS (SELECT 1 FROM public.vsd_disclosure_selections WHERE disclosure_id = %L)', :L4))
+  AND pg_temp.given(:R, :S4) = '[]'::jsonb,
+  'D4.17 an empty choice is sealed: a link created without statements can never gain one');
+
+-- A link the Passport created by itself, under a key the bridge never saw.
+CREATE TEMP TABLE d4_plain ON COMMIT DROP AS
+  SELECT pg_temp.j(pg_temp.run(:A, format(
+    'SELECT public.sp_create_credential_disclosure_v2(ARRAY[%L]::uuid[], ''{}'', 7, NULL, NULL, ''sv'', %L)::text',
+    (SELECT claim_id FROM vsdd_claims WHERE holder = :A), :K2))) AS r;
+SELECT pg_temp.ok(
+  (SELECT r ->> 'status' = 'created' FROM d4_plain)
+  AND pg_temp.share(:A, :K2, ARRAY['enforcement_debt_none']) = 'err:VSD_DISCLOSURE_CHOICE_SEALED'
+  AND pg_temp.share(:A, :K2, '{}') = 'err:VSD_DISCLOSURE_CHOICE_SEALED'
+  AND pg_temp.q(format('NOT EXISTS (SELECT 1 FROM public.vsd_disclosure_choices WHERE request_key = %L)', :K2))
+  AND pg_temp.q(format('(SELECT count(*) = 1 FROM public.sp_disclosures WHERE request_key = %L)', :K2)),
+  'D4.18 a link created without the bridge cannot be claimed afterwards by replaying its own key');
+
+-- A REISSUED copy of the link that carries the statement.
+CREATE TEMP TABLE d4_reissue ON COMMIT DROP AS
+  SELECT pg_temp.j(pg_temp.run(:A, format(
+    'SELECT public.sp_replace_selected_disclosure(%L, false, %L)::text', :L1, :K3))) AS r;
+SELECT quote_literal(coalesce((SELECT r ->> 'disclosure_id' FROM d4_reissue), '00000000-0000-4000-8000-000000000000')) AS "L3" \gset
+SELECT pg_temp.session(:L3, :S3) WHERE EXISTS (SELECT 1 FROM public.sp_disclosures WHERE id = :L3);
+SELECT pg_temp.ok(
+  (SELECT r ->> 'status' = 'created' FROM d4_reissue) AND :L3 <> :L1
+  AND pg_temp.given(:R, :S3) = '[]'::jsonb
+  AND pg_temp.share(:A, :K3, ARRAY['enforcement_debt_none']) = 'err:VSD_DISCLOSURE_CHOICE_SEALED'
+  AND pg_temp.q(format('NOT EXISTS (SELECT 1 FROM public.vsd_disclosure_selections WHERE disclosure_id = %L)', :L3))
+  AND pg_temp.q(format('NOT EXISTS (SELECT 1 FROM public.vsd_disclosure_choices WHERE disclosure_id = %L)', :L3))
+  AND pg_temp.kinds(pg_temp.given(:R, :S1)) = 'enforcement_debt_none',
+  'D4.19 a reissued link carries no statement and cannot gain one; the original is unchanged');
+
+SELECT pg_temp.ok(
+  pg_temp.j(pg_temp.run(:A, format('SELECT public.vsd_share_operation(%L)::text', :K1)))
+    @> jsonb_build_object('status', 'sealed', 'declarations', 1, 'disclosure_id', :L1)
+  AND pg_temp.j(pg_temp.run(:A, format('SELECT public.vsd_share_operation(%L)::text', :K4)))
+    @> '{"status": "sealed", "declarations": 0}'::jsonb
+  AND pg_temp.j(pg_temp.run(:A, format('SELECT public.vsd_share_operation(%L)::text', :K2)))
+    @> '{"status": "unsealed", "declarations": 0}'::jsonb
+  AND pg_temp.j(pg_temp.run(:A, format('SELECT public.vsd_share_operation(%L)::text', :KX))) = '{"status": "none"}'::jsonb
+  AND pg_temp.j(pg_temp.run(:B, format('SELECT public.vsd_share_operation(%L)::text', :K1))) = '{"status": "none"}'::jsonb
+  AND pg_temp.run(NULL, format('SELECT public.vsd_share_operation(%L)::text', :K1), true, 'anon') LIKE 'err:%permission denied%'
+  AND pg_temp.run(:A, format('SELECT public.vsd_share_operation(%L)::text', :K1)) !~* 'token|5d000000-0000-4000-8000-0000000000d',
+  'D4.20 the holder can ask what one operation really committed -- sealed, unsealed or nothing -- and nobody else can');
 
 -- ══ GROUP D5 · the recipient ══════════════════════════════════════════════
 
@@ -465,7 +659,7 @@ SELECT pg_temp.ok(
 SELECT pg_temp.ok(
   pg_temp.given(:R, repeat('9', 64)) = '[]'::jsonb
   AND pg_temp.given(:R, '') = '[]'::jsonb
-  AND pg_temp.given(:R, 'vsd-suite-5d000000-0000-4000-8000-000000000011') = '[]'::jsonb
+  AND pg_temp.given(:R, (SELECT token_hash FROM public.sp_disclosures WHERE id = :L1)) = '[]'::jsonb
   AND pg_temp.given(:R, (SELECT session_hash FROM public.sp_share_sessions WHERE disclosure_id = :L1)) = '[]'::jsonb,
   'D5.5 being signed in reaches nothing without the link''s own share session: not a guess, the token hash or the stored hash');
 SELECT pg_temp.ok(
@@ -513,9 +707,18 @@ SELECT pg_temp.ok(
   AND pg_temp.q(format('(SELECT revoked_at IS NULL FROM public.sp_disclosures WHERE id = %L)', :L1)),
   'D6.2 the holder stops sharing one statement: the next read gives nothing, and the link itself still stands');
 SELECT pg_temp.ok(
-  pg_temp.choose(:A, :L1, ARRAY['enforcement_debt_none'])::jsonb ->> 'status' = 'already_selected'
+  pg_temp.j(pg_temp.share(:A, :K1, ARRAY['enforcement_debt_none'])) ->> 'status' = 'already_created'
+  AND pg_temp.attach(:L1, :A, 'enforcement_debt_none') LIKE 'err:%'
   AND pg_temp.given(:R, :S1) = '[]'::jsonb,
-  'D6.3 a withdrawn selection is not revived by selecting again');
+  'D6.3 a withdrawn selection is not revived by repeating the operation, nor replaced by a direct write');
+DO $$
+BEGIN
+  UPDATE public.vsd_disclosure_selections SET withdrawn_at = NULL WHERE withdrawn_at IS NOT NULL;
+  RAISE EXCEPTION 'ASSERTION FAILED: D6.3b a withdrawal cannot be undone';
+EXCEPTION WHEN check_violation THEN
+  IF SQLERRM <> 'VSD_DISCLOSURE_SELECTION_IMMUTABLE' THEN RAISE; END IF;
+  RAISE NOTICE 'ok  D6.3b a withdrawal cannot be undone';
+END $$;
 ROLLBACK TO SAVEPOINT d6;
 
 SAVEPOINT d6;
@@ -639,16 +842,19 @@ SELECT pg_temp.ok(
 SELECT pg_temp.ok(
   (SELECT array_agg(p.proname::text ORDER BY p.proname) FROM pg_proc p
     WHERE p.pronamespace = 'public'::regnamespace
-      AND (p.proname LIKE 'vsd\_%disclos%' OR p.proname = 'vsd_my_passport_declarations')
+      AND (p.proname LIKE 'vsd\_%disclos%' OR p.proname LIKE 'vsd\_%share%' OR p.proname LIKE 'vsd\_choice%'
+           OR p.proname = 'vsd_my_passport_declarations')
       AND has_function_privilege('authenticated', p.oid, 'EXECUTE'))
-  = ARRAY['vsd_my_disclosure_selections', 'vsd_my_passport_declarations', 'vsd_preview_disclosure',
-          'vsd_read_disclosed', 'vsd_select_for_disclosure', 'vsd_withdraw_disclosure_selection']
+  = ARRAY['vsd_create_credential_share', 'vsd_my_disclosure_selections', 'vsd_my_passport_declarations',
+          'vsd_preview_disclosure', 'vsd_read_disclosed', 'vsd_share_operation',
+          'vsd_withdraw_disclosure_selection']
   AND NOT EXISTS (
     SELECT 1 FROM pg_proc p
      WHERE p.pronamespace = 'public'::regnamespace
-       AND (p.proname LIKE 'vsd\_%disclos%' OR p.proname = 'vsd_my_passport_declarations')
+       AND (p.proname LIKE 'vsd\_%disclos%' OR p.proname LIKE 'vsd\_%share%' OR p.proname LIKE 'vsd\_choice%'
+            OR p.proname = 'vsd_my_passport_declarations')
        AND has_function_privilege('service_role', p.oid, 'EXECUTE')),
-  'D7.5 a signed-in user executes exactly the six bridge functions, and the service role none');
+  'D7.5 a signed-in user executes exactly the seven bridge functions, and the service role none');
 SELECT pg_temp.ok(
   NOT EXISTS (
     SELECT 1 FROM pg_class c
@@ -657,9 +863,9 @@ SELECT pg_temp.ok(
          OR has_table_privilege('authenticated', c.oid, 'SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')
          OR has_table_privilege('service_role', c.oid, 'SELECT,INSERT,UPDATE,DELETE,TRUNCATE')
          OR NOT c.relrowsecurity))
-  AND (SELECT count(*) = 3 FROM pg_class c
+  AND (SELECT count(*) = 4 FROM pg_class c
         WHERE c.relnamespace = 'public'::regnamespace AND c.relname LIKE 'vsd\_disclosure\_%' AND c.relkind = 'r'),
-  'D7.6 no client or service role holds any privilege on the three disclosure tables, and RLS is on');
+  'D7.6 no client or service role holds any privilege on the four disclosure tables, and RLS is on');
 SELECT pg_temp.ok(
   NOT EXISTS (
     SELECT 1 FROM information_schema.columns
@@ -668,16 +874,44 @@ SELECT pg_temp.ok(
   'D7.7 no disclosure column can hold a verdict, an explanation, an identity number, a token, a path or a hash');
 
 SAVEPOINT d7_erasure;
+-- A holder with nothing but a statement on a link, so that deleting the
+-- account exercises the bridge's own cascades and nothing of the Passport's.
+-- The direct writes are accepted here because they ARE the link's creation:
+-- the same transaction, the link's own key, nobody holding it yet.
+INSERT INTO auth.users (id, email, email_confirmed_at, raw_user_meta_data)
+VALUES ('5d000000-0000-4000-8000-0000000000d5', 'vsdd-holder-e@test.invalid', now(), '{}');
+INSERT INTO auth.sessions (id, user_id)
+VALUES ('5d000000-0000-4000-8000-0000000000d5', '5d000000-0000-4000-8000-0000000000d5');
+\set E '''5d000000-0000-4000-8000-0000000000d5'''
+\set LE '''5d000000-0000-4000-8000-000000000017'''
+\set SE '''7777777777777777777777777777777777777777777777777777777777777777'''
+SELECT pg_temp.link(:LE, :E, NULL);
+CREATE TEMP TABLE d7_direct ON COMMIT DROP AS
+  SELECT pg_temp.save(:E, 'payment_remarks_none', 'se-remarks-v1', NULL) AS saved, NULL::text AS sealed,
+         NULL::text AS first, NULL::text AS second;
+UPDATE d7_direct SET sealed = pg_temp.seal(:LE, :E);
+UPDATE d7_direct SET first = pg_temp.attach(:LE, :E, 'payment_remarks_none');
+UPDATE d7_direct SET second = pg_temp.attach(:LE, :E, 'payment_remarks_none');
+SELECT pg_temp.session(:LE, :SE);
+SELECT pg_temp.ok(
+  (SELECT saved NOT LIKE 'err:%' AND sealed = 'ok' AND first = 'ok' AND second LIKE 'err:%' FROM d7_direct)
+  AND pg_temp.kinds(pg_temp.given(:R, :SE)) = 'payment_remarks_none',
+  'D7.8 fixture: a choice sealed while its link is created is accepted, once, and disclosed');
 DELETE FROM auth.users WHERE id = :R;
 SELECT pg_temp.ok(
   (SELECT count(*) > 0 AND bool_and(recipient_user_id IS NULL) FROM public.vsd_disclosure_accesses),
-  'D7.8 erasing a recipient''s account keeps the event and removes who it was');
-DELETE FROM auth.users WHERE id = :A;
+  'D7.9 erasing a recipient''s account keeps the event and removes who it was');
+DELETE FROM auth.users WHERE id = :E;
 SELECT pg_temp.ok(
-  NOT EXISTS (SELECT 1 FROM public.vsd_disclosure_selections)
-  AND NOT EXISTS (SELECT 1 FROM public.vsd_disclosure_accesses)
-  AND NOT EXISTS (SELECT 1 FROM public.vsd_declarations WHERE holder_user_id = :A),
-  'D7.9 erasing the holder''s account removes their selections and every record of their reads');
+  NOT EXISTS (SELECT 1 FROM public.vsd_disclosure_selections WHERE holder_user_id = :E)
+  AND NOT EXISTS (SELECT 1 FROM public.vsd_disclosure_choices WHERE holder_user_id = :E)
+  AND NOT EXISTS (SELECT 1 FROM public.vsd_disclosure_accesses a
+                   WHERE NOT EXISTS (SELECT 1 FROM public.vsd_disclosure_selections s WHERE s.id = a.selection_id))
+  AND NOT EXISTS (SELECT 1 FROM public.vsd_declarations WHERE holder_user_id = :E)
+  AND (SELECT count(*) = 2 FROM pg_constraint c
+        WHERE c.contype = 'f' AND c.confrelid = 'auth.users'::regclass AND c.confdeltype = 'c'
+          AND c.conrelid IN ('public.vsd_disclosure_selections'::regclass, 'public.vsd_disclosure_choices'::regclass)),
+  'D7.10 erasing a holder''s account removes their sealed choices, selections and every record of their reads');
 ROLLBACK TO SAVEPOINT d7_erasure;
 
 -- The real rollback, with selections and read records present.
@@ -685,17 +919,18 @@ ROLLBACK TO SAVEPOINT d7_erasure;
 SELECT pg_temp.ok(
   NOT EXISTS (SELECT 1 FROM pg_class c WHERE c.relnamespace = 'public'::regnamespace AND c.relname LIKE 'vsd\_disclosure\_%')
   AND NOT EXISTS (SELECT 1 FROM pg_proc p WHERE p.pronamespace = 'public'::regnamespace
-                     AND (p.proname LIKE 'vsd\_%disclos%' OR p.proname = 'vsd_my_passport_declarations'))
+                     AND (p.proname LIKE 'vsd\_%disclos%' OR p.proname LIKE 'vsd\_%share%' OR p.proname LIKE 'vsd\_choice%'
+                          OR p.proname = 'vsd_my_passport_declarations'))
   AND (SELECT count(*) = 30 FROM pg_proc p WHERE p.pronamespace = 'public'::regnamespace AND p.proname LIKE 'vsd\_%')
   AND (SELECT count(*) = 2 FROM public.vsd_declarations WHERE holder_user_id = :A)
   AND obj_description('public.vsd_declarations'::regclass) LIKE '%never shared.',
-  'D7.10 the rollback removes the bridge and leaves the thirty collection functions and every statement as they were');
+  'D7.11 the rollback removes the bridge and leaves the thirty collection functions and every statement as they were');
 \ir ../migrations/20270325090000_vsd_passport_disclosure.sql
 SELECT pg_temp.ok(
   to_regclass('public.vsd_disclosure_selections') IS NOT NULL
   AND (SELECT count(*) = 0 FROM public.vsd_disclosure_authorizations)
   AND pg_temp.given(:R, :S1) = '[]'::jsonb
   AND pg_temp.preview(:A, ARRAY['enforcement_debt_none']) = 'err:VSD_DISCLOSURE_NOT_AUTHORIZED',
-  'D7.11 the migration re-applies cleanly after a rollback, closed again');
+  'D7.12 the migration re-applies cleanly after a rollback, closed again');
 
 ROLLBACK;
