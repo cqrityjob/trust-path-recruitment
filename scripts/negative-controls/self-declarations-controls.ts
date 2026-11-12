@@ -24,6 +24,16 @@ const IDENTITY = "src/lib/professional-identity/identity.functions.ts";
 const WORKFLOW = "src/lib/self-declarations/workflow.ts";
 const STORE = "src/lib/self-declarations/document-store.server.ts";
 const CONTENT = "src/lib/self-declarations/content.ts";
+const BRIDGE_DIR = "src/components/security-passport/self-declarations";
+const BRIDGE_SHIELD = `${BRIDGE_DIR}/SelfDeclarationShield.tsx`;
+const BRIDGE_SHARE = `${BRIDGE_DIR}/ShareSelfDeclarations.tsx`;
+const BRIDGE_RECIPIENT = `${BRIDGE_DIR}/RecipientSelfDeclarations.tsx`;
+const BRIDGE_MODEL = "src/lib/self-declarations/passport-bridge.ts";
+const BRIDGE_FUNCTIONS = "src/lib/self-declarations/passport-bridge.functions.ts";
+const BRIDGE_RECIPIENT_FN = "src/lib/security-passport/self-declarations-bridge.functions.ts";
+const PASSPORT_ROUTE = "src/routes/_authenticated.passport.index.tsx";
+const SHARE_ROUTE = "src/routes/_authenticated.passport.share.tsx";
+const RECIPIENT_ROUTE = "src/routes/p.$token.tsx";
 
 const MUTATIONS: readonly Mutation[] = [
   {
@@ -192,6 +202,242 @@ const MUTATIONS: readonly Mutation[] = [
     replace: "  const slash",
     guard: GUARD,
     expect: "5.6d the server's bucket access takes only a database path",
+  },
+  // ── The Security Passport bridge ──────────────────────────────────────
+  {
+    id: "VSD-NC-BRIDGE-OTHER-SURFACE",
+    defect:
+      "the social share flow -- the image, its preview and its download -- starts naming the self-declarations",
+    file: "src/components/security-passport/live/SocialShareFlow.tsx",
+    find: "export function SocialShareFlow({",
+    replace: 'const leakedSelfDeclarations = "selfDeclaration";\nexport function SocialShareFlow({',
+    guard: GUARD,
+    expect: "1.1 no file outside the module",
+  },
+  {
+    id: "VSD-NC-BRIDGE-VERIFIED-SHIELD",
+    defect: "the shield is drawn in the verified treatment, with its tick and gold rim",
+    file: BRIDGE_SHIELD,
+    find: '<ShieldMark state="self_declared" size={36} />',
+    replace: '<ShieldMark state="verified" size={36} />',
+    guard: GUARD,
+    expect: "8.3 the shield is drawn only in the self-declared treatment",
+  },
+  {
+    id: "VSD-NC-BRIDGE-DOCUMENT-UPGRADES-LABEL",
+    defect:
+      "a supporting document changes the shield's label from self-declared to its provenance level",
+    file: BRIDGE_SHIELD,
+    find: "  return `${L(SHIELD_SUBJECT[statement.kind], lang)} · ${L(SHIELD.selfDeclared, lang)}`;",
+    replace:
+      "  return `${L(SHIELD_SUBJECT[statement.kind], lang)} · ${L(PROVENANCE.document_reviewed.label, lang)}`;",
+    guard: GUARD,
+    expect: "8.3a its label is the subject and",
+  },
+  {
+    id: "VSD-NC-BRIDGE-UNVERIFIED-OMITTED",
+    defect: "the sentence saying CQrityjob has not verified the statement is no longer shown",
+    file: BRIDGE_SHIELD,
+    find: "            {L(SHIELD.notVerified, lang)}\n",
+    replace: "",
+    guard: GUARD,
+    expect: "8.3b an opened shield always shows the exact statement",
+  },
+  {
+    id: "VSD-NC-BRIDGE-PROVENANCE-TO-RECIPIENT",
+    defect:
+      "the disclosed statement gains a provenance field, so a reviewed document can reach a recipient",
+    file: BRIDGE_MODEL,
+    find: "    statementPeriod: z.string().max(200).nullable(),\n  })\n  .strict();",
+    replace:
+      "    statementPeriod: z.string().max(200).nullable(),\n    provenance: z.string().optional(),\n  })\n  .strict();",
+    guard: GUARD,
+    expect: "8.4 a disclosed statement is exactly six fields",
+  },
+  {
+    id: "VSD-NC-BRIDGE-CRIMINAL-SHIELD",
+    defect:
+      "a statement is shown without the application holding its wording, so criminal history could draw a shield",
+    file: BRIDGE_MODEL,
+    find: "  return held !== undefined && held === statement.statementVersion;",
+    replace: "  return held !== statement.statementVersion || true;",
+    guard: GUARD,
+    expect: "8.4a criminal history, or any wording the application does not hold",
+  },
+  {
+    id: "VSD-NC-BRIDGE-FAILED-READ-SHIELD",
+    defect: "a refused Passport read is no longer the closed view",
+    file: BRIDGE_FUNCTIONS,
+    find: "    if (error) return CLOSED_PASSPORT_DECLARATIONS;\n",
+    replace: "",
+    guard: GUARD,
+    expect: "8.5 closed processing produces no shield",
+  },
+  {
+    id: "VSD-NC-BRIDGE-PRE-TICKED",
+    defect: "a shareable statement is offered already ticked",
+    file: BRIDGE_SHARE,
+    find: "checked={ticked.has(declaration.id)}",
+    replace: "defaultChecked",
+    guard: GUARD,
+    expect: "8.7 nothing is pre-selected",
+  },
+  {
+    id: "VSD-NC-BRIDGE-UNPREVIEWED-ATTACH",
+    defect: "a ticked statement is attached without the holder having been shown the preview",
+    file: BRIDGE_SHARE,
+    find: "  const confirmed = useMemo(() => confirmedChoices(chosen, previewed), [chosen, previewed]);",
+    replace:
+      "  const confirmed = useMemo(() => chosen.map((d) => ({ declarationId: d.id, revision: d.revision })), [chosen, previewed]);",
+    guard: GUARD,
+    expect: "8.8 only what the server's preview returned can be attached",
+  },
+  {
+    id: "VSD-NC-BRIDGE-SOCIAL-IMAGE",
+    defect: "the holder's choice of statements is passed on to the social share",
+    file: SHARE_ROUTE,
+    find: "      create: (input) => doSocialCreate({ data: { ...input, claimIds: [...input.claimIds] } }),",
+    replace:
+      "      create: (input) =>\n        doSocialCreate({\n          data: { ...input, claimIds: [...input.claimIds], extra: selfDeclarationOffer.choices } as never,\n        }),",
+    guard: GUARD,
+    expect: "8.9 the choice goes to one place",
+  },
+  {
+    id: "VSD-NC-BRIDGE-ANONYMOUS-READ",
+    defect: "the recipient's read no longer requires a signed-in caller",
+    file: BRIDGE_RECIPIENT_FN,
+    find: 'export const readSharedSelfDeclarations = createServerFn({ method: "POST" })\n  .middleware([requireSupabaseAuth])\n',
+    replace: 'export const readSharedSelfDeclarations = createServerFn({ method: "POST" })\n',
+    guard: GUARD,
+    expect: "8.10 the recipient's read is a separate call",
+  },
+  {
+    id: "VSD-NC-BRIDGE-SERVICE-ROLE-READ",
+    defect:
+      "the recipient's read goes through the service role instead of the recipient's own client",
+    file: BRIDGE_RECIPIENT_FN,
+    find: "    const client = (context as { supabase: unknown }).supabase as CallerClient;",
+    replace:
+      '    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");\n    const client = supabaseAdmin as unknown as CallerClient;',
+    guard: GUARD,
+    expect: "8.10 the recipient's read is a separate call",
+  },
+  {
+    id: "VSD-NC-BRIDGE-ANONYMOUS-CALL",
+    defect: "the recipient page asks for the statements whether or not the visitor is signed in",
+    file: BRIDGE_RECIPIENT,
+    find: "    if (signedIn !== true) {",
+    replace: "    if (signedIn === false) {",
+    guard: GUARD,
+    expect: "8.10b a visitor who is not signed in triggers no call",
+  },
+  {
+    id: "VSD-NC-BRIDGE-PAGE-HEAD",
+    defect: "the recipient page's head starts describing the self-declarations to link previews",
+    file: RECIPIENT_ROUTE,
+    find: '      { name: "robots", content: "noindex, nofollow" },',
+    replace:
+      '      { name: "robots", content: "noindex, nofollow" },\n      { name: "description", content: "self-declarations included" },',
+    guard: GUARD,
+    expect: "8.11 nothing of it reaches the recipient page",
+  },
+  {
+    id: "VSD-NC-BRIDGE-WALLET",
+    defect: "the credential wallet is handed the self-declarations, where they could be counted",
+    file: PASSPORT_ROUTE,
+    find: "          metadata={metadata}\n          reviews={reviews}\n          reviewState={reviewState}",
+    replace:
+      "          metadata={metadata}\n          selfDeclarations={loadSelfDeclarations}\n          reviews={reviews}\n          reviewState={reviewState}",
+    guard: GUARD,
+    expect: "8.6 the Passport page mounts the section once",
+  },
+  // ── One creation operation: what is known, and what a retry repeats ───
+  {
+    id: "VSD-NC-BRIDGE-LOST-ANSWER-NOT-SHARED",
+    defect:
+      "a lost answer with nothing committed yet is reported as a refusal, so the screen says nothing was shared while the request may still commit",
+    file: BRIDGE_MODEL,
+    find: '    // is not proof that nothing will be. Only a repeat settles it.\n    return { kind: "unconfirmed" };',
+    replace:
+      '    // is not proof that nothing will be. Only a repeat settles it.\n    return { kind: "refused", code: "VSD_WRITE_FAILED" };',
+    guard: GUARD,
+    expect: "8.9a a lost answer is never 'not shared'",
+  },
+  {
+    id: "VSD-NC-BRIDGE-UNREADABLE-STATE-NOT-SHARED",
+    defect: "when the committed state cannot be read either, the operation is reported as refused",
+    file: BRIDGE_MODEL,
+    find: '    } catch {\n      return { kind: "unconfirmed" };\n    }',
+    replace: '    } catch {\n      return { kind: "refused", code: "VSD_WRITE_FAILED" };\n    }',
+    guard: GUARD,
+    expect: "8.9a a lost answer is never 'not shared'",
+  },
+  {
+    id: "VSD-NC-BRIDGE-ANY-ERROR-IS-REFUSAL",
+    defect: "any thrown error counts as the database's refusal",
+    file: BRIDGE_MODEL,
+    find: "  return REFUSAL.test(message) ? message : null;",
+    replace: "  return message || null;",
+    guard: GUARD,
+    expect: "8.9a a lost answer is never 'not shared'",
+  },
+  {
+    id: "VSD-NC-BRIDGE-RETRY-NEW-OPERATION",
+    defect:
+      "while an operation is unconfirmed, creating again starts a NEW operation from whatever the screen shows now",
+    file: BRIDGE_SHARE,
+    find: "      settle(unconfirmed.current && kept.current ? kept.current : operation),",
+    replace: "      settle(operation),",
+    guard: GUARD,
+    expect: "8.9b an unconfirmed operation is kept and repeated as it was",
+  },
+  {
+    id: "VSD-NC-BRIDGE-KEY-ROTATED-UNCONFIRMED",
+    defect:
+      "an unconfirmed outcome rotates the request key, so the next attempt can create a second link",
+    file: SHARE_ROUTE,
+    find: '    if (!settled || settled.kind === "unconfirmed") return;',
+    replace: "    if (!settled) return;",
+    guard: GUARD,
+    expect: "8.9b an unconfirmed operation is kept and repeated as it was",
+  },
+  {
+    id: "VSD-NC-BRIDGE-REFRESH-DECIDES-OUTCOME",
+    defect: "a failed re-read of the list after a confirmed creation overturns the outcome",
+    file: BRIDGE_SHARE,
+    find: "      setView((current) => ({ ...current, listStale: true }));",
+    replace:
+      '      setView((current) => ({ ...current, listStale: true, outcome: { kind: "unconfirmed" } }));',
+    guard: GUARD,
+    expect: "8.9c whether the list could be re-read is a separate fact",
+  },
+  {
+    id: "VSD-NC-BRIDGE-LIST-FAILURE-AS-EMPTY",
+    defect: "an unreadable list of shared statements is answered as an empty one",
+    file: BRIDGE_FUNCTIONS,
+    find: '    if (error) throw refusal(error, "VSD_READ_FAILED");\n    return toSharedSelections(data);',
+    replace: "    if (error) return [];\n    return toSharedSelections(data);",
+    guard: GUARD,
+    expect: "8.9c whether the list could be re-read is a separate fact",
+  },
+  {
+    id: "VSD-NC-BRIDGE-RECIPIENT-BELOW-PROMOTION",
+    defect: "the recipient view no longer renders the slot below the card",
+    file: "src/components/security-passport/live/RecipientPassportView.tsx",
+    find: "      </section>\n      {afterCard}\n",
+    replace: "      </section>\n",
+    guard: GUARD,
+    expect: "8.11a the section sits directly below the card",
+  },
+  {
+    id: "VSD-NC-BRIDGE-TIME-WINDOW",
+    defect:
+      "the seal accepts any link younger than an hour instead of the link being created in this transaction",
+    file: "supabase/migrations/20270325090000_vsd_passport_disclosure.sql",
+    find: "          AND x.created_at = transaction_timestamp()",
+    replace: "          AND x.created_at > now() - interval '1 hour'",
+    guard: GUARD,
+    expect: "8.14a the migration has no function that gives an existing link a statement",
   },
 ];
 

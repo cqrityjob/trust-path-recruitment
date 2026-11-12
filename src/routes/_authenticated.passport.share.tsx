@@ -129,6 +129,27 @@ import {
   revokeSocialShare,
   type MyPassportNumber,
 } from "@/lib/security-passport/social-share.functions";
+// The one authorized bridge to the voluntary self-declarations. Its state is
+// given to exactly one place below: the attach call after a LINK is created.
+// It is never passed to the social image, the preview payload or any export.
+import {
+  NO_SELF_DECLARATION_OFFER,
+  ShareSelfDeclarationChoices,
+  ShareSelfDeclarationResult,
+  SharedSelfDeclarations,
+  useShareOperation,
+  type SelfDeclarationShareApi,
+  type ShareSelfDeclarationOffer,
+} from "@/components/security-passport/self-declarations/ShareSelfDeclarations";
+import {
+  createShareWithSelfDeclarations,
+  getMyPassportSelfDeclarations,
+  getShareOperation,
+  listMySharedSelfDeclarations,
+  previewSelfDeclarationDisclosure,
+  stopSharingSelfDeclaration,
+} from "@/lib/self-declarations/passport-bridge.functions";
+import type { ShareOperationOutcome } from "@/lib/self-declarations/passport-bridge";
 
 export const Route = createFileRoute("/_authenticated/passport/share")({
   ssr: false,
@@ -344,6 +365,30 @@ function PassportShareInner() {
   const doPreview = useServerFn(previewCredentialShare);
   const doCreate = useServerFn(createCredentialShare);
   const doRevoke = useServerFn(revokeShare);
+  const vsdLoad = useServerFn(getMyPassportSelfDeclarations);
+  const vsdPreview = useServerFn(previewSelfDeclarationDisclosure);
+  const vsdCreate = useServerFn(createShareWithSelfDeclarations);
+  const vsdCommitted = useServerFn(getShareOperation);
+  const vsdList = useServerFn(listMySharedSelfDeclarations);
+  const vsdStop = useServerFn(stopSharingSelfDeclaration);
+  const selfDeclarationsApi: SelfDeclarationShareApi = useMemo(
+    () => ({
+      load: () => vsdLoad(),
+      preview: vsdPreview,
+      create: vsdCreate,
+      committed: vsdCommitted,
+      list: () => vsdList(),
+      stop: vsdStop,
+    }),
+    [vsdLoad, vsdPreview, vsdCreate, vsdCommitted, vsdList, vsdStop],
+  );
+  /** Whether a choice of self-declarations was put to the holder for the link
+   *  being created, and what they ticked AND previewed. Nothing by default. */
+  const [selfDeclarationOffer, setSelfDeclarationOffer] =
+    useState<ShareSelfDeclarationOffer>(NO_SELF_DECLARATION_OFFER);
+  /** The link-and-choice creation, kept until the database has settled it. */
+  const shareOperation = useShareOperation(selfDeclarationsApi);
+  const shareUnconfirmed = shareOperation.view.outcome?.kind === "unconfirmed";
 
   const [snapshot, setSnapshot] = useState<PassportSnapshot | null>(null);
   const [passportState, setPassportState] = useState<LoadState>("loading");
@@ -664,11 +709,75 @@ function PassportShareInner() {
   /* ---------------------------------------------------------------- */
 
   const shareUrl = outcome?.kind === "created" ? publicShareUrl(outcome.token) : null;
+  /** The steps are shown while a link is being composed -- not once one
+   *  exists, and not while an attempt is unconfirmed: that attempt is then
+   *  the only thing that can be repeated, exactly as it was. */
+  const composing = !outcome && !shareUnconfirmed;
+
+  /** What the database settled for a link created together with a choice of
+   *  self-declarations. An UNCONFIRMED outcome changes nothing here: the
+   *  operation and its key are kept, and only a retry of it follows. */
+  async function applyShareOutcome(settled: ShareOperationOutcome | null) {
+    if (!settled || settled.kind === "unconfirmed") return;
+    if (settled.kind === "refused") {
+      // The database refused the whole operation: no link exists.
+      setCreateError(
+        settled.code.startsWith("SP_")
+          ? CREATE_ERROR_KEY[shareErrorCode(new Error(settled.code))]
+          : "sel.error.create",
+      );
+      return;
+    }
+    if (settled.kind === "created" && settled.token) {
+      trackFunnelOnce("passport_share_link_created");
+      setOutcome({ kind: "created", token: settled.token, expiresAt: settled.expiresAt });
+    } else {
+      setOutcome({
+        kind: "already",
+        disclosureId: settled.disclosureId,
+        expiresAt: settled.kind === "created" ? settled.expiresAt : null,
+      });
+    }
+    // Settled: the next create is a new decision, with nothing ticked.
+    setSelfDeclarationOffer(NO_SELF_DECLARATION_OFFER);
+    requestKey.current = newRequestKey();
+    await readShares();
+  }
+
+  async function onRetryShareOperation() {
+    setCreating(true);
+    setCreateError(null);
+    try {
+      await applyShareOutcome(await shareOperation.retry());
+    } finally {
+      setCreating(false);
+    }
+  }
 
   async function onCreate() {
     setCreating(true);
     setCreateError(null);
     try {
+      // A choice of self-declarations was offered (or an earlier attempt is
+      // still unconfirmed): the link and the choice are ONE database
+      // operation under this request key. An unconfirmed attempt is repeated
+      // as it was, whatever the screen shows now.
+      if (selfDeclarationOffer.offered || shareUnconfirmed) {
+        await applyShareOutcome(
+          await shareOperation.run({
+            requestKey: requestKey.current,
+            link: {
+              claimIds: selectedIds.claimIds,
+              permittedFields,
+              expiresDays: expiryDays,
+              locale: shareLang,
+            },
+            choices: selfDeclarationOffer.choices,
+          }),
+        );
+        return;
+      }
+      shareOperation.clear();
       const result = await doCreate({
         data: {
           claimIds: selectedIds.claimIds,
@@ -727,6 +836,9 @@ function PassportShareInner() {
   async function onReissue(id: string, revokePrevious: boolean) {
     setReissuing(id);
     setReissueError(null);
+    // A reissued link carries no self-declaration; nothing may say it does.
+    // (An attempt that is still unconfirmed is kept: it is not this link.)
+    if (!shareUnconfirmed) shareOperation.clear();
     try {
       const result = await replaceShare({
         data: { disclosureId: id, revokePrevious, requestKey: reissueKey.current },
@@ -878,9 +990,17 @@ function PassportShareInner() {
           lang={lang}
         />
       ) : null}
+      {via === "link" ? (
+        <ShareSelfDeclarationResult
+          view={shareOperation.view}
+          lang={lang}
+          onRetry={() => void onRetryShareOperation()}
+          onRefreshList={() => void shareOperation.refreshList()}
+        />
+      ) : null}
 
       {/* ── 1 · What to share ──────────────────────────────────────── */}
-      {via === "link" && !outcome ? (
+      {via === "link" && composing ? (
         <section aria-labelledby="sel-choose">
           <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
             01
@@ -952,11 +1072,23 @@ function PassportShareInner() {
           <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
             {pt("sel.onlyCurrentVerified")}
           </p>
+
+          {/* Optional, unticked, and absent entirely while disclosure is
+              closed. A statement accompanies a link only together with at
+              least one credential, so it is offered once one is chosen. */}
+          {selectedCount > 0 ? (
+            <ShareSelfDeclarationChoices
+              lang={lang}
+              shareLang={shareLang}
+              api={selfDeclarationsApi}
+              onOfferChange={setSelfDeclarationOffer}
+            />
+          ) : null}
         </section>
       ) : null}
 
       {/* ── 2 · The recipient's view ───────────────────────────────── */}
-      {via === "link" && !outcome && selectedCount > 0 ? (
+      {via === "link" && composing && selectedCount > 0 ? (
         <section aria-labelledby="sel-preview">
           <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
             02
@@ -1003,7 +1135,7 @@ function PassportShareInner() {
       ) : null}
 
       {/* ── 3 · Link settings ──────────────────────────────────────── */}
-      {via === "link" && !outcome ? (
+      {via === "link" && composing ? (
         <section aria-labelledby="sel-settings">
           <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
             03
@@ -1100,7 +1232,7 @@ function PassportShareInner() {
       ) : null}
 
       {/* ── 4 · Create ─────────────────────────────────────────────── */}
-      {via === "link" && !outcome ? (
+      {via === "link" && composing ? (
         <section aria-labelledby="sel-create">
           <h2 id="sel-create" className="sr-only">
             {pt("sel.step.create")}
@@ -1114,7 +1246,7 @@ function PassportShareInner() {
             type="button"
             data-share-cta
             onClick={() => void onCreate()}
-            disabled={creating || selectedCount === 0}
+            disabled={creating || selectedCount === 0 || !selfDeclarationOffer.ready}
             aria-describedby="sel-create-help"
             className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:w-auto"
           >
@@ -1188,6 +1320,7 @@ function PassportShareInner() {
           lang={lang}
         />
       ) : null}
+      {via === "link" ? <SharedSelfDeclarations lang={lang} api={selfDeclarationsApi} /> : null}
 
       <BackLink label={pt("sel.back")} />
     </div>

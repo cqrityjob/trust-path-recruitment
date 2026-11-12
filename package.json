@@ -297,7 +297,7 @@
     "self-declarations:check": "bun run scripts/self-declarations-check.ts",
     "self-declarations:test": "bun test scripts/self-declarations.test.tsx",
     "negative-controls:self-declarations": "bun run scripts/negative-controls/self-declarations-controls.ts",
-    "e2e:self-declarations": "playwright test e2e/self-declarations.spec.ts --project=chromium --project=mobile-375",
+    "e2e:self-declarations": "playwright test e2e/self-declarations.spec.ts e2e/self-declarations-passport.spec.ts --project=chromium --project=mobile-375",
     "cv-application-source:check": "bun run scripts/cv-application-source-check.tsx",
     "cv-pilot:check": "bun run scripts/cv-pilot-check.tsx",
     "cv-provider-minimisation:check": "bun run scripts/cv-provider-minimisation-check.tsx",

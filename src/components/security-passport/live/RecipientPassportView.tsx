@@ -31,6 +31,7 @@
 // would render the reader's language in the middle of the recipient's page.
 
 import { ExternalLink, ShieldCheck } from "lucide-react";
+import type { ReactNode } from "react";
 import type { PassportLang } from "@/lib/security-passport/i18n";
 import { PassportLangProvider, usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import {
@@ -73,6 +74,10 @@ export interface RecipientPassportViewProps {
     readonly passportNumber: number | null;
     readonly designation: "founder" | null;
   };
+  /** Rendered directly below the card, before the details and everything
+   *  addressed to a stranger. The view knows nothing about what it is: it is
+   *  never part of the share's payload, and absent it leaves no gap. */
+  readonly afterCard?: ReactNode;
 }
 
 export function RecipientPassportView(props: RecipientPassportViewProps) {
@@ -88,6 +93,7 @@ function RecipientPassportBody({
   verifyUrl,
   preview = false,
   identity,
+  afterCard,
 }: RecipientPassportViewProps) {
   // Inside the provider, so this is the SHARE's language, not the reader's.
   const { pt, lang } = usePassportCopy();
@@ -149,6 +155,7 @@ function RecipientPassportBody({
       <section className="mt-6" aria-label={pt("rec.cardTitle")}>
         <RecipientPassportCard presentation={presentation} verifyUrl={verifyUrl} />
       </section>
+      {afterCard}
 
       {presentation.containsExpired ? (
         <p

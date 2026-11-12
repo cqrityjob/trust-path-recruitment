@@ -27,6 +27,11 @@ import { listMyVerificationRequests } from "@/lib/security-passport/verification
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import { CredentialWallet } from "@/components/security-passport/CredentialWallet";
 import { PassportSideColumn } from "@/components/security-passport/PassportSideColumn";
+// The one authorized bridge to the voluntary self-declarations: a separate
+// section with its own read. Nothing of it is given to the wallet, the side
+// column, the attention panel or any count on this page.
+import { PassportSelfDeclarations } from "@/components/security-passport/self-declarations/PassportSelfDeclarations";
+import { getMyPassportSelfDeclarations } from "@/lib/self-declarations/passport-bridge.functions";
 import { EvidenceUploadRecoveryPanel } from "@/components/security-passport/live/EvidenceUploadRecoveryPanel";
 import {
   listMyUploadAttempts,
@@ -47,6 +52,7 @@ function PassportWorkspaceRoute() {
   const cleanupUploadAttempt = useServerFn(cleanupMyUploadAttempt);
   const loadMetadata = useServerFn(getInternationalPassportMetadata);
   const loadReviews = useServerFn(listMyVerificationRequests);
+  const loadSelfDeclarations = useServerFn(getMyPassportSelfDeclarations);
   const [snapshot, setSnapshot] = useState<PassportSnapshot | null>(null);
   const [metadata, setMetadata] = useState<InternationalPassportMetadata | null>(null);
   const [reviews, setReviews] = useState<ReadonlyMap<string, string> | null>(null);
@@ -155,6 +161,7 @@ function PassportWorkspaceRoute() {
             />
           }
         />
+        <PassportSelfDeclarations lang={lang} load={() => loadSelfDeclarations()} />
         <section id="attention" aria-labelledby="attention-heading" tabIndex={-1}>
           <h2 id="attention-heading" className="sr-only">
             {pt("att.title")}

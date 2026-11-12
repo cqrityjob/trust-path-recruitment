@@ -2336,6 +2336,10 @@ jobs:
       # desktop and 375: closed by default with no control at all, nothing
       # pre-selected, the three provenance labels, and an owed or failed
       # file cleanup that stays visible and is never called erased early.
+      # And the Security Passport bridge: no shield while processing is
+      # closed, a self-declared shield a reviewed document cannot upgrade,
+      # unticked choices, the holder's preview equal to what is attached, and
+      # a recipient who sees a statement only when signed in.
       - name: Voluntary self-declarations browser suite
         run: bun run e2e:self-declarations
 

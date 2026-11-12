@@ -18,6 +18,7 @@
 // claims, no employment history, no reviewer notes. The server already
 // refuses to send them; this component has no field for them either.
 
+import type { ReactNode } from "react";
 import { TRUST_PALETTE } from "@/lib/security-passport/design/trust-system";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import { formatExpiry } from "@/lib/security-passport/format";
@@ -31,11 +32,15 @@ export function CredentialVerificationPage({
   holderLabel,
   jurisdiction,
   verifyUrl,
+  afterCard,
 }: {
   credential: RecipientCredential;
   holderLabel: string;
   jurisdiction: string;
   verifyUrl: string;
+  /** Rendered directly below the credential, before its details. The page
+   *  knows nothing about what it is, and absent it leaves no gap. */
+  afterCard?: ReactNode;
 }) {
   const { pt, lang } = usePassportCopy();
   const isCurrent = credential.lifecycle === "active";
@@ -131,6 +136,7 @@ export function CredentialVerificationPage({
           </p>
         </div>
       </article>
+      {afterCard}
 
       {/* ── The four things that make it checkable ────────────────────── */}
       <section className="rounded-xl border border-border bg-card p-5">

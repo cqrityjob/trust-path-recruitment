@@ -217,6 +217,8 @@ async function mount(
     getMyPassport: snapshot,
     getInternationalPassportMetadata: metadata,
     listMyVerificationRequests: { requests: [], decisions: [] },
+    // The self-declarations bridge: closed, as production is (20270325090000).
+    listMySharedSelfDeclarations: [],
     listMyShares: [],
     getMyPassportNumber: { number: null, designation: null },
     listMySocialShares: [],
@@ -228,6 +230,8 @@ async function mount(
     listMyEmployerWorkspaces: [],
     trackV31FunnelEvent: { recorded: false },
     listMyEvidence: [],
+    // The self-declarations bridge: closed, as production is (20270325090000).
+    getMyPassportSelfDeclarations: { state: "not_activated", declarations: [] },
     listMyUploadAttempts: [],
     listClaimVersions: [],
     getCredentialPrivateFields: { credentialReference: null, holderNote: null },
@@ -744,6 +748,8 @@ for (const lang of ["sv", "en"] as const) {
     for (const width of [390, 1440] as const) {
       await page.setViewportSize({ width, height: 900 });
       await mount(page, "/p/abcdef0123456789", lang, snapshotFor("Mostafa Alshawi", NINE), {
+        // The self-declarations bridge: closed, as production is (20270325090000).
+        readSharedSelfDeclarations: [],
         getPublicDisclosureFromCookie: payload,
       });
       const items = page.locator("[data-recipient-credential]");
@@ -1048,6 +1054,8 @@ for (const lang of ["sv", "en"] as const) {
     for (const width of [390, 1440] as const) {
       await page.setViewportSize({ width, height: 900 });
       await mount(page, "/p/abcdef0123456789", lang, snapshotFor("Mostafa Alshawi", NINE), {
+        // The self-declarations bridge: closed, as production is (20270325090000).
+        readSharedSelfDeclarations: [],
         getPublicDisclosureFromCookie: payload,
       });
       const region = page.locator("[data-recipient-shields]");

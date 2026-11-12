@@ -36,7 +36,7 @@
 // keeping it out of search indexes is a governance decision, not a tuning
 // knob to trade away for a nicer preview.
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { createFileRoute, useParams } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { ShieldAlert, ShieldCheck } from "lucide-react";
@@ -49,6 +49,13 @@ import { RecipientPassportView } from "@/components/security-passport/live/Recip
 import { CredentialVerificationPage } from "@/components/security-passport/live/CredentialVerificationPage";
 import { PassportLangProvider } from "@/lib/security-passport/use-passport-copy";
 import { publicShareOrigin } from "@/lib/security-passport/public-origin";
+
+// The one authorized bridge to the voluntary self-declarations. It makes its
+// OWN authenticated call, for a signed-in recipient only; the anonymous
+// payload this page reads above never carries a statement, and nothing of it
+// reaches this route's head, title or social image.
+import { RecipientSelfDeclarations } from "@/components/security-passport/self-declarations/RecipientSelfDeclarations";
+import { readSharedSelfDeclarations } from "@/lib/security-passport/self-declarations-bridge.functions";
 
 export const Route = createFileRoute("/p/$token")({
   ssr: false,
@@ -123,6 +130,7 @@ function RecipientRoute() {
   // single-cookie version had. See share-transport.ts.
   const { token: navigationId } = useParams({ from: "/p/$token" });
   const read = useServerFn(getPublicDisclosureFromCookie);
+  const readSelfDeclarations = useServerFn(readSharedSelfDeclarations);
 
   const [payload, setPayload] = useState<RecipientPayload | null>(null);
 
@@ -225,17 +233,40 @@ function RecipientRoute() {
   // Reading them from the route's own `pt`, which is bound before the
   // provider exists, is how a page ends up half in the reader's language and
   // half in the recipient's.
+  // What the holder chose to say about themselves, for a SIGNED-IN recipient
+  // only. It is a separate authenticated read (never part of `payload`, which
+  // is what an anonymous visitor is given) and it renders nothing at all --
+  // no heading, placeholder, count or hint -- unless that read returns a
+  // statement. Both layouts place it directly below the card, before the
+  // details and before anything addressed to a stranger.
+  const selfDeclarations = (
+    <RecipientSelfDeclarations
+      navigationId={navigationId}
+      lang={lang}
+      read={readSelfDeclarations}
+    />
+  );
+
   if (presentation.focus === "credential" && presentation.credentials.length === 1) {
     return (
       <PassportLangProvider lang={lang}>
-        <CredentialShare presentation={presentation} verifyUrl={shareUrl} />
+        <CredentialShare
+          presentation={presentation}
+          verifyUrl={shareUrl}
+          afterCard={selfDeclarations}
+        />
       </PassportLangProvider>
     );
   }
 
   return (
     <main className="px-4 py-8 sm:py-10">
-      <RecipientPassportView presentation={presentation} lang={lang} verifyUrl={shareUrl} />
+      <RecipientPassportView
+        presentation={presentation}
+        lang={lang}
+        verifyUrl={shareUrl}
+        afterCard={selfDeclarations}
+      />
     </main>
   );
 }
@@ -243,9 +274,12 @@ function RecipientRoute() {
 function CredentialShare({
   presentation,
   verifyUrl,
+  afterCard,
 }: {
   presentation: NonNullable<ReturnType<typeof buildRecipientPresentation>>;
   verifyUrl: string;
+  /** Directly below the credential card, before its details. */
+  afterCard: ReactNode;
 }) {
   const { pt, lang } = usePassportCopy();
   return (
@@ -257,7 +291,7 @@ function CredentialShare({
         <ShieldCheck aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
         {pt("rec.authoritative")}
       </p>
-      <div className="mt-6">
+      <div className="mt-6" data-credential-share>
         <CredentialVerificationPage
           credential={presentation.credentials[0]}
           holderLabel={presentation.holderLabel ?? pt("rec.anonymousHolder")}
@@ -267,6 +301,7 @@ function CredentialShare({
             lang,
           )}
           verifyUrl={verifyUrl}
+          afterCard={afterCard}
         />
       </div>
       {presentation.checkedAt ? (

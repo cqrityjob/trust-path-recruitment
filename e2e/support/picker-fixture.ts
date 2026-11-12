@@ -287,12 +287,16 @@ export async function mount(
     getMyPassport: snapshot,
     getInternationalPassportMetadata: metadata,
     listMyVerificationRequests: { requests: [], decisions: [] },
+    // The self-declarations bridge: closed, as production is (20270325090000).
+    listMySharedSelfDeclarations: [],
     listMyShares: [],
     countMyAcademyWork: { total: 0, actionable: 0 },
     countMyReviewQueue: 0,
     listMyEmployerWorkspaces: [],
     trackV31FunnelEvent: { recorded: false },
     listMyEvidence: [],
+    // The self-declarations bridge: closed, as production is (20270325090000).
+    getMyPassportSelfDeclarations: { state: "not_activated", declarations: [] },
     listMyUploadAttempts: [],
     listClaimVersions: [],
     listMyCredentialDrafts: [],

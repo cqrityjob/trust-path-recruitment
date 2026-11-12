@@ -492,12 +492,14 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // function bodies, privileges, storage policies and triggers match the
 // merged source, and vsd_processing_authorizations is empty.
 //
-// 2026-11-11: 20270325090000 (the Security Passport bridge for the voluntary
-// self-declarations, vsd_disclosure_*) is a schema-first release awaiting the
-// owner's merge and the official integration. It is additive, records no
-// authorization of either kind, changes no sp_ object and is called by no
-// merged application code.
-const expectedPending: string[] = ["20270325090000_vsd_passport_disclosure.sql"];
+// 2026-11-12: #494 (20270325090000, the Security Passport bridge for the
+// voluntary self-declarations, vsd_disclosure_*) was installed by the official
+// integration after merge 45e1ffa2. Read-only catalog and ledger proof:
+// docs/release/2026-11-12-self-declarations-passport-bridge-hosted-verification.json.
+// The 404-row hosted ledger preserves all previous 403 entries; all 16
+// function bodies, privileges and triggers match the merged source, and both
+// vsd_disclosure_authorizations and vsd_processing_authorizations are empty.
+const expectedPending: string[] = [];
 
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",

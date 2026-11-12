@@ -1,9 +1,13 @@
 # Voluntary self-declarations — processing record and activation
 
-Status: **built, closed.** Schema `20270324090000_vsd_voluntary_self_declarations.sql`.
-Nothing is collected in any environment until a processing authorization is
-recorded (see [Activation](#activation-prerequisites)). This document records
-no legal conclusion; the legal fields below are for the controller to fill.
+Status: **built, closed.** Schema `20270324090000_vsd_voluntary_self_declarations.sql`
+(collection) and `20270325090000_vsd_passport_disclosure.sql` (the Security
+Passport bridge: presentation and optional disclosure). Nothing is collected in
+any environment until a processing authorization is recorded, and nothing can
+be disclosed to anyone until, separately, a disclosure authorization is
+recorded (see [Activation](#activation-prerequisites)). Neither migration
+records one. This document records no legal conclusion; the legal fields below
+are for the controller to fill.
 
 ## What it is
 
@@ -51,11 +55,15 @@ file to erasure and removes its review. There is no "verified clean record" or
 
 - Tables `vsd_*`, bucket `self-declaration-documents`. Nothing is written to
   `sp_claims` or any `sp_*` object, and no existing function was changed.
-- Private to the holder. It is absent from public profiles, social/OG cards,
-  CV sources and exports, talent search, applications and every Passport
-  sharing payload. The suite proves from the catalogue that no other
-  function, view or table names a `vsd_` object (V9.1–V9.3);
-  `scripts/self-declarations-check.ts` proves the same for the application.
+- Private to the holder, with ONE exception the holder controls: the
+  [Security Passport bridge](#the-security-passport-bridge). It is absent from
+  public profiles, social/OG cards and images, CV sources and exports, card
+  downloads, talent search, catalogues, applications and every Passport
+  sharing payload (the anonymous recipient payload included). The suites
+  prove from the catalogue that no function, view or table outside the
+  `vsd_` family names a `vsd_` object (V9.1–V9.3, D7.1–D7.3);
+  `scripts/self-declarations-check.ts` proves the same for the application,
+  naming the bridge's files one by one.
 - It does not count toward profile completeness, Passport completion,
   numbering, titles or CV content. Skipping it changes nothing anywhere.
 - The Security Passport's own refusal to process criminal-record data
@@ -153,13 +161,128 @@ statement version, and who approved it when.
 - No client role and no function can write the table. A row is immutable; it
   can only be revoked, which stops collection at once and deletes what was
   collected under it.
-- There is deliberately **no disclosure operation**. Showing a declaration to
-  an employer is not something this schema can authorize.
+- There is deliberately **no disclosure operation** on this table. A
+  processing authorization never authorizes showing a statement to anyone;
+  that takes a separate row in `vsd_disclosure_authorizations` (below).
 - A `criminal_history` row is refused by the table unless its legal basis is
   not consent and it names the national-law authority for offence data
   (GDPR Art. 10) and the period reviewed. The application additionally holds
   no criminal-history statement wording, so that panel stays closed even if a
   row exists.
+
+## The Security Passport bridge
+
+Built in `20270325090000`, closed until a disclosure authorization exists.
+
+### What the holder sees in their own Passport
+
+`/passport` has a compact section, separate from the credential wallet, with
+one shield per **current** statement: "Kronofogden · Självdeklarerat",
+"Betalningsanmärkningar · Självdeklarerat" (English: "Swedish Enforcement
+Authority · Self-declared", "Payment remarks · Self-declared"). A
+"Brottshistorik · Självdeklarerat" shield can only appear once reviewed
+criminal-history wording exists in the application; today none does.
+
+- The shield reuses the Passport's own primitive in its self-declared
+  (dashed outline) treatment, and that treatment is fixed in the component.
+  No tick, verified rim, approval wording or score exists for it.
+- Opening it shows the exact versioned statement, its date, jurisdiction,
+  scope and reviewed period, and always: "Uppgiften är lämnad av personen
+  själv och har inte verifierats av CQrityjob."
+- A supporting document, or an appointed reviewer's note about it, never
+  changes the shield or its label. The holder alone is shown the existing
+  provenance description ("Document provided … nobody has reviewed it").
+- With processing closed, a refused or failed read, or wording the application
+  does not hold, there is **no shield**: one neutral line ("not activated")
+  and a link to the Profile, where the existing editor lives.
+- The section has its own read. The wallet, its counts, the card, the
+  next-step prompts, completeness, the Passport number, rankings and
+  applications are given nothing of it, so skipping it changes none of them.
+
+### Optional disclosure
+
+When creating a Passport **link** (`/passport/share`), a holder may tick
+statements to accompany that link.
+
+- Nothing is pre-selected, and nothing is offered at all unless the database
+  reports a statement as shareable (a current disclosure authorization).
+- The holder is shown exactly what a recipient will receive, built by the same
+  database function the recipient's read uses (`vsd_disclosed_statement`) and
+  drawn by the same component. Only what was previewed can be attached.
+- The choice belongs to the link's **creation**. One database function
+  (`vsd_create_credential_share`) creates the link, through the Passport's own
+  unchanged function, and seals the choice in the same transaction under the
+  link's request key (`vsd_disclosure_choices`) -- also when nothing was
+  ticked. There is no function that takes an existing link, and no time
+  window is consulted. Two triggers hold this for any writer: a choice is
+  sealed only for a link created in the current transaction and in nobody's
+  hands; a selection is written only in the transaction that sealed its
+  link's choice. A link created without statements -- with an empty choice, by
+  the Passport directly, or by a reissue -- can never gain one, and a
+  selection can afterwards only be withdrawn, once.
+- The same operation can be repeated safely. A retry with the same key and
+  choice is answered from the seal and writes nothing; the same key with a
+  different choice is refused; a refusal leaves no link behind.
+- The screen says only what it knows. The database's own refusal means no
+  link and nothing shared. A lost answer is **not** treated as a refusal: the
+  page asks what was committed (`vsd_share_operation`) and either confirms the
+  link and its statements or says it does not know, keeps the operation
+  unchanged, and offers a retry of that same operation. A link's address is
+  returned once; if that answer was lost the link exists and carries the
+  statement, the address cannot be shown again, and the holder is told to
+  revoke it and create a new one (a reissue carries no statement). Whether
+  the list of shared statements could be re-read afterwards is reported
+  separately and changes nothing about what is shared.
+- A recipient sees the section directly below the Passport card (or below the
+  credential on a single-credential link), before the details and before the
+  block that invites a visitor to create a Passport.
+- It never reaches the social image, link previews, the page's head, card
+  downloads or the CV.
+
+### Who can read a disclosed statement
+
+Only a recipient who is **signed in** to CQrityjob with a live session **and**
+whose browser holds that link's live share session. An ordinary Passport link
+is readable by anyone who holds it; a statement is not. The anonymous
+recipient call is unchanged and carries no trace of a statement, and a visitor
+who is not signed in is shown no placeholder or hint.
+
+`signed_in_recipient` is the only audience that exists. A table constraint
+refuses any other, so opening an anonymous or public audience is a reviewed
+schema change, not a row. Application (employer) disclosures cannot carry a
+statement.
+
+What a recipient is given is exactly: kind, jurisdiction, statement version,
+the date the statement is about, the day it was made, and the reviewed period
+where one exists. Never a document, its name, type, hash or path, a review, a
+provenance level, an identity number, the holder's user id or another
+statement.
+
+### Lifecycle
+
+A selection names the exact revision, wording and disclosure authorization it
+was made under. On **every** recipient read the database decides again
+(`vsd_selection_disclosable`): the selection not withdrawn; the statement
+active, inside its retention, under a current processing authorization; the
+same revision and wording; the same disclosure authorization still current
+and permitting the audience; the link the holder's, live and not revoked or
+expired. Withdrawal, deletion, change or renewal, a passed retention date and
+revocation of either authorization each end disclosure of the old statement at
+once, before any reconciliation, and nothing later revives it. The holder can
+also stop sharing one statement without revoking the link.
+
+Each read that actually gave a recipient a statement is recorded
+(`vsd_disclosure_accesses`). The holder is shown how often, never by whom;
+erasing a recipient's account keeps the event and removes the identity.
+
+### Not built
+
+- Disclosure through an employer application.
+- Any audience other than a signed-in recipient.
+- A way for a signed-out recipient to learn that a link carries a statement
+  (deliberate; the holder tells them to sign in).
+- Retention scheduling for `vsd_disclosure_accesses` beyond the cascade from
+  its selection, statement and holder.
 
 ## Activation prerequisites
 
@@ -175,8 +298,16 @@ activated separately.
 3. **Storing a UC extract or a Kronofogden statement**: a separate assessment
    (the documents carry far more than the statement — identity number,
    address, income, credit engagements). Only then add `store_document`.
-4. **Financial-data disclosure**: not built. A separate assessment and a new
-   schema change before any declaration is shown to anyone else.
+4. **Disclosure** (per kind, separately from collection): the mechanism is
+   built and closed. Showing a statement to a signed-in recipient needs its
+   own assessment: purpose, legal basis, the recipient's position (a recipient
+   becomes a controller of what they read), whether "signed in to CQrityjob"
+   is a sufficient audience limit or recipients must be further qualified, the
+   retention of the read record, and the privacy-notice wording. Only then is
+   a `vsd_disclosure_authorizations` row recorded for that kind. For
+   `criminal_history` the row additionally cannot rest on consent and must
+   name its Art. 10 authority. Disclosure cannot be activated for a kind
+   whose collection is not active.
 5. **Criminal history**: an Art. 10 assessment naming the national-law
    authority, the jurisdiction, the period and the purpose; then approved
    statement wording added to the application. Consent is not sufficient.
@@ -189,7 +320,7 @@ activated separately.
 9. **Schema release**: merge the schema PR, let the Supabase integration
    install it, verify hosted, then merge the application PR.
 
-Recording an authorization is then one reviewed migration, for example:
+Recording a processing authorization is then one reviewed migration, for example:
 
 ```sql
 INSERT INTO public.vsd_processing_authorizations
@@ -202,6 +333,24 @@ VALUES
    ARRAY['collect_declaration'], '{}', '<approver>', DATE '<yyyy-mm-dd>');
 ```
 
+A disclosure authorization is a second, separate reviewed migration, recorded
+only after its own assessment:
+
+```sql
+INSERT INTO public.vsd_disclosure_authorizations
+  (authorization_id, purpose, legal_basis, legal_basis_detail, assessment_reference,
+   permitted_audiences, approved_by_name, approved_on)
+SELECT a.id, '<disclosure purpose>', '<basis>', '<basis detail>', '<assessment reference>',
+       ARRAY['signed_in_recipient'], '<approver>', DATE '<yyyy-mm-dd>'
+  FROM public.vsd_processing_authorizations a
+ WHERE a.declaration_kind = 'payment_remarks_none' AND a.jurisdiction = 'SE'
+   AND a.revoked_at IS NULL;
+```
+
+Implementation completeness and activation are separate things: the whole
+flow above is implemented and tested with synthetic authorizations, and
+production holds none.
+
 ## Tests
 
 - `supabase/tests/vsd_voluntary_self_declarations_test.sql` — 111 assertions,
@@ -209,5 +358,11 @@ VALUES
 - `scripts/self-declarations-check.ts`, `scripts/self-declarations.test.tsx`,
   `scripts/negative-controls/self-declarations-controls.ts`.
 - `e2e/self-declarations.spec.ts` — Swedish and English, desktop and mobile.
+- The bridge: `supabase/tests/vsd_passport_disclosure_test.sql` — 66
+  assertions, eleven negative controls in `scripts/db-test.sh`; section 8 of
+  `scripts/self-declarations-check.ts` with fifteen negative controls;
+  `e2e/self-declarations-passport.spec.ts` — the holder's Passport, the share
+  step and the recipient, Swedish and English, desktop and 375 px, keyboard
+  and accessible names.
 
 All fixtures are synthetic. No real document has been or may be used.
