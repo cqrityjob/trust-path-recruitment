@@ -126,13 +126,49 @@ if [ "$RUN_MODE" = full ]; then
  start_rest ri_p1_browser_ci_test "$UI_REST" ui
  start_gateway ri_p1_browser_ci_test "$UI_REST" "$UI_GATEWAY" ui
 fi
+# Why a service is not ready, printed where a CI run keeps it: the state and
+# last lines of each PostgREST container, each gateway's log, and what every
+# hop answers (gateway -> PostgREST -> Postgres). Without this a readiness
+# failure leaves nothing to inspect, because the private logs are never
+# uploaded. The only secrets here are this run's synthetic ones, and they are
+# redacted all the same.
+service_diagnostics() {
+ local redact="s/${AUTH_PASSWORD}/[redacted]/g;s/${LOCAL_JWT_SECRET}/[redacted]/g" container log
+ {
+  echo "--- readiness diagnostics (redacted) ---"
+  for container in "${CONTAINERS[@]-}"; do
+   [ -n "$container" ] || continue
+   echo "container $container: $(docker inspect --format 'status={{.State.Status}} exit={{.State.ExitCode}} oom={{.State.OOMKilled}} restarts={{.RestartCount}}' "$container" 2>&1)"
+   docker logs --tail 40 "$container" 2>&1 | sed "$redact" || true
+  done
+  for log in "$REPORT"/private/*-gateway.log "$REPORT"/private/api.log "$REPORT"/private/ui.log; do
+   [ -f "$log" ] || continue
+   echo "log $(basename "$log"):"
+   tail -n 20 "$log" | sed "$redact"
+  done
+  echo "hop gateway  $API_GATEWAY /rest/v1/: HTTP $(curl --silent --max-time 5 --output /dev/null --write-out '%{http_code}' "http://127.0.0.1:$API_GATEWAY/rest/v1/" 2>/dev/null || true)"
+  echo "hop postgrest $API_REST /: HTTP $(curl --silent --max-time 5 --output /dev/null --write-out '%{http_code}' "http://127.0.0.1:$API_REST/" 2>/dev/null || true)"
+  echo "hop postgres $PGPORT as authenticator: $(PGPASSWORD="$AUTH_PASSWORD" psql -h 127.0.0.1 -p "$PGPORT" -U authenticator -d ri_p1_api_ci_test -tAc 'SELECT 1' 2>&1 | head -1 | sed "$redact")"
+  echo "--- end of readiness diagnostics ---"
+ } >&2
+}
 wait_url() {
- local url="$1"
+ local url="$1" container
  for attempt in $(seq 1 60); do
-  if curl --silent --fail "$url" >/dev/null; then return; fi
+  if curl --silent --fail --max-time 5 "$url" >/dev/null; then return; fi
+  # A PostgREST container that has exited will never become ready: say so
+  # now, with its log, instead of waiting out the minute.
+  for container in "${CONTAINERS[@]-}"; do
+   [ -n "$container" ] || continue
+   if [ "$(docker inspect --format '{{.State.Running}}' "$container" 2>/dev/null)" = false ]; then
+    service_diagnostics
+    fail "local service stopped: $container exited before $url was ready (diagnostics above)"
+   fi
+  done
   sleep 1
  done
- fail "local service not ready: $url (see private logs)"
+ service_diagnostics
+ fail "local service not ready: $url (diagnostics above; full logs stay private)"
 }
 wait_url "http://127.0.0.1:$API_GATEWAY/rest/v1/"
 [ "$RUN_MODE" != full ] || wait_url "http://127.0.0.1:$UI_GATEWAY/rest/v1/"

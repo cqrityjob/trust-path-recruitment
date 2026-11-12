@@ -200,7 +200,16 @@ describe("official real Supabase CI target", () => {
     expect(APP_SHA).toBe("53659419a1c243c27a59540eb849569140b71365");
     // The schema witness moved to the self-declarations Passport bridge slot (404 files);
     // the application under this regression stays the reviewed 53659419.
-    expect(SCHEMA_SHA).toBe("e78f01daaa3b35b5d73dd9cdb2d4eb5dce124394");
+    expect(SCHEMA_SHA).toBe("d7fca67d8636cdb0b0c0ae652c616cd58083fb0b");
+    // Nor the bridge's first witness, before the choice was sealed in the
+    // link's creation (e78f01da): it still has vsd_select_for_disclosure.
+    expect(() =>
+      validateTarget(
+        { ...env, RI_REAL_RELEASE_SCHEMA_SHA: "e78f01daaa3b35b5d73dd9cdb2d4eb5dce124394" },
+        env.RI_REAL_SCHEMA_SHA,
+        APP_SHA,
+      ),
+    ).toThrow("REAL_CI_UNREVIEWED_RELEASE_SCHEMA");
     // Nor the self-declarations slot before its Passport bridge (5814706f).
     expect(() =>
       validateTarget(
@@ -324,7 +333,7 @@ describe("official real Supabase CI target", () => {
     ).toThrow("UNREVIEWED_APP_HEAD");
   });
   test("release schema binding is separate from test code and requires a full SHA", () => {
-    const release = "e78f01daaa3b35b5d73dd9cdb2d4eb5dce124394";
+    const release = "d7fca67d8636cdb0b0c0ae652c616cd58083fb0b";
     const context = validateTarget(
       { ...env, RI_REAL_RELEASE_SCHEMA_SHA: release },
       env.RI_REAL_SCHEMA_SHA,
@@ -479,7 +488,7 @@ describe("real CI execution and publication cannot silently narrow", () => {
     expect(job["runs-on"]).toBe("ubuntu-latest");
     expect(job.if).toBeUndefined();
     expect(job["continue-on-error"]).toBeUndefined();
-    expect(job.env.RI_REAL_RELEASE_SCHEMA_SHA).toBe("e78f01daaa3b35b5d73dd9cdb2d4eb5dce124394");
+    expect(job.env.RI_REAL_RELEASE_SCHEMA_SHA).toBe("d7fca67d8636cdb0b0c0ae652c616cd58083fb0b");
     expect(job.steps[0].with["fetch-depth"]).toBe(0);
     expect(job.steps.every((step: { [key: string]: unknown }) => !step["continue-on-error"])).toBe(
       true,

@@ -307,23 +307,33 @@ VSDD_M=supabase/migrations/20270325090000_vsd_passport_disclosure.sql
 VSDD_R=supabase/rollback/20270325090000_vsd_passport_disclosure_rollback.sql
 VSDD_T=vsd_passport_disclosure_test
 echo "==> Running the self-declarations Passport bridge (20270325090000)"
-td_suite "$VSDD_T" "Self-declarations Passport bridge" 66 \
+td_suite "$VSDD_T" "Self-declarations Passport bridge" 78 \
   "D1.5 without a disclosure authorization a preview is refused" \
+  "D1.6 without a disclosure authorization no link is created with a statement, and none is left behind" \
   "D1.7 without a disclosure authorization a recipient is given nothing" \
   "D2.1 no anonymous or public audience can be authorized" \
   "D3.2 a statement carries exactly its six keys: no id, document, hash, path, review or provenance" \
   "D3.5 a supporting document or its review changes nothing a recipient is given" \
-  "D4.2 a link that already existed cannot gain a statement" \
-  "D4.3 a holder cannot attach to somebody else's link, nor attach or preview somebody else's statement" \
-  "D4.7 the recipient is given exactly what the holder previewed, and only the selected statement" \
+  "D4.2 no function takes an existing link: the only writer of a choice or a selection is the one that creates the link" \
+  "D4.3 a link that already existed cannot gain a statement, even by a direct write, however recent it is" \
+  "D4.4 a link a recipient has opened, or holds a session for, cannot gain a statement" \
+  "D4.5 a choice cannot be sealed for somebody else's link, and nobody shares or previews somebody else's statement" \
+  "D4.10 the recipient is given exactly what the holder previewed, and only the selected statement" \
+  "D4.12 a retry of the same operation, repeated, creates no second link, changes nothing and returns no address" \
+  "D4.13 the sealed choice cannot be widened, swapped or emptied -- by a retry or by a direct write" \
+  "D4.17 an empty choice is sealed: a link created without statements can never gain one" \
+  "D4.18 a link created without the bridge cannot be claimed afterwards by replaying its own key" \
+  "D4.19 a reissued link carries no statement and cannot gain one; the original is unchanged" \
+  "D4.20 the holder can ask what one operation really committed -- sealed, unsealed or nothing -- and nobody else can" \
   "D5.2 an anonymous holder of the link is refused" \
   "D5.7 an expired share session opens nothing" \
   "D6.2 the holder stops sharing one statement: the next read gives nothing, and the link itself still stands" \
+  "D6.3 a withdrawn selection is not revived by repeating the operation, nor replaced by a direct write" \
   "D6.7 making the statement again does not put it back on the old link" \
   "D6.11 revoking the disclosure authorization ends disclosure at once; the holder keeps their own statement" \
   "D6.12 a later disclosure authorization does not revive a selection made under the revoked one" \
   "D7.1 no Passport, share, talent, application or other function or view names a vsd_ object" \
-  "D7.11 the migration re-applies cleanly after a rollback, closed again"
+  "D7.12 the migration re-applies cleanly after a rollback, closed again"
 VSDD_CHOICE='CREATE FUNCTION public.vsd_assert_disclosure_choice('
 td_plant "$VSDD_M" "$VSDD_CHOICE" '^END \$\$;' "/RAISE EXCEPTION 'VSD_DISCLOSURE_NOT_AUTHORIZED'/d"
 td_nc "$VSDD_T" "VSDD NC1 a collection authorization alone lets a statement be shared" "D1.5"
@@ -337,13 +347,32 @@ VSDD_B='CREATE FUNCTION public.vsd_disclosed_statement('
 td_plant "$VSDD_M" "$VSDD_B" '^\$\$;' "s/'kind', _d.declaration_kind,/'kind', _d.declaration_kind, 'provenance', public.vsd_declaration_payload(_d) ->> 'provenance',/"
 td_nc "$VSDD_T" "VSDD NC3 a document's provenance reaches the recipient" "D3.2"
 td_restore "$VSDD_M" "$VSDD_B" '^\$\$;'
-VSDD_SEL='CREATE FUNCTION public.vsd_select_for_disclosure('
-td_plant "$VSDD_M" "$VSDD_SEL" '^END \$\$;' "/RAISE EXCEPTION 'VSD_DISCLOSURE_CLOSED_TO_SELECTION'/d"
-td_nc "$VSDD_T" "VSDD NC4 an existing link gains a statement" "D4.2"
-td_restore "$VSDD_M" "$VSDD_SEL" '^END \$\$;'
-td_plant "$VSDD_M" "$VSDD_SEL" '^END \$\$;' "s/WHERE id = _disclosure_id AND holder_user_id = _uid FOR UPDATE;/WHERE id = _disclosure_id FOR UPDATE;/"
-td_nc "$VSDD_T" "VSDD NC5 a holder attaches a statement to somebody else's link" "D4.3"
-td_restore "$VSDD_M" "$VSDD_SEL" '^END \$\$;'
+# The choice belongs to the link's creation. Each condition of the two
+# triggers and of the creating function, one at a time.
+VSDD_SEAL='CREATE FUNCTION public.vsd_disclosure_choice_at_creation('
+td_plant "$VSDD_M" "$VSDD_SEAL" '^END \$\$;' "/AND x.created_at = transaction_timestamp()/d"
+td_nc "$VSDD_T" "VSDD NC4 an existing link gains a statement" "D4.3"
+td_restore "$VSDD_M" "$VSDD_SEAL" '^END \$\$;'
+td_plant "$VSDD_M" "$VSDD_SEAL" '^END \$\$;' "s/AND x.access_count = 0)/)/"
+td_nc "$VSDD_T" "VSDD NC4b an opened link gains a statement" "D4.4"
+td_restore "$VSDD_M" "$VSDD_SEAL" '^END \$\$;'
+td_plant "$VSDD_M" "$VSDD_SEAL" '^END \$\$;' "s/OR EXISTS (SELECT 1 FROM public.sp_share_sessions ss WHERE ss.disclosure_id = NEW.disclosure_id) THEN/THEN/"
+td_nc "$VSDD_T" "VSDD NC4c a link in a recipient's session gains a statement" "D4.4"
+td_restore "$VSDD_M" "$VSDD_SEAL" '^END \$\$;'
+td_plant "$VSDD_M" "$VSDD_SEAL" '^END \$\$;' "/AND x.holder_user_id = NEW.holder_user_id/d"
+td_nc "$VSDD_T" "VSDD NC5 a choice is sealed for somebody else's link" "D4.5"
+td_restore "$VSDD_M" "$VSDD_SEAL" '^END \$\$;'
+psql_q -d "$TEST_DB" -c "DROP TRIGGER vsd_disclosure_selection_within_seal ON public.vsd_disclosure_selections;" >/dev/null
+td_nc "$VSDD_T" "VSDD NC5b a statement is written onto a link outside its creation" "D4.3"
+psql_q -d "$TEST_DB" -c "CREATE TRIGGER vsd_disclosure_selection_within_seal BEFORE INSERT ON public.vsd_disclosure_selections FOR EACH ROW EXECUTE FUNCTION public.vsd_disclosure_selection_within_seal();" >/dev/null
+VSDD_CREATE='CREATE FUNCTION public.vsd_create_credential_share('
+td_plant "$VSDD_M" "$VSDD_CREATE" '^END \$\$;' "s/IF _seal.choice_digest <> _digest THEN/IF false THEN/"
+td_nc "$VSDD_T" "VSDD NC5c a retry with a different choice is answered as done" "D4.13"
+td_restore "$VSDD_M" "$VSDD_CREATE" '^END \$\$;'
+VSDD_OP='CREATE FUNCTION public.vsd_share_operation('
+td_plant "$VSDD_M" "$VSDD_OP" '^END \$\$;' "s/WHERE holder_user_id = _uid AND request_key = _request_key;/WHERE request_key = _request_key;/"
+td_nc "$VSDD_T" "VSDD NC5d another user reads what an operation committed" "D4.20"
+td_restore "$VSDD_M" "$VSDD_OP" '^END \$\$;'
 psql_q -d "$TEST_DB" -c "GRANT EXECUTE ON FUNCTION public.vsd_read_disclosed(text) TO anon;" >/dev/null
 td_nc "$VSDD_T" "VSDD NC6 the recipient read is opened to anon" "D5.2"
 psql_q -d "$TEST_DB" -c "REVOKE EXECUTE ON FUNCTION public.vsd_read_disclosed(text) FROM anon;" >/dev/null
@@ -365,7 +394,32 @@ td_restore "$VSDD_M" "$VSDD_RULE" '^\$\$;'
 td_plant "$VSDD_M" "$VSDD_RULE" '^\$\$;' "s/JOIN public.vsd_disclosure_authorizations da ON da.id = _s.disclosure_authorization_id/JOIN public.vsd_disclosure_authorizations da ON true/"
 td_nc "$VSDD_T" "VSDD NC11 a new authorization revives an old selection" "D6.12"
 td_restore "$VSDD_M" "$VSDD_RULE" '^\$\$;'
-td_suite "$VSDD_T" "Self-declarations Passport bridge (after controls)" 66
+td_suite "$VSDD_T" "Self-declarations Passport bridge (after controls)" 78
+# What one transaction cannot show: committed links, separate connections,
+# real waits. And the script must FAIL when either trigger loses the condition
+# that only a later transaction exercises.
+echo "==> Running the self-declaration share-operation races and bypasses"
+TEST_DB="$TEST_DB" bash scripts/vsd-share-operation-race-check.sh
+VSDD_WITHIN='CREATE FUNCTION public.vsd_disclosure_selection_within_seal('
+vsdd_race_nc() {
+  local label="$1" expect="$2" out
+  set +e
+  out="$(TEST_DB="$TEST_DB" bash scripts/vsd-share-operation-race-check.sh 2>&1)"; local rc=$?
+  set -e
+  if [ "$rc" -eq 0 ] || ! echo "$out" | grep -q "FAIL: $expect"; then
+    echo "$out" | tail -5 >&2
+    echo "FAIL: negative control '${label}' did not fail on ${expect} -- the race check proves nothing" >&2
+    exit 1
+  fi
+  echo "    ok  NC ${label}: the race check fails on ${expect}"
+}
+td_plant "$VSDD_M" "$VSDD_SEAL" '^END \$\$;' "/AND x.created_at = transaction_timestamp()/d"
+vsdd_race_nc "VSDD NC12 a committed link is sealed by a later transaction" "R1"
+td_restore "$VSDD_M" "$VSDD_SEAL" '^END \$\$;'
+td_plant "$VSDD_M" "$VSDD_WITHIN" '^END \$\$;' "/AND c.sealed_xid = pg_current_xact_id()/d"
+vsdd_race_nc "VSDD NC13 a later transaction fills room in a sealed choice" "R6"
+td_restore "$VSDD_M" "$VSDD_WITHIN" '^END \$\$;'
+TEST_DB="$TEST_DB" bash scripts/vsd-share-operation-race-check.sh >/dev/null
 psql_q -d "$TEST_DB" -f "$VSDD_R" >/dev/null
 psql_q -d "$TEST_DB" -f "$VSDD_M" >/dev/null
 psql_q -d "$TEST_DB" -f "$VSDD_R" >/dev/null

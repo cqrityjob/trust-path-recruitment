@@ -19,8 +19,8 @@
 --   * the holder's own Passport page may read their CURRENT statements
 --     (vsd_my_passport_declarations), nothing else about them;
 --   * the holder may attach chosen statements to ONE Passport link they have
---     just created (vsd_select_for_disclosure), having previewed exactly what
---     a recipient will receive (vsd_preview_disclosure);
+--     creating (vsd_create_credential_share), having previewed exactly what a
+--     recipient will receive (vsd_preview_disclosure);
 --   * a recipient who holds that link's live share session AND is signed in
 --     with a live session of their own may read exactly those statements
 --     (vsd_read_disclosed).
@@ -71,9 +71,25 @@
 --
 -- Nothing waits for a reconciliation, a profile read or a purge.
 --
--- A link's selection is made once, within an hour of the link's creation,
--- and can afterwards only shrink. A link that already exists never gains a
--- statement, and a reissued link carries none.
+-- ── THE CHOICE BELONGS TO THE LINK'S CREATION ───────────────────────────
+--
+-- There is no function that takes an existing link and adds a statement to
+-- it. vsd_create_credential_share creates the link (through the Passport's
+-- own sp_create_credential_disclosure_v2, unchanged) AND seals the holder's
+-- choice -- including an empty one -- in the SAME transaction, under the
+-- link's own request key. Two triggers hold that for any writer, not just
+-- that function:
+--
+--   * a choice can be sealed only for a link created in the current
+--     transaction, never opened, under the same holder and request key;
+--   * a selection can be inserted only in the transaction that sealed its
+--     link's choice.
+--
+-- So a link created without statements (by this function with an empty
+-- choice, by any sp_ function directly, or by a reissue) can never gain one;
+-- a retry of the same operation answers from the seal and changes nothing; a
+-- different choice under the same key is refused; and a selection can
+-- afterwards only be withdrawn, once. No clock is consulted.
 --
 -- ── WHAT IT DOES NOT TOUCH ──────────────────────────────────────────────
 --
@@ -210,6 +226,90 @@ END $$;
 REVOKE ALL ON FUNCTION public.vsd_disclosure_selection_immutable() FROM PUBLIC, anon, authenticated, service_role;
 CREATE TRIGGER vsd_disclosure_selection_immutable BEFORE UPDATE ON public.vsd_disclosure_selections
   FOR EACH ROW EXECUTE FUNCTION public.vsd_disclosure_selection_immutable();
+
+-- ── 2b · The sealed choice of a link's creation ─────────────────────────
+--
+-- One row for every link created through vsd_create_credential_share, also
+-- when the holder chose nothing. It holds no declaration id: the choice is
+-- kept as a count and a digest, enough to recognise a retry of the same
+-- operation and to refuse a different one.
+CREATE TABLE public.vsd_disclosure_choices (
+  disclosure_id   uuid PRIMARY KEY REFERENCES public.sp_disclosures(id) ON DELETE CASCADE,
+  holder_user_id  uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  -- The creation operation: the link's own sp_disclosures.request_key.
+  request_key     uuid NOT NULL,
+  choice_count    integer NOT NULL CHECK (choice_count BETWEEN 0 AND 3),
+  choice_digest   text NOT NULL CHECK (choice_digest ~ '^[0-9a-f]{64}$'),
+  -- The transaction that created the link and sealed its choice.
+  sealed_xid      xid8 NOT NULL DEFAULT pg_current_xact_id(),
+  sealed_at       timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT vsd_disclosure_choice_one_per_operation UNIQUE (holder_user_id, request_key)
+);
+
+ALTER TABLE public.vsd_disclosure_choices ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.vsd_disclosure_choices FROM PUBLIC, anon, authenticated, service_role;
+
+COMMENT ON TABLE public.vsd_disclosure_choices IS
+  'The sealed record that one Passport link was created together with exactly this choice of '
+  'voluntary self-declarations (possibly none). Written once, in the transaction that creates the '
+  'link; never changed. A link without a row here was created without statements and has no way '
+  'to gain one.';
+
+-- A choice is sealed for a link only while that link is being created.
+CREATE FUNCTION public.vsd_disclosure_choice_at_creation()
+RETURNS trigger LANGUAGE plpgsql SET search_path = '' AS $$
+BEGIN
+  IF TG_OP <> 'INSERT' THEN
+    RAISE EXCEPTION 'VSD_DISCLOSURE_CHOICE_SEALED' USING ERRCODE = '23514';
+  END IF;
+  IF NEW.sealed_xid IS DISTINCT FROM pg_current_xact_id()
+     OR NOT EXISTS (
+       SELECT 1 FROM public.sp_disclosures x
+        WHERE x.id = NEW.disclosure_id
+          AND x.holder_user_id = NEW.holder_user_id
+          AND x.request_key = NEW.request_key
+          AND x.application_id IS NULL
+          -- Created by this very transaction, and in nobody's hands.
+          AND x.created_at = transaction_timestamp()
+          AND x.access_count = 0)
+     OR EXISTS (SELECT 1 FROM public.sp_share_sessions ss WHERE ss.disclosure_id = NEW.disclosure_id) THEN
+    RAISE EXCEPTION 'VSD_DISCLOSURE_CHOICE_SEALED' USING ERRCODE = '23514';
+  END IF;
+  RETURN NEW;
+END $$;
+REVOKE ALL ON FUNCTION public.vsd_disclosure_choice_at_creation() FROM PUBLIC, anon, authenticated, service_role;
+CREATE TRIGGER vsd_disclosure_choice_at_creation BEFORE INSERT OR UPDATE ON public.vsd_disclosure_choices
+  FOR EACH ROW EXECUTE FUNCTION public.vsd_disclosure_choice_at_creation();
+
+-- A selection exists only as part of the transaction that sealed its link's
+-- choice. Nothing can add one to a link afterwards.
+CREATE FUNCTION public.vsd_disclosure_selection_within_seal()
+RETURNS trigger LANGUAGE plpgsql SET search_path = '' AS $$
+BEGIN
+  IF NOT EXISTS (
+       SELECT 1 FROM public.vsd_disclosure_choices c
+        WHERE c.disclosure_id = NEW.disclosure_id
+          AND c.holder_user_id = NEW.holder_user_id
+          AND c.sealed_xid = pg_current_xact_id()
+          AND c.choice_count > (SELECT count(*) FROM public.vsd_disclosure_selections s
+                                 WHERE s.disclosure_id = NEW.disclosure_id))
+     OR NEW.withdrawn_at IS NOT NULL THEN
+    RAISE EXCEPTION 'VSD_DISCLOSURE_CHOICE_SEALED' USING ERRCODE = '23514';
+  END IF;
+  RETURN NEW;
+END $$;
+REVOKE ALL ON FUNCTION public.vsd_disclosure_selection_within_seal() FROM PUBLIC, anon, authenticated, service_role;
+CREATE TRIGGER vsd_disclosure_selection_within_seal BEFORE INSERT ON public.vsd_disclosure_selections
+  FOR EACH ROW EXECUTE FUNCTION public.vsd_disclosure_selection_within_seal();
+
+-- The identity of a choice: order-independent, and the same for a retry.
+CREATE FUNCTION public.vsd_choice_digest(_declaration_ids uuid[], _revisions integer[])
+RETURNS text LANGUAGE sql IMMUTABLE SET search_path = '' AS $$
+  SELECT encode(sha256(convert_to(coalesce(
+           string_agg(c.id::text || ':' || c.revision::text, ',' ORDER BY c.id), ''), 'UTF8')), 'hex')
+    FROM unnest(_declaration_ids, _revisions) AS c(id, revision)
+$$;
+REVOKE ALL ON FUNCTION public.vsd_choice_digest(uuid[], integer[]) FROM PUBLIC, anon, authenticated, service_role;
 
 -- ── 3 · The record of a recipient's read ────────────────────────────────
 
@@ -366,59 +466,132 @@ END $$;
 REVOKE ALL ON FUNCTION public.vsd_preview_disclosure(uuid[], integer[]) FROM PUBLIC, anon, service_role;
 GRANT EXECUTE ON FUNCTION public.vsd_preview_disclosure(uuid[], integer[]) TO authenticated;
 
--- Attach the chosen statements to ONE link the holder has just created.
+-- Create ONE credential link together with the holder's choice of statements.
 --
--- Made once per link: a repeat of the same choice changes nothing, a
--- different one is refused. Only within an hour of the link's creation, so a
--- link that is already in somebody's hands can never start carrying more
--- than it did when the holder previewed it.
-CREATE FUNCTION public.vsd_select_for_disclosure(_disclosure_id uuid, _declaration_ids uuid[], _revisions integer[])
+-- The link itself is created by the Passport's own function, with its own
+-- checks, payload and request-key idempotency; nothing about an sp_ link
+-- changes. What this adds, in the same transaction, is the sealed choice and
+-- the selections it names. Either all of it commits or none of it does:
+--
+--   * a refusal (not authorized, a stale revision, an inadmissible share)
+--     leaves NO link behind;
+--   * a retry with the same key and the same choice answers
+--     `already_created` from the seal and writes nothing -- as the Passport's
+--     own retry, it cannot return the link's address a second time;
+--   * the same key with a different choice, or a key whose link was created
+--     without a sealed choice, is refused: VSD_DISCLOSURE_CHOICE_SEALED.
+CREATE FUNCTION public.vsd_create_credential_share(
+  _claim_ids uuid[], _fields text[], _expires_days integer, _locale text, _request_key uuid,
+  _declaration_ids uuid[], _revisions integer[])
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
 DECLARE
   _uid uuid := public.vsd_assert_caller();
-  _link public.sp_disclosures;
+  _n integer;
+  _digest text;
+  _seal public.vsd_disclosure_choices;
+  _r jsonb;
+  _id uuid;
   _d public.vsd_declarations;
-  _existing integer;
 BEGIN
-  IF _disclosure_id IS NULL THEN
+  IF _request_key IS NULL OR _declaration_ids IS NULL OR _revisions IS NULL
+     OR cardinality(_declaration_ids) > 3
+     OR cardinality(_revisions) <> cardinality(_declaration_ids)
+     OR array_position(_declaration_ids, NULL) IS NOT NULL
+     OR array_position(_revisions, NULL) IS NOT NULL
+     OR (SELECT count(DISTINCT x) FROM unnest(_declaration_ids) x) <> cardinality(_declaration_ids) THEN
+    RAISE EXCEPTION 'VSD_INVALID_INPUT' USING ERRCODE = '23514';
+  END IF;
+  _n := cardinality(_declaration_ids);
+  _digest := public.vsd_choice_digest(_declaration_ids, _revisions);
+
+  -- The Passport's own per-operation lock (re-entrant in this transaction):
+  -- a concurrent request with this key, through this function or the
+  -- Passport's, waits here and then sees what the first one committed.
+  PERFORM pg_advisory_xact_lock(
+    hashtextextended('sp_share:' || _uid::text || ':' || _request_key::text, 0));
+
+  SELECT * INTO _seal FROM public.vsd_disclosure_choices
+   WHERE holder_user_id = _uid AND request_key = _request_key;
+  IF FOUND THEN
+    IF _seal.choice_digest <> _digest THEN
+      RAISE EXCEPTION 'VSD_DISCLOSURE_CHOICE_SEALED' USING ERRCODE = '23505';
+    END IF;
+    -- The Passport decides whether this is the same share (it raises
+    -- SP_REQUEST_KEY_CONFLICT if not).
+    _r := public.sp_create_credential_disclosure_v2(
+            _claim_ids, _fields, _expires_days, NULL, NULL, _locale, _request_key);
+    IF _r ->> 'status' IS DISTINCT FROM 'already_created'
+       OR (_r ->> 'disclosure_id')::uuid IS DISTINCT FROM _seal.disclosure_id THEN
+      RAISE EXCEPTION 'VSD_DISCLOSURE_CHOICE_SEALED' USING ERRCODE = '23505';
+    END IF;
+    RETURN (_r - 'token') || jsonb_build_object('declarations', _seal.choice_count);
+  END IF;
+
+  -- A link that already answers this key was created without a sealed choice.
+  IF EXISTS (SELECT 1 FROM public.sp_disclosures
+              WHERE holder_user_id = _uid AND request_key = _request_key) THEN
+    RAISE EXCEPTION 'VSD_DISCLOSURE_CHOICE_SEALED' USING ERRCODE = '23505';
+  END IF;
+
+  -- Refuse the choice BEFORE anything is created.
+  IF _n > 0 THEN
+    PERFORM 1 FROM public.vsd_assert_disclosure_choice(_uid, _declaration_ids, _revisions);
+  END IF;
+
+  _r := public.sp_create_credential_disclosure_v2(
+          _claim_ids, _fields, _expires_days, NULL, NULL, _locale, _request_key);
+  IF _r ->> 'status' IS DISTINCT FROM 'created' THEN
+    RAISE EXCEPTION 'VSD_DISCLOSURE_CHOICE_SEALED' USING ERRCODE = '23505';
+  END IF;
+  _id := (_r ->> 'disclosure_id')::uuid;
+
+  INSERT INTO public.vsd_disclosure_choices (disclosure_id, holder_user_id, request_key, choice_count, choice_digest)
+  VALUES (_id, _uid, _request_key, _n, _digest);
+  IF _n > 0 THEN
+    FOR _d IN SELECT * FROM public.vsd_assert_disclosure_choice(_uid, _declaration_ids, _revisions) LOOP
+      INSERT INTO public.vsd_disclosure_selections
+        (holder_user_id, disclosure_id, declaration_id, declaration_revision, statement_version,
+         disclosure_authorization_id, audience)
+      VALUES (_uid, _id, _d.id, _d.revision, _d.statement_version,
+              public.vsd_disclosure_authorization_for(_d, 'signed_in_recipient'), 'signed_in_recipient');
+    END LOOP;
+  END IF;
+  RETURN _r || jsonb_build_object('declarations', _n);
+END $$;
+REVOKE ALL ON FUNCTION public.vsd_create_credential_share(uuid[], text[], integer, text, uuid, uuid[], integer[]) FROM PUBLIC, anon, service_role;
+GRANT EXECUTE ON FUNCTION public.vsd_create_credential_share(uuid[], text[], integer, text, uuid, uuid[], integer[]) TO authenticated;
+
+-- What one creation operation of the caller's actually committed. Read-only:
+-- lets a caller whose response was lost learn the truth without creating,
+-- widening or repeating anything.
+--
+--   none      -- nothing is committed under this key (a request still in
+--                flight is not visible here; a retry of the same operation is
+--                what settles that);
+--   unsealed  -- a link exists and was created WITHOUT a sealed choice: it
+--                carries no statement and never will;
+--   sealed    -- the link exists with exactly `declarations` statements.
+CREATE FUNCTION public.vsd_share_operation(_request_key uuid)
+RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = '' AS $$
+DECLARE _uid uuid := public.vsd_assert_caller(); _link public.sp_disclosures; _seal public.vsd_disclosure_choices;
+BEGIN
+  IF _request_key IS NULL THEN
     RAISE EXCEPTION 'VSD_INVALID_INPUT' USING ERRCODE = '23514';
   END IF;
   SELECT * INTO _link FROM public.sp_disclosures
-   WHERE id = _disclosure_id AND holder_user_id = _uid FOR UPDATE;
-  IF NOT FOUND OR _link.application_id IS NOT NULL OR _link.revoked_at IS NOT NULL
-     OR (_link.expires_at IS NOT NULL AND _link.expires_at < now()) THEN
-    RAISE EXCEPTION 'VSD_DISCLOSURE_NOT_FOUND' USING ERRCODE = '42501';
+   WHERE holder_user_id = _uid AND request_key = _request_key;
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('status', 'none');
   END IF;
-
-  SELECT count(*) INTO _existing FROM public.vsd_disclosure_selections WHERE disclosure_id = _link.id;
-  IF _existing > 0 THEN
-    -- A retry of the same choice, or nothing.
-    IF _existing = cardinality(_declaration_ids)
-       AND cardinality(_revisions) = cardinality(_declaration_ids)
-       AND NOT EXISTS (
-         SELECT 1 FROM unnest(_declaration_ids, _revisions) AS c(declaration_id, revision)
-          WHERE NOT EXISTS (SELECT 1 FROM public.vsd_disclosure_selections s
-                             WHERE s.disclosure_id = _link.id AND s.declaration_id = c.declaration_id
-                               AND s.declaration_revision = c.revision)) THEN
-      RETURN jsonb_build_object('status', 'already_selected', 'count', _existing);
-    END IF;
-    RAISE EXCEPTION 'VSD_DISCLOSURE_ALREADY_SELECTED' USING ERRCODE = '23505';
+  SELECT * INTO _seal FROM public.vsd_disclosure_choices WHERE disclosure_id = _link.id;
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('status', 'unsealed', 'disclosure_id', _link.id, 'declarations', 0);
   END IF;
-  IF _link.created_at < now() - interval '1 hour' THEN
-    RAISE EXCEPTION 'VSD_DISCLOSURE_CLOSED_TO_SELECTION' USING ERRCODE = '42501';
-  END IF;
-
-  FOR _d IN SELECT * FROM public.vsd_assert_disclosure_choice(_uid, _declaration_ids, _revisions) LOOP
-    INSERT INTO public.vsd_disclosure_selections
-      (holder_user_id, disclosure_id, declaration_id, declaration_revision, statement_version,
-       disclosure_authorization_id, audience)
-    VALUES (_uid, _link.id, _d.id, _d.revision, _d.statement_version,
-            public.vsd_disclosure_authorization_for(_d, 'signed_in_recipient'), 'signed_in_recipient');
-  END LOOP;
-  RETURN jsonb_build_object('status', 'selected', 'count', cardinality(_declaration_ids));
+  RETURN jsonb_build_object('status', 'sealed', 'disclosure_id', _link.id,
+                            'declarations', _seal.choice_count, 'choice_digest', _seal.choice_digest);
 END $$;
-REVOKE ALL ON FUNCTION public.vsd_select_for_disclosure(uuid, uuid[], integer[]) FROM PUBLIC, anon, service_role;
-GRANT EXECUTE ON FUNCTION public.vsd_select_for_disclosure(uuid, uuid[], integer[]) TO authenticated;
+REVOKE ALL ON FUNCTION public.vsd_share_operation(uuid) FROM PUBLIC, anon, service_role;
+GRANT EXECUTE ON FUNCTION public.vsd_share_operation(uuid) TO authenticated;
 
 -- Stop one statement accompanying one link. Never needs an authorization: a
 -- holder can always take a disclosure back. The link itself is untouched.
@@ -532,7 +705,7 @@ DO $$
 DECLARE _t text; _f record;
 BEGIN
   FOREACH _t IN ARRAY ARRAY['vsd_disclosure_authorizations', 'vsd_disclosure_selections',
-                            'vsd_disclosure_accesses'] LOOP
+                            'vsd_disclosure_choices', 'vsd_disclosure_accesses'] LOOP
     IF has_table_privilege('anon', 'public.' || _t, 'SELECT,INSERT,UPDATE,DELETE,TRUNCATE')
        OR has_table_privilege('authenticated', 'public.' || _t, 'SELECT,INSERT,UPDATE,DELETE,TRUNCATE')
        OR has_table_privilege('service_role', 'public.' || _t, 'SELECT,INSERT,UPDATE,DELETE,TRUNCATE') THEN
@@ -551,6 +724,12 @@ BEGIN
   END LOOP;
   IF has_function_privilege('service_role', 'public.vsd_read_disclosed(text)', 'EXECUTE') THEN
     RAISE EXCEPTION 'VSD_DISCLOSURE_POSTFLIGHT: the service role can read a disclosed statement.';
+  END IF;
+
+  -- No function can attach a statement to a link that already exists.
+  IF EXISTS (SELECT 1 FROM pg_proc p WHERE p.pronamespace = 'public'::regnamespace
+              AND p.proname = 'vsd_select_for_disclosure') THEN
+    RAISE EXCEPTION 'VSD_DISCLOSURE_POSTFLIGHT: a link could be given a statement after its creation.';
   END IF;
 
   -- Nothing is authorized by installing this.
