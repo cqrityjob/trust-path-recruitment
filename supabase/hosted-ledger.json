@@ -13,8 +13,8 @@
   ],
   "source": "Supabase connector read-only SQL, explicit project wrygicdfxwjnrugduxnt",
   "projectRef": "wrygicdfxwjnrugduxnt",
-  "readAt": "2026-11-11T18:22:17.812013+00:00",
-  "readBy": "Claude Code read-only verification after #492 merged as 82a28c3b on 2026-11-11. Ledger 403 rows ending 20270324090000. The previous 402 version/name entries are unchanged, verified by live md5 eedafaf9c6c7ec90283e7b4dd86da01e; the new canonical row was appended and the complete snapshot matches live md5 0ddf24b33ae137ddf6a91d934de3b912. All 30 vsd_ function bodies match the merged canonical SQL byte for byte; table and function privileges, storage policies, triggers and the private bucket verified; vsd_processing_authorizations is empty. Full evidence: docs/release/2026-11-11-self-declarations-hosted-verification.json. No production writes.",
+  "readAt": "2026-11-12T16:37:13.239355+00:00",
+  "readBy": "Claude Code read-only verification after #494 merged as 45e1ffa2 on 2026-11-12. Ledger 404 rows ending 20270325090000. The previous 403 version/name entries are unchanged, verified by live md5 0ddf24b33ae137ddf6a91d934de3b912; the new canonical row was appended and the complete snapshot matches live md5 3d150b38ca62e749d9ac38270dd81728. All 16 function bodies of the migration match the merged canonical SQL byte for byte; table and function privileges and triggers verified; vsd_select_for_disclosure does not exist; vsd_disclosure_authorizations and vsd_processing_authorizations are empty. Full evidence: docs/release/2026-11-12-self-declarations-passport-bridge-hosted-verification.json. No production writes.",
   "versions": [
     {
       "version": "20260716153446",
@@ -1627,6 +1627,10 @@
     {
       "name": "vsd_voluntary_self_declarations",
       "version": "20270324090000"
+    },
+    {
+      "name": "vsd_passport_disclosure",
+      "version": "20270325090000"
     }
   ]
 }

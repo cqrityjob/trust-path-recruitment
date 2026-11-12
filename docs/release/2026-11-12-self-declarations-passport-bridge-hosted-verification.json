@@ -1,0 +1,369 @@
+{
+  "formatVersion": 1,
+  "projectRef": "wrygicdfxwjnrugduxnt",
+  "installation": "official_supabase_github_integration",
+  "readOnly": true,
+  "observedBy": "Claude Code via the Supabase connector, one SELECT statement, after the owner reported that #494 was merged.",
+  "observedAt": "2026-11-12T16:37:13.239355+00:00",
+  "merges": [
+    {
+      "pr": 494,
+      "head": "cfaa410a1f3fd4b012b9006fba8bfa08325f1e5b",
+      "mergeSha": "45e1ffa227d7fb8fe579d9003f54f9f1b8722208",
+      "mergedAt": "2026-11-12T16:35:52Z",
+      "slots": ["20270325090000"]
+    }
+  ],
+  "migrationSha256": {
+    "20270325090000_vsd_passport_disclosure.sql": "40492f8022e45d0cdb0df4885b84790caeac9e553fc42338be60f8a660397e55"
+  },
+  "ledger": {
+    "before494Snapshot": {
+      "count": 403,
+      "latest": "20270324090000",
+      "versionNameNewlineMd5": "0ddf24b33ae137ddf6a91d934de3b912"
+    },
+    "after494": {
+      "count": 404,
+      "latest": "20270325090000",
+      "versionNameNewlineMd5": "3d150b38ca62e749d9ac38270dd81728",
+      "observedAt": "2026-11-12T16:37:13.239355+00:00",
+      "newRows": [
+        {
+          "name": "vsd_passport_disclosure",
+          "version": "20270325090000"
+        }
+      ]
+    },
+    "prior403Unchanged": true,
+    "formula": "md5(string_agg(version || ' ' || name, E'\\n' ORDER BY version))",
+    "snapshotVerification": "The live rows below 20270325090000 number 403 and have the same digest as the committed 403-row snapshot. The one new row is the canonical slot."
+  },
+  "tables": [
+    {
+      "name": "vsd_disclosure_accesses",
+      "rowLevelSecurity": true,
+      "policies": 0,
+      "anyPrivilege": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": false,
+        "public": false
+      }
+    },
+    {
+      "name": "vsd_disclosure_authorizations",
+      "rowLevelSecurity": true,
+      "policies": 0,
+      "anyPrivilege": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": false,
+        "public": false
+      }
+    },
+    {
+      "name": "vsd_disclosure_choices",
+      "rowLevelSecurity": true,
+      "policies": 0,
+      "anyPrivilege": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": false,
+        "public": false
+      }
+    },
+    {
+      "name": "vsd_disclosure_selections",
+      "rowLevelSecurity": true,
+      "policies": 0,
+      "anyPrivilege": {
+        "anon": false,
+        "authenticated": false,
+        "service_role": false,
+        "public": false
+      }
+    }
+  ],
+  "rows": {
+    "vsd_disclosure_authorizations": 0,
+    "vsd_disclosure_selections": 0,
+    "vsd_disclosure_choices": 0,
+    "vsd_disclosure_accesses": 0,
+    "vsd_processing_authorizations": 0
+  },
+  "disclosureClosed": "vsd_disclosure_authorizations is EMPTY: no statement can be shared, previewed, attached to a link or read by a recipient. vsd_processing_authorizations is also EMPTY: nothing can be collected. No authorization of either kind was inserted by this verification or by anything else.",
+  "removedFunctionAbsent": {
+    "vsd_select_for_disclosure": true
+  },
+  "triggers": [
+    {
+      "name": "vsd_disclosure_authorization_admissible",
+      "table": "vsd_disclosure_authorizations",
+      "function": "vsd_disclosure_authorization_admissible",
+      "enabled": true
+    },
+    {
+      "name": "vsd_disclosure_authorization_immutable",
+      "table": "vsd_disclosure_authorizations",
+      "function": "vsd_authorization_immutable",
+      "enabled": true
+    },
+    {
+      "name": "vsd_disclosure_choice_at_creation",
+      "table": "vsd_disclosure_choices",
+      "function": "vsd_disclosure_choice_at_creation",
+      "enabled": true
+    },
+    {
+      "name": "vsd_disclosure_selection_immutable",
+      "table": "vsd_disclosure_selections",
+      "function": "vsd_disclosure_selection_immutable",
+      "enabled": true
+    },
+    {
+      "name": "vsd_disclosure_selection_within_seal",
+      "table": "vsd_disclosure_selections",
+      "function": "vsd_disclosure_selection_within_seal",
+      "enabled": true
+    }
+  ],
+  "functions": [
+    {
+      "name": "vsd_assert_disclosure_choice",
+      "securityDefiner": true,
+      "settings": ["search_path=\"\""],
+      "bodyMd5": "d8fa9b3bc4dfd6b6f3e282892e92564b",
+      "canonicalBodyMd5": "d8fa9b3bc4dfd6b6f3e282892e92564b",
+      "bodyMatchesCanonicalByteForByte": true,
+      "execute": {
+        "anon": false,
+        "public": false,
+        "authenticated": false,
+        "service_role": false
+      }
+    },
+    {
+      "name": "vsd_choice_digest",
+      "securityDefiner": false,
+      "settings": ["search_path=\"\""],
+      "bodyMd5": "1d984bee7b2723334191ac26450fd1fb",
+      "canonicalBodyMd5": "1d984bee7b2723334191ac26450fd1fb",
+      "bodyMatchesCanonicalByteForByte": true,
+      "execute": {
+        "anon": false,
+        "public": false,
+        "authenticated": false,
+        "service_role": false
+      }
+    },
+    {
+      "name": "vsd_create_credential_share",
+      "securityDefiner": true,
+      "settings": ["search_path=\"\""],
+      "bodyMd5": "c28ed6fb9a3d32781f1f7ac9e869cee7",
+      "canonicalBodyMd5": "c28ed6fb9a3d32781f1f7ac9e869cee7",
+      "bodyMatchesCanonicalByteForByte": true,
+      "execute": {
+        "anon": false,
+        "public": false,
+        "authenticated": true,
+        "service_role": false
+      }
+    },
+    {
+      "name": "vsd_disclosed_statement",
+      "securityDefiner": true,
+      "settings": ["search_path=\"\""],
+      "bodyMd5": "9258f3cc945241aa5d69496f5044a56d",
+      "canonicalBodyMd5": "9258f3cc945241aa5d69496f5044a56d",
+      "bodyMatchesCanonicalByteForByte": true,
+      "execute": {
+        "anon": false,
+        "public": false,
+        "authenticated": false,
+        "service_role": false
+      }
+    },
+    {
+      "name": "vsd_disclosure_authorization_admissible",
+      "securityDefiner": false,
+      "settings": ["search_path=\"\""],
+      "bodyMd5": "d8ac0f307a815ad5ad00278c105ea7a9",
+      "canonicalBodyMd5": "d8ac0f307a815ad5ad00278c105ea7a9",
+      "bodyMatchesCanonicalByteForByte": true,
+      "execute": {
+        "anon": false,
+        "public": false,
+        "authenticated": false,
+        "service_role": false
+      }
+    },
+    {
+      "name": "vsd_disclosure_authorization_for",
+      "securityDefiner": true,
+      "settings": ["search_path=\"\""],
+      "bodyMd5": "516cb376e4d216c425e3854affda94ff",
+      "canonicalBodyMd5": "516cb376e4d216c425e3854affda94ff",
+      "bodyMatchesCanonicalByteForByte": true,
+      "execute": {
+        "anon": false,
+        "public": false,
+        "authenticated": false,
+        "service_role": false
+      }
+    },
+    {
+      "name": "vsd_disclosure_choice_at_creation",
+      "securityDefiner": false,
+      "settings": ["search_path=\"\""],
+      "bodyMd5": "aea662f1e117b383c7c028403d2e46c8",
+      "canonicalBodyMd5": "aea662f1e117b383c7c028403d2e46c8",
+      "bodyMatchesCanonicalByteForByte": true,
+      "execute": {
+        "anon": false,
+        "public": false,
+        "authenticated": false,
+        "service_role": false
+      }
+    },
+    {
+      "name": "vsd_disclosure_selection_immutable",
+      "securityDefiner": false,
+      "settings": ["search_path=\"\""],
+      "bodyMd5": "5b8070c18dad62eed4965881f0a7b1f7",
+      "canonicalBodyMd5": "5b8070c18dad62eed4965881f0a7b1f7",
+      "bodyMatchesCanonicalByteForByte": true,
+      "execute": {
+        "anon": false,
+        "public": false,
+        "authenticated": false,
+        "service_role": false
+      }
+    },
+    {
+      "name": "vsd_disclosure_selection_within_seal",
+      "securityDefiner": false,
+      "settings": ["search_path=\"\""],
+      "bodyMd5": "de0f9a758a1272d90739281b71509680",
+      "canonicalBodyMd5": "de0f9a758a1272d90739281b71509680",
+      "bodyMatchesCanonicalByteForByte": true,
+      "execute": {
+        "anon": false,
+        "public": false,
+        "authenticated": false,
+        "service_role": false
+      }
+    },
+    {
+      "name": "vsd_my_disclosure_selections",
+      "securityDefiner": true,
+      "settings": ["search_path=\"\""],
+      "bodyMd5": "8f00fa8b78cf209e29118b9b82239368",
+      "canonicalBodyMd5": "8f00fa8b78cf209e29118b9b82239368",
+      "bodyMatchesCanonicalByteForByte": true,
+      "execute": {
+        "anon": false,
+        "public": false,
+        "authenticated": true,
+        "service_role": false
+      }
+    },
+    {
+      "name": "vsd_my_passport_declarations",
+      "securityDefiner": true,
+      "settings": ["search_path=\"\""],
+      "bodyMd5": "83027fa00d18f394b0193017a0579a79",
+      "canonicalBodyMd5": "83027fa00d18f394b0193017a0579a79",
+      "bodyMatchesCanonicalByteForByte": true,
+      "execute": {
+        "anon": false,
+        "public": false,
+        "authenticated": true,
+        "service_role": false
+      }
+    },
+    {
+      "name": "vsd_preview_disclosure",
+      "securityDefiner": true,
+      "settings": ["search_path=\"\""],
+      "bodyMd5": "4e1d04608001ad5272e42da70ba127b1",
+      "canonicalBodyMd5": "4e1d04608001ad5272e42da70ba127b1",
+      "bodyMatchesCanonicalByteForByte": true,
+      "execute": {
+        "anon": false,
+        "public": false,
+        "authenticated": true,
+        "service_role": false
+      }
+    },
+    {
+      "name": "vsd_read_disclosed",
+      "securityDefiner": true,
+      "settings": ["search_path=\"\""],
+      "bodyMd5": "f99706413a462cca727eb2b63a29f052",
+      "canonicalBodyMd5": "f99706413a462cca727eb2b63a29f052",
+      "bodyMatchesCanonicalByteForByte": true,
+      "execute": {
+        "anon": false,
+        "public": false,
+        "authenticated": true,
+        "service_role": false
+      }
+    },
+    {
+      "name": "vsd_selection_disclosable",
+      "securityDefiner": true,
+      "settings": ["search_path=\"\""],
+      "bodyMd5": "474b41a04f62d40890762013a242ecec",
+      "canonicalBodyMd5": "474b41a04f62d40890762013a242ecec",
+      "bodyMatchesCanonicalByteForByte": true,
+      "execute": {
+        "anon": false,
+        "public": false,
+        "authenticated": false,
+        "service_role": false
+      }
+    },
+    {
+      "name": "vsd_share_operation",
+      "securityDefiner": true,
+      "settings": ["search_path=\"\""],
+      "bodyMd5": "ce4f988a6a42434cf3bee2fcbf4882b0",
+      "canonicalBodyMd5": "ce4f988a6a42434cf3bee2fcbf4882b0",
+      "bodyMatchesCanonicalByteForByte": true,
+      "execute": {
+        "anon": false,
+        "public": false,
+        "authenticated": true,
+        "service_role": false
+      }
+    },
+    {
+      "name": "vsd_withdraw_disclosure_selection",
+      "securityDefiner": true,
+      "settings": ["search_path=\"\""],
+      "bodyMd5": "b69b7e6a537ba13f583be964ce9dcc85",
+      "canonicalBodyMd5": "b69b7e6a537ba13f583be964ce9dcc85",
+      "bodyMatchesCanonicalByteForByte": true,
+      "execute": {
+        "anon": false,
+        "public": false,
+        "authenticated": true,
+        "service_role": false
+      }
+    }
+  ],
+  "functionsExecutableByAuthenticated": [
+    "vsd_create_credential_share",
+    "vsd_my_disclosure_selections",
+    "vsd_my_passport_declarations",
+    "vsd_preview_disclosure",
+    "vsd_read_disclosed",
+    "vsd_share_operation",
+    "vsd_withdraw_disclosure_selection"
+  ],
+  "notRead": "Column defaults, CHECK constraints and foreign-key actions were not read individually. The migration applies in one transaction and every function body, table, trigger and privilege that was read matches it, so they are concluded to have arrived, not observed.",
+  "comparisonMethod": "md5(pg_proc.prosrc) on the hosted database against md5 of each function body (the text between the dollar-quote delimiters) in supabase/migrations/20270325090000_vsd_passport_disclosure.sql at merge 45e1ffa2. All 16 match.",
+  "productionActions": "None. One SELECT statement was run. No migration was run or re-run, no row was written and no authorization of either kind was recorded."
+}
