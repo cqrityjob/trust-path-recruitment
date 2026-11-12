@@ -13,21 +13,32 @@
 //     server's own preview, through the recipient's own component, BEFORE
 //     the link exists. Only what was previewed can be attached
 //     (confirmedChoices); a failed preview attaches nothing.
-//   * The choice belongs to the link being created. It is never applied to
-//     an existing link, and it is never given to the social image, the card
-//     download or any other export: this component's state is passed to one
-//     place, the attach call that follows the link's creation.
+//   * The choice belongs to the link's CREATION. The link and the choice are
+//     one database operation under one request key; there is no call that
+//     gives an existing link a statement. The choice is never given to the
+//     social image, the card download or any other export.
+//   * The screen says only what it knows (passport-bridge.ts,
+//     settleShareOperation): created, refused, or UNCONFIRMED. A lost answer
+//     is never described as "nothing was shared"; the operation is kept and
+//     the holder is offered a retry of that same operation.
+//   * Whether the list further down could be refreshed is a separate fact
+//     from whether the statement is shared, and is said separately.
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { L, Lf, type Lang } from "@/components/professional-identity/copy";
 import { SHARE, SHIELD, SHIELD_SUBJECT } from "@/lib/self-declarations/copy";
 import {
   CLOSED_PASSPORT_DECLARATIONS,
   confirmedChoices,
+  settleShareOperation,
+  type CommittedShareOperation,
+  type CreatedShare,
   type DisclosedStatement,
   type DisclosureChoice,
   type PassportDeclarationsView,
+  type ShareOperation,
+  type ShareOperationOutcome,
   type SharedSelection,
 } from "@/lib/self-declarations/passport-bridge";
 import { PASSPORT_SELF_DECLARATIONS_QUERY_KEY } from "./PassportSelfDeclarations";
@@ -36,7 +47,7 @@ import { RecipientSelfDeclarationList } from "./RecipientSelfDeclarations";
 const SHARED_QUERY_KEY = ["self-declarations", "shared"] as const;
 
 /**
- * The five server calls of the share step. The ROUTE binds them and passes
+ * The six server calls of the share step. The ROUTE binds them and passes
  * them in, as every Passport component's read and write is owned by its route.
  */
 export type SelfDeclarationShareApi = {
@@ -44,26 +55,55 @@ export type SelfDeclarationShareApi = {
   readonly preview: (input: {
     data: { choices: DisclosureChoice[] };
   }) => Promise<readonly DisclosedStatement[]>;
-  readonly attach: (input: {
-    data: { disclosureId: string; choices: DisclosureChoice[] };
-  }) => Promise<{ readonly attached: number }>;
+  /** Create the link together with the choice: one operation, repeatable. */
+  readonly create: (input: {
+    data: {
+      requestKey: string;
+      link: {
+        claimIds: string[];
+        permittedFields: ("holder_name" | "identifier" | "profile_title")[];
+        expiresDays: number;
+        locale: "sv" | "en";
+      };
+      choices: DisclosureChoice[];
+    };
+  }) => Promise<CreatedShare>;
+  /** What the database has committed for one operation. Read-only. */
+  readonly committed: (input: { data: { requestKey: string } }) => Promise<CommittedShareOperation>;
   readonly list: () => Promise<readonly SharedSelection[]>;
   readonly stop: (input: { data: { selectionId: string } }) => Promise<readonly SharedSelection[]>;
+};
+
+/** What the share step knows about the holder's choice right now. */
+export type ShareSelfDeclarationOffer = {
+  /** A choice was put to the holder: the link is then created through the
+   *  bridge, which seals the choice -- also when nothing is ticked. */
+  readonly offered: boolean;
+  /** False while something is ticked that the holder has not yet been shown
+   *  as a recipient will see it. A link is not created in that state. */
+  readonly ready: boolean;
+  /** Ticked AND previewed. */
+  readonly choices: readonly DisclosureChoice[];
+};
+
+export const NO_SELF_DECLARATION_OFFER: ShareSelfDeclarationOffer = {
+  offered: false,
+  ready: true,
+  choices: [],
 };
 
 export function ShareSelfDeclarationChoices({
   lang,
   shareLang,
   api,
-  onConfirmedChange,
+  onOfferChange,
 }: {
   readonly api: SelfDeclarationShareApi;
   /** The holder's own language, for the controls. */
   readonly lang: Lang;
   /** The language the link is created in, for the preview. */
   readonly shareLang: Lang;
-  /** The choices that were ticked AND previewed. Empty until both are true. */
-  readonly onConfirmedChange: (choices: readonly DisclosureChoice[]) => void;
+  readonly onOfferChange: (offer: ShareSelfDeclarationOffer) => void;
 }) {
   const { load, preview } = api;
   const query = useQuery({
@@ -115,10 +155,14 @@ export function ShareSelfDeclarationChoices({
 
   const confirmed = useMemo(() => confirmedChoices(chosen, previewed), [chosen, previewed]);
   const confirmedKey = confirmed.map((c) => `${c.declarationId}:${c.revision}`).join(",");
+  const offered = shareable.length > 0;
+  const ready = confirmed.length === chosen.length;
   useEffect(() => {
-    onConfirmedChange(confirmed);
+    onOfferChange({ offered, ready, choices: confirmed });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [confirmedKey, onConfirmedChange]);
+  }, [offered, ready, confirmedKey, onOfferChange]);
+  // Leaving the step withdraws the offer: nothing chosen here outlives it.
+  useEffect(() => () => onOfferChange(NO_SELF_DECLARATION_OFFER), [onOfferChange]);
 
   // Closed, loading, failed or nothing shareable: the share flow is unchanged.
   if (shareable.length === 0) return null;
@@ -205,54 +249,200 @@ export function ShareSelfDeclarationChoices({
   );
 }
 
-export type ShareSelfDeclarationOutcome = "attached" | "failed";
+/** One creation operation as the screen holds it. */
+export type ShareOperationView = {
+  /** Kept, unchanged, until the operation is settled: the retry is this. */
+  readonly operation: ShareOperation | null;
+  readonly outcome: ShareOperationOutcome | null;
+  readonly settling: boolean;
+  /** The operation IS persisted, but the list below could not be re-read. */
+  readonly listStale: boolean;
+};
+
+const IDLE_OPERATION: ShareOperationView = {
+  operation: null,
+  outcome: null,
+  settling: false,
+  listStale: false,
+};
 
 /**
- * Attach the confirmed choices to the link that was just created. Returns
- * what really happened, so the screen never says a statement accompanies a
- * link when it does not.
+ * Runs one creation operation and keeps it until it is settled.
+ *
+ * `run` starts an operation; while one is unconfirmed, `run` and `retry` both
+ * repeat THAT operation -- same key, same link, same choices -- so nothing a
+ * holder does in between can create a second link or widen what is shared.
+ * Re-reading the list afterwards is a separate step whose failure never
+ * changes the outcome.
  */
-export function useAttachSelfDeclarations(
-  attach: SelfDeclarationShareApi["attach"],
-): (
-  disclosureId: string,
-  choices: readonly DisclosureChoice[],
-) => Promise<ShareSelfDeclarationOutcome> {
+export function useShareOperation(api: SelfDeclarationShareApi): {
+  readonly view: ShareOperationView;
+  readonly run: (operation: ShareOperation) => Promise<ShareOperationOutcome>;
+  readonly retry: () => Promise<ShareOperationOutcome | null>;
+  readonly refreshList: () => Promise<void>;
+  readonly clear: () => void;
+} {
+  const { create, committed, list } = api;
   const queryClient = useQueryClient();
-  return useCallback(
-    async (disclosureId, choices) => {
-      try {
-        await attach({ data: { disclosureId, choices: [...choices] } });
-        await queryClient.invalidateQueries({ queryKey: SHARED_QUERY_KEY });
-        return "attached";
-      } catch {
-        return "failed";
-      }
+  const [view, setView] = useState<ShareOperationView>(IDLE_OPERATION);
+  const kept = useRef<ShareOperation | null>(null);
+  const unconfirmed = useRef(false);
+
+  const refreshList = useCallback(async () => {
+    try {
+      await queryClient.fetchQuery({
+        queryKey: SHARED_QUERY_KEY,
+        queryFn: async () => (await list()) ?? [],
+        staleTime: 0,
+        retry: false,
+      });
+      setView((current) => ({ ...current, listStale: false }));
+    } catch {
+      setView((current) => ({ ...current, listStale: true }));
+    }
+  }, [list, queryClient]);
+
+  const settle = useCallback(
+    async (operation: ShareOperation) => {
+      kept.current = operation;
+      setView((current) => ({ ...current, operation, settling: true }));
+      const outcome = await settleShareOperation(
+        {
+          create: (op) =>
+            create({
+              data: {
+                requestKey: op.requestKey,
+                link: {
+                  claimIds: [...op.link.claimIds],
+                  permittedFields: [...op.link.permittedFields],
+                  expiresDays: op.link.expiresDays,
+                  locale: op.link.locale,
+                },
+                choices: [...op.choices],
+              },
+            }),
+          committed: (requestKey) => committed({ data: { requestKey } }),
+        },
+        operation,
+      );
+      unconfirmed.current = outcome.kind === "unconfirmed";
+      setView((current) => ({ ...current, operation, outcome, settling: false }));
+      // Persistence is settled above. The list is a convenience re-read.
+      if (outcome.kind === "created" && outcome.declarations > 0) await refreshList();
+      return outcome;
     },
-    [attach, queryClient],
+    [create, committed, refreshList],
   );
+
+  const run = useCallback(
+    (operation: ShareOperation) =>
+      settle(unconfirmed.current && kept.current ? kept.current : operation),
+    [settle],
+  );
+  const retry = useCallback(async () => (kept.current ? settle(kept.current) : null), [settle]);
+  const clear = useCallback(() => {
+    kept.current = null;
+    unconfirmed.current = false;
+    setView(IDLE_OPERATION);
+  }, []);
+
+  return { view, run, retry, refreshList, clear };
 }
 
+function refusalCopy(code: string) {
+  if (code === "VSD_STALE_REVISION") return SHARE.refusedChanged;
+  if (code.startsWith("VSD_")) return SHARE.refusedNotShareable;
+  return SHARE.refused;
+}
+
+/**
+ * What is KNOWN about the operation, in words that claim no more than that.
+ * Rendered for every outcome that involves a statement or leaves a doubt.
+ */
 export function ShareSelfDeclarationResult({
-  outcome,
+  view,
   lang,
+  onRetry,
+  onRefreshList,
 }: {
-  readonly outcome: ShareSelfDeclarationOutcome | null;
+  readonly view: ShareOperationView;
   readonly lang: Lang;
+  readonly onRetry: () => void;
+  readonly onRefreshList: () => void;
 }) {
-  if (!outcome) return null;
+  const { outcome, operation, settling, listStale } = view;
+  if (!outcome || !operation) return null;
+  const withStatements = operation.choices.length > 0;
+
+  if (outcome.kind === "unconfirmed") {
+    return (
+      <div
+        role="alert"
+        className="mt-3 rounded-lg border border-destructive/40 p-3 text-sm leading-relaxed text-foreground"
+        data-share-vsd-result="unconfirmed"
+      >
+        <p>{L(withStatements ? SHARE.unconfirmed : SHARE.unconfirmedPlain, lang)}</p>
+        <button
+          type="button"
+          disabled={settling}
+          onClick={onRetry}
+          className="mt-3 inline-flex min-h-11 items-center rounded-md border border-input bg-background px-4 text-sm font-medium text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50"
+          data-share-vsd-retry
+        >
+          {L(settling ? SHARE.settling : SHARE.retry, lang)}
+        </button>
+      </div>
+    );
+  }
+  if (outcome.kind === "refused") {
+    // Without a statement the Passport's own error line says it; with one,
+    // the holder must be told that the statement was not shared either.
+    if (!withStatements) return null;
+    return (
+      <p
+        role="alert"
+        className="mt-3 rounded-lg border border-destructive/40 p-3 text-sm leading-relaxed text-destructive"
+        data-share-vsd-result="refused"
+      >
+        {L(refusalCopy(outcome.code), lang)}
+      </p>
+    );
+  }
+  if (outcome.kind === "created_without") {
+    if (!withStatements) return null;
+    return (
+      <p
+        role="alert"
+        className="mt-3 rounded-lg border border-destructive/40 p-3 text-sm leading-relaxed text-foreground"
+        data-share-vsd-result="created_without"
+      >
+        {L(SHARE.createdWithout, lang)}
+      </p>
+    );
+  }
+  if (outcome.declarations === 0) return null;
   return (
-    <p
-      role={outcome === "failed" ? "alert" : "status"}
-      className={`mt-3 rounded-lg border p-3 text-sm leading-relaxed ${
-        outcome === "failed"
-          ? "border-destructive/40 text-destructive"
-          : "border-border bg-secondary/40 text-foreground"
-      }`}
-      data-share-vsd-result={outcome}
+    <div
+      role="status"
+      className="mt-3 rounded-lg border border-border bg-secondary/40 p-3 text-sm leading-relaxed text-foreground"
+      data-share-vsd-result="created"
+      data-share-vsd-address={outcome.token === null ? "lost" : "shown"}
     >
-      {L(outcome === "failed" ? SHARE.attachFailed : SHARE.attached, lang)}
-    </p>
+      <p>{L(outcome.token === null ? SHARE.attachedAddressLost : SHARE.attached, lang)}</p>
+      {listStale ? (
+        <p className="mt-2 text-muted-foreground" data-share-vsd-list-stale>
+          {L(SHARE.listStale, lang)}{" "}
+          <button
+            type="button"
+            onClick={onRefreshList}
+            className="inline-flex min-h-11 items-center font-medium text-foreground underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            data-share-vsd-refresh
+          >
+            {L(SHARE.refreshList, lang)}
+          </button>
+        </p>
+      ) : null}
+    </div>
   );
 }
 
@@ -339,6 +529,19 @@ export function SharedSelfDeclarations({
       {failed ? (
         <p role="alert" className="mt-2 text-sm text-destructive">
           {L(SHARE.stopFailed, lang)}
+        </p>
+      ) : null}
+      {query.isError ? (
+        // The rows above are the last ones read; what is shared is unchanged.
+        <p className="mt-2 text-sm text-muted-foreground" data-shared-vsd-stale>
+          {L(SHARE.listStale, lang)}{" "}
+          <button
+            type="button"
+            onClick={() => void query.refetch()}
+            className="inline-flex min-h-11 items-center font-medium text-foreground underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          >
+            {L(SHARE.refreshList, lang)}
+          </button>
         </p>
       ) : null}
     </section>

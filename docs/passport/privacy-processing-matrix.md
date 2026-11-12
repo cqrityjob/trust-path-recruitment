@@ -80,7 +80,8 @@ _Status: Implemented (absence + two narrow-result credentials), Tested._
 >
 > **The one bridge (2026-11-11, `20270325090000`).** A holder's own Passport
 > page may show their current self-declarations as self-declared shields, and
-> a holder may attach chosen statements to one Passport link for a signed-in
+> a holder may create one Passport link together with chosen statements, sealed
+> in that link's creation and never added to an existing link, for a signed-in
 > recipient. Still no `sp_*` table, function or payload holds or reads them:
 > the bridge is `vsd_` functions that reference a Passport link, never the
 > reverse, and the anonymous recipient payload is unchanged. Disclosure needs

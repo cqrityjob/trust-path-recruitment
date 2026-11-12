@@ -207,6 +207,204 @@ export function confirmedChoices(
     .map((d) => ({ declarationId: d.id, revision: d.revision }));
 }
 
+// ── One creation operation ───────────────────────────────────────────────
+//
+// A link and its choice of statements are created by ONE database call, under
+// one request key. The caller can lose the answer to that call without the
+// database having lost the work, so "the call failed" is never read as
+// "nothing was shared". There are exactly three things a caller can know:
+//
+//   * CONFIRMED CREATED   the database answered, now or on reconciliation:
+//                         the link exists and carries exactly this choice;
+//   * CONFIRMED NOT       the database REFUSED (its own named refusal): the
+//                         whole transaction rolled back, so no link exists
+//                         and nothing is shared -- or a link exists that was
+//                         created without a choice and can never gain one;
+//   * UNCONFIRMED         anything else. The same operation -- same key, same
+//                         share, same choices -- is kept and can be repeated:
+//                         the database answers a repeat from what it sealed,
+//                         so a retry can neither create a second link nor
+//                         widen the choice.
+
+/** A possibly EMPTY choice: an offered-and-declined choice is sealed too. */
+export const sealedChoicesSchema = z
+  .array(
+    z.object({ declarationId: z.string().uuid(), revision: z.number().int().positive() }).strict(),
+  )
+  .max(MAX_DISCLOSED_STATEMENTS);
+
+/** The credential link being created; the Passport's own share inputs. */
+export type ShareOperationLink = {
+  readonly claimIds: readonly string[];
+  readonly permittedFields: readonly ("holder_name" | "identifier" | "profile_title")[];
+  readonly expiresDays: number;
+  readonly locale: "sv" | "en";
+};
+
+/** Everything a retry needs, kept unchanged until the operation is settled. */
+export type ShareOperation = {
+  readonly requestKey: string;
+  readonly link: ShareOperationLink;
+  readonly choices: readonly DisclosureChoice[];
+};
+
+const createdShareSchema = z.union([
+  z.object({
+    status: z.literal("created"),
+    token: z.string().min(1),
+    disclosure_id: z.string().uuid(),
+    expires_at: z.string().nullable().optional(),
+    declarations: z.number().int().min(0).max(MAX_DISCLOSED_STATEMENTS),
+  }),
+  z.object({
+    status: z.literal("already_created"),
+    disclosure_id: z.string().uuid(),
+    expires_at: z.string().nullable().optional(),
+    declarations: z.number().int().min(0).max(MAX_DISCLOSED_STATEMENTS),
+  }),
+]);
+
+/** What vsd_create_credential_share answered. */
+export type CreatedShare = {
+  /** `already_created`: a repeat of a committed operation; no address again. */
+  readonly status: "created" | "already_created";
+  readonly token: string | null;
+  readonly disclosureId: string;
+  readonly expiresAt: string | null;
+  /** How many statements the link was SEALED with. */
+  readonly declarations: number;
+};
+
+export function toCreatedShare(payload: unknown): CreatedShare | null {
+  const parsed = createdShareSchema.safeParse(payload);
+  if (!parsed.success) return null;
+  const row = parsed.data;
+  return {
+    status: row.status,
+    token: row.status === "created" ? row.token : null,
+    disclosureId: row.disclosure_id,
+    expiresAt: row.expires_at ?? null,
+    declarations: row.declarations,
+  };
+}
+
+const committedOperationSchema = z.union([
+  z.object({ status: z.literal("none") }).strict(),
+  z.object({
+    status: z.enum(["sealed", "unsealed"]),
+    disclosure_id: z.string().uuid(),
+    declarations: z.number().int().min(0).max(MAX_DISCLOSED_STATEMENTS),
+    choice_digest: z.string().optional(),
+  }),
+]);
+
+/** What the database has COMMITTED for one request key (vsd_share_operation). */
+export type CommittedShareOperation =
+  | { readonly status: "none" }
+  | {
+      readonly status: "sealed" | "unsealed";
+      readonly disclosureId: string;
+      readonly declarations: number;
+    };
+
+export function toCommittedShareOperation(payload: unknown): CommittedShareOperation | null {
+  const parsed = committedOperationSchema.safeParse(payload);
+  if (!parsed.success) return null;
+  const row = parsed.data;
+  if (row.status === "none") return { status: "none" };
+  return { status: row.status, disclosureId: row.disclosure_id, declarations: row.declarations };
+}
+
+/**
+ * The marker a server function throws when the database itself refused: its
+ * own named refusal (VSD_… from this module, SP_… from the Passport). Raised
+ * inside the one transaction, so nothing of the operation was committed.
+ * Anything else a caller catches -- a lost connection, a timeout, an
+ * unreadable answer -- is NOT a refusal and proves nothing.
+ */
+const REFUSAL = /^(?:VSD|SP)_[A-Z0-9_]+$/;
+export function shareRefusalCode(error: unknown): string | null {
+  const message = String((error as { message?: unknown } | null)?.message ?? "");
+  return REFUSAL.test(message) ? message : null;
+}
+
+export type ShareOperationOutcome =
+  /** Confirmed: the link exists and carries exactly the operation's choice.
+   *  `token` is null when the creating answer was lost: the link's address is
+   *  shown once by the database and cannot be read again. */
+  | {
+      readonly kind: "created";
+      readonly disclosureId: string;
+      readonly token: string | null;
+      readonly expiresAt: string | null;
+      readonly declarations: number;
+    }
+  /** Confirmed: the database refused. No link, nothing shared. */
+  | { readonly kind: "refused"; readonly code: string }
+  /** Confirmed: a link exists under this key, created without a choice. It
+   *  carries no statement and never will. */
+  | { readonly kind: "created_without"; readonly disclosureId: string }
+  /** Not known. The operation is kept; repeating it is safe. */
+  | { readonly kind: "unconfirmed" };
+
+export type ShareOperationApi = {
+  readonly create: (operation: ShareOperation) => Promise<CreatedShare>;
+  readonly committed: (requestKey: string) => Promise<CommittedShareOperation>;
+};
+
+/**
+ * Run -- or repeat -- one creation operation and say only what is known.
+ *
+ * Called again with the SAME operation for a retry: the database then either
+ * creates what never arrived, answers `already_created` from the seal, or
+ * refuses. It is never called with a new key or a changed choice for an
+ * operation that is still unconfirmed.
+ */
+export async function settleShareOperation(
+  api: ShareOperationApi,
+  operation: ShareOperation,
+): Promise<ShareOperationOutcome> {
+  let created: CreatedShare;
+  try {
+    created = await api.create(operation);
+  } catch (error) {
+    const code = shareRefusalCode(error);
+    if (code) return { kind: "refused", code };
+    // The answer was lost. Ask what was actually committed.
+    let committed: CommittedShareOperation;
+    try {
+      committed = await api.committed(operation.requestKey);
+    } catch {
+      return { kind: "unconfirmed" };
+    }
+    if (committed.status === "sealed" && committed.declarations === operation.choices.length) {
+      return {
+        kind: "created",
+        disclosureId: committed.disclosureId,
+        token: null,
+        expiresAt: null,
+        declarations: committed.declarations,
+      };
+    }
+    if (committed.status === "unsealed") {
+      return { kind: "created_without", disclosureId: committed.disclosureId };
+    }
+    // Nothing committed YET: the lost request may still be in flight, so this
+    // is not proof that nothing will be. Only a repeat settles it.
+    return { kind: "unconfirmed" };
+  }
+  // The database seals the choice it was sent; a different count is an answer
+  // this screen cannot vouch for.
+  if (created.declarations !== operation.choices.length) return { kind: "unconfirmed" };
+  return {
+    kind: "created",
+    disclosureId: created.disclosureId,
+    token: created.token,
+    expiresAt: created.expiresAt,
+    declarations: created.declarations,
+  };
+}
+
 const selectionRowSchema = z
   .object({
     id: z.string().uuid(),

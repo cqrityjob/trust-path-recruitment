@@ -775,34 +775,131 @@ ck(
 );
 const shareRoute = read(SHARE_ROUTE);
 ck(
-  "8.9 the choice goes to one place: the attach call after a link is created. Never the social image, a preview payload or a reissue",
-  (shareRoute.match(/selfDeclarationChoices\b/g) ?? []).length === 3 &&
-    ordered(
-      shareRoute,
-      "const result = await doCreate({",
-      "if (selfDeclarationChoices.length > 0) {",
-      "await attachSelfDeclarations(result.disclosureId, selfDeclarationChoices),",
-      "setSelfDeclarationChoices([]);",
-    ) &&
-    (shareRoute.match(/attachSelfDeclarations\(/g) ?? []).length === 1 &&
+  "8.9 the choice goes to one place: the single operation that creates the link. Never an existing link, the social image, a preview payload or a reissue",
+  ordered(
+    shareRoute,
+    "if (selfDeclarationOffer.offered || shareUnconfirmed) {",
+    "await shareOperation.run({",
+    "requestKey: requestKey.current,",
+    "choices: selfDeclarationOffer.choices,",
+    "shareOperation.clear();",
+    "const result = await doCreate({",
+  ) &&
+    (shareRoute.match(/shareOperation\.run\(/g) ?? []).length === 1 &&
+    (shareRoute.match(/selfDeclarationOffer\.choices/g) ?? []).length === 1 &&
     (shareRoute.match(/<ShareSelfDeclarationChoices/g) ?? []).length === 1 &&
-    /\{via === "link" && outcome \? \(\s*<ShareSelfDeclarationResult/.test(shareRoute) &&
+    !/attachSelfDeclarations|disclosureId:\s*[a-zA-Z.]+,\s*choices/.test(shareRoute) &&
+    !/vsd_select_for_disclosure|attachSelfDeclarationsToShare/.test(read(BRIDGE_FUNCTIONS)) &&
+    /\{via === "link" \? \(\s*<ShareSelfDeclarationResult/.test(shareRoute) &&
     !NAMES.test(read("src/components/security-passport/live/SocialShareFlow.tsx")) &&
     !NAMES.test(read("src/lib/security-passport/credential-sharing.functions.ts")) &&
     !NAMES.test(read("src/lib/security-passport/share-image.ts")) &&
     !NAMES.test(read("src/lib/security-passport/social-export.ts")),
 );
+// What a caller can KNOW after one creation call, exercised for real.
+const OP = {
+  requestKey: "0d000000-0000-4000-8000-0000000000aa",
+  link: { claimIds: [SYN_ID], permittedFields: [], expiresDays: 7, locale: "sv" },
+  choices: [{ declarationId: SYN_ID, revision: 2 }],
+} as const;
+const lost = () => Promise.reject(new Error("fetch failed"));
+const settled = {
+  lostThenNothing: await bridge.settleShareOperation(
+    { create: lost, committed: async () => ({ status: "none" }) },
+    OP,
+  ),
+  lostThenUnreadable: await bridge.settleShareOperation({ create: lost, committed: lost }, OP),
+  lostButCommitted: await bridge.settleShareOperation(
+    {
+      create: lost,
+      committed: async () => ({ status: "sealed", disclosureId: SYN_ID, declarations: 1 }),
+    },
+    OP,
+  ),
+  lostButNarrower: await bridge.settleShareOperation(
+    {
+      create: lost,
+      committed: async () => ({ status: "sealed", disclosureId: SYN_ID, declarations: 0 }),
+    },
+    OP,
+  ),
+  refused: await bridge.settleShareOperation(
+    {
+      create: () => Promise.reject(new Error("VSD_STALE_REVISION")),
+      committed: () => {
+        throw new Error("a refusal must not be reconciled");
+      },
+    },
+    OP,
+  ),
+};
 ck(
-  "8.9a a failed attach is said plainly, and a reissued link is never said to carry a statement",
-  /does not carry it/.test(copy.SHARE.attachFailed.en) &&
-    /innehåller den inte/.test(copy.SHARE.attachFailed.sv) &&
+  "8.9a a lost answer is never 'not shared': it is confirmed from what the database committed, or it stays unconfirmed; only the database's own refusal is a no",
+  settled.lostThenNothing.kind === "unconfirmed" &&
+    settled.lostThenUnreadable.kind === "unconfirmed" &&
+    settled.lostButCommitted.kind === "created" &&
+    settled.lostButCommitted.token === null &&
+    settled.lostButNarrower.kind === "unconfirmed" &&
+    settled.refused.kind === "refused" &&
+    bridge.shareRefusalCode(new Error("UNCONFIRMED")) === null &&
+    bridge.shareRefusalCode(new Error("fetch failed")) === null &&
+    bridge.shareRefusalCode(new Error("SP_REQUEST_KEY_CONFLICT")) === "SP_REQUEST_KEY_CONFLICT" &&
+    !share.includes('return "failed"') &&
+    !("attachFailed" in copy.SHARE) &&
+    /vet därför inte/.test(copy.SHARE.unconfirmed.sv) &&
+    /do not know/.test(copy.SHARE.unconfirmed.en) &&
+    [copy.SHARE.unconfirmed, copy.SHARE.unconfirmedPlain].every(
+      (p) =>
+        !/delades inte|ingen självdeklaration delades|innehåller den inte|not shared|was shared\.|does not carry|ingen länk skapades|no link was created/i.test(
+          `${p.sv} ${p.en}`,
+        ),
+    ) &&
+    ordered(share, 'if (outcome.kind === "refused") {', "L(refusalCopy(outcome.code), lang)") &&
+    (share.match(/refusalCopy\(/g) ?? []).length === 2 &&
+    (share.match(/SHARE\.refused/g) ?? []).length === 3,
+);
+ck(
+  "8.9b an unconfirmed operation is kept and repeated as it was: same key, same link, same choices; the steps are closed until it is settled",
+  share.includes("settle(unconfirmed.current && kept.current ? kept.current : operation)") &&
+    share.includes("async () => (kept.current ? settle(kept.current) : null)") &&
+    shareRoute.includes("const composing = !outcome && !shareUnconfirmed;") &&
+    (shareRoute.match(/via === "link" && composing/g) ?? []).length === 4 &&
+    ordered(
+      shareRoute,
+      "async function applyShareOutcome(",
+      'if (!settled || settled.kind === "unconfirmed") return;',
+      "requestKey.current = newRequestKey();",
+      "async function onRetryShareOperation() {",
+      "await applyShareOutcome(await shareOperation.retry());",
+    ) &&
+    share.includes("data-share-vsd-retry") &&
+    shareRoute.includes("!selfDeclarationOffer.ready"),
+);
+ck(
+  "8.9c whether the list could be re-read is a separate fact from whether the statement is shared, and a reissued link is never said to carry one",
+  ordered(
+    share,
+    "setView((current) => ({ ...current, operation, outcome, settling: false }));",
+    'if (outcome.kind === "created" && outcome.declarations > 0) await refreshList();',
+    "return outcome;",
+  ) &&
+    ordered(
+      share,
+      "const refreshList = useCallback(async () => {",
+      "setView((current) => ({ ...current, listStale: false }));",
+      "} catch {",
+      "setView((current) => ({ ...current, listStale: true }));",
+    ) &&
+    /does not change what is shared/.test(copy.SHARE.listStale.en) &&
+    /if \(error\) throw refusal\(error, "VSD_READ_FAILED"\);\s*return toSharedSelections\(data\);/.test(
+      read(BRIDGE_FUNCTIONS),
+    ) &&
     ordered(
       shareRoute,
       "async function onReissue(",
-      "setSelfDeclarationOutcome(null);",
+      "if (!shareUnconfirmed) shareOperation.clear();",
       "replaceShare(",
-    ) &&
-    share.includes('return "failed";'),
+    ),
 );
 
 // ── The recipient ───────────────────────────────────────────────────────
@@ -855,29 +952,58 @@ ck(
   "8.11 nothing of it reaches the recipient page's head, title or social image, or the social share and OG routes",
   head.length > 200 &&
     !NAMES.test(head) &&
-    (recipientRoute.match(/<RecipientSelfDeclarations\b/g) ?? []).length === 2 &&
+    (recipientRoute.match(/<RecipientSelfDeclarations\b/g) ?? []).length === 1 &&
     !NAMES.test(read("src/routes/s.$publicId.tsx")) &&
     !NAMES.test(read("src/routes/og.share.$publicId.ts")) &&
     !NAMES.test(read("src/lib/security-passport/og-image/render.ts")),
+);
+
+const recipientView = read("src/components/security-passport/live/RecipientPassportView.tsx");
+ck(
+  "8.11a the section sits directly below the card -- before the details and the promotional block -- in both layouts, through a slot that carries no payload",
+  ordered(
+    recipientView,
+    "<RecipientPassportCard presentation={presentation} verifyUrl={verifyUrl} />",
+    "{afterCard}",
+    'pt("rec.detailsTitle")',
+    'pt("rec.ctaTitle")',
+  ) &&
+    (recipientView.match(/afterCard/g) ?? []).length === 3 &&
+    (recipientRoute.match(/afterCard=\{selfDeclarations\}/g) ?? []).length === 2 &&
+    ordered(
+      recipientRoute,
+      "function CredentialShare({",
+      "<CredentialVerificationPage",
+      "afterCard={afterCard}",
+      "{presentation.checkedAt ? (",
+    ) &&
+    ordered(
+      read("src/components/security-passport/live/CredentialVerificationPage.tsx"),
+      "</article>",
+      "{afterCard}",
+      '<section className="rounded-xl border border-border bg-card p-5">',
+    ) &&
+    !NAMES.test(read("src/components/security-passport/live/CredentialVerificationPage.tsx")) &&
+    !/payload[^;\n]*selfDeclarations|selfDeclarations[^;\n]*payload/.test(recipientRoute),
 );
 
 // ── The holder's functions ──────────────────────────────────────────────
 const bridgeFns = read(BRIDGE_FUNCTIONS);
 ck(
   "8.12 every holder bridge function requires a signed-in caller, uses the caller's own client and no service key",
-  (bridgeFns.match(/createServerFn\(/g) ?? []).length === 5 &&
+  (bridgeFns.match(/createServerFn\(/g) ?? []).length === 6 &&
     (
       bridgeFns.match(
         /createServerFn\(\{ method: "(GET|POST)" \}\)\s*\.middleware\(\[requireSupabaseAuth\]\)/g,
       ) ?? []
-    ).length === 5 &&
+    ).length === 6 &&
     !/supabaseAdmin|client\.server|\.server"/.test(bridgeFns) &&
     !/throw new Error\(error\.message\)/.test(bridgeFns) &&
     [...bridgeFns.matchAll(/rpc\(\s*"([a-z_]+)"/g)]
       .map((m) => m[1])
       .sort()
       .join(",") ===
-      "vsd_my_disclosure_selections,vsd_my_disclosure_selections,vsd_my_passport_declarations,vsd_preview_disclosure,vsd_select_for_disclosure,vsd_withdraw_disclosure_selection",
+      "vsd_create_credential_share,vsd_my_disclosure_selections,vsd_my_disclosure_selections,vsd_my_passport_declarations,vsd_preview_disclosure,vsd_share_operation,vsd_withdraw_disclosure_selection",
 );
 ck(
   "8.12a the holder is told how often a statement was read, never by whom",
@@ -890,13 +1016,22 @@ ck(
 
 // ── Registered ──────────────────────────────────────────────────────────
 ck(
-  "8.13 the bridge's database suite is registered with its eleven negative controls, ahead of the collection suite",
+  "8.13 the bridge's database suite is registered with its sixteen negative controls and its cross-connection races, ahead of the collection suite",
   ordered(
     read("scripts/db-test.sh"),
     "VSDD_T=vsd_passport_disclosure_test",
     'td_suite "$VSDD_T" "Self-declarations Passport bridge (after controls)"',
     "VSD_T=vsd_voluntary_self_declarations_test",
-  ) && (read("scripts/db-test.sh").match(/td_nc "\$VSDD_T"/g) ?? []).length === 11,
+  ) &&
+    (read("scripts/db-test.sh").match(/td_nc "\$VSDD_T"/g) ?? []).length === 16 &&
+    ordered(
+      read("scripts/db-test.sh"),
+      'td_suite "$VSDD_T" "Self-declarations Passport bridge (after controls)"',
+      'TEST_DB="$TEST_DB" bash scripts/vsd-share-operation-race-check.sh',
+      'vsdd_race_nc "VSDD NC12',
+      'vsdd_race_nc "VSDD NC13',
+      "VSD_T=vsd_voluntary_self_declarations_test",
+    ),
 );
 ck(
   "8.13a the bridge's browser suite runs with the self-declarations suite, at desktop and 375",
@@ -913,6 +1048,23 @@ ck(
       "permitted_audiences <@ ARRAY['signed_in_recipient']",
     ) &&
     bridge.DISCLOSURE_AUDIENCE === "signed_in_recipient",
+);
+const bridgeMigration = read(`supabase/migrations/${BRIDGE_MIGRATION}`);
+ck(
+  "8.14a the migration has no function that gives an existing link a statement and consults no time window: the choice is sealed in the transaction that creates the link",
+  !/FUNCTION public\.vsd_select_for_disclosure/.test(bridgeMigration) &&
+    !/interval '\d+ (hour|minute|day)s?'/.test(bridgeMigration) &&
+    bridgeMigration.includes("AND x.created_at = transaction_timestamp()") &&
+    bridgeMigration.includes("AND c.sealed_xid = pg_current_xact_id()") &&
+    (bridgeMigration.match(/INSERT INTO public\.vsd_disclosure_(selections|choices)/g) ?? [])
+      .length === 2 &&
+    ordered(
+      bridgeMigration,
+      "CREATE FUNCTION public.vsd_create_credential_share(",
+      "_r := public.sp_create_credential_disclosure_v2(",
+      "INSERT INTO public.vsd_disclosure_choices",
+      "INSERT INTO public.vsd_disclosure_selections",
+    ),
 );
 
 console.log(

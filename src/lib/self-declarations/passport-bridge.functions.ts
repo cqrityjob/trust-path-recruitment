@@ -30,8 +30,13 @@ import {
   buildPassportDeclarationsView,
   disclosureChoicesSchema,
   parsePassportDeclarations,
+  sealedChoicesSchema,
+  toCommittedShareOperation,
+  toCreatedShare,
   toDisclosedStatements,
   toSharedSelections,
+  type CommittedShareOperation,
+  type CreatedShare,
   type DisclosedStatement,
   type PassportDeclarationsView,
   type SharedSelection,
@@ -75,7 +80,7 @@ export const getMyPassportSelfDeclarations = createServerFn({ method: "GET" })
 
 const choiceInput = z.object({ choices: disclosureChoicesSchema }).strict();
 
-function split(choices: z.infer<typeof disclosureChoicesSchema>) {
+function split(choices: z.infer<typeof sealedChoicesSchema>) {
   return {
     _declaration_ids: choices.map((c) => c.declarationId),
     _revisions: choices.map((c) => c.revision),
@@ -96,31 +101,81 @@ export const previewSelfDeclarationDisclosure = createServerFn({ method: "POST" 
     return toDisclosedStatements(payload);
   });
 
-const attachInput = z
-  .object({ disclosureId: z.string().uuid(), choices: disclosureChoicesSchema })
+const createInput = z
+  .object({
+    requestKey: z.string().uuid(),
+    link: z
+      .object({
+        claimIds: z.array(z.string().uuid()).min(1).max(200),
+        permittedFields: z.array(z.enum(["holder_name", "identifier", "profile_title"])).max(3),
+        expiresDays: z.number().refine((v) => [7, 30, 90].includes(v)),
+        locale: z.enum(["sv", "en"]),
+      })
+      .strict(),
+    choices: sealedChoicesSchema,
+  })
   .strict();
 
 /**
- * Attach the chosen statements to the link the holder just created. Safe to
- * repeat: the database makes a link's selection once and answers a retry of
- * the same choice without changing anything.
+ * Create ONE credential link together with the holder's choice of statements
+ * (possibly none), in one database transaction, under the link's request key.
+ *
+ * What it throws is the whole contract of the caller's reconciliation:
+ *
+ *   * the database's own refusal code (VSD_… / SP_…) -- the transaction rolled
+ *     back, so NO link exists and nothing is shared;
+ *   * `UNCONFIRMED` for everything else -- an unreachable database, a timeout,
+ *     an answer that cannot be read. The work may have been committed.
+ *
+ * Safe to repeat with the same input: the database answers a repeat from what
+ * it sealed and creates nothing twice.
  */
-export const attachSelfDeclarationsToShare = createServerFn({ method: "POST" })
+export const createShareWithSelfDeclarations = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((data: unknown) => attachInput.parse(data))
-  .handler(async ({ context, data }): Promise<{ readonly attached: number }> => {
-    const { data: result, error } = await clientOf(context).rpc("vsd_select_for_disclosure", {
-      _disclosure_id: data.disclosureId,
-      ...split(data.choices),
-    });
-    if (error) throw refusal(error, "VSD_DISCLOSURE_NOT_AUTHORIZED");
-    const parsed = z
-      .object({ status: z.enum(["selected", "already_selected"]), count: z.number().int() })
-      .safeParse(result);
-    if (!parsed.success || parsed.data.count !== data.choices.length) {
-      throw new Error("VSD_WRITE_FAILED");
+  .validator((data: unknown) => createInput.parse(data))
+  .handler(async ({ context, data }): Promise<CreatedShare> => {
+    uncacheable();
+    let answer: RpcResult;
+    try {
+      answer = await clientOf(context).rpc("vsd_create_credential_share", {
+        _claim_ids: data.link.claimIds,
+        _fields: data.link.permittedFields,
+        _expires_days: data.link.expiresDays,
+        _locale: data.link.locale,
+        _request_key: data.requestKey,
+        ...split(data.choices),
+      });
+    } catch {
+      throw new Error("UNCONFIRMED");
     }
-    return { attached: parsed.data.count };
+    if (answer.error) {
+      const match = /\b(?:VSD|SP)_[A-Z0-9_]+/.exec(answer.error.message ?? "");
+      throw new Error(match ? match[0] : "UNCONFIRMED");
+    }
+    const created = toCreatedShare(answer.data);
+    if (!created) throw new Error("UNCONFIRMED");
+    return created;
+  });
+
+const operationInput = z.object({ requestKey: z.string().uuid() }).strict();
+
+/**
+ * What the database has COMMITTED for one creation operation of the caller's.
+ * Read-only; used when the answer to the creation was lost. A failure here is
+ * a failure to know, and is thrown as one.
+ */
+export const getShareOperation = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((data: unknown) => operationInput.parse(data))
+  .handler(async ({ context, data }): Promise<CommittedShareOperation> => {
+    uncacheable();
+    const { data: payload, error } = await clientOf(context).rpc("vsd_share_operation", {
+      _request_key: data.requestKey,
+    });
+    if (error) throw new Error("UNCONFIRMED");
+    const committed = toCommittedShareOperation(payload);
+    if (!committed) throw new Error("UNCONFIRMED");
+    return committed;
   });
 
 /** The holder's statements on their links, and whether each still discloses. */
@@ -129,7 +184,9 @@ export const listMySharedSelfDeclarations = createServerFn({ method: "GET" })
   .handler(async ({ context }): Promise<readonly SharedSelection[]> => {
     uncacheable();
     const { data, error } = await clientOf(context).rpc("vsd_my_disclosure_selections");
-    if (error) return [];
+    // Thrown, not answered as "none": an unreadable list must not look like
+    // a list in which nothing is shared. The page keeps what it last read.
+    if (error) throw refusal(error, "VSD_READ_FAILED");
     return toSharedSelections(data);
   });
 

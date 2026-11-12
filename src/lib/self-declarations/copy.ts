@@ -426,17 +426,55 @@ export const SHARE = {
   ),
   previewLoading: c("Hämtar förhandsvisningen…", "Loading the preview…"),
   previewFailed: c(
-    "Förhandsvisningen kunde inte läsas. Ingen självdeklaration bifogas förrän du har kunnat se den.",
-    "The preview could not be loaded. No self-declaration is attached until you have been able to see it.",
+    "Förhandsvisningen kunde inte läsas. Ingen självdeklaration bifogas förrän du har kunnat se den. Avmarkera uppgiften för att skapa länken utan den.",
+    "The preview could not be loaded. No self-declaration is attached until you have been able to see it. Untick the statement to create the link without it.",
   ),
   attached: c(
     "Självdeklarationen följer med den här länken, för inloggade mottagare.",
     "The self-declaration accompanies this link, for signed-in recipients.",
   ),
-  attachFailed: c(
-    "Länken skapades, men självdeklarationen kunde inte bifogas. Länken innehåller den inte.",
-    "The link was created, but the self-declaration could not be attached. The link does not carry it.",
+  // The link's address is shown once by the database. When the answer that
+  // carried it never arrived, the link exists, carries the statement, and
+  // cannot be shown again; a reissue carries nothing.
+  attachedAddressLost: c(
+    "Länken skapades och innehåller självdeklarationen, men svaret med länkens adress kom aldrig fram och adressen kan inte visas igen. En länk som du skapar på nytt innehåller inte självdeklarationen. Återkalla den här länken i listan nedan och skapa en ny om du vill dela uppgiften.",
+    "The link was created and carries the self-declaration, but the answer with the link's address never arrived and the address cannot be shown again. A link that you issue again does not carry the self-declaration. Revoke this link in the list below and create a new one if you want to share the statement.",
   ),
+  // Said only when the DATABASE refused: the link and the choice are one
+  // operation, so a refusal leaves neither.
+  refused: c(
+    "Ingen länk skapades och ingen självdeklaration delades.",
+    "No link was created and no self-declaration was shared.",
+  ),
+  refusedChanged: c(
+    "Uppgiften har ändrats sedan du såg förhandsvisningen. Ingen länk skapades och ingen självdeklaration delades. Kontrollera förhandsvisningen och skapa länken igen.",
+    "The statement has changed since you saw the preview. No link was created and no self-declaration was shared. Check the preview and create the link again.",
+  ),
+  refusedNotShareable: c(
+    "Självdeklarationen kan inte delas just nu. Ingen länk skapades och ingen självdeklaration delades.",
+    "The self-declaration cannot be shared right now. No link was created and no self-declaration was shared.",
+  ),
+  createdWithout: c(
+    "En länk finns redan för det här försöket och den skapades utan självdeklaration. Den kan inte få någon i efterhand. Skapa en ny länk om du vill dela uppgiften.",
+    "A link already exists for this attempt and it was created without a self-declaration. It cannot be given one afterwards. Create a new link if you want to share the statement.",
+  ),
+  // Never "nothing was shared": that is not known.
+  unconfirmed: c(
+    "Vi fick inget svar och vet därför inte om länken skapades eller om självdeklarationen delas. Försök igen: då kontrolleras samma länk och samma val. Ingenting skapas två gånger och valet kan inte utökas.",
+    "We received no answer, so we do not know whether the link was created or whether the self-declaration is shared. Try again: the same link and the same choice are then checked. Nothing is created twice and the choice cannot be widened.",
+  ),
+  unconfirmedPlain: c(
+    "Vi fick inget svar och vet därför inte om länken skapades. Försök igen: då kontrolleras samma länk. Ingenting skapas två gånger.",
+    "We received no answer, so we do not know whether the link was created. Try again: the same link is then checked. Nothing is created twice.",
+  ),
+  retry: c("Kontrollera och försök igen", "Check and try again"),
+  settling: c("Kontrollerar…", "Checking…"),
+  // A separate fact from whether the statement is shared.
+  listStale: c(
+    "Listan över dina delade självdeklarationer kunde inte uppdateras. Det ändrar inte vad som delas.",
+    "The list of your shared self-declarations could not be updated. That does not change what is shared.",
+  ),
+  refreshList: c("Uppdatera listan", "Update the list"),
   listHeading: c("Självdeklarationer i dina länkar", "Self-declarations on your links"),
   listLede: c(
     "En länk som du skapar på nytt innehåller ingen självdeklaration.",

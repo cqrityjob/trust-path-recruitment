@@ -298,7 +298,7 @@ const MUTATIONS: readonly Mutation[] = [
     file: SHARE_ROUTE,
     find: "      create: (input) => doSocialCreate({ data: { ...input, claimIds: [...input.claimIds] } }),",
     replace:
-      "      create: (input) =>\n        doSocialCreate({\n          data: { ...input, claimIds: [...input.claimIds], selfDeclarationChoices } as never,\n        }),",
+      "      create: (input) =>\n        doSocialCreate({\n          data: { ...input, claimIds: [...input.claimIds], extra: selfDeclarationOffer.choices } as never,\n        }),",
     guard: GUARD,
     expect: "8.9 the choice goes to one place",
   },
@@ -350,6 +350,94 @@ const MUTATIONS: readonly Mutation[] = [
       "          metadata={metadata}\n          selfDeclarations={loadSelfDeclarations}\n          reviews={reviews}\n          reviewState={reviewState}",
     guard: GUARD,
     expect: "8.6 the Passport page mounts the section once",
+  },
+  // ── One creation operation: what is known, and what a retry repeats ───
+  {
+    id: "VSD-NC-BRIDGE-LOST-ANSWER-NOT-SHARED",
+    defect:
+      "a lost answer with nothing committed yet is reported as a refusal, so the screen says nothing was shared while the request may still commit",
+    file: BRIDGE_MODEL,
+    find: '    // is not proof that nothing will be. Only a repeat settles it.\n    return { kind: "unconfirmed" };',
+    replace:
+      '    // is not proof that nothing will be. Only a repeat settles it.\n    return { kind: "refused", code: "VSD_WRITE_FAILED" };',
+    guard: GUARD,
+    expect: "8.9a a lost answer is never 'not shared'",
+  },
+  {
+    id: "VSD-NC-BRIDGE-UNREADABLE-STATE-NOT-SHARED",
+    defect: "when the committed state cannot be read either, the operation is reported as refused",
+    file: BRIDGE_MODEL,
+    find: '    } catch {\n      return { kind: "unconfirmed" };\n    }',
+    replace: '    } catch {\n      return { kind: "refused", code: "VSD_WRITE_FAILED" };\n    }',
+    guard: GUARD,
+    expect: "8.9a a lost answer is never 'not shared'",
+  },
+  {
+    id: "VSD-NC-BRIDGE-ANY-ERROR-IS-REFUSAL",
+    defect: "any thrown error counts as the database's refusal",
+    file: BRIDGE_MODEL,
+    find: "  return REFUSAL.test(message) ? message : null;",
+    replace: "  return message || null;",
+    guard: GUARD,
+    expect: "8.9a a lost answer is never 'not shared'",
+  },
+  {
+    id: "VSD-NC-BRIDGE-RETRY-NEW-OPERATION",
+    defect:
+      "while an operation is unconfirmed, creating again starts a NEW operation from whatever the screen shows now",
+    file: BRIDGE_SHARE,
+    find: "      settle(unconfirmed.current && kept.current ? kept.current : operation),",
+    replace: "      settle(operation),",
+    guard: GUARD,
+    expect: "8.9b an unconfirmed operation is kept and repeated as it was",
+  },
+  {
+    id: "VSD-NC-BRIDGE-KEY-ROTATED-UNCONFIRMED",
+    defect:
+      "an unconfirmed outcome rotates the request key, so the next attempt can create a second link",
+    file: SHARE_ROUTE,
+    find: '    if (!settled || settled.kind === "unconfirmed") return;',
+    replace: "    if (!settled) return;",
+    guard: GUARD,
+    expect: "8.9b an unconfirmed operation is kept and repeated as it was",
+  },
+  {
+    id: "VSD-NC-BRIDGE-REFRESH-DECIDES-OUTCOME",
+    defect: "a failed re-read of the list after a confirmed creation overturns the outcome",
+    file: BRIDGE_SHARE,
+    find: "      setView((current) => ({ ...current, listStale: true }));",
+    replace:
+      '      setView((current) => ({ ...current, listStale: true, outcome: { kind: "unconfirmed" } }));',
+    guard: GUARD,
+    expect: "8.9c whether the list could be re-read is a separate fact",
+  },
+  {
+    id: "VSD-NC-BRIDGE-LIST-FAILURE-AS-EMPTY",
+    defect: "an unreadable list of shared statements is answered as an empty one",
+    file: BRIDGE_FUNCTIONS,
+    find: '    if (error) throw refusal(error, "VSD_READ_FAILED");\n    return toSharedSelections(data);',
+    replace: "    if (error) return [];\n    return toSharedSelections(data);",
+    guard: GUARD,
+    expect: "8.9c whether the list could be re-read is a separate fact",
+  },
+  {
+    id: "VSD-NC-BRIDGE-RECIPIENT-BELOW-PROMOTION",
+    defect: "the recipient view no longer renders the slot below the card",
+    file: "src/components/security-passport/live/RecipientPassportView.tsx",
+    find: "      </section>\n      {afterCard}\n",
+    replace: "      </section>\n",
+    guard: GUARD,
+    expect: "8.11a the section sits directly below the card",
+  },
+  {
+    id: "VSD-NC-BRIDGE-TIME-WINDOW",
+    defect:
+      "the seal accepts any link younger than an hour instead of the link being created in this transaction",
+    file: "supabase/migrations/20270325090000_vsd_passport_disclosure.sql",
+    find: "          AND x.created_at = transaction_timestamp()",
+    replace: "          AND x.created_at > now() - interval '1 hour'",
+    guard: GUARD,
+    expect: "8.14a the migration has no function that gives an existing link a statement",
   },
 ];
 

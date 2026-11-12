@@ -252,9 +252,13 @@ const T = {
     reviewed: "Dokument granskat",
     reviewedHint: "Det är inte en bedömning av dig",
     attached: "Självdeklarationen följer med den här länken",
-    attachFailed: "Länken innehåller den inte",
+    addressLost: "innehåller självdeklarationen, men svaret med länkens adress kom aldrig fram",
+    unconfirmed: "vet därför inte om länken skapades eller om självdeklarationen delas",
+    refusedChanged: "Uppgiften har ändrats sedan du såg förhandsvisningen. Ingen länk skapades",
+    listStale: "Det ändrar inte vad som delas",
     previewFailed: "Ingen självdeklaration bifogas förrän du har kunnat se den",
     recipientHeading: "Personens egna uppgifter",
+    promo: "Skapa ditt Security Passport",
     ended: "Delas inte längre",
   },
   en: {
@@ -270,9 +274,15 @@ const T = {
     reviewed: "Document reviewed",
     reviewedHint: "It is not an assessment of you",
     attached: "The self-declaration accompanies this link",
-    attachFailed: "The link does not carry it",
+    addressLost:
+      "carries the self-declaration, but the answer with the link's address never arrived",
+    unconfirmed:
+      "do not know whether the link was created or whether the self-declaration is shared",
+    refusedChanged: "The statement has changed since you saw the preview. No link was created",
+    listStale: "That does not change what is shared",
     previewFailed: "No self-declaration is attached until you have been able to see it",
     recipientHeading: "The person's own statements",
+    promo: "Create your Security Passport",
     ended: "No longer shared",
   },
 } as const;
@@ -430,7 +440,40 @@ async function openShare(page: Page, lang: "sv" | "en", overrides: Overrides) {
     .check();
 }
 
-test("sharing — while disclosure is closed the step offers nothing and a new link carries nothing", async ({
+/** Nothing on the screen may claim that a statement was NOT shared. */
+const CLAIMS_NOT_SHARED =
+  /ingen självdeklaration delades|länken innehåller den inte|ingen länk skapades|no self-declaration was shared|the link does not carry it|no link was created/i;
+const LINK_ID = "5d000000-0000-4000-8000-000000000011";
+const created = (declarations: number) => ({
+  status: "created",
+  token: "a".repeat(64),
+  disclosureId: LINK_ID,
+  expiresAt: "2026-12-11T09:00:00Z",
+  declarations,
+});
+const alreadyCreated = (declarations: number) => ({
+  status: "already_created",
+  token: null,
+  disclosureId: LINK_ID,
+  expiresAt: "2026-12-11T09:00:00Z",
+  declarations,
+});
+const lost = (route: Route) => route.abort("failed");
+const refuse = (code: string) => (route: Route) =>
+  route.fulfill({ status: 500, contentType: "text/plain", body: code });
+/** A creation that must never be reached in a scenario. */
+const never = (what: string, calls: string[]) => async (route: Route) => {
+  calls.push(what);
+  await refuse("UNCONFIRMED")(route);
+};
+
+async function tickAndPreview(page: Page, kind: string) {
+  const step = page.locator("[data-share-self-declarations]");
+  await step.locator(`[data-share-vsd-choice="${kind}"]`).check();
+  await expect(step.locator('[data-share-vsd-preview="ready"]')).toBeVisible();
+}
+
+test("sharing — while disclosure is closed the step offers nothing and a new link is the Passport's own", async ({
   page,
 }) => {
   const calls: string[] = [];
@@ -446,14 +489,9 @@ test("sharing — while disclosure is closed the step offers nothing and a new l
         expiresAt: null,
       })(route);
     },
-    previewSelfDeclarationDisclosure: async (route) => {
-      calls.push("preview");
-      await boom("VSD_DISCLOSURE_NOT_AUTHORIZED")(route);
-    },
-    attachSelfDeclarationsToShare: async (route) => {
-      calls.push("attach");
-      await boom("VSD_DISCLOSURE_NOT_AUTHORIZED")(route);
-    },
+    previewSelfDeclarationDisclosure: never("preview", calls),
+    createShareWithSelfDeclarations: never("bridge", calls),
+    getShareOperation: never("committed", calls),
   });
   await expect(page.locator("[data-share-self-declarations]")).toHaveCount(0);
   await expect(page.locator("[data-share-vsd-choice]")).toHaveCount(0);
@@ -465,28 +503,19 @@ test("sharing — while disclosure is closed the step offers nothing and a new l
 });
 
 for (const lang of ["sv", "en"] as const) {
-  test(`${lang}: sharing — nothing is pre-selected, and an unticked statement is not attached`, async ({
+  test(`${lang}: sharing — nothing is pre-selected, and an unticked choice is sealed as empty with the link`, async ({
     page,
   }) => {
     const calls: string[] = [];
+    const sent: Record<string, unknown>[] = [];
     await openShare(page, lang, {
       getMyPassportSelfDeclarations: ok(declared(true)),
-      createCredentialShare: async (route) => {
-        calls.push("create");
-        await reply({
-          status: "created",
-          token: "a".repeat(64),
-          disclosureId: ID_REMARKS,
-          expiresAt: null,
-        })(route);
-      },
-      previewSelfDeclarationDisclosure: async (route) => {
-        calls.push("preview");
-        await reply([])(route);
-      },
-      attachSelfDeclarationsToShare: async (route) => {
-        calls.push("attach");
-        await reply({ attached: 1 })(route);
+      createCredentialShare: never("plain", calls),
+      previewSelfDeclarationDisclosure: never("preview", calls),
+      createShareWithSelfDeclarations: async (route) => {
+        calls.push("bridge");
+        sent.push(argsOf(route));
+        await reply(created(0))(route);
       },
     });
     const step = page.locator("[data-share-self-declarations]");
@@ -499,39 +528,31 @@ for (const lang of ["sv", "en"] as const) {
 
     await page.locator("[data-share-cta]").click();
     await expect(page.locator("[data-share-created]")).toBeVisible();
-    expect(calls).toEqual(["create"]);
+    // ONE call created the link and sealed the empty choice.
+    expect(calls).toEqual(["bridge"]);
+    expect(sent[0]!.choices).toEqual([]);
     await expect(page.locator("[data-share-vsd-result]")).toHaveCount(0);
   });
 
-  test(`${lang}: sharing — the holder previews exactly what a recipient gets, and exactly that is attached to the new link`, async ({
+  test(`${lang}: sharing — the holder previews exactly what a recipient gets, and exactly that is created with the new link`, async ({
     page,
   }) => {
     const previewArgs: unknown[] = [];
-    const attachArgs: unknown[] = [];
-    const socialBodies: string[] = [];
+    const sent: Record<string, unknown>[] = [];
+    const calls: string[] = [];
     await openShare(page, lang, {
       getMyPassportSelfDeclarations: ok(declared(true)),
       previewSelfDeclarationDisclosure: async (route) => {
         previewArgs.push(argsOf(route).choices);
         await reply([ENFORCEMENT])(route);
       },
-      createCredentialShare: async (route) => {
-        // The credential share itself is told nothing about the statement.
-        expect(route.request().postData() ?? "").not.toMatch(/declaration|enforcement|0d000000/i);
-        await reply({
-          status: "created",
-          token: "a".repeat(64),
-          disclosureId: "5d000000-0000-4000-8000-000000000011",
-          expiresAt: "2026-12-11T09:00:00Z",
-        })(route);
-      },
-      attachSelfDeclarationsToShare: async (route) => {
-        attachArgs.push(argsOf(route));
-        await reply({ attached: 1 })(route);
-      },
-      createSocialShare: async (route) => {
-        socialBodies.push(route.request().postData() ?? "");
-        await reply({ status: "failed", code: "SP_SOCIAL_LIMIT" })(route);
+      // The link and the choice are ONE call; the Passport's own create and
+      // the social share are told nothing.
+      createCredentialShare: never("plain", calls),
+      createSocialShare: never("social", calls),
+      createShareWithSelfDeclarations: async (route) => {
+        sent.push(argsOf(route));
+        await reply(created(1))(route);
       },
       listMySharedSelfDeclarations: ok([]),
     });
@@ -556,71 +577,259 @@ for (const lang of ["sv", "en"] as const) {
     await shoot(page, `share-choose-preview-${lang}`, "[data-share-self-declarations]");
 
     await page.locator("[data-share-cta]").click();
-    await expect(page.locator('[data-share-vsd-result="attached"]')).toContainText(
-      T[lang].attached,
-    );
-    expect(attachArgs).toEqual([
-      {
-        disclosureId: "5d000000-0000-4000-8000-000000000011",
-        choices: [{ declarationId: ID_ENFORCEMENT, revision: 2 }],
-      },
-    ]);
-    expect(socialBodies).toEqual([]);
+    const result = page.locator('[data-share-vsd-result="created"]');
+    await expect(result).toContainText(T[lang].attached);
+    await expect(result).toHaveAttribute("data-share-vsd-address", "shown");
+    await expect(page.locator("[data-share-created]")).toBeVisible();
+    expect(sent).toHaveLength(1);
+    expect(sent[0]!.choices).toEqual([{ declarationId: ID_ENFORCEMENT, revision: 2 }]);
+    expect(String(sent[0]!.requestKey)).toMatch(/^[0-9a-f-]{36}$/);
+    expect(calls).toEqual([]);
     await shoot(page, `share-created-${lang}`);
   });
 }
 
-test("sharing — a preview that fails attaches nothing, and says so", async ({ page }) => {
-  const calls: string[] = [];
+test("sharing — a preview that fails creates no link with the statement: the holder must untick it", async ({
+  page,
+}) => {
+  const sent: Record<string, unknown>[] = [];
   await openShare(page, "en", {
     getMyPassportSelfDeclarations: ok(declared(true)),
-    previewSelfDeclarationDisclosure: boom("VSD_DISCLOSURE_NOT_AUTHORIZED"),
-    createCredentialShare: async (route) => {
-      calls.push("create");
-      await reply({
-        status: "created",
-        token: "a".repeat(64),
-        disclosureId: ID_REMARKS,
-        expiresAt: null,
-      })(route);
-    },
-    attachSelfDeclarationsToShare: async (route) => {
-      calls.push("attach");
-      await reply({ attached: 1 })(route);
+    previewSelfDeclarationDisclosure: refuse("VSD_DISCLOSURE_NOT_AUTHORIZED"),
+    createShareWithSelfDeclarations: async (route) => {
+      sent.push(argsOf(route));
+      await reply(created(0))(route);
     },
   });
   const step = page.locator("[data-share-self-declarations]");
-  await step.locator('[data-share-vsd-choice="enforcement_debt_none"]').check();
+  const box = step.locator('[data-share-vsd-choice="enforcement_debt_none"]');
+  await box.check();
   await expect(step.locator('[data-share-vsd-preview="failed"]').getByRole("alert")).toContainText(
     T.en.previewFailed,
   );
+  // Ticked but never seen: the link cannot be created in this state.
+  await expect(page.locator("[data-share-cta]")).toBeDisabled();
+  expect(sent).toEqual([]);
+  await box.uncheck();
+  await expect(page.locator("[data-share-cta]")).toBeEnabled();
   await page.locator("[data-share-cta]").click();
   await expect(page.locator("[data-share-created]")).toBeVisible();
-  expect(calls).toEqual(["create"]);
+  expect(sent).toHaveLength(1);
+  expect(sent[0]!.choices).toEqual([]);
   await expect(page.locator("[data-share-vsd-result]")).toHaveCount(0);
   // The stubbed 500 is this scenario's subject, not a console defect.
   takeMountBookkeeping();
 });
 
-test("sharing — a failed attach says the link does not carry the statement", async ({ page }) => {
+// ── What is known after the call: created, refused, or unconfirmed ─────────
+
+for (const lang of ["sv", "en"] as const) {
+  test(`${lang}: sharing — the database committed but the answer was lost: confirmed from the committed state, never "not shared"`, async ({
+    page,
+  }) => {
+    const asked: unknown[] = [];
+    let creates = 0;
+    await openShare(page, lang, {
+      getMyPassportSelfDeclarations: ok(declared(true)),
+      previewSelfDeclarationDisclosure: ok([ENFORCEMENT]),
+      // The commit happened; the response never arrived.
+      createShareWithSelfDeclarations: async (route) => {
+        creates += 1;
+        await lost(route);
+      },
+      getShareOperation: async (route) => {
+        asked.push(argsOf(route));
+        await reply({ status: "sealed", disclosureId: LINK_ID, declarations: 1 })(route);
+      },
+      listMySharedSelfDeclarations: ok([]),
+    });
+    await tickAndPreview(page, "enforcement_debt_none");
+    await page.locator("[data-share-cta]").click();
+    const result = page.locator('[data-share-vsd-result="created"]');
+    await expect(result).toHaveAttribute("data-share-vsd-address", "lost");
+    await expect(result).toContainText(T[lang].addressLost);
+    // The link exists; its address is not invented.
+    await expect(page.locator("[data-share-already]")).toBeVisible();
+    await expect(page.locator("[data-share-link]")).toHaveCount(0);
+    await expect(page.locator("[data-share-screen]")).not.toContainText(CLAIMS_NOT_SHARED);
+    expect(creates).toBe(1);
+    expect(asked).toHaveLength(1);
+    expect(await overflow(page)).toBeLessThanOrEqual(1);
+    await shoot(page, `share-address-lost-${lang}`, "[data-share-vsd-result]");
+    takeMountBookkeeping();
+  });
+
+  test(`${lang}: sharing — nothing is known: unconfirmed, with a retry of the SAME operation, repeated until the database answers`, async ({
+    page,
+  }) => {
+    const sent: Record<string, unknown>[] = [];
+    let mode: "lost" | "answer" = "lost";
+    const plain: string[] = [];
+    await openShare(page, lang, {
+      getMyPassportSelfDeclarations: ok(declared(true)),
+      previewSelfDeclarationDisclosure: ok([ENFORCEMENT]),
+      createCredentialShare: never("plain", plain),
+      createShareWithSelfDeclarations: async (route) => {
+        sent.push(argsOf(route));
+        if (mode === "lost") return lost(route);
+        // The first attempt DID commit: the repeat is answered from the seal.
+        await reply(alreadyCreated(1))(route);
+      },
+      // The committed state cannot be read either.
+      getShareOperation: lost,
+      listMySharedSelfDeclarations: ok([]),
+    });
+    await tickAndPreview(page, "enforcement_debt_none");
+    await page.locator("[data-share-cta]").click();
+
+    const doubt = page.locator('[data-share-vsd-result="unconfirmed"]');
+    await expect(doubt).toHaveAttribute("role", "alert");
+    await expect(doubt).toContainText(T[lang].unconfirmed);
+    await expect(page.locator("[data-share-screen]")).not.toContainText(CLAIMS_NOT_SHARED);
+    // The steps are closed: nothing can be changed into a different operation.
+    await expect(page.locator("[data-share-cta]")).toHaveCount(0);
+    await expect(page.locator("[data-share-self-declarations]")).toHaveCount(0);
+    await expect(page.locator("[data-share-created]")).toHaveCount(0);
+    expect(await overflow(page)).toBeLessThanOrEqual(1);
+    await shoot(page, `share-unconfirmed-${lang}`, "[data-share-vsd-result]");
+
+    // Keyboard: the retry is a button; two more attempts are lost too.
+    const retry = doubt.locator("[data-share-vsd-retry]");
+    await retry.focus();
+    await page.keyboard.press("Enter");
+    await expect.poll(() => sent.length).toBe(2);
+    await expect(doubt).toBeVisible();
+    await expect(retry).toBeEnabled();
+    await retry.click();
+    await expect.poll(() => sent.length).toBe(3);
+    await expect(retry).toBeEnabled();
+    await expect(page.locator("[data-share-screen]")).not.toContainText(CLAIMS_NOT_SHARED);
+
+    mode = "answer";
+    await retry.click();
+    const result = page.locator('[data-share-vsd-result="created"]');
+    await expect(result).toHaveAttribute("data-share-vsd-address", "lost");
+    await expect(page.locator("[data-share-already]")).toBeVisible();
+    await expect(page.locator('[data-share-vsd-result="unconfirmed"]')).toHaveCount(0);
+
+    // Four requests, ONE operation: the same key, link and choices each time.
+    expect(sent).toHaveLength(4);
+    for (const request of sent) expect(request).toEqual(sent[0]);
+    expect(sent[0]!.choices).toEqual([{ declarationId: ID_ENFORCEMENT, revision: 2 }]);
+    expect(plain).toEqual([]);
+    takeMountBookkeeping();
+  });
+}
+
+test("sharing — the request never arrived: the retry of the same operation creates the link, once, with its address", async ({
+  page,
+}) => {
+  const sent: Record<string, unknown>[] = [];
+  let mode: "lost" | "answer" = "lost";
   await openShare(page, "sv", {
     getMyPassportSelfDeclarations: ok(declared(true)),
     previewSelfDeclarationDisclosure: ok([REMARKS]),
-    createCredentialShare: ok({
-      status: "created",
-      token: "a".repeat(64),
-      disclosureId: ID_REMARKS,
-      expiresAt: null,
-    }),
-    attachSelfDeclarationsToShare: boom("VSD_DISCLOSURE_CLOSED_TO_SELECTION"),
+    createShareWithSelfDeclarations: async (route) => {
+      sent.push(argsOf(route));
+      if (mode === "lost") return lost(route);
+      await reply(created(1))(route);
+    },
+    // Nothing is committed -- which is not proof that nothing will be.
+    getShareOperation: ok({ status: "none" }),
+    listMySharedSelfDeclarations: ok([]),
   });
-  const step = page.locator("[data-share-self-declarations]");
-  await step.locator('[data-share-vsd-choice="payment_remarks_none"]').check();
-  await expect(step.locator('[data-share-vsd-preview="ready"]')).toBeVisible();
+  await tickAndPreview(page, "payment_remarks_none");
   await page.locator("[data-share-cta]").click();
-  const result = page.locator('[data-share-vsd-result="failed"]');
+  const doubt = page.locator('[data-share-vsd-result="unconfirmed"]');
+  await expect(doubt).toBeVisible();
+  await expect(page.locator("[data-share-screen]")).not.toContainText(CLAIMS_NOT_SHARED);
+  mode = "answer";
+  await doubt.locator("[data-share-vsd-retry]").click();
+  await expect(page.locator('[data-share-vsd-result="created"]')).toHaveAttribute(
+    "data-share-vsd-address",
+    "shown",
+  );
+  await expect(page.locator("[data-share-link]")).toBeVisible();
+  expect(sent).toHaveLength(2);
+  expect(sent[1]).toEqual(sent[0]);
+  takeMountBookkeeping();
+});
+
+test("sharing — a genuine database refusal: no link, nothing shared, and no reconciliation or retry of it", async ({
+  page,
+}) => {
+  const calls: string[] = [];
+  await openShare(page, "sv", {
+    getMyPassportSelfDeclarations: ok(declared(true)),
+    previewSelfDeclarationDisclosure: ok([REMARKS]),
+    createShareWithSelfDeclarations: async (route) => {
+      calls.push("bridge");
+      await refuse("VSD_STALE_REVISION")(route);
+    },
+    getShareOperation: never("committed", calls),
+    createCredentialShare: never("plain", calls),
+  });
+  await tickAndPreview(page, "payment_remarks_none");
+  await page.locator("[data-share-cta]").click();
+  const result = page.locator('[data-share-vsd-result="refused"]');
   await expect(result).toHaveAttribute("role", "alert");
-  await expect(result).toContainText(T.sv.attachFailed);
+  await expect(result).toContainText(T.sv.refusedChanged);
+  await expect(page.locator("[data-share-vsd-retry]")).toHaveCount(0);
+  await expect(page.locator("[data-share-created]")).toHaveCount(0);
+  await expect(page.locator("[data-share-already]")).toHaveCount(0);
+  // The steps stay open: the holder can look at the preview again.
+  await expect(page.locator("[data-share-cta]")).toBeVisible();
+  expect(calls).toEqual(["bridge"]);
+  await shoot(page, "share-refused-sv", "[data-share-vsd-result]");
+  takeMountBookkeeping();
+});
+
+test("sharing — the statement IS shared but the list could not be re-read: said separately, and repaired without touching the link", async ({
+  page,
+}) => {
+  const row = {
+    id: "0e000000-0000-4000-8000-000000000001",
+    disclosureId: LINK_ID,
+    kind: "enforcement_debt_none",
+    createdAt: "2026-11-11T09:00:00Z",
+    disclosable: true,
+    accessCount: 0,
+  };
+  let creates = 0;
+  let listMode: "empty" | "lost" | "row" = "empty";
+  await openShare(page, "sv", {
+    getMyPassportSelfDeclarations: ok(declared(true)),
+    previewSelfDeclarationDisclosure: ok([ENFORCEMENT]),
+    createShareWithSelfDeclarations: async (route) => {
+      creates += 1;
+      listMode = "lost";
+      await reply(created(1))(route);
+    },
+    listMySharedSelfDeclarations: async (route) => {
+      if (listMode === "lost") return lost(route);
+      await reply(listMode === "row" ? [row] : [])(route);
+    },
+  });
+  await tickAndPreview(page, "enforcement_debt_none");
+  await page.locator("[data-share-cta]").click();
+  const result = page.locator('[data-share-vsd-result="created"]');
+  // Persistence is confirmed; the refresh failing takes none of it back.
+  await expect(result).toContainText(T.sv.attached);
+  await expect(page.locator("[data-share-link]")).toBeVisible();
+  const stale = result.locator("[data-share-vsd-list-stale]");
+  await expect(stale).toContainText(T.sv.listStale);
+  await expect(page.locator("[data-share-screen]")).not.toContainText(CLAIMS_NOT_SHARED);
+  await expect(page.locator('[data-share-vsd-result="unconfirmed"]')).toHaveCount(0);
+  await shoot(page, "share-list-stale-sv", "[data-share-vsd-result]");
+
+  listMode = "row";
+  await stale.locator("[data-share-vsd-refresh]").click();
+  await expect(result.locator("[data-share-vsd-list-stale]")).toHaveCount(0);
+  await expect(
+    page.locator('[data-shared-self-declarations] [data-shared-vsd="active"]'),
+  ).toContainText(T.sv.enforcement);
+  // The refresh re-read the list. It did not create or repeat anything.
+  expect(creates).toBe(1);
   takeMountBookkeeping();
 });
 
@@ -709,8 +918,47 @@ for (const lang of ["sv", "en"] as const) {
     await expect(section).not.toContainText(/Dokument|Document|granskat|reviewed/i);
     expect(asked).toEqual([{ navigationId: "abcdef0123456789" }]);
 
+    // Directly below the Passport card: before the details, and before the
+    // block that invites a stranger to create a Passport of their own.
+    const order = await page.evaluate(() => {
+      const view = document.querySelector("[data-recipient-view]")!;
+      const section = view.querySelector("[data-recipient-self-declarations]")!;
+      const card = view.querySelector("[data-recipient-shields]")!.closest("section")!;
+      const headings = [...view.querySelectorAll("h2")];
+      const follows = (a: Element, b: Element) =>
+        Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+      const after = headings.filter((h) => !section.contains(h) && follows(section, h));
+      return {
+        inside: view.contains(section),
+        belowCard: follows(card, section),
+        // The element right before the section's wrapper IS the card.
+        directly: section.parentElement!.previousElementSibling === card,
+        headingsAfter: after.length,
+        top: section.getBoundingClientRect().top,
+        cardBottom: card.getBoundingClientRect().bottom,
+        nextTop: after[0]?.getBoundingClientRect().top ?? null,
+      };
+    });
+    expect(order.inside).toBe(true);
+    expect(order.belowCard).toBe(true);
+    expect(order.directly).toBe(true);
+    // The details heading and the promotional heading both come after it.
+    expect(order.headingsAfter).toBeGreaterThanOrEqual(2);
+    expect(order.top).toBeGreaterThanOrEqual(order.cardBottom);
+    expect(order.nextTop).toBeGreaterThan(order.top);
+    const promo = page.getByRole("heading", { name: T[lang].promo });
+    await expect(promo).toBeVisible();
+    expect(
+      await promo.evaluate((h) =>
+        Boolean(
+          document.querySelector("[data-recipient-self-declarations]")!.compareDocumentPosition(h) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+        ),
+      ),
+    ).toBe(true);
+
     // It is NOT among the credentials, and not in the page's title or preview.
-    await expect(page.locator("[data-recipient-view]")).not.toContainText(
+    await expect(page.locator("[data-recipient-shields]")).not.toContainText(
       /Kronofogden|Enforcement Authority/,
     );
     expect(await page.title()).not.toMatch(/Kronofogden|Enforcement|deklar|declar/i);
@@ -722,6 +970,55 @@ for (const lang of ["sv", "en"] as const) {
     expect(meta).not.toMatch(/Kronofogden|Enforcement|deklar|declar|2026-11-11/i);
     expect(await overflow(page)).toBeLessThanOrEqual(1);
     await shoot(page, `recipient-signed-in-${lang}`);
+  });
+
+  test(`${lang}: recipient — a single-credential link shows the statement directly below the credential`, async ({
+    page,
+  }) => {
+    const single = recipientPayload(lang);
+    await mount(page, "hub_active", {
+      lang,
+      path: "/p/abcdef0123456789",
+      ready: "[data-credential-share]",
+      overrides: {
+        getPublicDisclosureFromCookie: ok({
+          ...single,
+          focus: "credential",
+          verified_claims: [single.verified_claims[0]],
+        }),
+        readSharedSelfDeclarations: ok([ENFORCEMENT]),
+      },
+    });
+    const section = page.locator("[data-recipient-self-declarations]");
+    await expect(section).toBeVisible();
+    await expect(section.locator("[data-vsd-shield-label]")).toHaveText(T[lang].enforcement);
+    await expect(section.locator("[data-vsd-shield-unverified]")).toHaveText(T[lang].notVerified);
+    const order = await page.evaluate(() => {
+      const main = document.querySelector("main")!;
+      const section = main.querySelector("[data-recipient-self-declarations]")!;
+      const credential = main.querySelector("[data-credential-share] article")!;
+      return {
+        inMain: main.contains(section),
+        below: Boolean(
+          credential.compareDocumentPosition(section) & Node.DOCUMENT_POSITION_FOLLOWING,
+        ),
+        directly: section.parentElement!.previousElementSibling === credential,
+        // Same column as the credential: no wider, no offset.
+        left: Math.round(section.getBoundingClientRect().left),
+        credentialLeft: Math.round(
+          section.parentElement!.previousElementSibling!.getBoundingClientRect().left,
+        ),
+        last: section.parentElement!.nextElementSibling?.tagName ?? null,
+      };
+    });
+    expect(order.inMain).toBe(true);
+    expect(order.below).toBe(true);
+    expect(order.directly).toBe(true);
+    expect(order.left).toBe(order.credentialLeft);
+    // The credential's own details follow it.
+    expect(order.last).toBe("SECTION");
+    expect(await overflow(page)).toBeLessThanOrEqual(1);
+    await shoot(page, `recipient-single-credential-${lang}`);
   });
 }
 

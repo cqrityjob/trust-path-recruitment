@@ -209,9 +209,33 @@ statements to accompany that link.
 - The holder is shown exactly what a recipient will receive, built by the same
   database function the recipient's read uses (`vsd_disclosed_statement`) and
   drawn by the same component. Only what was previewed can be attached.
-- The selection belongs to that one new link. It is made once, within an hour
-  of the link's creation, and can afterwards only shrink. Existing links never
-  gain a statement; a reissued link carries none.
+- The choice belongs to the link's **creation**. One database function
+  (`vsd_create_credential_share`) creates the link, through the Passport's own
+  unchanged function, and seals the choice in the same transaction under the
+  link's request key (`vsd_disclosure_choices`) -- also when nothing was
+  ticked. There is no function that takes an existing link, and no time
+  window is consulted. Two triggers hold this for any writer: a choice is
+  sealed only for a link created in the current transaction and in nobody's
+  hands; a selection is written only in the transaction that sealed its
+  link's choice. A link created without statements -- with an empty choice, by
+  the Passport directly, or by a reissue -- can never gain one, and a
+  selection can afterwards only be withdrawn, once.
+- The same operation can be repeated safely. A retry with the same key and
+  choice is answered from the seal and writes nothing; the same key with a
+  different choice is refused; a refusal leaves no link behind.
+- The screen says only what it knows. The database's own refusal means no
+  link and nothing shared. A lost answer is **not** treated as a refusal: the
+  page asks what was committed (`vsd_share_operation`) and either confirms the
+  link and its statements or says it does not know, keeps the operation
+  unchanged, and offers a retry of that same operation. A link's address is
+  returned once; if that answer was lost the link exists and carries the
+  statement, the address cannot be shown again, and the holder is told to
+  revoke it and create a new one (a reissue carries no statement). Whether
+  the list of shared statements could be re-read afterwards is reported
+  separately and changes nothing about what is shared.
+- A recipient sees the section directly below the Passport card (or below the
+  credential on a single-credential link), before the details and before the
+  block that invites a visitor to create a Passport.
 - It never reaches the social image, link previews, the page's head, card
   downloads or the CV.
 
