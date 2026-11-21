@@ -365,7 +365,9 @@ export const securityWorkSv = {
   "sw.prog.owner.member": "Medlem i arbetsytan",
   "sw.prog.error.ai": "Security AI kunde inte svara just nu. Du kan fortsätta utan AI.",
   "sw.prog.error.aiUnknown":
-    "Vi vet inte om Security AI hann svara. Frågan skickas inte igen automatiskt, så den debiteras inte två gånger. Ställ frågan på nytt om du vill försöka igen.",
+    "Vi vet inte om Security AI hann svara. Den reserverade kostnaden räknas mot dagens AI-budget även om inget svar kom fram. Kontrollera igen hämtar samma förfrågan och skickar ingenting nytt. En ny förfrågan är ett nytt anrop som kostar igen.",
+  "sw.prog.ai.checkAgain": "Kontrollera igen",
+  "sw.prog.ai.newRequest": "Skicka som ny förfrågan (kostar igen)",
   "sw.prog.error.aiBudget":
     "Arbetsytans AI-budget för i dag är förbrukad. Ingen fråga skickades. Du kan fortsätta utan AI.",
 } as const;
@@ -740,7 +742,9 @@ export const securityWorkEn: { [K in keyof typeof securityWorkSv]: string } = {
   "sw.prog.owner.member": "Workspace member",
   "sw.prog.error.ai": "Security AI could not answer right now. You can continue without AI.",
   "sw.prog.error.aiUnknown":
-    "We do not know whether Security AI finished answering. The question is not sent again automatically, so it is not charged twice. Ask again if you want to retry.",
+    "We do not know whether Security AI finished answering. Its reserved cost counts against today's AI budget even though no answer arrived. Check again looks up the same request and sends nothing new. A new request is a new call and costs again.",
+  "sw.prog.ai.checkAgain": "Check again",
+  "sw.prog.ai.newRequest": "Send as a new request (costs again)",
   "sw.prog.error.aiBudget":
     "The workspace's AI budget for today is used up. Nothing was sent. You can continue without AI.",
 };

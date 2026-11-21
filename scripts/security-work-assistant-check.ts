@@ -442,6 +442,92 @@ await check("a decision is one database call and no direct table write", async (
   assert.deepEqual(decided.applied_target, apply);
 });
 
+// Review findings on #497 (regressions): replay only to the same intent, and
+// recover a stored result whatever happened to the workspace context since.
+await check(
+  "a recorded operation id with a different capability is a conflict, not a replay",
+  async () => {
+    const w = world();
+    await requestSuggestion(w.caller, request(), env, { dispatch: provider("succeeded", []) });
+    const sent: unknown[] = [];
+    await failsWith("CONFLICT", () =>
+      requestSuggestion(w.caller, { ...request(), capability: "mandate_ceo_questions" }, env, {
+        dispatch: provider("succeeded", sent),
+      }),
+    );
+    assert.equal(sent.length, 0);
+    assert.equal(w.tables.sw_ai_suggestions.length, 1);
+  },
+);
+
+await check(
+  "a recorded operation id with different request text or context is a conflict",
+  async () => {
+    const w = world();
+    await requestSuggestion(w.caller, request(), env, { dispatch: provider("succeeded", []) });
+    await failsWith("CONFLICT", () =>
+      requestSuggestion(w.caller, request(requestId, "Something else entirely"), env, {
+        dispatch: provider("succeeded", []),
+      }),
+    );
+    await failsWith("CONFLICT", () =>
+      requestSuggestion(w.caller, { ...request(), contextId: mandateId }, env, {
+        dispatch: provider("succeeded", []),
+      }),
+    );
+  },
+);
+
+await check(
+  "an unknown outcome retried with a different question is a conflict, not 'unknown'",
+  async () => {
+    const w = world();
+    await failsWith("AI_OUTCOME_UNKNOWN", () =>
+      requestSuggestion(w.caller, request(), env, { dispatch: provider("outcome_unknown", []) }),
+    );
+    await failsWith("CONFLICT", () =>
+      requestSuggestion(w.caller, request(requestId, "A different question"), env, {
+        dispatch: provider("succeeded", []),
+      }),
+    );
+  },
+);
+
+await check(
+  "the same intent recovers its stored result after the workspace context changed",
+  async () => {
+    const w = world();
+    await requestSuggestion(w.caller, request(), env, { dispatch: provider("succeeded", []) });
+    w.tables.sw_security_mandates[0].organisation_description = "Changed after the answer";
+    w.tables.sw_security_mandates[0].geographic_scope = "Norway";
+    const before = w.calls.length;
+    const sent: unknown[] = [];
+    // Whitespace differences normalise to the same request text.
+    const again = await requestSuggestion(
+      w.caller,
+      request(requestId, "  Draft   our mandate "),
+      env,
+      {
+        dispatch: provider("succeeded", sent),
+      },
+    );
+    assert.equal(again.id, requestId);
+    assert.equal(sent.length, 0);
+    assert.deepEqual(w.calls.slice(before), [], "no reservation, dispatch or completion");
+  },
+);
+
+await check("the same intent recovers an unstored result after the context changed", async () => {
+  const w = world();
+  await requestSuggestion(w.caller, request(), env, { dispatch: provider("succeeded", []) });
+  w.tables.sw_ai_suggestions.length = 0;
+  w.tables.sw_security_mandates[0].organisation_description = "Changed meanwhile";
+  const recovered = await requestSuggestion(w.caller, request(), env, {
+    dispatch: provider("succeeded", []),
+  });
+  assert.deepEqual(recovered.content, draft);
+});
+
 console.log(
   `Security Work assistant: ${checks} synthetic checks passed; no database or provider calls.`,
 );

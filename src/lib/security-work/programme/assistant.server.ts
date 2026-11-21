@@ -429,6 +429,23 @@ async function settledOutcome(
   throw new AnalysisFailure("CONFLICT");
 }
 
+/**
+ * The immutable intent of an operation: what was asked, about what. A recorded
+ * operation is replayed only to the same intent. The workspace context is NOT
+ * part of it, so a stored result stays recoverable after the context changes.
+ */
+function assertSameIntent(job: ProcessingJob, data: inputs.RequestSuggestionInput) {
+  const manifest = manifestSchema.safeParse(job.input_manifest);
+  if (
+    !manifest.success ||
+    manifest.data.capability !== data.capability ||
+    manifest.data.contextKind !== data.contextKind ||
+    (manifest.data.contextId ?? null) !== (data.contextId ?? null) ||
+    manifest.data.requestText !== settled(data.requestText, 2000)
+  )
+    throw new AnalysisFailure("CONFLICT");
+}
+
 async function readJob(caller: SecurityWorkCaller, workspaceId: string, id: string) {
   return checked(
     await caller.supabase
@@ -454,6 +471,8 @@ export async function requestSuggestion(
   const previous = await readJob(caller, data.workspaceId, data.requestId);
   if (previous) {
     assertOwnAssistantJob(previous, caller, data.workspaceId);
+    // A different question under a recorded operation id is a conflict, never a replay.
+    assertSameIntent(previous, data);
     if (previous.status !== "reserved") return settledOutcome(caller, data.workspaceId, previous);
   }
   const configuration = await loadConfiguration(caller, data.workspaceId, env);
@@ -475,6 +494,7 @@ export async function requestSuggestion(
   assertOwnAssistantJob(job, caller, data.workspaceId);
   if (job.id !== data.requestId || job.activation_id !== configuration.activation.id)
     throw new AnalysisFailure("CONFLICT");
+  assertSameIntent(job, data);
   if (job.status !== "reserved") return settledOutcome(caller, data.workspaceId, job);
   // The reservation must hold exactly what is about to be sent.
   if (canonical(job.input_manifest) !== canonical(manifest)) throw new AnalysisFailure("CONFLICT");
