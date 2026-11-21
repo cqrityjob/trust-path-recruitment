@@ -9,12 +9,15 @@ import {
 import { requireWorkspace, type SecurityWorkCaller } from "../services";
 import { EgressError, checkFeedUrl, checkResolved } from "./egress";
 import { FeedError, parseFeed } from "./feed";
+import { pinnedTransport, type PinnedTransport } from "./pinned-https.server";
 
 type Env = Readonly<Record<string, string | undefined>>;
 export interface FetchDeps {
   /** Every address the host resolves to (default: DNS, all families). */
   resolve?: (host: string) => Promise<string[]>;
-  fetchImpl?: typeof fetch;
+  /** The HTTPS request to a checked address (default: pinned to it, TLS for the host). */
+  transport?: PinnedTransport;
+  /** One deadline for DNS, connection, every redirect hop and the body. */
   timeoutMs?: number;
 }
 export interface FetchPayload {
@@ -91,33 +94,35 @@ export async function resolveAll(
   }
 }
 
-async function boundedText(response: Response, signal: AbortSignal): Promise<string> {
-  if (!response.body) return "";
-  const reader = response.body.getReader();
-  const chunks: Uint8Array[] = [];
-  let size = 0;
-  try {
-    for (;;) {
-      signal.throwIfAborted();
-      const chunk = await reader.read();
-      if (chunk.done) break;
-      size += chunk.value.length;
-      if (size > MAX_BYTES) throw new FeedError("feed_too_large");
-      chunks.push(chunk.value);
-    }
-  } finally {
-    reader.releaseLock();
-  }
-  return Buffer.concat(chunks).toString("utf8");
+/** Rejects when the shared deadline passes first: a hung DNS answer is a timeout too. */
+function beforeDeadline<T>(
+  work: Promise<T>,
+  signal: AbortSignal,
+  code: EgressError["code"],
+): Promise<T> {
+  if (signal.aborted) return Promise.reject(new EgressError(code));
+  return new Promise<T>((resolve, reject) => {
+    const abort = () => reject(new EgressError(code));
+    signal.addEventListener("abort", abort, { once: true });
+    work.then(
+      (value) => {
+        signal.removeEventListener("abort", abort);
+        resolve(value);
+      },
+      (error) => {
+        signal.removeEventListener("abort", abort);
+        reject(error);
+      },
+    );
+  });
 }
 
 /**
  * One conditional GET of an approved feed. Never throws for network or feed
  * problems: they become a failed payload, which is a coverage fact. Redirects
- * are followed by hand so each hop is checked against the allowlist and DNS.
- * Residual risk (stated, not hidden): the platform fetch resolves the host
- * again after our check; the host allowlist limits that to approved official
- * hosts.
+ * are followed by hand so each hop is checked against the allowlist and DNS,
+ * and every request is pinned to an address that passed the check, so the
+ * platform never resolves the name again (no DNS-rebinding window).
  */
 export async function fetchFeed(
   source: { feedUrl: string; etag: string | null; lastModified: string | null },
@@ -125,27 +130,30 @@ export async function fetchFeed(
   deps: FetchDeps = {},
 ): Promise<FetchPayload> {
   const resolve = deps.resolve ?? resolveAll;
-  const fetchImpl = deps.fetchImpl ?? fetch;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), deps.timeoutMs ?? 10_000);
   try {
+    const transport = deps.transport ?? pinnedTransport();
     let url = checkFeedUrl(source.feedUrl, approvedHosts);
     for (let hop = 0; ; hop++) {
-      checkResolved(await resolve(url.hostname));
+      const [target] = checkResolved(
+        await beforeDeadline(resolve(url.hostname), controller.signal, "egress_dns_timeout"),
+      );
       const headers: Record<string, string> = {
         accept: "application/rss+xml, application/atom+xml, application/xml;q=0.9, text/xml;q=0.8",
         "user-agent": "CQrityjob-SecurityWork-FeedConnector/1.0",
       };
       if (hop === 0 && source.etag) headers["if-none-match"] = source.etag;
       if (hop === 0 && source.lastModified) headers["if-modified-since"] = source.lastModified;
-      const response = await fetchImpl(url.toString(), {
-        method: "GET",
+      const response = await transport({
+        url,
+        address: target.address,
+        family: target.family,
         headers,
-        redirect: "manual",
         signal: controller.signal,
+        maxBytes: MAX_BYTES,
       });
       if (response.status >= 300 && response.status < 400 && response.status !== 304) {
-        void response.body?.cancel();
         const location = response.headers.get("location");
         if (!location || hop >= MAX_REDIRECTS)
           return { status: "failed", httpStatus: response.status, errorCode: "redirect_refused" };
@@ -153,20 +161,14 @@ export async function fetchFeed(
         continue;
       }
       if (response.status === 304) return { status: "not_modified", httpStatus: 304 };
-      if (!response.ok) {
-        void response.body?.cancel();
+      if (response.status < 200 || response.status >= 300) {
         return {
           status: "failed",
           httpStatus: response.status,
           errorCode: `http_${response.status}`,
         };
       }
-      const declared = Number(response.headers.get("content-length") ?? "0");
-      if (declared > MAX_BYTES) {
-        void response.body?.cancel();
-        return { status: "failed", httpStatus: response.status, errorCode: "feed_too_large" };
-      }
-      const items = parseFeed(await boundedText(response, controller.signal)).map((item) => ({
+      const items = parseFeed(new TextDecoder().decode(response.body)).map((item) => ({
         ...item,
         contentHash: createHash("sha256").update(item.text, "utf8").digest("hex"),
       }));

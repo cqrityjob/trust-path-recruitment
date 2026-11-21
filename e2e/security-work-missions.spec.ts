@@ -275,6 +275,10 @@ function handle(state: State, name: string, data: Row): unknown {
         mission.execution_state = data.executionState;
       }
       if (data.reviewState) {
+        // As the database (20270329090000): accepting is an approval, stamped.
+        if (data.reviewState === "accepted" && !state.membership.can_approve)
+          return fail("APPROVER_REQUIRED");
+        mission.review_accepted_by = data.reviewState === "accepted" ? USER : null;
         event(
           state,
           String(mission.id),
@@ -670,4 +674,40 @@ test("English: the same journey surfaces read in English", async ({ page }) => {
   await slow(page.getByTestId("sw-mission-create")).toBeVisible();
   await expect(page.getByLabel("Mission type")).toHaveValue("monitoring_impact");
   await shot(page, "08-english-create");
+});
+
+test("an editor without approval rights cannot accept a mission review", async ({ page }) => {
+  mkdirSync(out, { recursive: true });
+  const state = freshState();
+  state.membership = { ...state.membership, role: "editor", can_approve: false };
+  const id = randomUUID();
+  state.missions.push({
+    id,
+    workspace_id: WORKSPACE,
+    kind: "risk_assessment",
+    title: "Terminalrisk under granskning",
+    brief: { decision: "Budget", scope: "Terminal", horizon: "12 månader" },
+    execution_state: "needs_review",
+    review_state: "in_review",
+    review_accepted_by: null,
+    restricted: false,
+    owner_id: USER,
+    next_action: "",
+    due_date: null,
+    operating_profile_version: null,
+    created_by: USER,
+    created_at: now(),
+    updated_at: now(),
+    version: 3,
+  });
+  await install(page, state);
+  await go(page, `/missions/${id}`);
+  await slow(page.getByTestId("sw-mission-detail")).toBeVisible();
+  await expect(page.getByTestId("sw-mission-awaits-approver")).toContainText(
+    "väntar på en person som får godkänna",
+  );
+  await expect(page.getByTestId("sw-mission-review-accepted")).toHaveCount(0);
+  await expect(page.getByTestId("sw-mission-to-completed")).toHaveCount(0);
+  await expect(page.getByTestId("sw-mission-review-changes_requested")).toBeVisible();
+  await shot(page, "09-editor-awaits-approver");
 });

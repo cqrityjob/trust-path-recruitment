@@ -9,6 +9,12 @@ import {
 } from "../src/lib/security-work/connectors/egress";
 import { FeedError, parseFeed } from "../src/lib/security-work/connectors/feed";
 import { fetchFeed, resolveAll } from "../src/lib/security-work/connectors/fetch.server";
+import {
+  pinnedTransport,
+  runtimeConnector,
+  workersConnector,
+  type Connector,
+} from "../src/lib/security-work/connectors/pinned-https.server";
 import { briefToMarkdown } from "../src/lib/security-work/impact/export";
 import type { BriefDetail } from "../src/lib/security-work/impact/services";
 import { coverage } from "../src/lib/security-work/knowledge/coverage";
@@ -52,10 +58,45 @@ await check("private, loopback, link-local, metadata and mapped addresses are re
     "::ffff:169.254.169.254",
     "64:ff9b::7f00:1",
     "not-an-ip",
+    // The reviewed bypasses: hex-mapped loopback, expanded loopback, mapped metadata.
+    "::ffff:7f00:1",
+    "0:0:0:0:0:0:0:1",
+    "::ffff:a9fe:a9fe",
+    // IPv4-compatible, site-local, 6to4, Teredo, documentation, benchmark,
+    // broadcast, reserved, zone ids, bracketed and empty forms.
+    "::7f00:1",
+    "fec0::1",
+    "2002:a00::1",
+    "2001::1",
+    "2001:db8::1",
+    "198.18.0.1",
+    "255.255.255.255",
+    "240.0.0.1",
+    "fe80::1%eth0",
+    "[::1]",
+    "0x7f000001",
+    "",
   ])
     assert.equal(isPrivateAddress(ip), true, ip);
-  for (const ip of ["93.184.216.34", "2606:4700:4700::1111", "::ffff:93.184.216.34"])
+  for (const ip of [
+    "93.184.216.34",
+    "2606:4700:4700::1111",
+    "::ffff:93.184.216.34",
+    "2a00:1450:4001:80b::200e",
+  ])
     assert.equal(isPrivateAddress(ip), false, ip);
+  assert.deepEqual(checkResolved(["::ffff:93.184.216.34", "2606:4700:4700::1111"]), [
+    { address: "93.184.216.34", family: 4 },
+    { address: "2606:4700:4700::1111", family: 6 },
+  ]);
+  assert.equal(
+    egressCode(() => checkResolved(["93.184.216.34", "10.0.0.1"])),
+    "egress_private_address",
+  );
+  assert.equal(
+    egressCode(() => checkResolved([])),
+    "egress_unresolved",
+  );
 });
 await check("only https on an approved host, default port, no credentials, no IP literal", () => {
   assert.equal(
@@ -130,26 +171,83 @@ await check("a document with a DTD or entity declaration is refused (no XXE)", (
   assert.throws(() => parseFeed("<html><body>not a feed</body></html>"), FeedError);
 });
 
-type Reply = { status: number; headers?: Record<string, string>; body?: string };
-function transport(
-  replies: Record<string, Reply>,
-  seen: { url: string; headers: Record<string, string> }[],
-) {
-  return (async (input: string | URL | Request, init?: RequestInit) => {
-    const url = String(input);
-    seen.push({ url, headers: (init?.headers ?? {}) as Record<string, string> });
-    const reply = replies[url];
-    if (!reply) throw new Error(`unexpected request to ${url}`);
-    return new Response(reply.body ?? null, { status: reply.status, headers: reply.headers });
-  }) as typeof fetch;
+type Reply = {
+  status: number;
+  headers?: Record<string, string>;
+  body?: string;
+  chunked?: boolean;
+  untilClose?: boolean;
+};
+type Seen = { url: string; address: string; hostname: string; headers: Record<string, string> };
+const enc = new TextEncoder();
+/**
+ * A controlled network: the real pinned transport and HTTP parser run over
+ * it. It records the address each connection was pinned to, and serves raw
+ * HTTP/1.1 bytes (Content-Length, chunked or read-to-close).
+ */
+function network(replies: Record<string, Reply>, seen: Seen[], stall = false): Connector {
+  return async (target, signal) => {
+    let text = "";
+    let received!: (value: string) => void;
+    const request = new Promise<string>((resolve) => (received = resolve));
+    const writable = new WritableStream<Uint8Array>({
+      write(chunk) {
+        text += new TextDecoder().decode(chunk);
+        if (text.includes("\r\n\r\n")) received(text);
+      },
+    });
+    const readable = new ReadableStream<Uint8Array>({
+      async start(controller) {
+        const raw = await request;
+        const [line, ...rest] = raw.split("\r\n");
+        const headers: Record<string, string> = {};
+        for (const header of rest) {
+          const colon = header.indexOf(":");
+          if (colon > 0)
+            headers[header.slice(0, colon).toLowerCase()] = header.slice(colon + 1).trim();
+        }
+        const url = `https://${target.hostname}${line.split(" ")[1]}`;
+        seen.push({ url, address: target.address, hostname: target.hostname, headers });
+        if (stall) {
+          signal.addEventListener("abort", () => controller.error(new Error("aborted")));
+          return;
+        }
+        const reply = replies[url];
+        if (!reply) return controller.error(new Error(`unexpected request to ${url}`));
+        const body = reply.body ?? "";
+        const head = [`HTTP/1.1 ${reply.status} X`];
+        for (const [k, v] of Object.entries(reply.headers ?? {})) head.push(`${k}: ${v}`);
+        let payload: string;
+        if (reply.chunked) {
+          head.push("transfer-encoding: chunked");
+          payload = "";
+          for (let i = 0; i < body.length; i += 4096) {
+            const part = body.slice(i, i + 4096);
+            payload += `${Buffer.byteLength(part).toString(16)}\r\n${part}\r\n`;
+          }
+          payload += "0\r\n\r\n";
+        } else if (reply.untilClose) {
+          payload = body;
+        } else {
+          head.push(`content-length: ${Buffer.byteLength(body)}`);
+          payload = body;
+        }
+        controller.enqueue(enc.encode(`${head.join("\r\n")}\r\n\r\n${payload}`));
+        controller.close();
+      },
+    });
+    return { readable, writable, close: () => undefined };
+  };
 }
+const transport = (replies: Record<string, Reply>, seen: Seen[] = [], stall = false) =>
+  pinnedTransport(network(replies, seen, stall));
 const publicDns = async () => ["93.184.216.34"];
 const feedBody = rss(
   `<item><title>Road closed</title><guid>g1</guid><link>https://feeds.example.test/g1</link><description>E6 closed</description></item>`,
 );
 
 await check("a successful fetch sends conditional headers and hashes each item", async () => {
-  const seen: { url: string; headers: Record<string, string> }[] = [];
+  const seen: Seen[] = [];
   const result = await fetchFeed(
     {
       feedUrl: "https://feeds.example.test/rss",
@@ -159,7 +257,7 @@ await check("a successful fetch sends conditional headers and hashes each item",
     HOSTS,
     {
       resolve: publicDns,
-      fetchImpl: transport(
+      transport: transport(
         {
           "https://feeds.example.test/rss": {
             status: 200,
@@ -185,7 +283,7 @@ await check("304 is not_modified; 503 is a failed run with its code", async () =
         HOSTS,
         {
           resolve: publicDns,
-          fetchImpl: transport({ "https://feeds.example.test/rss": { status: 304 } }, []),
+          transport: transport({ "https://feeds.example.test/rss": { status: 304 } }, []),
         },
       )
     ).status,
@@ -196,17 +294,17 @@ await check("304 is not_modified; 503 is a failed run with its code", async () =
     HOSTS,
     {
       resolve: publicDns,
-      fetchImpl: transport({ "https://feeds.example.test/rss": { status: 503 } }, []),
+      transport: transport({ "https://feeds.example.test/rss": { status: 503 } }, []),
     },
   );
   assert.deepEqual([failed.status, failed.errorCode], ["failed", "http_503"]);
 });
 await check("a host resolving to a private address is never requested", async () => {
-  const seen: { url: string; headers: Record<string, string> }[] = [];
+  const seen: Seen[] = [];
   const result = await fetchFeed(
     { feedUrl: "https://feeds.example.test/rss", etag: null, lastModified: null },
     HOSTS,
-    { resolve: async () => ["169.254.169.254"], fetchImpl: transport({}, seen) },
+    { resolve: async () => ["169.254.169.254"], transport: transport({}, seen) },
   );
   assert.deepEqual(
     [result.status, result.errorCode, seen.length],
@@ -216,13 +314,13 @@ await check("a host resolving to a private address is never requested", async ()
 await check(
   "a redirect to an unapproved host or a private address is refused at the hop",
   async () => {
-    const seen: { url: string; headers: Record<string, string> }[] = [];
+    const seen: Seen[] = [];
     const off = await fetchFeed(
       { feedUrl: "https://feeds.example.test/rss", etag: null, lastModified: null },
       HOSTS,
       {
         resolve: publicDns,
-        fetchImpl: transport(
+        transport: transport(
           {
             "https://feeds.example.test/rss": {
               status: 302,
@@ -242,7 +340,7 @@ await check(
       HOSTS,
       {
         resolve: publicDns,
-        fetchImpl: transport(
+        transport: transport(
           {
             "https://feeds.example.test/rss": {
               status: 301,
@@ -261,7 +359,7 @@ await check(
       {
         resolve: async (host) =>
           calls++ > 0 && host === "feeds.example.test" ? ["10.0.0.5"] : ["93.184.216.34"],
-        fetchImpl: transport(
+        transport: transport(
           {
             "https://feeds.example.test/rss": { status: 302, headers: { location: "/next" } },
             "https://feeds.example.test/next": { status: 200, body: feedBody },
@@ -283,7 +381,7 @@ await check("an oversized body and a stalled response fail as coverage facts", a
     HOSTS,
     {
       resolve: publicDns,
-      fetchImpl: transport(
+      transport: transport(
         {
           "https://feeds.example.test/rss": {
             status: 200,
@@ -301,14 +399,147 @@ await check("an oversized body and a stalled response fail as coverage facts", a
     {
       resolve: publicDns,
       timeoutMs: 50,
-      fetchImpl: ((_url: string, init?: RequestInit) =>
-        new Promise((_r, reject) =>
-          init?.signal?.addEventListener("abort", () => reject(new Error("aborted"))),
-        )) as typeof fetch,
+      transport: transport({}, [], true),
     },
   );
   assert.equal(slow.errorCode, "timeout");
+  for (const shape of [{ chunked: true }, { untilClose: true }]) {
+    const over = await fetchFeed(
+      { feedUrl: "https://feeds.example.test/rss", etag: null, lastModified: null },
+      HOSTS,
+      {
+        resolve: publicDns,
+        transport: transport({
+          "https://feeds.example.test/rss": {
+            status: 200,
+            body: rss("x".repeat(2 * 1024 * 1024 + 10)),
+            ...shape,
+          },
+        }),
+      },
+    );
+    assert.equal(over.errorCode, "feed_too_large", JSON.stringify(shape));
+  }
+  const chunked = await fetchFeed(
+    { feedUrl: "https://feeds.example.test/rss", etag: null, lastModified: null },
+    HOSTS,
+    {
+      resolve: publicDns,
+      transport: transport({
+        "https://feeds.example.test/rss": { status: 200, body: feedBody, chunked: true },
+      }),
+    },
+  );
+  assert.equal(chunked.items?.[0]?.title, "Road closed", "a chunked body is reassembled");
+  const hungDns = await fetchFeed(
+    { feedUrl: "https://feeds.example.test/rss", etag: null, lastModified: null },
+    HOSTS,
+    { resolve: () => new Promise(() => undefined), timeoutMs: 50, transport: transport({}) },
+  );
+  assert.equal(hungDns.errorCode, "egress_dns_timeout", "a hung DNS answer is a timeout too");
 });
+await check(
+  "the connection is pinned to the checked address: DNS rebinding cannot redirect it",
+  async () => {
+    // A rebinding resolver: public for the check, private for any later lookup.
+    let lookups = 0;
+    const rebinding = async () => (lookups++ === 0 ? ["93.184.216.34"] : ["127.0.0.1"]);
+    const seen: Seen[] = [];
+    const result = await fetchFeed(
+      { feedUrl: "https://feeds.example.test/rss", etag: null, lastModified: null },
+      HOSTS,
+      {
+        resolve: rebinding,
+        transport: transport(
+          { "https://feeds.example.test/rss": { status: 200, body: feedBody } },
+          seen,
+        ),
+      },
+    );
+    assert.equal(result.status, "succeeded");
+    assert.equal(lookups, 1, "the name is resolved once per hop, never again by the transport");
+    assert.deepEqual(
+      [seen[0].address, seen[0].hostname],
+      ["93.184.216.34", "feeds.example.test"],
+      "the socket goes to the checked IP; TLS is verified for the hostname",
+    );
+    const mixed = await fetchFeed(
+      { feedUrl: "https://feeds.example.test/rss", etag: null, lastModified: null },
+      HOSTS,
+      { resolve: async () => ["93.184.216.34", "::ffff:7f00:1"], transport: transport({}) },
+    );
+    assert.equal(mixed.errorCode, "egress_private_address", "one private answer refuses the host");
+    const none = await fetchFeed(
+      { feedUrl: "https://feeds.example.test/rss", etag: null, lastModified: null },
+      HOSTS,
+      { resolve: async () => [], transport: transport({}) },
+    );
+    assert.equal(none.errorCode, "egress_unresolved");
+  },
+);
+await check(
+  "redirects stop after three hops; a header with a line break is never sent",
+  async () => {
+    const hops: Record<string, Reply> = {};
+    for (let i = 0; i < 5; i++)
+      hops[`https://feeds.example.test/r${i}`] = {
+        status: 302,
+        headers: { location: `/r${i + 1}` },
+      };
+    const seen: Seen[] = [];
+    const looped = await fetchFeed(
+      { feedUrl: "https://feeds.example.test/r0", etag: null, lastModified: null },
+      HOSTS,
+      { resolve: publicDns, transport: transport(hops, seen) },
+    );
+    assert.deepEqual([looped.errorCode, seen.length], ["redirect_refused", 4]);
+    const injected: Seen[] = [];
+    const header = await fetchFeed(
+      {
+        feedUrl: "https://feeds.example.test/rss",
+        etag: '"v1"\r\nX-Injected: 1',
+        lastModified: null,
+      },
+      HOSTS,
+      { resolve: publicDns, transport: transport({}, injected) },
+    );
+    assert.deepEqual(
+      [header.status, header.errorCode, injected.length],
+      ["failed", "feed_unparseable", 0],
+    );
+  },
+);
+await check(
+  "the runtime decides the connector; an unknown runtime refuses instead of an unpinned fetch",
+  () => {
+    const original = Object.getOwnPropertyDescriptor(globalThis, "navigator");
+    try {
+      Object.defineProperty(globalThis, "navigator", {
+        value: { userAgent: "Cloudflare-Workers" },
+        configurable: true,
+      });
+      assert.equal(
+        runtimeConnector(),
+        workersConnector,
+        "Cloudflare Workers use cloudflare:sockets",
+      );
+    } finally {
+      if (original) Object.defineProperty(globalThis, "navigator", original);
+      else delete (globalThis as { navigator?: unknown }).navigator;
+    }
+    assert.notEqual(runtimeConnector(), workersConnector, "Node uses tls.connect");
+    const versions = process.versions;
+    try {
+      Object.defineProperty(process, "versions", { value: {}, configurable: true });
+      assert.equal(
+        egressCode(() => runtimeConnector()),
+        "egress_transport_unavailable",
+      );
+    } finally {
+      Object.defineProperty(process, "versions", { value: versions, configurable: true });
+    }
+  },
+);
 
 await check("relevance is explainable, honours exclusions and a movable threshold", () => {
   const profile = {

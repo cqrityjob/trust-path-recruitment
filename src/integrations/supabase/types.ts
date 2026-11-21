@@ -18491,6 +18491,7 @@ export type Database = {
           updated_at: string
           version: number
           workspace_id: string
+          access_mission_id: string | null
         }
         Insert: {
           approval_note?: string
@@ -18516,6 +18517,7 @@ export type Database = {
           updated_at?: string
           version?: number
           workspace_id: string
+          access_mission_id?: string | null
         }
         Update: {
           approval_note?: string
@@ -18541,6 +18543,7 @@ export type Database = {
           updated_at?: string
           version?: number
           workspace_id?: string
+          access_mission_id?: string | null
         }
         Relationships: [
           {
@@ -20526,6 +20529,8 @@ export type Database = {
           updated_at: string
           version: number
           workspace_id: string
+          review_accepted_at: string | null
+          review_accepted_by: string | null
         }
         Insert: {
           brief?: Json
@@ -20544,6 +20549,8 @@ export type Database = {
           updated_at?: string
           version?: number
           workspace_id: string
+          review_accepted_at?: string | null
+          review_accepted_by?: string | null
         }
         Update: {
           brief?: Json
@@ -20562,6 +20569,8 @@ export type Database = {
           updated_at?: string
           version?: number
           workspace_id?: string
+          review_accepted_at?: string | null
+          review_accepted_by?: string | null
         }
         Relationships: [
           {
@@ -21377,6 +21386,7 @@ export type Database = {
           updated_at: string
           version: number
           workspace_id: string
+          access_mission_id: string | null
         }
         Insert: {
           accepted_at?: string | null
@@ -21399,6 +21409,7 @@ export type Database = {
           updated_at?: string
           version?: number
           workspace_id: string
+          access_mission_id?: string | null
         }
         Update: {
           accepted_at?: string | null
@@ -21421,6 +21432,7 @@ export type Database = {
           updated_at?: string
           version?: number
           workspace_id?: string
+          access_mission_id?: string | null
         }
         Relationships: [
           {

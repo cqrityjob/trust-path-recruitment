@@ -456,6 +456,14 @@ function ApplyBrief({ brief }: { brief: ChangeBrief }) {
       <h2 className="font-semibold">
         {l("För in i risker och åtgärder", "Record as risk and actions")}
       </h2>
+      {brief.mission_id && (
+        <p className="text-sm text-muted-foreground" data-testid="sw-brief-apply-scope">
+          {l(
+            "Risken och åtgärderna stannar i uppdraget: de syns och kan ändras bara av dem som ser uppdraget, och kommer inte med i ledningsrapporter för hela arbetsytan.",
+            "The risk and actions stay in the mission: only people who can see the mission see or change them, and they are left out of workspace-wide management reports.",
+          )}
+        </p>
+      )}
       <label className="flex min-h-11 items-center gap-2 text-sm">
         <input
           type="checkbox"

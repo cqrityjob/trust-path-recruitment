@@ -370,6 +370,8 @@ export const securityWorkSv = {
   "sw.prog.ai.newRequest": "Skicka som ny förfrågan (kostar igen)",
   "sw.prog.error.aiBudget":
     "Arbetsytans AI-budget för i dag är förbrukad. Ingen fråga skickades. Du kan fortsätta utan AI.",
+  "sw.prog.error.restrictedContext":
+    "Posten tillhör ett begränsat uppdrag. AI-svar kan läsas av hela arbetsytan, så den skickas inte till AI. Inget skickades.",
 } as const;
 
 export const securityWorkEn: { [K in keyof typeof securityWorkSv]: string } = {
@@ -747,4 +749,6 @@ export const securityWorkEn: { [K in keyof typeof securityWorkSv]: string } = {
   "sw.prog.ai.newRequest": "Send as a new request (costs again)",
   "sw.prog.error.aiBudget":
     "The workspace's AI budget for today is used up. Nothing was sent. You can continue without AI.",
+  "sw.prog.error.restrictedContext":
+    "This record belongs to a restricted mission. AI answers are readable by the whole workspace, so it is not sent to AI. Nothing was sent.",
 };

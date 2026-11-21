@@ -60,6 +60,17 @@ jobs:
           bun run scripts/security-work-processor-check.ts
           bun run scripts/security-work-processor-artifact-check.ts
           bash scripts/security-work-processor-integration-test.sh
+      # The feed connector connects to the address it checked (no DNS-rebinding
+      # window), verifies TLS for the hostname, and refuses unknown runtimes.
+      # Real TLS on 127.0.0.1 under Node, then the deployed runtime (workerd,
+      # nodejs_compat) via the same pinned wrangler as the preview-image job.
+      # Localhost only: no external host is contacted.
+      - name: Feed transport pinned to the checked address (Node TLS and workerd)
+        run: |
+          bun run scripts/security-work-release-b-check.ts
+          bun run scripts/security-work-pinned-https-check.ts
+          npm install --prefix "$RUNNER_TEMP/wrangler" --no-audit --no-fund --silent wrangler@4.147.0
+          SW_WRANGLER="$RUNNER_TEMP/wrangler/node_modules/.bin/wrangler" bun run scripts/security-work-pinned-https-workerd.ts
       - name: Build and exercise the pinned processor container locally
         run: |
           bash scripts/security-work-processor-container-build.sh sw-processor:ci

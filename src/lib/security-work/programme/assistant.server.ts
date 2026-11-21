@@ -131,12 +131,15 @@ async function collectContext(
     const risk = checked(
       await db
         .from("sw_risks")
-        .select("id,title,description,threat_scenario,uncertainty")
+        .select("id,title,description,threat_scenario,uncertainty,access_mission_id")
         .eq("workspace_id", workspaceId)
         .eq("id", contextId)
         .maybeSingle(),
     );
     if (!risk) throw new AnalysisFailure("ACCESS_DENIED");
+    // Assistant results are workspace-readable; a mission-scoped record is
+    // never sent as context (the database refuses it too).
+    if (risk.access_mission_id) throw new AnalysisFailure("RESTRICTED_CONTEXT");
     sources.push({ table: "sw_risks", id: risk.id });
     const links =
       checked(
@@ -200,12 +203,13 @@ async function collectContext(
     const action = checked(
       await db
         .from("sw_actions")
-        .select("id,title,description,priority,status")
+        .select("id,title,description,priority,status,access_mission_id")
         .eq("workspace_id", workspaceId)
         .eq("id", contextId)
         .maybeSingle(),
     );
     if (!action) throw new AnalysisFailure("ACCESS_DENIED");
+    if (action.access_mission_id) throw new AnalysisFailure("RESTRICTED_CONTEXT");
     sources.push({ table: "sw_actions", id: action.id });
     context.action = {
       title: settled(action.title, 500),

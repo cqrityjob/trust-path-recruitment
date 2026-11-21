@@ -39,13 +39,18 @@ export function checked<T>(result: {
     throw new AnalysisFailure(
       code === "23514" && result.error.message === "SW_AI_BUDGET_EXCEEDED"
         ? "AI_BUDGET_EXCEEDED"
-        : code === "42501"
-          ? "ACCESS_DENIED"
-          : code === "PT409" || code === "40001" || code === "23505"
-            ? "CONFLICT"
-            : code === "23514" || code === "22023"
-              ? "INVALID_INPUT"
-              : "SAVE_FAILED",
+        : // Refusals that are not a loss of workspace access keep their own code.
+          code === "42501" && result.error.message === "SW_RESTRICTED_CONTEXT"
+          ? "RESTRICTED_CONTEXT"
+          : code === "42501" && result.error.message === "SW_APPROVER_REQUIRED"
+            ? "APPROVER_REQUIRED"
+            : code === "42501"
+              ? "ACCESS_DENIED"
+              : code === "PT409" || code === "40001" || code === "23505"
+                ? "CONFLICT"
+                : code === "23514" || code === "22023"
+                  ? "INVALID_INPUT"
+                  : "SAVE_FAILED",
     );
   }
   return result.data;

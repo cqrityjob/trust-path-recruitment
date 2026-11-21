@@ -57,13 +57,17 @@ let feed = {
 const seen: Record<string, string>[] = [];
 const deps = {
   resolve: async () => ["93.184.216.34"],
-  fetchImpl: (async (_url: string, init?: RequestInit) => {
-    seen.push((init?.headers ?? {}) as Record<string, string>);
-    return new Response(feed.status === 304 ? null : feed.body, {
+  // Controlled network at the pinned-transport seam (HTTP itself is proven in
+  // scripts/security-work-release-b-check.ts and the TLS/workerd checks).
+  transport: async (request: { address: string; headers: Record<string, string> }) => {
+    assert.equal(request.address, "93.184.216.34", "the request is pinned to the checked address");
+    seen.push(request.headers);
+    return {
       status: feed.status,
-      headers: { etag: feed.etag },
-    });
-  }) as typeof fetch,
+      headers: new Headers({ etag: feed.etag }),
+      body: new TextEncoder().encode(feed.status === 304 ? "" : feed.body),
+    };
+  },
 };
 
 const stack = await startPostgrest(db);
@@ -357,6 +361,37 @@ try {
         ).length,
         1,
         "the outsider resolved nothing",
+      );
+      // The risk and actions derived from the brief carry the mission's scope
+      // (20270329090000): nothing of them reaches the outsider through
+      // PostgREST, directly or through what points at them, and nothing can
+      // be changed; the circle still works with them.
+      const riskId = psql(
+        `SELECT risk_id FROM sw_change_brief_applications WHERE brief_id='${briefId}'`,
+      );
+      for (const [table, column] of [
+        ["sw_risks", "id"],
+        ["sw_actions", "risk_id"],
+        ["sw_evidence_links", "target_id"],
+        ["sw_audit_events", "entity_id"],
+        ["sw_record_versions", "risk_id"],
+      ] as const)
+        assert.deepEqual(
+          (await direct.from(table).select("id").eq(column, riskId)).data,
+          [],
+          `${table} reaches the outsider`,
+        );
+      assert.deepEqual(
+        (await direct.from("sw_risks").update({ title: "Outsider" }).eq("id", riskId).select("id"))
+          .data,
+        [],
+        "the outsider changes nothing",
+      );
+      assert.equal(
+        (await caller(EDITOR).supabase.from("sw_risks").select("title").eq("id", riskId)).data?.[0]
+          ?.title,
+        "Transport disruption",
+        "the circle still reads the derived risk, unchanged",
       );
       psql(
         `${asUser(EDITOR)} SET ROLE authenticated; UPDATE sw_missions SET restricted=false WHERE id='${mission}';`,

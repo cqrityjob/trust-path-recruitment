@@ -12,7 +12,13 @@ export interface FeedItem {
   text: string;
 }
 export class FeedError extends Error {
-  constructor(readonly code: "feed_dtd_refused" | "feed_not_rss_or_atom" | "feed_too_large") {
+  constructor(
+    readonly code:
+      | "feed_dtd_refused"
+      | "feed_not_rss_or_atom"
+      | "feed_too_large"
+      | "feed_unparseable",
+  ) {
     super(code);
   }
 }

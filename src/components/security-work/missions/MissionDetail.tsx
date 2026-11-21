@@ -81,7 +81,7 @@ function MissionWorkspace({ detail }: { detail: Detail }) {
   const l = useWorkText();
   const text = useMissionText();
   const { lang } = useT();
-  const { workspace, canEdit, user } = useSecurityWorkspace();
+  const { workspace, canEdit, user, membership } = useSecurityWorkspace();
   const queryClient = useQueryClient();
   const [view, setView] = useState<MissionView>("brief");
   const [error, setError] = useState<string | null>(null);
@@ -109,11 +109,16 @@ function MissionWorkspace({ detail }: { detail: Detail }) {
     await refresh();
     return true;
   };
+  // The database is the authority (20270329090000): accepting a review is an
+  // approval, and completing needs an acceptance it recorded. Only offer what
+  // it will allow.
+  const accepted = mission.review_state === "accepted" && Boolean(mission.review_accepted_by);
   const moves = executionStates.filter(
     (state) =>
       !(systemOnlyStates as readonly string[]).includes(state) &&
       canTransition(mission, state) &&
-      !(state === "ready" && missing.length > 0),
+      !(state === "ready" && missing.length > 0) &&
+      !(state === "completed" && !accepted),
   );
   const reviewMoves = (["in_review", "accepted", "changes_requested"] as ReviewState[]).filter(
     (state) =>
@@ -121,8 +126,9 @@ function MissionWorkspace({ detail }: { detail: Detail }) {
         mission.review_state as ReviewState,
         state,
         mission.execution_state as ExecutionState,
-      ),
+      ) && !(state === "accepted" && !membership.can_approve),
   );
+  const awaitsApprover = mission.review_state === "in_review" && !membership.can_approve && canEdit;
   const evidence = detail.links.filter((entry) =>
     (evidenceLinkKinds as readonly string[]).includes(entry.link.target_kind),
   );
@@ -156,7 +162,17 @@ function MissionWorkspace({ detail }: { detail: Detail }) {
           )}
         </div>
       </div>
-      <WorkError code={error} />
+      <WorkError
+        code={error}
+        message={
+          error === "APPROVER_REQUIRED"
+            ? l(
+                "Bara en person som får godkänna kan acceptera granskningen.",
+                "Only a person who may approve can accept the review.",
+              )
+            : undefined
+        }
+      />
       <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_300px] lg:gap-6">
         <div className="min-w-0 space-y-4">
           <div
@@ -292,6 +308,17 @@ function MissionWorkspace({ detail }: { detail: Detail }) {
                     </WorkButton>
                   ))}
                 </div>
+                {awaitsApprover && (
+                  <p
+                    className="text-xs text-muted-foreground"
+                    data-testid="sw-mission-awaits-approver"
+                  >
+                    {l(
+                      "Granskningen väntar på en person som får godkänna. Du kan inte acceptera den själv.",
+                      "The review is waiting for a person who may approve. You cannot accept it yourself.",
+                    )}
+                  </p>
+                )}
                 {missing.length > 0 && (
                   <p className="text-xs text-muted-foreground">
                     {l(

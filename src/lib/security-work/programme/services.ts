@@ -643,6 +643,37 @@ export async function savePlan(
 }
 
 // ── Management reports ───────────────────────────────────────────────────────
+/**
+ * A management report is read by the whole workspace and its facts are
+ * frozen, so a risk or action scoped to a mission (derived from that
+ * mission's impact brief) never enters it - not even when the person who
+ * builds the report is in the mission's circle and can see it. Links and gap
+ * references to such records are dropped with them. Ordinary records are
+ * untouched.
+ */
+export function workspaceWideFacts(snapshot: ProgrammeSnapshot): ProgrammeSnapshot {
+  const risks = new Set(snapshot.risks.filter((r) => r.access_mission_id).map((r) => r.id));
+  const actions = new Set(snapshot.actions.filter((a) => a.access_mission_id).map((a) => a.id));
+  if (!risks.size && !actions.size) return snapshot;
+  return {
+    ...snapshot,
+    risks: snapshot.risks.filter((r) => !risks.has(r.id)),
+    actions: snapshot.actions.filter(
+      (a) => !actions.has(a.id) && !(a.risk_id && risks.has(a.risk_id)),
+    ),
+    riskAssets: snapshot.riskAssets.filter((link) => !risks.has(link.risk_id)),
+    evidenceLinks: snapshot.evidenceLinks.filter(
+      (link) =>
+        !(link.target_kind === "risk" && risks.has(link.target_id)) &&
+        !(link.target_kind === "action" && actions.has(link.target_id)),
+    ),
+    gaps: snapshot.gaps.map((gap) =>
+      gap.related_risk_id && risks.has(gap.related_risk_id)
+        ? { ...gap, related_risk_id: null }
+        : gap,
+    ),
+  };
+}
 async function latestApprovedReport(
   caller: SecurityWorkCaller,
   workspaceId: string,
@@ -665,7 +696,7 @@ export async function createManagementReport(
   data: inputs.CreateManagementReportInput,
 ): Promise<ManagementReport> {
   await access(caller, data.workspaceId, true);
-  const snapshot = await readProgramme(caller, data.workspaceId);
+  const snapshot = workspaceWideFacts(await readProgramme(caller, data.workspaceId));
   const previous = await latestApprovedReport(caller, data.workspaceId, data.id);
   const built = buildManagementReportData(snapshot, previous);
   const created = checked(
@@ -714,7 +745,7 @@ export async function saveManagementReport(
   }
   let refreshed: { facts: Json; computed: Json } | null = null;
   if (data.refreshData) {
-    const snapshot = await readProgramme(caller, data.workspaceId);
+    const snapshot = workspaceWideFacts(await readProgramme(caller, data.workspaceId));
     const previous = await latestApprovedReport(caller, data.workspaceId, data.id);
     const built = buildManagementReportData(snapshot, previous);
     refreshed = {
