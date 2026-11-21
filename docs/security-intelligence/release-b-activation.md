@@ -7,13 +7,17 @@ is fetched and nothing is billed. No step here activates AI or document
 processing. Those stay behind their own activations (see
 `processing-activation.md`).
 
-Read-only state of production on 2026-11-21: `sw_private.worker_keys` has
-**0 active rows**, and 20270328090000 is **not installed**.
+Read-only state of production at 2026-11-21T21:07:43.931516+00:00: 20270328090000 is
+**installed and verified** after #500 merged. The 13 function bodies match the
+merged source, and the restricted-brief policies and privileges are verified.
+See [hosted verification](../release/2026-11-21-security-work-monitoring-hosted-verification.json).
+`sw_private.worker_keys` still has **0 active rows**, and no feed host is approved.
+Installation has not activated fetching.
 
 ## 1. Merge and publish
 
-1. Merge #500. The official Supabase integration installs 20270328090000.
-   Claude then verifies it read-only and records it in #501.
+1. #500 is merged and 20270328090000 is installed. Its read-only verification
+   and applied registration are recorded in #501; do not rerun the migration.
 2. Merge #501, then **Publish** in Lovable. Lovable does not publish on merge.
 
 ## 2. Worker signing key (once)

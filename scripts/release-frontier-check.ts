@@ -527,7 +527,10 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // risk/action) is a schema-first release awaiting the owner's merge. It approves
 // no feed host and creates no key or schedule, so nothing can be fetched after
 // installation until the owner approves a host.
-const expectedPending: string[] = ["20270328090000_security_work_monitoring_impact.sql"];
+// Installed after #500 merged as 3d34b626 and verified read-only at 2026-11-21T21:07:43.931516+00:00.
+// The 407-row ledger preserves the previous 406 entries; all 13 function bodies,
+// privileges and restricted-brief policies match. Evidence: docs/release/2026-11-21-security-work-monitoring-hosted-verification.json.
+const expectedPending: string[] = [];
 
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
