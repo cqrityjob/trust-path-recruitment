@@ -200,7 +200,15 @@ describe("official real Supabase CI target", () => {
     expect(APP_SHA).toBe("53659419a1c243c27a59540eb849569140b71365");
     // The schema witness moved to the Security Work context slot (406 files);
     // the application under this regression stays the reviewed 53659419.
-    expect(SCHEMA_SHA).toBe("1130faf625ac39c60219064611af265abf05eacb");
+    expect(SCHEMA_SHA).toBe("612290b3112bbf93466ee4e8050082995e823058");
+    // Nor the context slot before its ownership-transfer fix (1130faf6).
+    expect(() =>
+      validateTarget(
+        { ...env, RI_REAL_RELEASE_SCHEMA_SHA: "1130faf625ac39c60219064611af265abf05eacb" },
+        env.RI_REAL_SCHEMA_SHA,
+        APP_SHA,
+      ),
+    ).toThrow("REAL_CI_UNREVIEWED_RELEASE_SCHEMA");
     // Nor the Security Work assistant slot before it (b31d1fd9).
     expect(() =>
       validateTarget(
@@ -349,7 +357,7 @@ describe("official real Supabase CI target", () => {
     ).toThrow("UNREVIEWED_APP_HEAD");
   });
   test("release schema binding is separate from test code and requires a full SHA", () => {
-    const release = "1130faf625ac39c60219064611af265abf05eacb";
+    const release = "612290b3112bbf93466ee4e8050082995e823058";
     const context = validateTarget(
       { ...env, RI_REAL_RELEASE_SCHEMA_SHA: release },
       env.RI_REAL_SCHEMA_SHA,
@@ -504,7 +512,7 @@ describe("real CI execution and publication cannot silently narrow", () => {
     expect(job["runs-on"]).toBe("ubuntu-latest");
     expect(job.if).toBeUndefined();
     expect(job["continue-on-error"]).toBeUndefined();
-    expect(job.env.RI_REAL_RELEASE_SCHEMA_SHA).toBe("1130faf625ac39c60219064611af265abf05eacb");
+    expect(job.env.RI_REAL_RELEASE_SCHEMA_SHA).toBe("612290b3112bbf93466ee4e8050082995e823058");
     expect(job.steps[0].with["fetch-depth"]).toBe(0);
     expect(job.steps.every((step: { [key: string]: unknown }) => !step["continue-on-error"])).toBe(
       true,

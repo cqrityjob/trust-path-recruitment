@@ -3607,7 +3607,7 @@ psql_q -d postgres -c "CREATE DATABASE ${TEST_DB}_pristine TEMPLATE ${TEST_DB};"
 echo "==> Running Security Work operating context, missions and collaboration assertions"
 SWCTX_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_work_context_missions_test.sql 2>&1)" || { echo "$SWCTX_OUT"; exit 1; }
 SWCTX_PASSED="$(printf '%s\n' "$SWCTX_OUT" | grep -c 'NOTICE:  ok  SW-CTX ' || true)"
-[ "$SWCTX_PASSED" -ge 64 ] || { echo "$SWCTX_OUT"; echo "FAIL: Security Work context assertion shortfall: $SWCTX_PASSED (floor 64)"; exit 1; }
+[ "$SWCTX_PASSED" -ge 74 ] || { echo "$SWCTX_OUT"; echo "FAIL: Security Work context assertion shortfall: $SWCTX_PASSED (floor 74)"; exit 1; }
 echo "    ok  $SWCTX_PASSED Security Work context assertions passed"
 TEST_DB="$TEST_DB" bash scripts/security-work-context-negative-controls.sh
 SWCTX_LOG="$(mktemp)"

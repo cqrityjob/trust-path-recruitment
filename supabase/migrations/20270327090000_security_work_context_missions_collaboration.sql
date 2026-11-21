@@ -199,6 +199,19 @@ BEGIN
        SELECT 1 FROM public.sw_workspace_memberships m WHERE m.workspace_id = NEW.workspace_id AND m.user_id = NEW.owner_id AND m.active) THEN
     RAISE EXCEPTION 'SW_ACTIVE_OWNER_REQUIRED' USING ERRCODE = '23514';
   END IF;
+  -- Ownership administers the circle (set_mission_member), so editing a mission
+  -- never confers it: only the creator, the current owner or a workspace owner
+  -- may transfer it, and in a restricted mission only to someone already in it.
+  IF NEW.owner_id IS DISTINCT FROM OLD.owner_id THEN
+    IF auth.uid() IS DISTINCT FROM OLD.created_by AND auth.uid() IS DISTINCT FROM OLD.owner_id
+       AND NOT sw_private.can_manage(NEW.workspace_id) THEN
+      RAISE EXCEPTION 'SW_MISSION_OWNER_REQUIRED' USING ERRCODE = '42501';
+    END IF;
+    IF NEW.restricted AND NEW.owner_id IS NOT NULL AND NEW.owner_id IS DISTINCT FROM NEW.created_by AND NOT EXISTS (
+         SELECT 1 FROM public.sw_mission_members mm WHERE mm.mission_id = NEW.id AND mm.user_id = NEW.owner_id) THEN
+      RAISE EXCEPTION 'SW_OWNER_OUTSIDE_CIRCLE' USING ERRCODE = '23514';
+    END IF;
+  END IF;
   -- Only the creator or a workspace owner may open or close a mission's circle.
   IF NEW.restricted IS DISTINCT FROM OLD.restricted AND OLD.created_by IS DISTINCT FROM auth.uid() AND NOT sw_private.can_manage(NEW.workspace_id) THEN
     RAISE EXCEPTION 'SW_RESTRICTION_OWNER_REQUIRED' USING ERRCODE = '42501';
