@@ -521,8 +521,13 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // after merge f58952db. Read-only proof:
 // docs/release/2026-11-21-security-work-context-hosted-verification.json. The
 // 406-row ledger preserves all previous 405 entries and all 18 function bodies
-// match the merged source. Nothing is pending.
-const expectedPending: string[] = [];
+// match the merged source.
+//
+// 2026-11-21: 20270328090000 (Security Work Release B: monitoring to a reviewed
+// risk/action) is a schema-first release awaiting the owner's merge. It approves
+// no feed host and creates no key or schedule, so nothing can be fetched after
+// installation until the owner approves a host.
+const expectedPending: string[] = ["20270328090000_security_work_monitoring_impact.sql"];
 
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",

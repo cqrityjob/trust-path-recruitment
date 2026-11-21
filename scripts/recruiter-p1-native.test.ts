@@ -756,14 +756,14 @@ test("human decisions preserve explicit NO, actual missing sources and checked e
 test("history/count contracts fail closed on missing full schema, skipped or flaky browser evidence", () => {
   const files = fs.readdirSync(path.join(root, "supabase/migrations"));
   assert.equal(APP_SHA, "53659419a1c243c27a59540eb849569140b71365");
-  assert.equal(SCHEMA_SHA, "612290b3112bbf93466ee4e8050082995e823058");
-  assert.equal(history(files).length, 406);
+  assert.equal(SCHEMA_SHA, "cc42c143ff3ad1919fd0f06625383f94ee283d6e");
+  assert.equal(history(files).length, 407);
   assert.throws(
     () =>
       history(
         files.filter(
           (name) =>
-            !/^202703(?:10090000|10100000|11100000|12100000|13100000|14100000|15100000|16090000|17090000|18090000|19090000|20090000|21090000|22090000|23090000|24090000|25090000|26090000|27090000)_/.test(
+            !/^202703(?:10090000|10100000|11100000|12100000|13100000|14100000|15100000|16090000|17090000|18090000|19090000|20090000|21090000|22090000|23090000|24090000|25090000|26090000|27090000|28090000)_/.test(
               name,
             ),
         ),
@@ -792,6 +792,7 @@ test("history/count contracts fail closed on missing full schema, skipped or fla
     "20270325090000_",
     "20270326090000_",
     "20270327090000_",
+    "20270328090000_",
   ]) {
     const omitted = files.filter((name) => !name.startsWith(prefix));
     assert.throws(() => history(omitted), /COMPLETE_HISTORY/);
@@ -813,7 +814,7 @@ test("history/count contracts fail closed on missing full schema, skipped or fla
       /FIVE_BROWSER/,
     );
 });
-test("workflow checkouts bind the exact406 schema and fresh reviewed app without floating refs", () => {
+test("workflow checkouts bind the exact407 schema and fresh reviewed app without floating refs", () => {
   const workflow = fs.readFileSync(
     path.join(root, ".github/workflows/recruiter-p1-native-ci.yml"),
     "utf8",
