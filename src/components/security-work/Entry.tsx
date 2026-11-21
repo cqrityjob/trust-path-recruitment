@@ -12,6 +12,7 @@ import { entryWorkspace, rememberedWorkspace } from "@/lib/security-work/workspa
 import { useT } from "@/i18n/context";
 import { useSecurityIdentity } from "./context";
 import { LoadingState, SafetyNotice, TextField, WorkButton, WorkError, panelClass } from "./ui";
+import { AcceptInvitation } from "./settings/AcceptInvitation";
 
 export function SecurityWorkEntry() {
   const { t, lang } = useT();
@@ -178,6 +179,7 @@ export function SecurityWorkEntry() {
           )}
         </>
       )}
+      <AcceptInvitation />
       <p className="flex max-w-2xl gap-2 text-sm leading-relaxed text-muted-foreground">
         <ShieldCheck className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden="true" />
         {t("sw.entry.privacy")}

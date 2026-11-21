@@ -19921,6 +19921,59 @@ export type Database = {
           },
         ]
       }
+      sw_invitations: {
+        Row: {
+          accepted_at: string | null
+          accepted_by: string | null
+          can_approve: boolean
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          invited_by: string
+          revoked_at: string | null
+          role: string
+          token_hash: string
+          workspace_id: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          can_approve?: boolean
+          created_at?: string
+          email: string
+          expires_at: string
+          id: string
+          invited_by: string
+          revoked_at?: string | null
+          role: string
+          token_hash: string
+          workspace_id: string
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          can_approve?: boolean
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          invited_by?: string
+          revoked_at?: string | null
+          role?: string
+          token_hash?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sw_invitations_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "sw_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sw_management_reports: {
         Row: {
           approved_at: string | null
@@ -19992,6 +20045,35 @@ export type Database = {
           },
         ]
       }
+      sw_member_preferences: {
+        Row: {
+          role_focus: string
+          updated_at: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          role_focus?: string
+          updated_at?: string
+          user_id?: string
+          workspace_id: string
+        }
+        Update: {
+          role_focus?: string
+          updated_at?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sw_member_preferences_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "sw_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sw_method_versions: {
         Row: {
           analysis_type: string
@@ -20012,6 +20094,209 @@ export type Database = {
           id?: string
         }
         Relationships: []
+      }
+      sw_mission_events: {
+        Row: {
+          actor_user_id: string | null
+          created_at: string
+          event: string
+          from_value: string | null
+          id: number
+          mission_id: string
+          record_version: number | null
+          to_value: string | null
+          workspace_id: string
+        }
+        Insert: {
+          actor_user_id?: string | null
+          created_at?: string
+          event: string
+          from_value?: string | null
+          id?: never
+          mission_id: string
+          record_version?: number | null
+          to_value?: string | null
+          workspace_id: string
+        }
+        Update: {
+          actor_user_id?: string | null
+          created_at?: string
+          event?: string
+          from_value?: string | null
+          id?: never
+          mission_id?: string
+          record_version?: number | null
+          to_value?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sw_mission_events_workspace_id_mission_id_fkey"
+            columns: ["workspace_id", "mission_id"]
+            isOneToOne: false
+            referencedRelation: "sw_missions"
+            referencedColumns: ["workspace_id", "id"]
+          },
+        ]
+      }
+      sw_mission_links: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          mission_id: string
+          note: string
+          target_id: string
+          target_kind: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          mission_id: string
+          note?: string
+          target_id: string
+          target_kind: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          mission_id?: string
+          note?: string
+          target_id?: string
+          target_kind?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sw_mission_links_workspace_id_mission_id_fkey"
+            columns: ["workspace_id", "mission_id"]
+            isOneToOne: false
+            referencedRelation: "sw_missions"
+            referencedColumns: ["workspace_id", "id"]
+          },
+        ]
+      }
+      sw_mission_members: {
+        Row: {
+          added_by: string
+          created_at: string
+          mission_id: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          added_by?: string
+          created_at?: string
+          mission_id: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          added_by?: string
+          created_at?: string
+          mission_id?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sw_mission_members_workspace_id_mission_id_fkey"
+            columns: ["workspace_id", "mission_id"]
+            isOneToOne: false
+            referencedRelation: "sw_missions"
+            referencedColumns: ["workspace_id", "id"]
+          },
+          {
+            foreignKeyName: "sw_mission_members_workspace_id_user_id_fkey"
+            columns: ["workspace_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "sw_workspace_memberships"
+            referencedColumns: ["workspace_id", "user_id"]
+          },
+        ]
+      }
+      sw_missions: {
+        Row: {
+          brief: Json
+          created_at: string
+          created_by: string
+          due_date: string | null
+          execution_state: string
+          id: string
+          kind: string
+          next_action: string
+          operating_profile_version: number | null
+          owner_id: string | null
+          restricted: boolean
+          review_state: string
+          title: string
+          updated_at: string
+          version: number
+          workspace_id: string
+        }
+        Insert: {
+          brief?: Json
+          created_at?: string
+          created_by?: string
+          due_date?: string | null
+          execution_state?: string
+          id?: string
+          kind: string
+          next_action?: string
+          operating_profile_version?: number | null
+          owner_id?: string | null
+          restricted?: boolean
+          review_state?: string
+          title: string
+          updated_at?: string
+          version?: number
+          workspace_id: string
+        }
+        Update: {
+          brief?: Json
+          created_at?: string
+          created_by?: string
+          due_date?: string | null
+          execution_state?: string
+          id?: string
+          kind?: string
+          next_action?: string
+          operating_profile_version?: number | null
+          owner_id?: string | null
+          restricted?: boolean
+          review_state?: string
+          title?: string
+          updated_at?: string
+          version?: number
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sw_missions_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "sw_workspaces"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sw_missions_workspace_id_operating_profile_version_fkey"
+            columns: ["workspace_id", "operating_profile_version"]
+            isOneToOne: false
+            referencedRelation: "sw_operating_profiles"
+            referencedColumns: ["workspace_id", "profile_version"]
+          },
+          {
+            foreignKeyName: "sw_missions_workspace_id_owner_id_fkey"
+            columns: ["workspace_id", "owner_id"]
+            isOneToOne: false
+            referencedRelation: "sw_workspace_memberships"
+            referencedColumns: ["workspace_id", "user_id"]
+          },
+        ]
       }
       sw_monitoring_profiles: {
         Row: {
@@ -20076,6 +20361,50 @@ export type Database = {
             foreignKeyName: "sw_monitoring_profiles_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: true
+            referencedRelation: "sw_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sw_operating_profiles: {
+        Row: {
+          change_note: string
+          created_at: string
+          created_by: string
+          id: string
+          profile: Json
+          profile_version: number
+          provenance: Json
+          schema_version: string
+          workspace_id: string
+        }
+        Insert: {
+          change_note?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          profile: Json
+          profile_version: number
+          provenance?: Json
+          schema_version: string
+          workspace_id: string
+        }
+        Update: {
+          change_note?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          profile?: Json
+          profile_version?: number
+          provenance?: Json
+          schema_version?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sw_operating_profiles_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
             referencedRelation: "sw_workspaces"
             referencedColumns: ["id"]
           },
@@ -25726,6 +26055,10 @@ export type Database = {
         Args: { _request_id: string }
         Returns: undefined
       }
+      sw_accept_invitation: {
+        Args: { _code: string }
+        Returns: string
+      }
       sw_apply_ai_draft: {
         Args: {
           _expected_version: number
@@ -25815,6 +26148,16 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      sw_create_invitation: {
+        Args: {
+          _can_approve: boolean
+          _email: string
+          _request_id: string
+          _role: string
+          _workspace_id: string
+        }
+        Returns: Json
+      }
       sw_create_personal_workspace: { Args: { _name: string }; Returns: string }
       sw_decide_suggestion: {
         Args: {
@@ -25883,6 +26226,16 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      sw_list_members: {
+        Args: { _workspace_id: string }
+        Returns: {
+          active: boolean
+          can_approve: boolean
+          email: string
+          role: string
+          user_id: string
+        }[]
       }
       sw_preview_report: {
         Args: { _report_id: string; _workspace_id: string }
@@ -26009,6 +26362,29 @@ export type Database = {
           _workspace_id: string
         }
         Returns: string
+      }
+      sw_revoke_invitation: {
+        Args: { _invitation_id: string; _workspace_id: string }
+        Returns: boolean
+      }
+      sw_set_member_role: {
+        Args: {
+          _active: boolean
+          _can_approve: boolean
+          _role: string
+          _user_id: string
+          _workspace_id: string
+        }
+        Returns: boolean
+      }
+      sw_set_mission_member: {
+        Args: {
+          _member: boolean
+          _mission_id: string
+          _user_id: string
+          _workspace_id: string
+        }
+        Returns: boolean
       }
       sweep_analytics_retention: {
         Args: never

@@ -2615,6 +2615,17 @@ jobs:
           E2E_BASE_URL: http://localhost:3100
         run: bun run e2e:security-work-programme
 
+      # Security Work Release A: a restricted risk-assessment mission from the
+      # overview's task entrance through brief, evidence, review and completion
+      # (stale-version conflict, hidden mission, keyboard tabs), the operating
+      # profile's confirm-to-keep prefill, role focus, invitations and the
+      # invitee's code entry, in Swedish and English, desktop and 375px phone.
+      # The fixture enforces the real pure rules; hosted Supabase is blocked.
+      - name: Security Work missions browser journey
+        env:
+          E2E_BASE_URL: http://localhost:3100
+        run: bun run e2e:security-work-missions
+
       # "Utforska nu" on the Career Discovery recommendation is a real link
       # to the occupation's page (its guide, or its reviewed catalogue page
       # where no guide is published), and the result survives the trip there
