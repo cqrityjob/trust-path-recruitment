@@ -4335,7 +4335,10 @@
     },
     {
       "file": "20270327090000_security_work_context_missions_collaboration.sql",
-      "hostedState": "pending",
+      "hostedState": "applied",
+      "hostedVersion": "20270327090000",
+      "hostedName": "security_work_context_missions_collaboration",
+      "evidenceSource": "Installed by the official Supabase GitHub integration after #498 merged as f58952db on 2026-11-21. Read-only verification on wrygicdfxwjnrugduxnt at 2026-11-21T15:28:37.553994+00:00: ledger 406 rows ending 20270327090000; previous 405 entries unchanged (md5 113579a8, equal to the committed snapshot). All 18 function bodies equal the local replay of the merged file by md5(prosrc), including the ownership-transfer rule in guard_mission. The seven tables have RLS on and no anon/service_role privilege; authenticated cannot read sw_invitations.token_hash nor write sw_invitations; the six public functions are executable by authenticated only. sw_missions, sw_operating_profiles and sw_invitations are empty. No production write. See docs/release/2026-11-21-security-work-context-hosted-verification.json.",
       "introduces": [
         {
           "kind": "table",
