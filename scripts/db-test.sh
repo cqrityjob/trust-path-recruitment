@@ -3607,7 +3607,7 @@ psql_q -d postgres -c "CREATE DATABASE ${TEST_DB}_pristine TEMPLATE ${TEST_DB};"
 echo "==> Running Security Work monitoring-to-impact assertions"
 SWMON_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_work_monitoring_impact_test.sql 2>&1)" || { echo "$SWMON_OUT"; exit 1; }
 SWMON_PASSED="$(printf '%s\n' "$SWMON_OUT" | grep -c 'NOTICE:  ok  SW-MON ' || true)"
-[ "$SWMON_PASSED" -ge 56 ] || { echo "$SWMON_OUT"; echo "FAIL: Security Work monitoring assertion shortfall: $SWMON_PASSED (floor 56)"; exit 1; }
+[ "$SWMON_PASSED" -ge 66 ] || { echo "$SWMON_OUT"; echo "FAIL: Security Work monitoring assertion shortfall: $SWMON_PASSED (floor 66)"; exit 1; }
 echo "    ok  $SWMON_PASSED Security Work monitoring assertions passed"
 TEST_DB="$TEST_DB" bash scripts/security-work-monitoring-negative-controls.sh
 SWMON_LOG="$(mktemp)"
@@ -3618,7 +3618,7 @@ grep -q 'SW_MONITORING_ROLLBACK_DATA_PRESENT' "$SWMON_LOG" || { cat "$SWMON_LOG"
 rm -f "$SWMON_LOG"
 echo '    ok  monitoring rollback preserves adopted feeds, items and briefs'
 psql_q -d "$TEST_DB" -f supabase/rollback/20270328090000_security_work_monitoring_impact_rollback.sql >/dev/null
-SWMON_LEFT="$(psql_q -d "$TEST_DB" -Atc "SELECT (SELECT count(*) FROM pg_class WHERE relnamespace='public'::regnamespace AND relname IN ('sw_feed_hosts','sw_fetch_runs','sw_story_clusters','sw_cluster_items','sw_change_briefs','sw_review_flags','sw_change_brief_applications')) + (SELECT count(*) FROM information_schema.columns WHERE table_schema='public' AND ((table_name='sw_sources' AND column_name IN ('feed_url','poll_target_minutes','last_checked_at','feed_etag','feed_last_modified')) OR (table_name='sw_source_items' AND column_name IN ('observed_at','content_hash')))) + (SELECT count(*) FROM pg_proc WHERE proname IN ('record_fetch','apply_change_brief','guard_feed_source','guard_fetched_item','guard_change_brief','supersede_previous_brief','guard_review_flag','story_key','feed_host','sw_record_fetch','sw_apply_change_brief'))")"
+SWMON_LEFT="$(psql_q -d "$TEST_DB" -Atc "SELECT (SELECT count(*) FROM pg_class WHERE relnamespace='public'::regnamespace AND relname IN ('sw_feed_hosts','sw_fetch_runs','sw_story_clusters','sw_cluster_items','sw_change_briefs','sw_review_flags','sw_change_brief_applications')) + (SELECT count(*) FROM information_schema.columns WHERE table_schema='public' AND ((table_name='sw_sources' AND column_name IN ('feed_url','poll_target_minutes','last_checked_at','feed_etag','feed_last_modified')) OR (table_name='sw_source_items' AND column_name IN ('observed_at','content_hash')))) + (SELECT count(*) FROM pg_proc WHERE proname IN ('record_fetch','apply_change_brief','guard_feed_source','guard_fetched_item','guard_change_brief','supersede_previous_brief','guard_review_flag','story_key','feed_host','sw_record_fetch','sw_apply_change_brief','can_see_brief','record_brief_mission_event')) + (SELECT count(*) FROM pg_constraint WHERE conname='sw_mission_events_event_check' AND pg_get_constraintdef(oid) LIKE '%impact_brief_changed%')")"
 [ "$SWMON_LEFT" = 0 ] || { echo "FAIL: monitoring rollback left $SWMON_LEFT object(s)"; exit 1; }
 echo '    ok  monitoring stood down; no new object remains'
 
