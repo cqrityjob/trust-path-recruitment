@@ -18,7 +18,10 @@ Installation has not activated fetching.
 
 1. #500 is merged and 20270328090000 is installed. Its read-only verification
    and applied registration are recorded in #501; do not rerun the migration.
-2. Merge #501, then **Publish** in Lovable. Lovable does not publish on merge.
+2. Merge #502 (20270329090000, the restricted-records and review-acceptance
+   fix). The official integration installs it; Claude verifies it read-only and
+   records it in #501. #501's schema-first gate stays red until then.
+3. Merge #501, then **Publish** in Lovable. Lovable does not publish on merge.
 
 ## 2. Worker signing key (once)
 
@@ -51,7 +54,14 @@ Fetching then stops at once.
 ## 3. Approve a publisher (per official source)
 
 Only hosts in `sw_feed_hosts` can be connected. Choose an official publisher
-whose RSS or Atom feed you are allowed to use. Record where its terms are:
+whose RSS or Atom feed you are allowed to use. Record where its terms are.
+
+Before approving, check that the feed host is **not served through
+Cloudflare** (for example `curl -sI https://<host>/ | grep -i '^server:'` does
+not say `cloudflare`). The app runs on Cloudflare Workers and connects to the
+checked IP address with `cloudflare:sockets`, which Cloudflare documents
+cannot reach Cloudflare's own address ranges. Such a host fails closed: the
+fetch is refused and coverage shows "misslyckas". Nothing is fetched unpinned.
 
 ```sql
 INSERT INTO public.sw_feed_hosts (host, publisher, terms_reference, approval_note)
@@ -66,10 +76,24 @@ Fetches from that host stop.
 
 ## 4. First supervised fetch
 
-The app server runs on Cloudflare Workers. DNS uses Node's `dns.lookup`, and
-falls back to Cloudflare DNS over HTTPS (`cloudflare-dns.com`) only if the
-runtime has no lookup. This has been tested in Node with controlled DNS and HTTP
-answers, but not yet in the hosted runtime. The first fetch below is that check:
+The app server runs on Cloudflare Workers. Each fetch resolves the host
+(Node's `dns.lookup`; Cloudflare DNS over HTTPS only if the runtime has no
+lookup), refuses any non-public answer, and then connects to the checked
+address itself: TLS is verified for the hostname, and the name is never
+resolved again, so DNS rebinding cannot redirect the request.
+
+Tested so far:
+
+- controlled DNS and HTTP answers;
+- real TLS on 127.0.0.1 under Node;
+- locally, the same module inside workerd (pinned wrangler 4.147.0) against
+  public hosts:
+  - the correct name returned 200;
+  - a wrong hostname pinned to a real address was refused at TLS;
+  - a self-signed certificate was refused.
+
+Not yet tested: Cloudflare's hosted network. The first fetch below is that
+check:
 
 - Coverage turns **aktuell** and new items appear: the integration works.
 - Coverage turns **misslyckas** with a reason: send Claude the reason.
