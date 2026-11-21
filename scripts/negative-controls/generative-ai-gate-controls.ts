@@ -78,13 +78,15 @@ const MUTATIONS: readonly Mutation[] = [
       "Security-work configuration (job and assistant) says AI_NOT_ENABLED before any database read",
   },
   {
-    id: "AIGATE-NC-ASSISTANT-DIRECT",
-    defect: "the Security AI assistant calls the provider with a direct fetch",
+    id: "AIGATE-NC-ASSISTANT-PROVIDER",
+    defect: "the Security AI assistant names the provider again instead of the shared dispatch",
     file: ASSISTANT,
-    find: 'await externalAiFetch(\n    "security-work.assistant",\n    fetchImpl,\n    ',
-    replace: "await fetchImpl(\n    ",
+    find: "export async function decideSuggestion(",
+    replace:
+      'const PROVIDER_URL = "https://api.anthropic.com/v1/messages";\nexport async function decideSuggestion(',
     guard: GUARD,
-    expect: "assistant.server.ts: sends through externalAiFetch and has no direct fetch call",
+    expect:
+      "the only files in src/ and supabase/functions that name a provider or send its credential are the known two",
   },
   {
     id: "AIGATE-NC-NEW-HOST",
@@ -95,7 +97,7 @@ const MUTATIONS: readonly Mutation[] = [
       'export const CV_TASK_KEY = "cv_presentation_drafting" as const;\nconst NEW_PROVIDER = "https://api.openai.com/v1/chat/completions";',
     guard: GUARD,
     expect:
-      "the only files in src/ and supabase/functions that name a provider or send its credential are the known three",
+      "the only files in src/ and supabase/functions that name a provider or send its credential are the known two",
   },
   {
     id: "AIGATE-NC-EDGE-FUNCTION",

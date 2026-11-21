@@ -1,0 +1,50 @@
+{
+  "migration": "20270327090000_security_work_context_missions_collaboration.sql",
+  "pullRequest": "https://github.com/cqrityjob/trust-path-recruitment/pull/498",
+  "mergedAt": "2026-11-21T15:27:36Z",
+  "mergeCommit": "f58952db",
+  "installedBy": "Official Supabase GitHub integration (owner project wrygicdfxwjnrugduxnt). Nothing was applied, re-sent or written by this verification.",
+  "readAt": "2026-11-21T15:28:37.553994+00:00",
+  "method": "Read-only SELECTs over the Supabase management connector.",
+  "ledger": {
+    "rows": 406,
+    "latest": "20270327090000:security_work_context_missions_collaboration",
+    "previous405Md5": "113579a85086f6bf335edc4a25d26195",
+    "previous405EqualsCommittedSnapshot": true,
+    "full406Md5": "784b7817d50af710ccdc4d413510c149",
+    "md5Of": "string_agg(version||':'||coalesce(name,''), E'\\n' ORDER BY version)"
+  },
+  "functionBodies": {
+    "comparedWith": "Local replay of the merged migration from main f58952db (PostgreSQL 16.14, full history): md5(prosrc) equal for all 18 functions (set comparison).",
+    "md5": {
+      "public.sw_accept_invitation(text)": "1b171b64d0fb8174e51c10e47dfa4148",
+      "public.sw_create_invitation(uuid,uuid,text,text,boolean)": "a45d0ce39b13a8aa3392fa62aaff78f8",
+      "public.sw_list_members(uuid)": "af6787fac860575883f7080daa8f5f2f",
+      "public.sw_revoke_invitation(uuid,uuid)": "90f9f2a278ef91cfc7b3552ffab3fc60",
+      "public.sw_set_member_role(uuid,uuid,text,boolean,boolean)": "d7ba7be2d9c74b7d447a0bead73bee10",
+      "public.sw_set_mission_member(uuid,uuid,uuid,boolean)": "7caffc0f5a8ff0f09929cccdcad9a4fd",
+      "sw_private.accept_invitation(text)": "9652c6e026957f9dcd931087d015617f",
+      "sw_private.can_manage(uuid)": "7582a327c45f273e3b235e3134704533",
+      "sw_private.can_see_mission(uuid,uuid)": "57db66b3fe868ca0b1397288c16ad1b8",
+      "sw_private.create_invitation(uuid,uuid,text,text,boolean)": "3fc141eed8c1e82141fa0b7bf75e96f5",
+      "sw_private.guard_mission()": "7ee988d5ba0359c92e7660ea7b4a778c",
+      "sw_private.guard_mission_link()": "9b15c22c4780578cb46fee5faa548918",
+      "sw_private.guard_operating_profile()": "851f0823b2d6e796793e0f912acc0637",
+      "sw_private.list_members(uuid)": "409ba8569c6e0b3d136668eb82a9c31c",
+      "sw_private.record_mission_event()": "5c8d0b4e268f73e94abff8ef6276ae77",
+      "sw_private.revoke_invitation(uuid,uuid)": "f51bbdc87c86f5c197b9c9fa1fcc830e",
+      "sw_private.set_member_role(uuid,uuid,text,boolean,boolean)": "02424351fde7801901c08b3b00e182e9",
+      "sw_private.set_mission_member(uuid,uuid,uuid,boolean)": "ad0dff59709e736c75bfa06d5bdbd8fc"
+    },
+    "ownershipTransferFixPresent": true
+  },
+  "privileges": {
+    "sevenTablesRlsOn": true,
+    "anonOrServiceRoleTablePrivileges": 0,
+    "authenticatedReadsInvitationTokenHash": false,
+    "authenticatedWritesInvitations": false,
+    "publicRpcsExecutableByAuthenticatedOnly": 6
+  },
+  "data": { "sw_missions": 0, "sw_operating_profiles": 0, "sw_invitations": 0 },
+  "notVerified": "Runtime behaviour through the hosted API as real users."
+}

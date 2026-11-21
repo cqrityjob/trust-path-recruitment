@@ -3779,6 +3779,16 @@ PGDATABASE="${TEST_DB}_sw_race" bash scripts/security-work-analysis-concurrency-
 PGDATABASE="${TEST_DB}_sw_race" bash scripts/security-work-assistant-race-test.sh
 psql_q -d postgres -c "DROP DATABASE ${TEST_DB}_sw_race;" >/dev/null
 
+# The assistant's application code over real PostgREST 14.15 (the same pinned
+# image as the recruiter checks above) on a disposable clone, with a stubbed
+# provider: single dispatch, replay only to the same intent, recovery after a
+# context change, outcome_unknown never re-sent, one decision.
+echo "==> Running Security Work assistant over real PostgREST"
+psql_q -d postgres -c "DROP DATABASE IF EXISTS ${TEST_DB}_sw_pgrst;" >/dev/null
+psql_q -d postgres -c "CREATE DATABASE ${TEST_DB}_sw_pgrst TEMPLATE ${TEST_DB}_pristine;" >/dev/null
+TEST_DB="${TEST_DB}_sw_pgrst" bun scripts/security-work-assistant-postgrest-check.ts
+psql_q -d postgres -c "DROP DATABASE ${TEST_DB}_sw_pgrst;" >/dev/null
+
 # International Passport: test fixtures roll back; rollback refuses adoption.
 for passport_round in before after; do
   for passport_suite in international_foundation international_wallet credential_sharing_v2 closed_catalogue organisation_roles pilot_scope catalogue_completeness hayat_assessments india_national_qualifications public_pilot_availability open_uk_dubai open_abu_dhabi catalogue_research; do

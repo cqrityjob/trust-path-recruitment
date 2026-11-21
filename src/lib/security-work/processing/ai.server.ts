@@ -365,25 +365,50 @@ async function boundedResponse(response: Response, signal: AbortSignal): Promise
   }
 }
 
+/** What a billable provider call returns. Hidden reasoning is never part of it. */
+export type ProviderResult<T> =
+  | {
+      readonly status: "succeeded";
+      readonly output: T;
+      readonly provider: "anthropic";
+      readonly model: string;
+      readonly usage: AiUsage;
+    }
+  | {
+      readonly status: "failed" | "outcome_unknown";
+      readonly errorCode: string;
+      readonly usage: AiUsage;
+    };
+
 /**
+ * One prepared provider request: the exact message body to send, and the
+ * validator its final text must pass. `prepare` runs after the activation is
+ * checked and before anything leaves the application; it may refuse by
+ * throwing SwAiError, which is a plain failure (nothing was sent).
+ */
+export interface PreparedProviderRequest<T> {
+  readonly body: unknown;
+  readonly parse: (value: unknown) => T;
+}
+
+/**
+ * The narrow provider interface every billable Security Work call goes through.
  * Call only after durable reservation/claim. One POST, no automatic retries.
  * A lost answer is outcome_unknown, never permission to dispatch the job again.
  */
-export async function dispatchSwAiOnce(
-  inputValue: unknown,
+export async function dispatchProviderOnce<T>(
   configuration: SwAiConfiguration,
+  prepare: () => PreparedProviderRequest<T>,
   options: {
     readonly signal?: AbortSignal;
     readonly fetchImpl?: typeof fetch;
     readonly beforeDispatch?: (signal: AbortSignal) => Promise<void>;
   } = {},
-): Promise<DispatchResult> {
+): Promise<ProviderResult<T>> {
   if (typeof window !== "undefined") throw new SwAiError("server_only");
   // Version 1 offers no generative AI: refuse before any state, timer or request.
   if (!externalAiAllowed()) throw new SwAiError("generative_ai_disabled");
   let dispatched = false;
-  let inputHash: string | null = null;
-  let withheldSegmentIds: string[] = [];
   let usage: AiUsage = { inputTokens: null, outputTokens: null, costMicros: null };
   const controller = new AbortController();
   const externalAbort = () => controller.abort(new SwAiError("cancelled"));
@@ -397,7 +422,7 @@ export async function dispatchSwAiOnce(
   const fetchImpl = options.fetchImpl ?? fetch;
   // Race also bounds nonconforming test transports; abort is passed into every
   // real network operation and checked again before the only material POST.
-  const run = async (): Promise<DispatchResult> => {
+  const run = async (): Promise<ProviderResult<T>> => {
     const activation = activationSchema.parse(configuration.activation);
     if (
       !configuration.apiKey ||
@@ -405,27 +430,7 @@ export async function dispatchSwAiOnce(
       Date.parse(activation.expiresAt) <= Date.now()
     )
       throw new SwAiError("activation_required");
-    const input = validateAnalysisInput(inputValue);
-    if (!["draft_assessment", "draft_report"].includes(input.purpose))
-      throw new SwAiError("purpose_not_approved");
-    inputHash = analysisInputHash(input);
-    withheldSegmentIds = input.manifest
-      .filter((segment) =>
-        sourceInstruction.test(
-          [
-            segment.text,
-            segment.locator,
-            segment.metadata?.title,
-            segment.metadata?.publisher,
-          ].join("\n"),
-        ),
-      )
-      .map((segment) => segment.segmentId);
-    const permitted: AnalysisInput = {
-      ...input,
-      manifest: input.manifest.filter((segment) => !withheldSegmentIds.includes(segment.segmentId)),
-    };
-    if (!permitted.manifest.length) throw new SwAiError("source_instructions");
+    const request = prepare();
     signal.throwIfAborted();
     const headers = {
       "content-type": "application/json",
@@ -462,9 +467,7 @@ export async function dispatchSwAiOnce(
         headers,
         signal,
         redirect: "error",
-        body: JSON.stringify(
-          buildAnalysisRequest(permitted, activation.model, activation.maxOutputTokens),
-        ),
+        body: JSON.stringify(request.body),
       },
     );
     if (!response.ok) {
@@ -474,8 +477,6 @@ export async function dispatchSwAiOnce(
         status: unknown ? "outcome_unknown" : "failed",
         errorCode: `provider_http_${response.status}`,
         usage,
-        inputHash,
-        withheldSegmentIds,
       };
     }
     const raw = await boundedResponse(response, signal);
@@ -531,15 +532,12 @@ export async function dispatchSwAiOnce(
     } catch {
       throw new SwAiError("schema_invalid");
     }
-    const output = validateAnalysisOutput(parsed, permitted);
     return {
       status: "succeeded",
-      output,
+      output: request.parse(parsed),
       provider: "anthropic",
       model: envelope.data.model,
       usage,
-      inputHash: inputHash!,
-      withheldSegmentIds,
     };
   };
   let abortListener: (() => void) | undefined;
@@ -553,16 +551,63 @@ export async function dispatchSwAiOnce(
   } catch (error) {
     const code = error instanceof SwAiError ? error.code : "transport";
     const uncertain = dispatched && (signal.aborted || !(error instanceof SwAiError));
-    return {
-      status: uncertain ? "outcome_unknown" : "failed",
-      errorCode: code,
-      usage,
-      inputHash,
-      withheldSegmentIds,
-    };
+    return { status: uncertain ? "outcome_unknown" : "failed", errorCode: code, usage };
   } finally {
     clearTimeout(timeout);
     if (abortListener) signal.removeEventListener("abort", abortListener);
     options.signal?.removeEventListener("abort", externalAbort);
   }
+}
+
+/** The analysis draft: the provider interface with the analysis contract. */
+export async function dispatchSwAiOnce(
+  inputValue: unknown,
+  configuration: SwAiConfiguration,
+  options: {
+    readonly signal?: AbortSignal;
+    readonly fetchImpl?: typeof fetch;
+    readonly beforeDispatch?: (signal: AbortSignal) => Promise<void>;
+  } = {},
+): Promise<DispatchResult> {
+  // dispatchProviderOnce refuses server-side only and while generative AI is
+  // off, before any state, timer or request; nothing here runs before it.
+  let inputHash: string | null = null;
+  let withheldSegmentIds: string[] = [];
+  const result = await dispatchProviderOnce<AnalysisOutput>(
+    configuration,
+    () => {
+      const activation = activationSchema.parse(configuration.activation);
+      const input = validateAnalysisInput(inputValue);
+      if (!["draft_assessment", "draft_report"].includes(input.purpose))
+        throw new SwAiError("purpose_not_approved");
+      inputHash = analysisInputHash(input);
+      withheldSegmentIds = input.manifest
+        .filter((segment) =>
+          sourceInstruction.test(
+            [
+              segment.text,
+              segment.locator,
+              segment.metadata?.title,
+              segment.metadata?.publisher,
+            ].join("\n"),
+          ),
+        )
+        .map((segment) => segment.segmentId);
+      const permitted: AnalysisInput = {
+        ...input,
+        manifest: input.manifest.filter(
+          (segment) => !withheldSegmentIds.includes(segment.segmentId),
+        ),
+      };
+      if (!permitted.manifest.length) throw new SwAiError("source_instructions");
+      return {
+        body: buildAnalysisRequest(permitted, activation.model, activation.maxOutputTokens),
+        parse: (value) => validateAnalysisOutput(value, permitted),
+      };
+    },
+    options,
+  );
+  return result.status === "succeeded"
+    ? { ...result, inputHash: inputHash!, withheldSegmentIds }
+    : { ...result, inputHash, withheldSegmentIds };
 }

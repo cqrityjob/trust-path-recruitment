@@ -54,6 +54,7 @@ jobs:
           bun run scripts/security-work-analysis-check.ts
           bun run scripts/security-work-processing-check.ts
           bun run scripts/security-work-ai-jobs-check.ts
+          bun run scripts/security-work-assistant-check.ts
           bun run scripts/security-work-ai-quality-check.ts
           bun run scripts/security-work-question-provenance-check.ts
           bun run scripts/security-work-processor-check.ts
