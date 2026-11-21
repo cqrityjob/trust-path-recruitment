@@ -17,7 +17,9 @@ INSERT INTO auth.users(id,email,email_confirmed_at) VALUES
  ('5a000000-0000-4000-8000-000000000001','mon-approver@example.test',now()),
  ('5a000000-0000-4000-8000-000000000002','mon-editor@example.test',now()),
  ('5a000000-0000-4000-8000-000000000003','mon-viewer@example.test',now()),
- ('5a000000-0000-4000-8000-000000000004','mon-owner-b@example.test',now());
+ ('5a000000-0000-4000-8000-000000000004','mon-owner-b@example.test',now()),
+ ('5a000000-0000-4000-8000-000000000005','mon-outside-editor@example.test',now()),
+ ('5a000000-0000-4000-8000-000000000006','mon-outside-owner@example.test',now());
 INSERT INTO auth.sessions(id,user_id,not_after) SELECT id,id,now()+interval '1 day' FROM auth.users WHERE id::text LIKE '5a000000-%';
 SET LOCAL ROLE authenticated;
 SELECT pg_temp.login('5a000000-0000-4000-8000-000000000001');
@@ -30,7 +32,9 @@ RESET ROLE;
 SELECT pg_temp.login('5a000000-0000-4000-8000-000000000001');
 INSERT INTO public.sw_workspace_memberships(workspace_id,user_id,role,can_approve) VALUES
  (:'wa','5a000000-0000-4000-8000-000000000002','editor',false),
- (:'wa','5a000000-0000-4000-8000-000000000003','viewer',false);
+ (:'wa','5a000000-0000-4000-8000-000000000003','viewer',false),
+ (:'wa','5a000000-0000-4000-8000-000000000005','editor',false),
+ (:'wa','5a000000-0000-4000-8000-000000000006','owner',true);
 INSERT INTO sw_private.worker_keys(key_id,secret) SELECT 'synthetic-test-key',repeat('synthetic-only-',4) WHERE NOT EXISTS (SELECT 1 FROM sw_private.worker_keys WHERE key_id='synthetic-test-key');
 
 -- ---------------------------------------------------------------------------
@@ -161,8 +165,59 @@ SELECT (pg_temp.fetch(:'wa','5a000000-0000-4000-8000-0000000000a7',:'feed',:'pne
 SELECT pg_temp.ok((SELECT count(*)=1 FROM sw_review_flags WHERE brief_id=:'brief' AND status='open'),'new evidence in a cited story raises a review flag');
 SELECT pg_temp.ok((SELECT status='approved' AND title='E6 closure affects the Gothenburg terminal' FROM sw_change_briefs WHERE id=:'brief'),'the approved brief itself is unchanged');
 SELECT id AS flag FROM sw_review_flags WHERE brief_id=:'brief' \gset
+
+-- ---------------------------------------------------------------------------
+-- Need-to-know reaches everything that hangs off a restricted brief
+-- ---------------------------------------------------------------------------
+SELECT pg_temp.ok((SELECT count(*)=1 FROM sw_review_flags WHERE id=:'flag') AND (SELECT count(*)=1 FROM sw_change_brief_applications WHERE brief_id=:'brief'),'the circle reads the restricted brief''s flag and its application receipt');
+SELECT pg_temp.ok((SELECT count(*)=0 FROM sw_audit_events WHERE entity_table='sw_change_briefs' AND entity_id=:'brief' AND new_status IN ('in_review','approved'))
+  AND (SELECT count(*)=1 FROM sw_mission_events WHERE mission_id=:'mmission' AND event='impact_brief_changed' AND from_value='draft' AND to_value='in_review')
+  AND (SELECT count(*)=1 FROM sw_mission_events WHERE mission_id=:'mmission' AND event='impact_brief_changed' AND from_value='in_review' AND to_value='approved' AND actor_user_id='5a000000-0000-4000-8000-000000000001'),'a restricted brief''s history is kept as mission events, not in the workspace audit feed');
+SELECT pg_temp.login('5a000000-0000-4000-8000-000000000005');
+SELECT pg_temp.ok((SELECT count(*)=0 FROM sw_change_briefs WHERE id=:'brief') AND (SELECT count(*)=0 FROM sw_review_flags WHERE id=:'flag') AND (SELECT count(*)=0 FROM sw_change_brief_applications WHERE brief_id=:'brief'),'an editor outside the circle reads neither the restricted brief, its flag nor its receipt');
+SELECT pg_temp.ok((SELECT count(*)=0 FROM sw_audit_events WHERE entity_id=:'brief' AND new_status IN ('in_review','approved')) AND (SELECT count(*)=0 FROM sw_mission_events WHERE mission_id=:'mmission'),'an editor outside the circle sees none of the restricted brief''s history');
+UPDATE sw_review_flags SET status='resolved', resolution_note='Resolved from outside the circle' WHERE id=:'flag';
+SELECT pg_temp.login('5a000000-0000-4000-8000-000000000006');
+SELECT pg_temp.ok((SELECT count(*)=0 FROM sw_review_flags WHERE id=:'flag') AND (SELECT count(*)=0 FROM sw_change_brief_applications WHERE brief_id=:'brief') AND (SELECT count(*)=0 FROM sw_mission_events WHERE mission_id=:'mmission'),'a workspace owner outside the circle does not bypass need-to-know for flags and receipts');
+UPDATE sw_review_flags SET status='resolved', resolution_note='Resolved by an owner outside the circle' WHERE id=:'flag';
+SELECT pg_temp.login('5a000000-0000-4000-8000-000000000002');
+SELECT sw_set_mission_member(:'wa',:'mmission','5a000000-0000-4000-8000-000000000003',true);
+SELECT pg_temp.login('5a000000-0000-4000-8000-000000000003');
+SELECT pg_temp.ok((SELECT count(*)=1 FROM sw_review_flags WHERE id=:'flag') AND (SELECT count(*)=1 FROM sw_change_brief_applications WHERE brief_id=:'brief'),'a viewer in the circle reads the flag and the receipt');
+UPDATE sw_review_flags SET status='resolved', resolution_note='Resolved by a viewer' WHERE id=:'flag';
+SELECT pg_temp.login('5a000000-0000-4000-8000-000000000002');
+SELECT pg_temp.ok((SELECT status='open' AND resolved_by IS NULL AND resolution_note='' FROM sw_review_flags WHERE id=:'flag'),'neither an outside editor, an outside owner nor a viewer can resolve the restricted flag');
+-- An editor cannot move a brief into a mission whose circle they are not in.
+-- The guard cannot see the hidden mission and refuses it first (23514); the
+-- update policy's check is the second layer behind it.
+SELECT pg_temp.login('5a000000-0000-4000-8000-000000000006');
+INSERT INTO sw_missions(workspace_id,kind,title,restricted) VALUES(:'wa','monitoring_impact','Board only',true) RETURNING id AS board \gset
+SELECT pg_temp.login('5a000000-0000-4000-8000-000000000002');
+INSERT INTO sw_change_briefs(workspace_id,title,evidence_item_ids) VALUES(:'wa','Unassigned draft',ARRAY[:'item1'::uuid]) RETURNING id AS loose \gset
+SELECT pg_temp.fail(format('UPDATE sw_change_briefs SET mission_id=%L WHERE id=%L',:'board',:'loose'),'23514','a brief cannot be moved into a mission outside the editor''s circle');
+-- Unrestricted briefs keep workspace-wide review.
+SELECT jsonb_build_object('status','succeeded','httpStatus',200,'items',jsonb_build_array(
+  pg_temp.item('h1','Harbour bridge closed for repairs','The harbour bridge is closed for two weeks.'))) AS ph1 \gset
+SELECT (pg_temp.fetch(:'wa',gen_random_uuid(),:'feed',:'ph1')).items_new AS nh1 \gset
+SELECT id AS hitem FROM sw_source_items WHERE source_id=:'feed' AND original_title LIKE 'Harbour bridge%' \gset
+INSERT INTO sw_change_briefs(workspace_id,title,what_changed,why_it_matters,evidence_item_ids) VALUES
+ (:'wa','Harbour bridge closure','Bridge closed for two weeks.','Deliveries use the bridge.',ARRAY[:'hitem'::uuid]) RETURNING id AS open_brief \gset
+UPDATE sw_change_briefs SET status='in_review' WHERE id=:'open_brief';
+SELECT pg_temp.login('5a000000-0000-4000-8000-000000000001');
+UPDATE sw_change_briefs SET status='approved' WHERE id=:'open_brief';
+SELECT pg_temp.login('5a000000-0000-4000-8000-000000000002');
+SELECT jsonb_build_object('status','succeeded','httpStatus',200,'items',jsonb_build_array(
+  pg_temp.item('h2','Harbour bridge closed for repairs - update','Repairs now expected to take three weeks.'))) AS ph2 \gset
+SELECT (pg_temp.fetch(:'wa',gen_random_uuid(),:'feed',:'ph2')).items_new AS nh2 \gset
+SELECT id AS open_flag FROM sw_review_flags WHERE brief_id=:'open_brief' \gset
+SELECT pg_temp.login('5a000000-0000-4000-8000-000000000005');
+SELECT pg_temp.ok((SELECT count(*)=1 FROM sw_change_briefs WHERE id=:'open_brief') AND (SELECT count(*)=1 FROM sw_review_flags WHERE id=:'open_flag')
+  AND (SELECT count(*)>=1 FROM sw_audit_events WHERE entity_table='sw_change_briefs' AND entity_id=:'open_brief' AND new_status='approved'),'an unrestricted brief, its flag and its history stay visible to every editor');
+UPDATE sw_review_flags SET status='resolved', resolution_note='Bridge reopening date does not change our plan' WHERE id=:'open_flag';
+SELECT pg_temp.ok((SELECT status='resolved' AND resolved_by='5a000000-0000-4000-8000-000000000005' FROM sw_review_flags WHERE id=:'open_flag'),'any editor resolves an unrestricted brief''s flag, stamped by the database');
+SELECT pg_temp.login('5a000000-0000-4000-8000-000000000002');
 SELECT pg_temp.fail(format('UPDATE sw_review_flags SET status=''resolved'' WHERE id=%L',:'flag'),'23514','resolving a flag needs a note');
-SELECT id AS item3 FROM sw_source_items WHERE source_id=:'feed' AND original_title LIKE '%update' \gset
+SELECT id AS item3 FROM sw_source_items WHERE source_id=:'feed' AND original_title LIKE 'Road closed%update' \gset
 INSERT INTO sw_change_briefs(workspace_id,title,mission_id,supersedes_id,what_changed,why_it_matters,evidence_item_ids) VALUES
  (:'wa','E6 closure: expected to reopen',:'mmission',:'brief','Reopening expected tomorrow.','Departures can resume.',ARRAY[:'item1'::uuid,:'item3'::uuid]) RETURNING id AS revision \gset
 SELECT pg_temp.fail(format('INSERT INTO sw_change_briefs(workspace_id,title,supersedes_id) VALUES(%L,''Second open revision'',%L)',:'wa',:'brief'),'23505','one open revision at a time');
@@ -176,7 +231,7 @@ SELECT pg_temp.ok((SELECT count(*)=1 FROM sw_change_brief_applications WHERE bri
 -- Isolation
 -- ---------------------------------------------------------------------------
 SELECT pg_temp.login('5a000000-0000-4000-8000-000000000004');
-SELECT pg_temp.ok((SELECT count(*)=0 FROM sw_fetch_runs WHERE workspace_id=:'wa') AND (SELECT count(*)=0 FROM sw_story_clusters WHERE workspace_id=:'wa') AND (SELECT count(*)=0 FROM sw_change_briefs WHERE workspace_id=:'wa') AND (SELECT count(*)=0 FROM sw_review_flags WHERE workspace_id=:'wa'),'another workspace sees no runs, clusters, briefs or flags');
+SELECT pg_temp.ok((SELECT count(*)=0 FROM sw_fetch_runs WHERE workspace_id=:'wa') AND (SELECT count(*)=0 FROM sw_story_clusters WHERE workspace_id=:'wa') AND (SELECT count(*)=0 FROM sw_change_briefs WHERE workspace_id=:'wa') AND (SELECT count(*)=0 FROM sw_review_flags WHERE workspace_id=:'wa') AND (SELECT count(*)=0 FROM sw_change_brief_applications WHERE workspace_id=:'wa'),'another workspace sees no runs, clusters, briefs, flags or receipts');
 SELECT pg_temp.fail(format('SELECT pg_temp.fetch(%L,gen_random_uuid(),%L,''{"status":"not_modified"}''::jsonb)',:'wa',:'feed'),'42501','another workspace cannot record a fetch');
 RESET ROLE;
 

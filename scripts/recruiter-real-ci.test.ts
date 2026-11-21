@@ -200,11 +200,19 @@ describe("official real Supabase CI target", () => {
     expect(APP_SHA).toBe("53659419a1c243c27a59540eb849569140b71365");
     // The schema witness moved to the Security Work monitoring slot (407 files);
     // the application under this regression stays the reviewed 53659419.
-    expect(SCHEMA_SHA).toBe("cc42c143ff3ad1919fd0f06625383f94ee283d6e");
+    expect(SCHEMA_SHA).toBe("1ed0a4e50d58891d2e34f03019c9f25045b3cf75");
     // Nor the corrected context slot before it (612290b3).
     expect(() =>
       validateTarget(
         { ...env, RI_REAL_RELEASE_SCHEMA_SHA: "612290b3112bbf93466ee4e8050082995e823058" },
+        env.RI_REAL_SCHEMA_SHA,
+        APP_SHA,
+      ),
+    ).toThrow("REAL_CI_UNREVIEWED_RELEASE_SCHEMA");
+    // Nor the monitoring slot before its flag/receipt visibility fix (cc42c143).
+    expect(() =>
+      validateTarget(
+        { ...env, RI_REAL_RELEASE_SCHEMA_SHA: "cc42c143ff3ad1919fd0f06625383f94ee283d6e" },
         env.RI_REAL_SCHEMA_SHA,
         APP_SHA,
       ),
@@ -365,7 +373,7 @@ describe("official real Supabase CI target", () => {
     ).toThrow("UNREVIEWED_APP_HEAD");
   });
   test("release schema binding is separate from test code and requires a full SHA", () => {
-    const release = "cc42c143ff3ad1919fd0f06625383f94ee283d6e";
+    const release = "1ed0a4e50d58891d2e34f03019c9f25045b3cf75";
     const context = validateTarget(
       { ...env, RI_REAL_RELEASE_SCHEMA_SHA: release },
       env.RI_REAL_SCHEMA_SHA,
@@ -520,7 +528,7 @@ describe("real CI execution and publication cannot silently narrow", () => {
     expect(job["runs-on"]).toBe("ubuntu-latest");
     expect(job.if).toBeUndefined();
     expect(job["continue-on-error"]).toBeUndefined();
-    expect(job.env.RI_REAL_RELEASE_SCHEMA_SHA).toBe("cc42c143ff3ad1919fd0f06625383f94ee283d6e");
+    expect(job.env.RI_REAL_RELEASE_SCHEMA_SHA).toBe("1ed0a4e50d58891d2e34f03019c9f25045b3cf75");
     expect(job.steps[0].with["fetch-depth"]).toBe(0);
     expect(job.steps.every((step: { [key: string]: unknown }) => !step["continue-on-error"])).toBe(
       true,

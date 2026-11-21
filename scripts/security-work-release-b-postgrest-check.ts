@@ -25,12 +25,12 @@ const ids = Array.from(
   { length: 6 },
   (_, i) => `5b000000-0000-4000-8000-${String(i + 1).padStart(12, "0")}`,
 );
-const [APPROVER, EDITOR, VIEWER] = ids;
+const [APPROVER, EDITOR, VIEWER, OUTSIDE] = ids;
 const secret = crypto.randomBytes(32).toString("hex");
 const env = { SW_WORKER_KEY_ID: "synthetic-feed-key", SW_WORKER_SECRET: secret };
 
 psql(`INSERT INTO auth.users(id,email,email_confirmed_at) VALUES
- ('${APPROVER}','rb-approver@example.test',now()),('${EDITOR}','rb-editor@example.test',now()),('${VIEWER}','rb-viewer@example.test',now());
+ ('${APPROVER}','rb-approver@example.test',now()),('${EDITOR}','rb-editor@example.test',now()),('${VIEWER}','rb-viewer@example.test',now()),('${OUTSIDE}','rb-outside@example.test',now());
  INSERT INTO auth.sessions(id,user_id,not_after) SELECT id,id,now()+interval '1 day' FROM auth.users WHERE id::text LIKE '5b000000-%';
  INSERT INTO sw_private.worker_keys(key_id,secret) VALUES('synthetic-feed-key','${secret}');
  INSERT INTO sw_feed_hosts(host,publisher,terms_reference,approval_note) VALUES('feeds.example.test','Synthetic Road Authority','Synthetic open licence','Synthetic approval for tests');`);
@@ -39,7 +39,7 @@ const workspace = psql(
 )
   .split("\n")
   .pop()!;
-psql(`${asUser(APPROVER)} INSERT INTO sw_workspace_memberships(workspace_id,user_id,role,can_approve) VALUES ('${workspace}','${EDITOR}','editor',false),('${workspace}','${VIEWER}','viewer',false);
+psql(`${asUser(APPROVER)} INSERT INTO sw_workspace_memberships(workspace_id,user_id,role,can_approve) VALUES ('${workspace}','${EDITOR}','editor',false),('${workspace}','${VIEWER}','viewer',false),('${workspace}','${OUTSIDE}','editor',false);
  SET ROLE authenticated; INSERT INTO sw_protected_assets(workspace_id,name,category) VALUES('${workspace}','Terminal Gothenburg','operations');`);
 
 const rss = (items: string) =>
@@ -305,7 +305,7 @@ try {
     },
   );
   await check(
-    "new evidence in the story raises a flag; the revision cites it and supersedes",
+    "new evidence raises a flag only the circle can see or resolve; the revision supersedes",
     async () => {
       feed = {
         status: 200,
@@ -317,6 +317,50 @@ try {
       await fetchSourceNow(caller(EDITOR), { workspaceId: workspace, sourceId }, env, deps);
       const flags = (await impact.readImpact(caller(EDITOR), workspace)).openFlags;
       assert.equal(flags.filter((f) => f.brief_id === briefId).length, 1);
+      // Need-to-know over the API: once the mission is restricted, an editor
+      // outside its circle reaches neither the brief, its flag nor its
+      // receipt, through the services or PostgREST directly, and resolves
+      // nothing.
+      const flagId = flags.find((f) => f.brief_id === briefId)!.id;
+      psql(
+        `${asUser(EDITOR)} SET ROLE authenticated; UPDATE sw_missions SET restricted=true WHERE id='${mission}';`,
+      );
+      const outside = await impact.readImpact(caller(OUTSIDE), workspace);
+      assert.ok(!outside.briefs.some((b) => b.id === briefId) && outside.openFlags.length === 0);
+      assert.equal(
+        await failureCode(impact.getBrief(caller(OUTSIDE), { workspaceId: workspace, briefId })),
+        "ACCESS_DENIED",
+      );
+      const direct = caller(OUTSIDE).supabase;
+      assert.deepEqual(
+        (await direct.from("sw_review_flags").select("id").eq("id", flagId)).data,
+        [],
+      );
+      assert.deepEqual(
+        (await direct.from("sw_change_brief_applications").select("id").eq("brief_id", briefId))
+          .data,
+        [],
+      );
+      assert.notEqual(
+        await failureCode(
+          impact.resolveFlag(caller(OUTSIDE), {
+            workspaceId: workspace,
+            flagId,
+            note: "From outside",
+          }),
+        ),
+        "OK",
+      );
+      assert.equal(
+        (await impact.readImpact(caller(EDITOR), workspace)).openFlags.filter(
+          (f) => f.id === flagId,
+        ).length,
+        1,
+        "the outsider resolved nothing",
+      );
+      psql(
+        `${asUser(EDITOR)} SET ROLE authenticated; UPDATE sw_missions SET restricted=false WHERE id='${mission}';`,
+      );
       let revision = await impact.reviseBrief(caller(EDITOR), { workspaceId: workspace, briefId });
       assert.equal(revision.evidence_item_ids.length, 2);
       revision = await impact.transitionBrief(caller(EDITOR), {

@@ -325,10 +325,35 @@ BEGIN
   RETURN NULL;
 END $$;
 
+-- A flag, an application receipt and a brief's history are need-to-know
+-- exactly like the brief they belong to: a restricted mission's circle only,
+-- whatever the person's workspace role (an owner outside the circle included).
+CREATE FUNCTION sw_private.can_see_brief(_workspace_id uuid, _brief_id uuid) RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = '' AS $$
+  SELECT sw_private.can_read(_workspace_id) AND EXISTS (
+    SELECT 1 FROM public.sw_change_briefs b
+    WHERE b.workspace_id = _workspace_id AND b.id = _brief_id
+      AND (b.mission_id IS NULL OR sw_private.can_see_mission(_workspace_id, b.mission_id)));
+$$;
+
+-- The workspace audit feed is readable by every member, so a brief inside a
+-- mission records its history as mission events, which carry the mission's
+-- own visibility (as Release A does for missions themselves).
+CREATE FUNCTION sw_private.record_brief_mission_event() RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
+BEGIN
+  IF NOT coalesce(sw_private.is_human(), false) THEN RAISE EXCEPTION 'SW_HUMAN_REQUIRED' USING ERRCODE = '42501'; END IF;
+  INSERT INTO public.sw_mission_events(workspace_id, mission_id, actor_user_id, event, from_value, to_value, record_version)
+  VALUES (NEW.workspace_id, NEW.mission_id, auth.uid(), 'impact_brief_changed',
+          CASE WHEN TG_OP = 'UPDATE' THEN OLD.status END, NEW.status, NEW.version);
+  RETURN NULL;
+END $$;
+
 CREATE FUNCTION sw_private.guard_review_flag() RETURNS trigger
 LANGUAGE plpgsql SECURITY INVOKER SET search_path = '' AS $$
 BEGIN
   IF NOT sw_private.can_edit(NEW.workspace_id) THEN RAISE EXCEPTION 'SW_EDITOR_REQUIRED' USING ERRCODE = '42501'; END IF;
+  IF NOT sw_private.can_see_brief(NEW.workspace_id, NEW.brief_id) THEN RAISE EXCEPTION 'SW_ACCESS_DENIED' USING ERRCODE = '42501'; END IF;
   IF OLD.status = 'resolved' THEN RAISE EXCEPTION 'SW_RECORD_FINAL' USING ERRCODE = '23514'; END IF;
   IF (to_jsonb(NEW) - ARRAY['status', 'resolution_note', 'resolved_by', 'resolved_at']) IS DISTINCT FROM (to_jsonb(OLD) - ARRAY['status', 'resolution_note', 'resolved_by', 'resolved_at']) THEN
     RAISE EXCEPTION 'SW_FLAG_IMMUTABLE' USING ERRCODE = '23514';
@@ -508,8 +533,11 @@ BEGIN
     EXECUTE format('GRANT SELECT ON TABLE public.%I TO authenticated', _table);
   END LOOP;
   FOREACH _table IN ARRAY ARRAY['sw_fetch_runs', 'sw_story_clusters', 'sw_cluster_items', 'sw_review_flags', 'sw_change_brief_applications'] LOOP
-    EXECUTE format('CREATE POLICY sw_member_read ON public.%I FOR SELECT TO authenticated USING (sw_private.can_read(workspace_id))', _table);
     EXECUTE format('CREATE INDEX %I ON public.%I (workspace_id)', _table || '_scope_idx', _table);
+  END LOOP;
+  -- Feeds, runs and stories are workspace-level: every member may read them.
+  FOREACH _table IN ARRAY ARRAY['sw_fetch_runs', 'sw_story_clusters', 'sw_cluster_items'] LOOP
+    EXECUTE format('CREATE POLICY sw_member_read ON public.%I FOR SELECT TO authenticated USING (sw_private.can_read(workspace_id))', _table);
   END LOOP;
 END
 $security$;
@@ -524,24 +552,33 @@ CREATE POLICY sw_brief_insert ON public.sw_change_briefs FOR INSERT TO authentic
   WITH CHECK (sw_private.can_edit(workspace_id) AND (mission_id IS NULL OR sw_private.can_see_mission(workspace_id, mission_id)));
 CREATE POLICY sw_brief_update ON public.sw_change_briefs FOR UPDATE TO authenticated
   USING (sw_private.can_edit(workspace_id) AND (mission_id IS NULL OR sw_private.can_see_mission(workspace_id, mission_id)))
-  WITH CHECK (sw_private.can_edit(workspace_id));
+  WITH CHECK (sw_private.can_edit(workspace_id) AND (mission_id IS NULL OR sw_private.can_see_mission(workspace_id, mission_id)));
 CREATE TRIGGER sw_10_guard BEFORE INSERT OR UPDATE ON public.sw_change_briefs FOR EACH ROW EXECUTE FUNCTION sw_private.guard_record();
 CREATE TRIGGER sw_20_brief BEFORE INSERT OR UPDATE ON public.sw_change_briefs FOR EACH ROW EXECUTE FUNCTION sw_private.guard_change_brief();
 CREATE TRIGGER sw_80_supersede AFTER UPDATE ON public.sw_change_briefs FOR EACH ROW EXECUTE FUNCTION sw_private.supersede_previous_brief();
-CREATE TRIGGER sw_90_audit AFTER INSERT OR UPDATE ON public.sw_change_briefs FOR EACH ROW EXECUTE FUNCTION sw_private.record_change();
+CREATE TRIGGER sw_90_audit AFTER INSERT OR UPDATE ON public.sw_change_briefs FOR EACH ROW WHEN (NEW.mission_id IS NULL) EXECUTE FUNCTION sw_private.record_change();
+CREATE TRIGGER sw_91_mission_audit AFTER INSERT OR UPDATE ON public.sw_change_briefs FOR EACH ROW WHEN (NEW.mission_id IS NOT NULL) EXECUTE FUNCTION sw_private.record_brief_mission_event();
+ALTER TABLE public.sw_mission_events DROP CONSTRAINT sw_mission_events_event_check;
+ALTER TABLE public.sw_mission_events ADD CONSTRAINT sw_mission_events_event_check CHECK (event IN ('created', 'state_changed', 'review_changed', 'brief_changed', 'member_added', 'member_removed', 'link_added', 'link_removed', 'restriction_changed', 'owner_changed', 'impact_brief_changed'));
 
+CREATE POLICY sw_flag_read ON public.sw_review_flags FOR SELECT TO authenticated USING (sw_private.can_see_brief(workspace_id, brief_id));
+CREATE POLICY sw_application_read ON public.sw_change_brief_applications FOR SELECT TO authenticated USING (sw_private.can_see_brief(workspace_id, brief_id));
 GRANT UPDATE (status, resolution_note) ON public.sw_review_flags TO authenticated;
-CREATE POLICY sw_flag_resolve ON public.sw_review_flags FOR UPDATE TO authenticated USING (sw_private.can_edit(workspace_id)) WITH CHECK (sw_private.can_edit(workspace_id));
+CREATE POLICY sw_flag_resolve ON public.sw_review_flags FOR UPDATE TO authenticated
+  USING (sw_private.can_edit(workspace_id) AND sw_private.can_see_brief(workspace_id, brief_id))
+  WITH CHECK (sw_private.can_edit(workspace_id) AND sw_private.can_see_brief(workspace_id, brief_id));
 CREATE TRIGGER sw_20_flag BEFORE UPDATE ON public.sw_review_flags FOR EACH ROW EXECUTE FUNCTION sw_private.guard_review_flag();
 CREATE TRIGGER sw_00_immutable BEFORE UPDATE OR DELETE ON public.sw_fetch_runs FOR EACH ROW EXECUTE FUNCTION sw_private.reject_history_change();
 CREATE TRIGGER sw_00_immutable BEFORE UPDATE OR DELETE ON public.sw_change_brief_applications FOR EACH ROW EXECUTE FUNCTION sw_private.reject_history_change();
 
 REVOKE ALL ON FUNCTION sw_private.feed_host(text), sw_private.guard_feed_source(), sw_private.guard_fetched_item(), sw_private.guard_change_brief(),
   sw_private.supersede_previous_brief(), sw_private.guard_review_flag(), sw_private.story_key(text),
+  sw_private.can_see_brief(uuid, uuid), sw_private.record_brief_mission_event(),
   sw_private.record_fetch(uuid, uuid, uuid, text, text, text), sw_private.apply_change_brief(uuid, uuid, integer, uuid, jsonb),
   public.sw_record_fetch(uuid, uuid, uuid, text, text, text), public.sw_apply_change_brief(uuid, uuid, integer, uuid, jsonb)
   FROM PUBLIC, anon, authenticated, service_role;
 GRANT EXECUTE ON FUNCTION sw_private.record_fetch(uuid, uuid, uuid, text, text, text), sw_private.apply_change_brief(uuid, uuid, integer, uuid, jsonb),
+  sw_private.can_see_brief(uuid, uuid),
   public.sw_record_fetch(uuid, uuid, uuid, text, text, text), public.sw_apply_change_brief(uuid, uuid, integer, uuid, jsonb)
   TO authenticated;
 

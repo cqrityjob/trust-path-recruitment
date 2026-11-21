@@ -75,5 +75,14 @@ control 'applied once' 'a brief is applied once' \
 control 'need-to-know for briefs' 'a brief in a restricted mission is invisible outside its circle' \
   'DROP POLICY sw_brief_read ON public.sw_change_briefs; CREATE POLICY sw_brief_read ON public.sw_change_briefs FOR SELECT TO authenticated USING (sw_private.can_read(workspace_id));'
 
-[ "$passed" -ge 11 ] || { echo "FAIL: monitoring negative-control shortfall: $passed (floor 11)"; exit 1; }
+control 'flags and receipts inherit brief visibility' 'an editor outside the circle reads neither the restricted brief, its flag nor its receipt' \
+  'DROP POLICY sw_flag_read ON public.sw_review_flags; CREATE POLICY sw_flag_read ON public.sw_review_flags FOR SELECT TO authenticated USING (sw_private.can_read(workspace_id));'
+control 'receipts inherit brief visibility' 'an editor outside the circle reads neither the restricted brief, its flag nor its receipt' \
+  'DROP POLICY sw_application_read ON public.sw_change_brief_applications; CREATE POLICY sw_application_read ON public.sw_change_brief_applications FOR SELECT TO authenticated USING (sw_private.can_read(workspace_id));'
+control 'owners do not bypass the circle' 'a workspace owner outside the circle does not bypass need-to-know for flags and receipts' \
+  "$(mutate 'sw_private.can_see_brief(uuid,uuid)' "SELECT sw_private.can_read(_workspace_id) AND EXISTS" "SELECT sw_private.can_manage(_workspace_id) OR sw_private.can_read(_workspace_id) AND EXISTS")"
+control 'restricted history stays in the mission' "a restricted brief's history is kept as mission events, not in the workspace audit feed" \
+  'DROP TRIGGER sw_90_audit ON public.sw_change_briefs; CREATE TRIGGER sw_90_audit AFTER INSERT OR UPDATE ON public.sw_change_briefs FOR EACH ROW EXECUTE FUNCTION sw_private.record_change();'
+
+[ "$passed" -ge 15 ] || { echo "FAIL: monitoring negative-control shortfall: $passed (floor 15)"; exit 1; }
 echo "    ok  $passed monitoring negative controls detected by their original assertions"
