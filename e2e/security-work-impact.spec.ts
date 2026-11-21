@@ -628,7 +628,9 @@ test("an official feed to a reviewed risk and actions, with follow-up, export an
   });
 });
 
-test("an editor without approval rights cannot approve, in English", async ({ page }) => {
+test("an editor cannot approve; the approver completes the journey, in English", async ({
+  page,
+}) => {
   mkdirSync(out, { recursive: true });
   const state = freshState("editor");
   await install(page, state, "en");
@@ -659,6 +661,32 @@ test("an editor without approval rights cannot approve, in English", async ({ pa
   );
   await expect(page.getByTestId("sw-brief-approve")).toHaveCount(0);
   await shot(page, "07-editor-awaits-approver-en");
+
+  // The workspace's approver (the same fixture, now answering as the owner)
+  // completes the journey in English: approve, record, follow up, export.
+  state.role = "owner";
+  await page.reload();
+  await slow(page.getByTestId("sw-brief-review")).toBeVisible();
+  await page.getByLabel("Decision note").fill("Reviewed against operating profile v1");
+  await page.getByTestId("sw-brief-approve").click();
+  await expect(page.getByTestId("sw-brief")).toHaveAttribute("data-status", "approved");
+  const apply = page.getByTestId("sw-brief-apply");
+  await apply.getByRole("button", { name: "Add action" }).click();
+  await apply.getByLabel("Action").last().fill("Re-route northbound departures");
+  await apply.getByLabel("Due").last().fill("2026-12-01");
+  await apply.getByTestId("sw-brief-apply-submit").click();
+  await expect(page.getByTestId("sw-brief-followup")).toContainText("Risk:");
+  await expect(page.getByTestId("sw-brief-followup")).toContainText("(proposed)");
+  await expect(page.getByTestId("sw-followup-action")).toContainText(
+    "Re-route northbound departures · open · due",
+  );
+  const download = page.waitForEvent("download");
+  await page.getByTestId("sw-brief-export").click();
+  const text = readFileSync((await (await download).path())!, "utf8");
+  expect(text).toContain("Status: Approved");
+  expect(text).toContain("Action: Re-route northbound departures (open, due 2026-12-01)");
+  expect(text).toContain("It covers only the sources that were connected.");
+  await shot(page, "08-approved-followup-en");
 });
 
 test("a brief that does not exist or is out of reach answers the same way", async ({ page }) => {
