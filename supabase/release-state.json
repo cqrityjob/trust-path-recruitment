@@ -4464,6 +4464,35 @@
       "rollback": "supabase/rollback/20270328090000_security_work_monitoring_impact_rollback.sql",
       "note": "Security Work Release B, schema (docs/security-intelligence/security-work-runtime-map.md section 6): permitted source -> signed fetch -> story cluster -> customer-specific impact brief -> human review -> risk/actions -> review flags. sw_feed_hosts is the platform allowlist of official feed hosts and is EMPTY: nothing can be fetched until the owner approves a host and provisions the worker key. sw_sources gains official_feed with an https feed_url on an approved host; source health changes only inside a signed fetch. sw_record_fetch verifies the worker HMAC (kind fetch), is idempotent per run id, deduplicates per source, stores items as fetched (impossible to forge elsewhere), clusters them by story (first five normalised headline words) with independent_sources = least(distinct publishers, distinct texts) so copies are not corroboration, queues them for triage and raises review flags on approved briefs that cited the same story. sw_change_briefs build their evidence in the database from the cited items; draft -> in_review (content frozen) -> approved/rejected by an approver (stamped by the database, rejection needs a note); approved briefs are immutable and an approved revision supersedes them. A brief in a restricted mission follows the mission's need-to-know. sw_apply_change_brief creates the unrated proposed risk (source_kind monitoring), its evidence links and the actions, linked to the mission, in one transaction, once per brief; a retry returns the receipt. No provider, schedule, host or key is created. Install after 20270327090000.",
       "verify": "Full-history replay plus supabase/tests/security_work_monitoring_impact_test.sql (66 assertions as real roles), scripts/security-work-monitoring-negative-controls.sh (15 planted defects each caught by its named assertion), adopted-data rollback refusal, a rollback restoring the sw_sources/sw_source_items constraints, columns and triggers exactly, and re-application with the context and foundation suites. After installation confirm: the seven tables exist with RLS on and no anon/service_role privilege; no client write on hosts, runs, clusters or applications; sw_record_fetch and sw_apply_change_brief executable by authenticated only; sw_feed_hosts EMPTY; no official_feed source and no fetched item."
+    },
+    {
+      "file": "20270329090000_security_work_restricted_records.sql",
+      "hostedState": "pending",
+      "introduces": [
+        {
+          "kind": "column",
+          "table": "sw_risks",
+          "object": "access_mission_id"
+        },
+        {
+          "kind": "column",
+          "table": "sw_actions",
+          "object": "access_mission_id"
+        },
+        {
+          "kind": "column",
+          "table": "sw_missions",
+          "object": "review_accepted_by"
+        },
+        {
+          "kind": "column",
+          "table": "sw_missions",
+          "object": "review_accepted_at"
+        }
+      ],
+      "rollback": "supabase/rollback/20270329090000_security_work_restricted_records_rollback.sql",
+      "note": "Security Work forward fix on the installed 20270327090000 and 20270328090000 (neither edited). (1) A risk or action created from a restricted mission's impact brief kept workspace-wide policies, so an editor, viewer or owner outside the mission's circle could read and change it. sw_apply_change_brief now stamps access_mission_id from the brief; the scope is immutable, inherited by actions from their risk, cannot join an assessment (whose revision copies risks), and is read through sw_private.can_see_mission - for the risk and action themselves and for controls, citations, asset links, evidence links, audit events and version snapshots that point at them. Removing a mission link changes nothing. The assistant refuses a scoped record as context (its results are workspace-readable). Ordinary records (scope NULL) are unchanged. (2) Accepting a mission review now requires sw_private.can_approve; the database stamps review_accepted_by/at, completion requires that stamp, and changing the reviewed brief or title withdraws the acceptance. Production had 0 missions, briefs, applications and monitoring risks when this was written; no backfill. Install after 20270328090000.",
+      "verify": "Full-history replay plus supabase/tests/security_work_restricted_records_test.sql (44 assertions as real roles: circle editor/viewer, editor/viewer/owner outside the circle, another workspace, membership removal, open missions, ordinary records, retry and atomic apply, review acceptance), scripts/security-work-restricted-records-negative-controls.sh (12 planted defects each caught by its named assertion), adopted-data rollback refusal, a rollback restoring the installed functions and every public policy exactly, and re-application with the monitoring, context and foundation suites. After installation confirm: both access_mission_id columns and both acceptance columns exist; sw_private.can_see_scope and can_see_record are executable by authenticated only, record_scope and the guards by nobody; the sw_risks/sw_actions policies reference can_see_scope; sw_04_scope and sw_06_assistant_scope triggers exist; no risk or action has a scope yet."
     }
   ],
   "policyVersion": 2, 
