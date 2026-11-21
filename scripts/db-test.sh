@@ -3601,6 +3601,27 @@ ac_expect_pass "interview case access model (after the cycles)" interview_case_a
 psql_q -d postgres -c "DROP DATABASE IF EXISTS ${TEST_DB}_pristine;" >/dev/null
 psql_q -d postgres -c "CREATE DATABASE ${TEST_DB}_pristine TEMPLATE ${TEST_DB};" >/dev/null
 
+# Operating profile, missions and collaboration (20270327090000) is the newest
+# Security Work slot, so it is proven and stood down first. Its rollback must
+# refuse adopted profiles, missions, preferences and invitations.
+echo "==> Running Security Work operating context, missions and collaboration assertions"
+SWCTX_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_work_context_missions_test.sql 2>&1)" || { echo "$SWCTX_OUT"; exit 1; }
+SWCTX_PASSED="$(printf '%s\n' "$SWCTX_OUT" | grep -c 'NOTICE:  ok  SW-CTX ' || true)"
+[ "$SWCTX_PASSED" -ge 64 ] || { echo "$SWCTX_OUT"; echo "FAIL: Security Work context assertion shortfall: $SWCTX_PASSED (floor 64)"; exit 1; }
+echo "    ok  $SWCTX_PASSED Security Work context assertions passed"
+TEST_DB="$TEST_DB" bash scripts/security-work-context-negative-controls.sh
+SWCTX_LOG="$(mktemp)"
+if psql -v ON_ERROR_STOP=1 -v sw_context_keep_fixture=true -d "$TEST_DB" -f supabase/tests/security_work_context_missions_test.sql -c 'RESET ROLE;' -f supabase/rollback/20270327090000_security_work_context_missions_collaboration_rollback.sql >"$SWCTX_LOG" 2>&1; then
+  cat "$SWCTX_LOG"; rm -f "$SWCTX_LOG"; echo 'FAIL: adopted context rollback succeeded'; exit 1
+fi
+grep -q 'SW_CONTEXT_ROLLBACK_DATA_PRESENT' "$SWCTX_LOG" || { cat "$SWCTX_LOG"; rm -f "$SWCTX_LOG"; exit 1; }
+rm -f "$SWCTX_LOG"
+echo '    ok  context rollback preserves adopted profiles, missions and invitations'
+psql_q -d "$TEST_DB" -f supabase/rollback/20270327090000_security_work_context_missions_collaboration_rollback.sql >/dev/null
+SWCTX_LEFT="$(psql_q -d "$TEST_DB" -Atc "SELECT (SELECT count(*) FROM pg_class WHERE relnamespace='public'::regnamespace AND relname IN ('sw_operating_profiles','sw_member_preferences','sw_missions','sw_mission_members','sw_mission_links','sw_mission_events','sw_invitations')) + (SELECT count(*) FROM pg_proc WHERE proname IN ('can_manage','can_see_mission','set_mission_member','create_invitation','accept_invitation','revoke_invitation','set_member_role','list_members','guard_mission','guard_mission_link','record_mission_event','guard_operating_profile','sw_set_mission_member','sw_create_invitation','sw_accept_invitation','sw_revoke_invitation','sw_set_member_role','sw_list_members'))")"
+[ "$SWCTX_LEFT" = 0 ] || { echo "FAIL: context rollback left $SWCTX_LEFT object(s)"; exit 1; }
+echo '    ok  context stood down; no new object remains'
+
 # Assistant dispatch and decision (20270326090000) changes analysis-contract
 # function bodies and extends a programme table, so it is proven and stood
 # down before either of them. Its rollback must refuse assistant jobs and
@@ -3744,6 +3765,9 @@ echo '    ok  programme reapplied; programme, analysis and foundation assertions
 psql_q -d "$TEST_DB" -f supabase/migrations/20270326090000_security_work_assistant_dispatch_and_decision.sql >/dev/null
 SWAST_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_work_assistant_dispatch_test.sql -f supabase/tests/security_work_analysis_contract_test.sql -f supabase/tests/security_work_foundation_test.sql 2>&1)" || { echo "$SWAST_OUT"; exit 1; }
 echo '    ok  assistant reapplied; assistant, analysis and foundation assertions pass together'
+psql_q -d "$TEST_DB" -f supabase/migrations/20270327090000_security_work_context_missions_collaboration.sql >/dev/null
+SWCTX_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_work_context_missions_test.sql -f supabase/tests/security_work_assistant_dispatch_test.sql -f supabase/tests/security_work_foundation_test.sql 2>&1)" || { echo "$SWCTX_OUT"; exit 1; }
+echo '    ok  context reapplied; context, assistant and foundation assertions pass together'
 
 # Race fixtures commit to coordinate independent sessions. Give them their own
 # clone so no persistent synthetic workspace can affect later rollback proofs.
