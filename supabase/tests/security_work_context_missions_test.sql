@@ -136,6 +136,27 @@ SELECT pg_temp.ok(sw_accept_invitation(:'code')=:'wa','the invited account accep
 SELECT pg_temp.ok(sw_accept_invitation(:'code')=:'wa','accepting again is harmless');
 SELECT pg_temp.ok((SELECT role='editor' AND active AND NOT can_approve FROM sw_workspace_memberships WHERE workspace_id=:'wa' AND user_id='57000000-0000-4000-8000-000000000006'),'the invitee becomes exactly what was offered');
 SELECT pg_temp.ok((SELECT count(*)=0 FROM sw_missions WHERE id=:'r'),'a new member does not see restricted missions');
+
+-- Ownership is not an editing right: it administers the circle (review finding on #498).
+SELECT pg_temp.login('57000000-0000-4000-8000-000000000002');
+INSERT INTO sw_missions(workspace_id,kind,title,restricted,owner_id) VALUES(:'wa','risk_assessment','Restricted circle ownership',true,'57000000-0000-4000-8000-000000000002') RETURNING id AS rc \gset
+SELECT sw_set_mission_member(:'wa',:'rc','57000000-0000-4000-8000-000000000006',true);
+SELECT pg_temp.login('57000000-0000-4000-8000-000000000006');
+SELECT pg_temp.ok((SELECT count(*)=1 FROM sw_missions WHERE id=:'rc'),'an ordinary editor in the circle sees the restricted mission');
+SELECT pg_temp.fail(format('UPDATE sw_missions SET owner_id=%L WHERE id=%L','57000000-0000-4000-8000-000000000006',:'rc'),'42501','an ordinary mission editor cannot make themself the owner');
+SELECT pg_temp.fail(format('SELECT sw_set_mission_member(%L,%L,%L,true)',:'wa',:'rc','57000000-0000-4000-8000-000000000003'),'42501','an ordinary mission editor cannot add another member to the circle');
+SELECT pg_temp.ok((SELECT owner_id='57000000-0000-4000-8000-000000000002' FROM sw_missions WHERE id=:'rc') AND (SELECT count(*)=2 FROM sw_mission_members WHERE mission_id=:'rc'),'the refused attempts changed neither the owner nor the circle');
+UPDATE sw_missions SET next_action='Collect site evidence' WHERE id=:'rc';
+SELECT pg_temp.ok((SELECT next_action='Collect site evidence' FROM sw_missions WHERE id=:'rc'),'a circle member can still edit the mission itself');
+SELECT pg_temp.login('57000000-0000-4000-8000-000000000002');
+SELECT pg_temp.fail(format('UPDATE sw_missions SET owner_id=%L WHERE id=%L','57000000-0000-4000-8000-000000000003',:'rc'),'23514','ownership of a restricted mission cannot go to someone outside its circle');
+UPDATE sw_missions SET owner_id='57000000-0000-4000-8000-000000000006' WHERE id=:'rc';
+SELECT pg_temp.ok((SELECT owner_id='57000000-0000-4000-8000-000000000006' FROM sw_missions WHERE id=:'rc') AND (SELECT count(*)=1 FROM sw_mission_events WHERE mission_id=:'rc' AND event='owner_changed'),'the creator transfers ownership to a member of the circle, recorded in its history');
+SELECT pg_temp.login('57000000-0000-4000-8000-000000000006');
+SELECT pg_temp.ok(sw_set_mission_member(:'wa',:'rc','57000000-0000-4000-8000-000000000003',true),'the new owner administers the circle');
+UPDATE sw_missions SET owner_id='57000000-0000-4000-8000-000000000002' WHERE id=:'rc';
+SELECT pg_temp.ok((SELECT owner_id='57000000-0000-4000-8000-000000000002' FROM sw_missions WHERE id=:'rc'),'the current owner may hand ownership on');
+SELECT pg_temp.fail(format('SELECT sw_set_mission_member(%L,%L,%L,false)',:'wa',:'rc','57000000-0000-4000-8000-000000000003'),'42501','a former owner no longer administers the circle');
 SELECT pg_temp.login('57000000-0000-4000-8000-000000000001');
 SELECT sw_create_invitation(:'wa','57000000-0000-4000-8000-000000000061','late@example.test','viewer',false)->>'code' AS code2 \gset
 SELECT pg_temp.ok(sw_revoke_invitation(:'wa','57000000-0000-4000-8000-000000000061'),'an owner revokes an open invitation');

@@ -61,8 +61,14 @@ control 'invitation bound to e-mail' 'the right code from the wrong account is r
   "$(mutate 'sw_private.accept_invitation(text)' "OR i.email IS DISTINCT FROM _email " "")"
 control 'last owner protected' 'the last active owner cannot step down' \
   "$(mutate 'sw_private.set_member_role(uuid,uuid,text,boolean,boolean)' "RAISE EXCEPTION 'SW_LAST_OWNER' USING ERRCODE = '23514';" "NULL;")"
+control 'ownership transfer is not an editing right' 'an ordinary mission editor cannot make themself the owner' \
+  "$(mutate 'sw_private.guard_mission()' "AND NOT sw_private.can_manage(NEW.workspace_id) THEN
+      RAISE EXCEPTION 'SW_MISSION_OWNER_REQUIRED'" "AND false THEN
+      RAISE EXCEPTION 'SW_MISSION_OWNER_REQUIRED'")"
+control 'restricted ownership stays inside the circle' 'ownership of a restricted mission cannot go to someone outside its circle' \
+  "$(mutate 'sw_private.guard_mission()' "RAISE EXCEPTION 'SW_OWNER_OUTSIDE_CIRCLE' USING ERRCODE = '23514';" "NULL;")"
 control 'no anonymous execution' 'no new function is executable by anon or service_role' \
   'GRANT EXECUTE ON FUNCTION public.sw_accept_invitation(text) TO anon;'
 
-[ "$passed" -ge 8 ] || { echo "FAIL: context negative-control shortfall: $passed (floor 8)"; exit 1; }
+[ "$passed" -ge 10 ] || { echo "FAIL: context negative-control shortfall: $passed (floor 10)"; exit 1; }
 echo "    ok  $passed context negative controls detected by their original assertions"
