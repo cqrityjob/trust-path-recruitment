@@ -36,9 +36,59 @@ export interface FetchPayload {
 const MAX_BYTES = 2 * 1024 * 1024;
 const MAX_REDIRECTS = 3;
 
-async function resolveAll(host: string): Promise<string[]> {
-  const answers = await lookup(host, { all: true, verbatim: true });
-  return answers.map((answer) => answer.address);
+// The fixed resolver used only where the runtime has no working dns.lookup
+// (some Cloudflare Workers configurations). It is never taken from a feed,
+// a source or user input.
+const DOH_ENDPOINT = "https://cloudflare-dns.com/dns-query";
+const isUnsupported = (error: unknown) => {
+  const code = (error as { code?: unknown } | null)?.code;
+  return (
+    code === "ENOTIMP" ||
+    code === "ERR_METHOD_NOT_IMPLEMENTED" ||
+    code === "ERR_NOT_IMPLEMENTED" ||
+    error instanceof TypeError
+  );
+};
+
+/** Answers of one DNS-over-HTTPS query; a non-zero DNS status yields none. */
+export async function resolveOverHttps(
+  host: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<string[]> {
+  const addresses: string[] = [];
+  for (const [type, code] of [
+    ["A", 1],
+    ["AAAA", 28],
+  ] as const) {
+    const response = await fetchImpl(
+      `${DOH_ENDPOINT}?name=${encodeURIComponent(host)}&type=${type}`,
+      { headers: { accept: "application/dns-json" }, redirect: "error" },
+    );
+    if (!response.ok) throw new EgressError("egress_unresolved");
+    const body = (await response.json()) as {
+      Status?: number;
+      Answer?: { type?: number; data?: string }[];
+    };
+    if (body.Status !== 0) continue;
+    for (const answer of body.Answer ?? [])
+      if (answer.type === code && typeof answer.data === "string") addresses.push(answer.data);
+  }
+  return addresses;
+}
+
+export async function resolveAll(
+  host: string,
+  deps: { lookupImpl?: typeof lookup; fetchImpl?: typeof fetch } = {},
+): Promise<string[]> {
+  try {
+    const answers = await (deps.lookupImpl ?? lookup)(host, { all: true, verbatim: true });
+    return answers.map((answer) => answer.address);
+  } catch (error) {
+    // A real DNS error (no such host, timeout) stays an error; only a runtime
+    // without a working lookup falls back to the fixed DoH resolver.
+    if (!isUnsupported(error)) throw error;
+    return resolveOverHttps(host, deps.fetchImpl);
+  }
 }
 
 async function boundedText(response: Response, signal: AbortSignal): Promise<string> {

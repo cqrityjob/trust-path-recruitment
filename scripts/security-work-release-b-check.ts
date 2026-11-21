@@ -8,7 +8,7 @@ import {
   isPrivateAddress,
 } from "../src/lib/security-work/connectors/egress";
 import { FeedError, parseFeed } from "../src/lib/security-work/connectors/feed";
-import { fetchFeed } from "../src/lib/security-work/connectors/fetch.server";
+import { fetchFeed, resolveAll } from "../src/lib/security-work/connectors/fetch.server";
 import { briefToMarkdown } from "../src/lib/security-work/impact/export";
 import type { BriefDetail } from "../src/lib/security-work/impact/services";
 import { coverage } from "../src/lib/security-work/knowledge/coverage";
@@ -473,6 +473,72 @@ await check(
     assert.match(approved, /Risk: Transport disruption \(proposed\)/);
     assert.match(approved, /Action: Re-route \(open, due 2026-12-01\)/);
     assert.match(approved, /covers only the sources that were connected/);
+  },
+);
+
+await check(
+  "DNS falls back to the fixed DoH resolver only when lookup is unavailable",
+  async () => {
+    const asked: string[] = [];
+    const doh = (async (url: string) => {
+      asked.push(url);
+      const type = new URL(url).searchParams.get("type");
+      return Response.json(
+        type === "A"
+          ? {
+              Status: 0,
+              Answer: [
+                { type: 1, data: "93.184.216.34" },
+                { type: 5, data: "alias.example.test." },
+              ],
+            }
+          : { Status: 0, Answer: [{ type: 28, data: "2606:2800:220:1::248" }] },
+      );
+    }) as unknown as typeof fetch;
+    const unsupported = (async () => {
+      throw Object.assign(new Error("not implemented"), { code: "ENOTIMP" });
+    }) as never;
+    assert.deepEqual(
+      await resolveAll("feeds.example.test", { lookupImpl: unsupported, fetchImpl: doh }),
+      ["93.184.216.34", "2606:2800:220:1::248"],
+    );
+    assert.ok(
+      asked.every((url) =>
+        url.startsWith("https://cloudflare-dns.com/dns-query?name=feeds.example.test&type="),
+      ),
+    );
+    // A real DNS failure is not retried elsewhere.
+    asked.length = 0;
+    const missing = (async () => {
+      throw Object.assign(new Error("not found"), { code: "ENOTFOUND" });
+    }) as never;
+    await assert.rejects(
+      resolveAll("nowhere.example.test", { lookupImpl: missing, fetchImpl: doh }),
+    );
+    assert.equal(asked.length, 0);
+    // NXDOMAIN over DoH is no address, which the egress rule refuses; a private answer is refused too.
+    const nx = (async () => Response.json({ Status: 3 })) as unknown as typeof fetch;
+    const none = await resolveAll("nowhere.example.test", {
+      lookupImpl: unsupported,
+      fetchImpl: nx,
+    });
+    assert.equal(
+      egressCode(() => checkResolved(none)),
+      "egress_unresolved",
+    );
+    const internal = (async () =>
+      Response.json({
+        Status: 0,
+        Answer: [{ type: 1, data: "10.0.0.5" }],
+      })) as unknown as typeof fetch;
+    const priv = await resolveAll("feeds.example.test", {
+      lookupImpl: unsupported,
+      fetchImpl: internal,
+    });
+    assert.equal(
+      egressCode(() => checkResolved(priv)),
+      "egress_private_address",
+    );
   },
 );
 
