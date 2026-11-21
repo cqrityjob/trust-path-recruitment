@@ -4295,6 +4295,40 @@
           "object": "vsd_read_disclosed"
         }
       ]
+    },
+    {
+      "file": "20270326090000_security_work_assistant_dispatch_and_decision.sql",
+      "hostedState": "pending",
+      "introduces": [
+        {
+          "kind": "function",
+          "object": "sw_reserve_assistant(uuid,uuid,uuid,jsonb)"
+        },
+        {
+          "kind": "function",
+          "object": "sw_decide_suggestion(uuid,uuid,integer,text,text,jsonb)"
+        },
+        {
+          "kind": "function",
+          "object": "sw_private.reserve_assistant(uuid,uuid,uuid,jsonb)"
+        },
+        {
+          "kind": "function",
+          "object": "sw_private.decide_suggestion(uuid,uuid,integer,text,text,jsonb)"
+        },
+        {
+          "kind": "function",
+          "object": "sw_private.require_suggestion_job()"
+        },
+        {
+          "kind": "column",
+          "table": "sw_ai_suggestions",
+          "object": "job_id"
+        }
+      ],
+      "rollback": "supabase/rollback/20270326090000_security_work_assistant_dispatch_and_decision_rollback.sql",
+      "note": "Security Work Release A, schema half (docs/security-intelligence/security-work-runtime-map.md). Fixes two defects found in code review of main 93ef3602: (A) the programme assistant called its provider after a read-before-write request-id check, outside the processing ledger and outside the daily budget, so two concurrent requests could both dispatch; (B) approving a suggestion wrote business records one call at a time before recording the decision, so a failure or a concurrent approval could leave partial or duplicated records. sw_processing_jobs gains kind assistant (no assessment/document, an activation); sw_reserve_assistant reserves under the workspace lock with the request id as operation id and the frozen manifest as the whole model input; the EXISTING sw_dispatch_processing/sw_complete_processing fence and signed receipt are reused (dispatch: one added branch requiring the activation to be live; completion: stores the assistant output; reserve_processing: sums ai and assistant against one daily budget). sw_ai_suggestions.job_id plus trigger sw_15_suggestion_job: a suggestion can only be the exact stored result of the same-id succeeded assistant job of the same person, matching the reserved manifest and the approved provider/model. sw_decide_suggestion (SECURITY INVOKER, one transaction, suggestion locked first) approves-and-applies or rejects; a retry of the same decision by the same person returns the stored result; any other second decision, stale suggestion or stale target version is PT409; any failure leaves nothing. No provider, key, activation, worker secret or schedule is created and no existing row is rewritten; existing suggestions keep job_id NULL and stay decidable. The application change that calls it ships separately after installation. Install after 20270325090000.",
+      "verify": "Full-history replay plus supabase/tests/security_work_assistant_dispatch_test.sql (72 assertions as real roles: surface and grants, operation-id idempotency and input binding, shared daily budget, single fence, outcome_unknown never re-sent, revocation at dispatch, signed output storage, suggestion provenance bound to job/manifest/model/content, atomic and idempotent decisions for all five apply kinds, two-approver refusal, stale target versions, membership removal while queued, workspace isolation), scripts/security-work-assistant-negative-controls.sh (12 planted defects, each caught by its named assertion) and scripts/security-work-assistant-race-test.sh (two connections: a duplicate operation and concurrent approvers, each proving the second session waited); adopted-data rollback refusal; rollback leaving no new object and restoring the 20261211090000 processing bodies byte for byte (compared with a fresh re-application of that file); then re-application with the analysis and foundation suites. After installation confirm: sw_reserve_assistant and sw_decide_suggestion executable by authenticated only (not anon, service_role or PUBLIC); sw_private.require_suggestion_job executable by nobody; sw_processing_jobs_target_check present and sw_processing_jobs_check1 absent; sw_ai_suggestions.job_id present and sw_15_suggestion_job enabled; md5 of the three processing bodies equal to local replay; no sw_processing_jobs row of kind assistant and no existing row changed."
     }
   ],
   "policyVersion": 2, 
