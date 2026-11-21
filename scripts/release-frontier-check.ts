@@ -515,11 +515,14 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // after merge f86cafa3. Read-only catalog and ledger proof:
 // docs/release/2026-11-21-security-work-assistant-hosted-verification.json.
 // The 405-row hosted ledger preserves all previous 404 entries; all 8 function
-// bodies and the privileges match the merged source. Only 20270327090000
-// remains pending, by design, until its own merge.
-const expectedPending: string[] = [
-  "20270327090000_security_work_context_missions_collaboration.sql",
-];
+// bodies and the privileges match the merged source.
+//
+// 2026-11-21: #498 (20270327090000) was installed by the official integration
+// after merge f58952db. Read-only proof:
+// docs/release/2026-11-21-security-work-context-hosted-verification.json. The
+// 406-row ledger preserves all previous 405 entries and all 18 function bodies
+// match the merged source. Nothing is pending.
+const expectedPending: string[] = [];
 
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
