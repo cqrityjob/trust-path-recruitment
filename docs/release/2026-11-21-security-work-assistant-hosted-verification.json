@@ -1,0 +1,49 @@
+{
+  "migration": "20270326090000_security_work_assistant_dispatch_and_decision.sql",
+  "pullRequest": "https://github.com/cqrityjob/trust-path-recruitment/pull/496",
+  "mergedAt": "2026-11-21T08:47:41Z",
+  "mergeCommit": "f86cafa3",
+  "installedBy": "Official Supabase GitHub integration (owner project wrygicdfxwjnrugduxnt). No migration was applied, re-sent or written by this verification.",
+  "readAt": "2026-11-21T14:32:53.661305+00:00",
+  "method": "Read-only SELECTs over the Supabase management connector. No production row or object was written.",
+  "ledger": {
+    "rows": 405,
+    "latest": "20270326090000:security_work_assistant_dispatch_and_decision",
+    "previous404Md5": "5a885bc43675ddd4e2671f87c16c5154",
+    "previous404EqualsCommittedSnapshot": true,
+    "full405Md5": "113579a85086f6bf335edc4a25d26195",
+    "md5Of": "string_agg(version||':'||coalesce(name,''), E'\\n' ORDER BY version)"
+  },
+  "functionBodies": {
+    "comparedWith": "Local replay of the merged migration (PostgreSQL 16.14, full history): md5(prosrc) equal for every function.",
+    "md5": {
+      "sw_private.complete_processing": "076f16b65d5885cc077082c11e24e7ff",
+      "sw_private.decide_suggestion": "552fde851a0d45d41c598c8380410bbf",
+      "sw_private.dispatch_processing": "07250ee556d95be58598bb85ac0fce8e",
+      "sw_private.require_suggestion_job": "b534526af9ad76906cf5cffd5a0deeef",
+      "sw_private.reserve_assistant": "d75edc13824d3ebdcd4898f6a6ba4f0e",
+      "sw_private.reserve_processing": "50465cf8cda661010614f0dc8c9e62db",
+      "public.sw_decide_suggestion": "09eeb908db5b4139b14278aff2e52fc3",
+      "public.sw_reserve_assistant": "0aa01d9495c3869d5ea179605cb1a185"
+    }
+  },
+  "privileges": {
+    "authenticatedExecutesSwReserveAssistant": true,
+    "authenticatedExecutesSwDecideSuggestion": true,
+    "anonOrServiceRoleExecutesAnyNewFunction": false,
+    "authenticatedExecutesRequireSuggestionJob": false
+  },
+  "schema": {
+    "sw_processing_jobs_target_check": "present",
+    "sw_processing_jobs_check1": "absent",
+    "sw_ai_suggestions.job_id": "present",
+    "sw_15_suggestion_job": "enabled (O)"
+  },
+  "data": {
+    "sw_processing_jobs_total": 0,
+    "assistantJobs": 0,
+    "sw_ai_suggestions": 0,
+    "note": "Nothing to repair; no existing row changed."
+  },
+  "notVerified": "Runtime behaviour through the hosted API (requests as real users). Generative AI remains off in version 1, so no assistant request can reach a provider; no activation, key or worker secret was created."
+}
