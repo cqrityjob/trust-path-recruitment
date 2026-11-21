@@ -4396,6 +4396,71 @@
       "rollback": "supabase/rollback/20270327090000_security_work_context_missions_collaboration_rollback.sql",
       "note": "Security Work Release A, schema (docs/security-intelligence/security-work-runtime-map.md section 5). Corrected before installation (review finding on #498): an owner_id change is authorized only for the creator, the current owner or a workspace owner, and in a restricted mission only to a member of its circle, so editing a mission never confers circle administration. sw_operating_profiles: append-only operating context, profile_version = previous + 1 enforced, unknown schema versions refused, per-field provenance beside the content. sw_member_preferences: a person's role focus, own row only, grants nothing. sw_missions (+ members, links, events): monitoring_impact, risk_assessment and event_security only; execution state, review state and linked records' lifecycles kept apart; completion requires accepted review; terminal states final; a restricted mission and its links, members and history are visible to its members only (RLS, including for the workspace owner) and its history is kept out of the workspace audit feed. Collaboration: owner-issued invitations with a one-time code shown once and stored only as a hash (nothing is sent), bound to the invited account e-mail, at most 14 days; owners change roles and deactivate members, the last active owner cannot be removed; membership changes audited by the existing trigger. No provider, connector, schedule, e-mail or external message; no existing row rewritten. The application change ships separately after installation. Install after 20270326090000.",
       "verify": "Full-history replay plus supabase/tests/security_work_context_missions_test.sql (74 assertions as real roles, including the ownership-transfer regression), scripts/security-work-context-negative-controls.sh (10 planted defects each caught by its named assertion), adopted-data rollback refusal, clean rollback leaving no object, re-application with the assistant and foundation suites. After installation confirm: the seven tables exist with RLS on and no anon/service_role privilege; authenticated cannot SELECT sw_invitations.token_hash nor write sw_invitations; the six public functions are executable by authenticated only; sw_missions, sw_operating_profiles and sw_invitations are empty."
+    },
+    {
+      "file": "20270328090000_security_work_monitoring_impact.sql",
+      "hostedState": "pending",
+      "introduces": [
+        {
+          "kind": "table",
+          "object": "sw_feed_hosts"
+        },
+        {
+          "kind": "table",
+          "object": "sw_fetch_runs"
+        },
+        {
+          "kind": "table",
+          "object": "sw_story_clusters"
+        },
+        {
+          "kind": "table",
+          "object": "sw_cluster_items"
+        },
+        {
+          "kind": "table",
+          "object": "sw_change_briefs"
+        },
+        {
+          "kind": "table",
+          "object": "sw_review_flags"
+        },
+        {
+          "kind": "table",
+          "object": "sw_change_brief_applications"
+        },
+        {
+          "kind": "function",
+          "object": "sw_record_fetch(uuid,uuid,uuid,text,text,text)"
+        },
+        {
+          "kind": "function",
+          "object": "sw_apply_change_brief(uuid,uuid,integer,uuid,jsonb)"
+        },
+        {
+          "kind": "column",
+          "table": "sw_sources",
+          "object": "feed_url"
+        },
+        {
+          "kind": "column",
+          "table": "sw_sources",
+          "object": "last_checked_at"
+        },
+        {
+          "kind": "column",
+          "table": "sw_source_items",
+          "object": "content_hash"
+        },
+        {
+          "kind": "column",
+          "table": "sw_source_items",
+          "object": "observed_at"
+        }
+      ],
+      "rollback": "supabase/rollback/20270328090000_security_work_monitoring_impact_rollback.sql",
+      "note": "Security Work Release B, schema (docs/security-intelligence/security-work-runtime-map.md section 6): permitted source -> signed fetch -> story cluster -> customer-specific impact brief -> human review -> risk/actions -> review flags. sw_feed_hosts is the platform allowlist of official feed hosts and is EMPTY: nothing can be fetched until the owner approves a host and provisions the worker key. sw_sources gains official_feed with an https feed_url on an approved host; source health changes only inside a signed fetch. sw_record_fetch verifies the worker HMAC (kind fetch), is idempotent per run id, deduplicates per source, stores items as fetched (impossible to forge elsewhere), clusters them by story (first five normalised headline words) with independent_sources = least(distinct publishers, distinct texts) so copies are not corroboration, queues them for triage and raises review flags on approved briefs that cited the same story. sw_change_briefs build their evidence in the database from the cited items; draft -> in_review (content frozen) -> approved/rejected by an approver (stamped by the database, rejection needs a note); approved briefs are immutable and an approved revision supersedes them. A brief in a restricted mission follows the mission's need-to-know. sw_apply_change_brief creates the unrated proposed risk (source_kind monitoring), its evidence links and the actions, linked to the mission, in one transaction, once per brief; a retry returns the receipt. No provider, schedule, host or key is created. Install after 20270327090000.",
+      "verify": "Full-history replay plus supabase/tests/security_work_monitoring_impact_test.sql (56 assertions as real roles), scripts/security-work-monitoring-negative-controls.sh (11 planted defects each caught by its named assertion), adopted-data rollback refusal, a rollback restoring the sw_sources/sw_source_items constraints, columns and triggers exactly, and re-application with the context and foundation suites. After installation confirm: the seven tables exist with RLS on and no anon/service_role privilege; no client write on hosts, runs, clusters or applications; sw_record_fetch and sw_apply_change_brief executable by authenticated only; sw_feed_hosts EMPTY; no official_feed source and no fetched item."
     }
   ],
   "policyVersion": 2, 
