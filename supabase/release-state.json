@@ -4298,7 +4298,10 @@
     },
     {
       "file": "20270326090000_security_work_assistant_dispatch_and_decision.sql",
-      "hostedState": "pending",
+      "hostedState": "applied",
+      "hostedVersion": "20270326090000",
+      "hostedName": "security_work_assistant_dispatch_and_decision",
+      "evidenceSource": "Installed by the official Supabase GitHub integration after #496 merged as f86cafa3 on 2026-11-21. Read-only verification on wrygicdfxwjnrugduxnt at 2026-11-21T14:32:53.661305+00:00: ledger 405 rows ending 20270326090000; previous 404 entries unchanged (md5 5a885bc4, equal to the committed snapshot). All 8 function bodies (reserve/dispatch/complete_processing, reserve_assistant, decide_suggestion, require_suggestion_job and the two public wrappers) equal the local replay of the merged file by md5(prosrc). sw_reserve_assistant and sw_decide_suggestion executable by authenticated only, none of the new functions by anon or service_role, require_suggestion_job by nobody; sw_processing_jobs_target_check present and sw_processing_jobs_check1 absent; sw_ai_suggestions.job_id present and sw_15_suggestion_job enabled. sw_processing_jobs and sw_ai_suggestions are empty. No production write. See docs/release/2026-11-21-security-work-assistant-hosted-verification.json.",
       "introduces": [
         {
           "kind": "function",
