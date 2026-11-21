@@ -2615,6 +2615,15 @@ jobs:
           E2E_BASE_URL: http://localhost:3100
         run: bun run e2e:security-work-programme
 
+      # Security AI after a lost answer: the operation id is kept, "check
+      # again" and a repeated click send the same id, and only the explicit
+      # "new request" button starts a second, separately billed operation; the
+      # cost copy in Swedish and English. Stubbed server functions.
+      - name: Security Work assistant retry browser journey
+        env:
+          E2E_BASE_URL: http://localhost:3100
+        run: bun run e2e:security-work-assistant
+
       # "Utforska nu" on the Career Discovery recommendation is a real link
       # to the occupation's page (its guide, or its reviewed catalogue page
       # where no guide is published), and the result survives the trip there

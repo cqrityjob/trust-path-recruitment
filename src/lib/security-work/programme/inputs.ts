@@ -210,8 +210,9 @@ export const decideSuggestionInput = scope
     version,
     status: z.enum(["approved", "rejected"]),
     decision_note: text(2000),
-    /** What the approving user chose to create from the proposal. The server
-     * writes these through the ordinary editor path, as that user. */
+    /** What the approving user chose to create from the proposal. The database
+     * writes exactly these, as that user, together with the decision, in one
+     * transaction (sw_decide_suggestion). */
     apply: z
       .discriminatedUnion("kind", [
         z.object({ kind: z.literal("none") }).strict(),
@@ -238,7 +239,8 @@ export const decideSuggestionInput = scope
                   })
                   .strict(),
               )
-              .max(15),
+              .min(1)
+              .max(12),
           })
           .strict(),
         z.object({ kind: z.literal("risk_scenario"), riskId: uuid, version }).strict(),
@@ -248,6 +250,7 @@ export const decideSuggestionInput = scope
             gapId: uuid,
             actions: z
               .array(z.object({ title: required(500), description: text(4000) }).strict())
+              .min(1)
               .max(5),
           })
           .strict(),
@@ -256,7 +259,7 @@ export const decideSuggestionInput = scope
             kind: z.literal("report_narrative"),
             reportId: uuid,
             version,
-            sections: z.array(z.enum(REPORT_SECTIONS)).max(12),
+            sections: z.array(z.enum(REPORT_SECTIONS)).min(1).max(12),
           })
           .strict(),
       ])

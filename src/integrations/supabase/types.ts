@@ -18873,6 +18873,7 @@ export type Database = {
           decision_note: string
           decision_required: boolean
           id: string
+          job_id: string | null
           kind: string
           model: string
           prompt_version: string
@@ -18896,6 +18897,7 @@ export type Database = {
           decision_note?: string
           decision_required?: boolean
           id?: string
+          job_id?: string | null
           kind: string
           model: string
           prompt_version: string
@@ -18919,6 +18921,7 @@ export type Database = {
           decision_note?: string
           decision_required?: boolean
           id?: string
+          job_id?: string | null
           kind?: string
           model?: string
           prompt_version?: string
@@ -18931,6 +18934,13 @@ export type Database = {
           workspace_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "sw_ai_suggestions_job_fk"
+            columns: ["workspace_id", "job_id"]
+            isOneToOne: true
+            referencedRelation: "sw_processing_jobs"
+            referencedColumns: ["workspace_id", "id"]
+          },
           {
             foreignKeyName: "sw_ai_suggestions_workspace_id_fkey"
             columns: ["workspace_id"]
@@ -25806,6 +25816,46 @@ export type Database = {
         }
       }
       sw_create_personal_workspace: { Args: { _name: string }; Returns: string }
+      sw_decide_suggestion: {
+        Args: {
+          _apply: Json
+          _decision_note: string
+          _expected_version: number
+          _status: string
+          _suggestion_id: string
+          _workspace_id: string
+        }
+        Returns: {
+          applied_target: Json
+          content: Json
+          context_id: string | null
+          context_kind: string | null
+          created_at: string
+          created_by: string
+          decided_at: string | null
+          decided_by: string | null
+          decision_note: string
+          decision_required: boolean
+          id: string
+          job_id: string | null
+          kind: string
+          model: string
+          prompt_version: string
+          provider: string
+          request_text: string
+          source_records: Json
+          status: string
+          updated_at: string
+          version: number
+          workspace_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "sw_ai_suggestions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       sw_dispatch_processing: {
         Args: { _job_id: string; _workspace_id: string }
         Returns: Json
@@ -25837,6 +25887,42 @@ export type Database = {
       sw_preview_report: {
         Args: { _report_id: string; _workspace_id: string }
         Returns: Json
+      }
+      sw_reserve_assistant: {
+        Args: {
+          _activation_id: string
+          _input_manifest: Json
+          _request_id: string
+          _workspace_id: string
+        }
+        Returns: {
+          activation_id: string | null
+          actual_cost_micros: number | null
+          assessment_id: string | null
+          completed_at: string | null
+          created_at: string
+          created_by: string
+          dispatched_at: string | null
+          document_id: string | null
+          error_code: string | null
+          expected_version: number | null
+          fence: string | null
+          id: string
+          input_hash: string
+          input_manifest: Json
+          kind: string
+          output: Json | null
+          output_hash: string | null
+          reserved_cost_micros: number
+          status: string
+          workspace_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "sw_processing_jobs"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       sw_reserve_document: {
         Args: {
