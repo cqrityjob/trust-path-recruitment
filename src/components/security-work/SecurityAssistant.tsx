@@ -227,6 +227,10 @@ export function SecurityAssistantPanel() {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [fallback, setFallback] = useState<CapabilityId | null>(null);
+  // One operation id per intent: a repeated click or a retry after an error
+  // reuses it, so the server answers from the recorded operation instead of
+  // starting (and paying for) a second one. A new id only for a new question.
+  const [operation, setOperation] = useState<{ key: string; id: string } | null>(null);
   const capabilities = capabilitiesFor(context.kind);
   const here = suggestions.filter(
     (suggestion) =>
@@ -246,6 +250,10 @@ export function SecurityAssistantPanel() {
       setFallback(capability);
       return;
     }
+    if (busy) return;
+    const key = JSON.stringify([workspace.id, capability, context.kind, context.id, question]);
+    const requestId = operation?.key === key ? operation.id : crypto.randomUUID();
+    setOperation({ key, id: requestId });
     setBusy(capability);
     try {
       const result = await request({
@@ -255,11 +263,15 @@ export function SecurityAssistantPanel() {
           contextKind: context.kind,
           contextId: context.id,
           requestText: question,
-          requestId: crypto.randomUUID(),
+          requestId,
         },
       });
-      if (!result.ok) setError(result.code);
-      else {
+      if (!result.ok) {
+        setError(result.code);
+        // The answer is unknown or final: asking again must be a new operation.
+        if (result.code === "AI_OUTCOME_UNKNOWN" || result.code === "CONFLICT") setOperation(null);
+      } else {
+        setOperation(null);
         setQuestion("");
         onChanged();
       }
@@ -463,7 +475,15 @@ export function SecurityAssistantPanel() {
         )}
         <WorkError
           code={error}
-          message={error && error !== "ACCESS_DENIED" ? t("sw.prog.error.ai") : undefined}
+          message={
+            error === "AI_OUTCOME_UNKNOWN"
+              ? t("sw.prog.error.aiUnknown")
+              : error === "AI_BUDGET_EXCEEDED"
+                ? t("sw.prog.error.aiBudget")
+                : error?.startsWith("AI_")
+                  ? t("sw.prog.error.ai")
+                  : undefined
+          }
         />
         {here.length > 0 && (
           <section className="space-y-3">

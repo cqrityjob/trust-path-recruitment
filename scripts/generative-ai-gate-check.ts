@@ -378,13 +378,13 @@ globalThis.fetch = realFetch;
   const provider = appFiles.filter((f) => hostRe.test(read(f)) || credentialRe.test(read(f)));
 
   ck(
-    "the only files in src/ and supabase/functions that name a provider or send its credential are the known three",
+    "the only files in src/ and supabase/functions that name a provider or send its credential are the known two",
     JSON.stringify([...provider].sort()) ===
       JSON.stringify(
         [
           "src/lib/interview-intelligence/ai/providers/anthropic.ts",
+          // The Security AI assistant sends through ai.server.ts's dispatchProviderOnce.
           "src/lib/security-work/processing/ai.server.ts",
-          "src/lib/security-work/programme/assistant.server.ts",
         ].sort(),
       ),
     provider.join(", "),

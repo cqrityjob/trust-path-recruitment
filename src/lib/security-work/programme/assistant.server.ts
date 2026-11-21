@@ -1,11 +1,17 @@
 import "@tanstack/react-start/server-only";
 import { z } from "zod";
-import { externalAiFetch } from "../../ai/generative-ai-gate";
 import type { Json } from "@/integrations/supabase/types";
 import { AnalysisFailure, checked } from "../analysis-services";
+import type { ProcessingJob } from "../analysis-types";
 import { requireWorkspace, type SecurityWorkCaller } from "../services";
+import { signProcessingReceipt } from "../processing/attestation.server";
 import { loadConfiguration } from "../processing/ai-jobs.server";
-import { sourceInstruction, type SwAiConfiguration } from "../processing/ai.server";
+import {
+  SwAiError,
+  dispatchProviderOnce,
+  sourceInstruction,
+  type SwAiConfiguration,
+} from "../processing/ai.server";
 import {
   SW_ASSISTANT_PROMPT_VERSION,
   capability as capabilityOf,
@@ -17,7 +23,6 @@ import {
 import { BASELINE_QUESTIONS, domainTitle } from "./content/baseline-v1";
 import type * as inputs from "./inputs";
 import { REPORT_SECTIONS, REPORT_SECTION_TITLES } from "./management-report";
-import { saveAsset, saveProgrammeAction } from "./services";
 import type { AiSuggestion } from "./types";
 
 type Env = Readonly<Record<string, string | undefined>>;
@@ -28,12 +33,18 @@ type SourceRecord = { table: string; id: string };
  *  - only the records named by the context are sent, as a plain JSON object
  *    of the fields listed in `collectContext`, never monitoring items,
  *    source extracts, incident text or anything from another workspace;
+ *  - every request is ONE billable operation in the processing ledger
+ *    (sw_reserve_assistant -> sw_dispatch_processing -> signed
+ *    sw_complete_processing): the client's request id is the operation id,
+ *    the frozen manifest is everything the model sees, the workspace's daily
+ *    budget applies, and a lost answer is outcome_unknown, never re-sent;
  *  - every answer is validated against the capability's output shape; an
- *    answer with any other shape is discarded and nothing is stored;
- *  - a validated answer is stored as a PROPOSED suggestion and returned.
- *    Nothing here writes to an authoritative record. `decideSuggestion`
- *    writes only what the approving human explicitly chose, as that human,
- *    through the ordinary editor services.
+ *    answer with any other shape is recorded as failed and nothing is stored;
+ *  - a validated answer is stored as a PROPOSED suggestion, which the
+ *    database accepts only as the exact signed result of its own job.
+ *    Nothing here writes to an authoritative record: `decideSuggestion`
+ *    hands the human's explicit choice to sw_decide_suggestion, which writes
+ *    it and the decision in one transaction, as that human.
  */
 const SYSTEM = [
   "You are CQrityjob Security AI, the assistant inside a corporate security management workspace used by a Head of Security or security coordinator.",
@@ -225,73 +236,43 @@ async function collectContext(
   return { context, sources };
 }
 
-async function callProvider(
-  configuration: SwAiConfiguration,
-  body: unknown,
-  signal: AbortSignal,
-  fetchImpl: typeof fetch,
-): Promise<{ text: string; model: string }> {
-  const response = await externalAiFetch(
-    "security-work.assistant",
-    fetchImpl,
-    "https://api.anthropic.com/v1/messages",
-    {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "x-api-key": configuration.apiKey,
-        "anthropic-version": "2023-06-01",
-      },
-      signal,
-      redirect: "error",
-      body: JSON.stringify(body),
-    },
-  );
-  if (!response.ok) {
-    void response.body?.cancel();
-    throw new AnalysisFailure("AI_PROVIDER_FAILED");
-  }
-  const raw = (await response.json()) as unknown;
-  const envelope = z
-    .object({
-      model: z.string(),
-      stop_reason: z.string(),
-      content: z
-        .array(z.object({ type: z.string(), text: z.string().optional() }).passthrough())
-        .max(8),
-    })
-    .passthrough()
-    .safeParse(raw);
-  if (!envelope.success) throw new AnalysisFailure("AI_PROVIDER_FAILED");
-  if (envelope.data.stop_reason !== "end_turn") throw new AnalysisFailure("AI_INCOMPLETE");
-  return {
-    text: envelope.data.content
-      .flatMap((block) => (block.type === "text" && block.text ? [block.text] : []))
-      .join(""),
-    model: envelope.data.model,
-  };
+const contextId = z
+  .string()
+  .regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
+
+/** Everything the model will see. Frozen in the reservation; never from the client. */
+const manifestSchema = z
+  .object({
+    kind: z.string().min(1),
+    capability: z.string().min(1),
+    contextKind: z.string().min(1),
+    contextId: z.string().max(120).nullable(),
+    requestText: z.string().max(2000),
+    language: z.enum(["sv", "en"]),
+    promptVersion: z.string().min(1),
+    decisionRequired: z.boolean(),
+    context: z.record(z.unknown()),
+    sources: z.array(z.object({ table: z.string(), id: z.string() })).max(200),
+  })
+  .strict();
+type AssistantManifest = z.infer<typeof manifestSchema>;
+
+/** Order-insensitive comparison of two JSON values (jsonb reorders keys). */
+function canonical(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;
+  if (value && typeof value === "object")
+    return `{${Object.keys(value as Record<string, unknown>)
+      .sort()
+      .map((key) => `${JSON.stringify(key)}:${canonical((value as Record<string, unknown>)[key])}`)
+      .join(",")}}`;
+  return JSON.stringify(value);
 }
 
-export async function requestSuggestion(
+async function buildManifest(
   caller: SecurityWorkCaller,
   data: inputs.RequestSuggestionInput,
-  env: Env = process.env,
-  fetchImpl: typeof fetch = fetch,
-): Promise<AiSuggestion> {
-  await requireWorkspace(caller, data.workspaceId, true);
+): Promise<AssistantManifest> {
   const capability = capabilityOf(data.capability);
-  if (!capability.contexts.includes(data.contextKind)) throw new AnalysisFailure("INVALID_INPUT");
-  // Idempotent on the client's request id: a retry returns the stored proposal.
-  const existing = checked(
-    await caller.supabase
-      .from("sw_ai_suggestions")
-      .select("*")
-      .eq("workspace_id", data.workspaceId)
-      .eq("id", data.requestId)
-      .maybeSingle(),
-  );
-  if (existing) return existing;
-  const configuration = await loadConfiguration(caller, data.workspaceId, env);
   const workspace = checked(
     await caller.supabase
       .from("sw_workspaces")
@@ -307,75 +288,104 @@ export async function requestSuggestion(
     data.contextId,
     data.capability,
   );
-  const requestText = settled(data.requestText, 2000);
-  if (sourceInstruction.test([requestText, JSON.stringify(context)].join("\n")))
-    throw new AnalysisFailure("AI_INPUT_REFUSED");
-  const controller = new AbortController();
-  const timeout = setTimeout(
-    () => controller.abort(),
-    Math.min(configuration.activation.timeoutMs, 60_000),
-  );
-  let answer: { text: string; model: string };
-  try {
-    answer = await callProvider(
-      configuration,
+  return {
+    kind: capability.kind,
+    capability: capability.id,
+    contextKind: data.contextKind,
+    contextId: data.contextId,
+    requestText: settled(data.requestText, 2000),
+    language: workspace.language === "en" ? "en" : "sv",
+    promptVersion: SW_ASSISTANT_PROMPT_VERSION,
+    decisionRequired: capability.decisionRequired,
+    // Round-trip through JSON so the manifest holds exactly what jsonb will store.
+    context: JSON.parse(JSON.stringify(context)) as Record<string, unknown>,
+    sources,
+  };
+}
+
+function providerBody(manifest: AssistantManifest, configuration: SwAiConfiguration) {
+  return {
+    model: configuration.activation.model,
+    max_tokens: Math.min(configuration.activation.maxOutputTokens, 4096),
+    system: SYSTEM,
+    messages: [
       {
-        model: configuration.activation.model,
-        max_tokens: Math.min(configuration.activation.maxOutputTokens, 4096),
-        system: SYSTEM,
-        messages: [
+        role: "user",
+        content: [
           {
-            role: "user",
-            content: [
-              {
-                type: "text",
-                text: JSON.stringify({
-                  capability: capability.id,
-                  outputContract: OUTPUT_CONTRACTS[capability.kind],
-                  language: workspace.language,
-                  userRequest: requestText,
-                  untrustedData: context,
-                }),
-              },
-            ],
+            type: "text",
+            text: JSON.stringify({
+              capability: manifest.capability,
+              outputContract: OUTPUT_CONTRACTS[manifest.kind as SuggestionKind],
+              language: manifest.language,
+              userRequest: manifest.requestText,
+              untrustedData: manifest.context,
+            }),
           },
         ],
       },
-      controller.signal,
-      fetchImpl,
-    );
-  } catch (error) {
-    if (error instanceof AnalysisFailure) throw error;
-    throw new AnalysisFailure(controller.signal.aborted ? "AI_TIMEOUT" : "AI_PROVIDER_FAILED");
-  } finally {
-    clearTimeout(timeout);
-  }
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(answer.text);
-  } catch {
-    throw new AnalysisFailure("AI_OUTPUT_INVALID");
-  }
-  const content = parseSuggestionContent(capability.kind, parsed);
-  if (!content.success) throw new AnalysisFailure("AI_OUTPUT_INVALID");
+    ],
+  };
+}
+
+function assertOwnAssistantJob(
+  job: ProcessingJob,
+  caller: SecurityWorkCaller,
+  workspaceId: string,
+) {
+  if (
+    job.workspace_id !== workspaceId ||
+    job.kind !== "assistant" ||
+    job.created_by !== caller.userId
+  )
+    throw new AnalysisFailure("CONFLICT");
+}
+
+/** Stores the suggestion from a succeeded job. Idempotent; never calls the provider. */
+async function storeFromJob(
+  caller: SecurityWorkCaller,
+  workspaceId: string,
+  job: ProcessingJob,
+): Promise<AiSuggestion> {
+  const existing = checked(
+    await caller.supabase
+      .from("sw_ai_suggestions")
+      .select("*")
+      .eq("workspace_id", workspaceId)
+      .eq("id", job.id)
+      .maybeSingle(),
+  );
+  if (existing) return existing;
+  const manifest = manifestSchema.safeParse(job.input_manifest);
+  if (!manifest.success || !job.activation_id) throw new AnalysisFailure("CONFLICT");
+  const activation = checked(
+    await caller.supabase
+      .from("sw_ai_activations")
+      .select("provider,model")
+      .eq("workspace_id", workspaceId)
+      .eq("id", job.activation_id)
+      .maybeSingle(),
+  );
+  if (!activation) throw new AnalysisFailure("ACCESS_DENIED");
   const inserted = await caller.supabase
     .from("sw_ai_suggestions")
     .insert({
-      id: data.requestId,
-      workspace_id: data.workspaceId,
-      kind: capability.kind,
-      context_kind: data.contextKind,
+      id: job.id,
+      job_id: job.id,
+      workspace_id: workspaceId,
+      kind: manifest.data.kind,
+      context_kind: manifest.data.contextKind,
       context_id:
-        data.contextId && z.string().uuid().safeParse(data.contextId).success
-          ? data.contextId
+        manifest.data.contextId && contextId.safeParse(manifest.data.contextId).success
+          ? manifest.data.contextId
           : null,
-      request_text: requestText,
-      content: content.data as Json,
-      source_records: sources as unknown as Json,
-      provider: configuration.activation.provider,
-      model: answer.model,
-      prompt_version: SW_ASSISTANT_PROMPT_VERSION,
-      decision_required: capability.decisionRequired,
+      request_text: manifest.data.requestText,
+      content: job.output as Json,
+      source_records: manifest.data.sources as unknown as Json,
+      provider: activation.provider,
+      model: activation.model,
+      prompt_version: manifest.data.promptVersion,
+      decision_required: manifest.data.decisionRequired,
     })
     .select("*")
     .single();
@@ -384,8 +394,8 @@ export async function requestSuggestion(
       await caller.supabase
         .from("sw_ai_suggestions")
         .select("*")
-        .eq("workspace_id", data.workspaceId)
-        .eq("id", data.requestId)
+        .eq("workspace_id", workspaceId)
+        .eq("id", job.id)
         .maybeSingle(),
     );
     if (winner) return winner;
@@ -395,167 +405,182 @@ export async function requestSuggestion(
   return row;
 }
 
+/** What an already-recorded operation means for the caller. Never re-sends. */
+async function settledOutcome(
+  caller: SecurityWorkCaller,
+  workspaceId: string,
+  job: ProcessingJob,
+): Promise<AiSuggestion> {
+  if (job.status === "succeeded") return storeFromJob(caller, workspaceId, job);
+  if (job.status === "dispatched" || job.status === "outcome_unknown")
+    throw new AnalysisFailure("AI_OUTCOME_UNKNOWN");
+  if (job.status === "failed")
+    throw new AnalysisFailure(
+      job.error_code === "schema_invalid"
+        ? "AI_OUTPUT_INVALID"
+        : job.error_code === "deadline"
+          ? "AI_TIMEOUT"
+          : job.error_code === "incomplete_response"
+            ? "AI_INCOMPLETE"
+            : job.error_code === "source_instructions"
+              ? "AI_INPUT_REFUSED"
+              : "AI_PROVIDER_FAILED",
+    );
+  throw new AnalysisFailure("CONFLICT");
+}
+
+async function readJob(caller: SecurityWorkCaller, workspaceId: string, id: string) {
+  return checked(
+    await caller.supabase
+      .from("sw_processing_jobs")
+      .select("*")
+      .eq("workspace_id", workspaceId)
+      .eq("id", id)
+      .maybeSingle(),
+  );
+}
+
+export async function requestSuggestion(
+  caller: SecurityWorkCaller,
+  data: inputs.RequestSuggestionInput,
+  env: Env = process.env,
+  options: { fetchImpl?: typeof fetch; dispatch?: typeof dispatchProviderOnce } = {},
+): Promise<AiSuggestion> {
+  await requireWorkspace(caller, data.workspaceId, true);
+  const capability = capabilityOf(data.capability);
+  if (!capability.contexts.includes(data.contextKind)) throw new AnalysisFailure("INVALID_INPUT");
+  // The request id is the operation id. A retry of a recorded operation gets its
+  // recorded outcome: the stored suggestion, or "outcome unknown" -- never a resend.
+  const previous = await readJob(caller, data.workspaceId, data.requestId);
+  if (previous) {
+    assertOwnAssistantJob(previous, caller, data.workspaceId);
+    if (previous.status !== "reserved") return settledOutcome(caller, data.workspaceId, previous);
+  }
+  const configuration = await loadConfiguration(caller, data.workspaceId, env);
+  const manifest = await buildManifest(caller, data);
+  // A reserved, never-dispatched operation may only continue with the same input.
+  if (previous && canonical(previous.input_manifest) !== canonical(manifest))
+    throw new AnalysisFailure("CONFLICT");
+  if (sourceInstruction.test([manifest.requestText, JSON.stringify(manifest.context)].join("\n")))
+    throw new AnalysisFailure("AI_INPUT_REFUSED");
+  const job = checked(
+    await caller.supabase.rpc("sw_reserve_assistant", {
+      _workspace_id: data.workspaceId,
+      _request_id: data.requestId,
+      _activation_id: configuration.activation.id,
+      _input_manifest: manifest as unknown as Json,
+    }),
+  );
+  if (!job) throw new AnalysisFailure("SAVE_FAILED");
+  assertOwnAssistantJob(job, caller, data.workspaceId);
+  if (job.id !== data.requestId || job.activation_id !== configuration.activation.id)
+    throw new AnalysisFailure("CONFLICT");
+  if (job.status !== "reserved") return settledOutcome(caller, data.workspaceId, job);
+  // The reservation must hold exactly what is about to be sent.
+  if (canonical(job.input_manifest) !== canonical(manifest)) throw new AnalysisFailure("CONFLICT");
+  const claim = checked(
+    await caller.supabase.rpc("sw_dispatch_processing", {
+      _workspace_id: data.workspaceId,
+      _job_id: job.id,
+    }),
+  );
+  const envelope = z
+    .object({
+      dispatch: z.boolean(),
+      job: z.object({ id: z.string().uuid(), fence: z.string().uuid().nullable() }).passthrough(),
+    })
+    .safeParse(claim);
+  if (!envelope.success || envelope.data.job.id !== job.id)
+    throw new AnalysisFailure("SAVE_FAILED");
+  if (!envelope.data.dispatch) {
+    const current = await readJob(caller, data.workspaceId, job.id);
+    if (!current) throw new AnalysisFailure("SAVE_FAILED");
+    return settledOutcome(caller, data.workspaceId, current);
+  }
+  const fence = envelope.data.job.fence;
+  if (!fence) throw new AnalysisFailure("SAVE_FAILED");
+  const kind = capability.kind;
+  const result = await (options.dispatch ?? dispatchProviderOnce)(
+    configuration,
+    () => ({
+      body: providerBody(manifest, configuration),
+      parse: (value: unknown) => {
+        const content = parseSuggestionContent(kind, value);
+        if (!content.success) throw new SwAiError("schema_invalid");
+        return content.data as Record<string, unknown>;
+      },
+    }),
+    {
+      fetchImpl: options.fetchImpl,
+      // Access, approval and every record in the context are confirmed again
+      // after model discovery and before anything leaves the application.
+      beforeDispatch: async (signal) => {
+        try {
+          signal.throwIfAborted();
+          await requireWorkspace(caller, data.workspaceId, true);
+          const current = await loadConfiguration(caller, data.workspaceId, env);
+          if (canonical(current.activation) !== canonical(configuration.activation))
+            throw new AnalysisFailure("CONFLICT");
+          if (canonical(await buildManifest(caller, data)) !== canonical(manifest))
+            throw new AnalysisFailure("CONFLICT");
+          signal.throwIfAborted();
+        } catch (error) {
+          if (signal.aborted) signal.throwIfAborted();
+          throw new SwAiError("authorization_not_confirmed");
+        }
+      },
+    },
+  );
+  const payload = JSON.stringify(
+    result.status === "succeeded"
+      ? {
+          status: result.status,
+          output: result.output,
+          provider: result.provider,
+          model: result.model,
+          inputTokens: result.usage.inputTokens,
+          outputTokens: result.usage.outputTokens,
+          costMicros: result.usage.costMicros,
+        }
+      : { status: result.status, errorCode: result.errorCode },
+  );
+  const signature = signProcessingReceipt("assistant", job.id, fence, payload, env);
+  const completed = checked(
+    await caller.supabase.rpc("sw_complete_processing", {
+      _workspace_id: data.workspaceId,
+      _job_id: job.id,
+      _fence: fence,
+      _key_id: signature.keyId,
+      _payload: payload,
+      _signature: signature.signature,
+    }),
+  );
+  if (!completed) throw new AnalysisFailure("SAVE_FAILED");
+  await requireWorkspace(caller, data.workspaceId, true);
+  return settledOutcome(caller, data.workspaceId, completed);
+}
+
 /**
- * The human decision. Applying is an explicit choice carried in `apply`:
- * the server writes exactly those records, as the approving user, through
- * the same services the forms use, then records the decision with what was
- * created. Rejecting records only the decision.
+ * The human decision. Applying is an explicit choice carried in `apply`; the
+ * database writes exactly those records and the decision together, as the
+ * deciding user, or nothing at all (sw_decide_suggestion). A retry of the same
+ * decision returns the stored result.
  */
 export async function decideSuggestion(
   caller: SecurityWorkCaller,
   data: inputs.DecideSuggestionInput,
 ): Promise<AiSuggestion> {
   await requireWorkspace(caller, data.workspaceId, true);
-  const suggestion = checked(
-    await caller.supabase
-      .from("sw_ai_suggestions")
-      .select("*")
-      .eq("workspace_id", data.workspaceId)
-      .eq("id", data.suggestionId)
-      .maybeSingle(),
-  );
-  if (!suggestion) throw new AnalysisFailure("ACCESS_DENIED");
-  if (suggestion.status !== "proposed" || suggestion.version !== data.version)
-    throw new AnalysisFailure("CONFLICT");
-  let applied: Json = {};
-  if (data.status === "approved" && data.apply.kind !== "none") {
-    const apply = data.apply;
-    const parsed = parseSuggestionContent(suggestion.kind as SuggestionKind, suggestion.content);
-    if (!parsed.success) throw new AnalysisFailure("INVALID_INPUT");
-    if (apply.kind === "mandate_document" && suggestion.kind === "mandate_draft") {
-      const draft = parsed.data as { text: string };
-      const saved = checked(
-        await caller.supabase
-          .from("sw_security_mandates")
-          .update({
-            mandate_document: draft.text,
-            document_provenance: { origin: "ai_suggestion", suggestion_id: suggestion.id },
-          })
-          .eq("workspace_id", data.workspaceId)
-          .eq("version", apply.version)
-          .select("id")
-          .maybeSingle(),
-      );
-      if (!saved) throw new AnalysisFailure("CONFLICT");
-      applied = { table: "sw_security_mandates", ids: [saved.id] };
-    } else if (apply.kind === "assets" && suggestion.kind === "asset_suggestions") {
-      const ids: string[] = [];
-      for (const asset of apply.assets) {
-        const row = await saveAsset(caller, {
-          workspaceId: data.workspaceId,
-          id: crypto.randomUUID(),
-          version: null,
-          name: asset.name,
-          description: asset.description,
-          category: asset.category,
-          owner_id: null,
-          owner_label: "",
-          business_importance: "medium",
-          consequence_level: null,
-          consequence_description: "",
-          status: "active",
-          review_date: null,
-        });
-        ids.push(row.id);
-      }
-      applied = { table: "sw_protected_assets", ids };
-    } else if (apply.kind === "risk_scenario" && suggestion.kind === "risk_scenario") {
-      const draft = parsed.data as { threat_scenario: string; description: string };
-      // Only the narrative fields; rating, owner and status stay untouched.
-      const saved = checked(
-        await caller.supabase
-          .from("sw_risks")
-          .update({ threat_scenario: draft.threat_scenario, description: draft.description })
-          .eq("workspace_id", data.workspaceId)
-          .eq("id", apply.riskId)
-          .eq("version", apply.version)
-          .eq("status", "proposed")
-          .select("id")
-          .maybeSingle(),
-      );
-      if (!saved) throw new AnalysisFailure("CONFLICT");
-      applied = { table: "sw_risks", ids: [saved.id] };
-    } else if (apply.kind === "actions" && suggestion.kind === "gap_action") {
-      const gap = checked(
-        await caller.supabase
-          .from("sw_gaps")
-          .select("id,related_asset_id,related_risk_id")
-          .eq("workspace_id", data.workspaceId)
-          .eq("id", apply.gapId)
-          .maybeSingle(),
-      );
-      if (!gap) throw new AnalysisFailure("ACCESS_DENIED");
-      const ids: string[] = [];
-      for (const action of apply.actions) {
-        const row = await saveProgrammeAction(caller, {
-          workspaceId: data.workspaceId,
-          id: crypto.randomUUID(),
-          version: null,
-          assessmentId: null,
-          riskId: gap.related_risk_id,
-          gapId: gap.id,
-          assetId: gap.related_asset_id,
-          source_kind: "gap",
-          title: action.title,
-          description: action.description,
-          assigneeUserId: null,
-          dueDate: null,
-          priority: "medium",
-          status: "open",
-          rationale: "",
-          completionEvidence: "",
-          approval_required: false,
-          approval_note: "",
-        });
-        ids.push(row.id);
-      }
-      applied = { table: "sw_actions", ids };
-    } else if (apply.kind === "report_narrative" && suggestion.kind === "report_narrative") {
-      const draft = parsed.data as { sections: Record<string, string> };
-      const report = checked(
-        await caller.supabase
-          .from("sw_management_reports")
-          .select("id,narrative,version,status")
-          .eq("workspace_id", data.workspaceId)
-          .eq("id", apply.reportId)
-          .maybeSingle(),
-      );
-      if (!report || report.status !== "draft" || report.version !== apply.version)
-        throw new AnalysisFailure("CONFLICT");
-      const narrative = { ...((report.narrative as Record<string, unknown>) ?? {}) };
-      for (const section of apply.sections)
-        if (draft.sections[section])
-          narrative[section] = {
-            text: draft.sections[section],
-            origin: "ai",
-            suggestion_id: suggestion.id,
-          };
-      const saved = checked(
-        await caller.supabase
-          .from("sw_management_reports")
-          .update({ narrative: narrative as Json })
-          .eq("workspace_id", data.workspaceId)
-          .eq("id", apply.reportId)
-          .eq("version", apply.version)
-          .select("id")
-          .maybeSingle(),
-      );
-      if (!saved) throw new AnalysisFailure("CONFLICT");
-      applied = { table: "sw_management_reports", ids: [saved.id], sections: apply.sections };
-    } else {
-      throw new AnalysisFailure("INVALID_INPUT");
-    }
-  }
   const decided = checked(
-    await caller.supabase
-      .from("sw_ai_suggestions")
-      .update({ status: data.status, decision_note: data.decision_note, applied_target: applied })
-      .eq("workspace_id", data.workspaceId)
-      .eq("id", data.suggestionId)
-      .eq("version", data.version)
-      .select("*")
-      .maybeSingle(),
+    await caller.supabase.rpc("sw_decide_suggestion", {
+      _workspace_id: data.workspaceId,
+      _suggestion_id: data.suggestionId,
+      _expected_version: data.version,
+      _status: data.status,
+      _decision_note: data.decision_note,
+      _apply: data.apply as unknown as Json,
+    }),
   );
-  if (!decided) throw new AnalysisFailure("CONFLICT");
+  if (!decided) throw new AnalysisFailure("SAVE_FAILED");
   return decided;
 }
