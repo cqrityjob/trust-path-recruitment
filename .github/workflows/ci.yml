@@ -2633,6 +2633,15 @@ jobs:
         env:
           E2E_BASE_URL: http://localhost:3100
         run: bun run e2e:security-work-assistant
+      # Release B: an approved official feed is fetched (the production
+      # parser over a fixture payload), relevance is explained per term,
+      # a person drafts the impact brief, an approver approves, it is recorded
+      # once as a risk and actions, exported, and new evidence in the same
+      # story flags it until a revision supersedes it. Stubbed server functions.
+      - name: Security Work impact browser journey
+        env:
+          E2E_BASE_URL: http://localhost:3100
+        run: bun run e2e:security-work-impact
 
       # "Utforska nu" on the Career Discovery recommendation is a real link
       # to the occupation's page (its guide, or its reviewed catalogue page

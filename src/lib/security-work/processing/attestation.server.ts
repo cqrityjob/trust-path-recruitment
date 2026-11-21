@@ -19,7 +19,7 @@ export function assertWorkerSigningConfigured(
 
 /** Keys are provisioned out of band in private DB storage and server environment. */
 export function signProcessingReceipt(
-  kind: "extraction" | "ai" | "assistant",
+  kind: "extraction" | "ai" | "assistant" | "fetch",
   jobId: string,
   fence: string,
   payload: string,
@@ -27,7 +27,7 @@ export function signProcessingReceipt(
 ): { keyId: string; signature: string } {
   if (typeof window !== "undefined") throw new Error("SW_SERVER_ONLY");
   assertWorkerSigningConfigured(env);
-  if (kind !== "extraction" && kind !== "ai" && kind !== "assistant")
+  if (kind !== "extraction" && kind !== "ai" && kind !== "assistant" && kind !== "fetch")
     throw new Error("SW_INVALID_RECEIPT_KIND");
   id.parse(jobId);
   id.parse(fence);

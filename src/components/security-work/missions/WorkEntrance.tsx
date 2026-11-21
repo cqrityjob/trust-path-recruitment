@@ -10,6 +10,8 @@ import { useWorkText } from "../analysis-ui";
 import { WorkButton, panelClass } from "../ui";
 import { MissionNextStep } from "./Missions";
 import { MissionStateBadge, useMissionText, useMissions } from "./mission-ui";
+import { isMaterial } from "@/lib/security-work/knowledge/relevance";
+import { useImpact, useImpactText } from "../impact/impact-ui";
 
 /**
  * The top of the Overview: what do you need done, what changed that affects
@@ -39,6 +41,16 @@ export function WorkEntrance({ facts }: { facts: ProgrammeSnapshot | undefined }
         : counts.pending > 0
           ? "pending"
           : "quiet";
+  // Release B: when the impact view answers, its coverage (connected official
+  // feeds and how recently each was checked) is the truth; otherwise the
+  // older manual-source summary above stands.
+  const impact = useImpact();
+  const impactText = useImpactText();
+  const live = impact.data;
+  const material = live ? live.developments.filter((d) => isMaterial(d.relevance)).length : 0;
+  const reviewing = live
+    ? live.briefs.filter((b) => b.status === "draft" || b.status === "in_review").length
+    : 0;
   return (
     <div className="space-y-6" data-testid="sw-work-entrance">
       <section aria-labelledby="sw-task-heading" className={`${panelClass} space-y-3`}>
@@ -72,39 +84,62 @@ export function WorkEntrance({ facts }: { facts: ProgrammeSnapshot | undefined }
           aria-labelledby="sw-changes-heading"
           className={`${panelClass} space-y-2`}
           data-testid="sw-changes"
-          data-coverage={coverage}
+          data-coverage={live ? live.coverage.state : coverage}
         >
           <h2 id="sw-changes-heading" className="font-semibold">
             {l("Förändringar som berör er", "Changes that affect you")}
           </h2>
-          <p className="text-sm text-muted-foreground">
-            {coverage === "none"
-              ? l(
-                  "Ingen bevakningskälla är ansluten. Vi kan därför inte säga att inget har hänt.",
-                  "No monitoring source is connected, so we cannot say that nothing has happened.",
-                )
-              : coverage === "no_requirements"
+          {live ? (
+            <div className="space-y-1 text-sm" data-testid="sw-changes-live">
+              <p className="text-muted-foreground">{impactText.coverage(live.coverage.state)}</p>
+              {live.coverage.state !== "no_connected_source" && (
+                <p>
+                  {l(
+                    `${material} relevanta händelser de senaste 30 dagarna · ${reviewing} bedömningar pågår · ${live.openFlags.length} med ny information`,
+                    `${material} relevant developments in the last 30 days · ${reviewing} briefs in progress · ${live.openFlags.length} with new information`,
+                  )}
+                </p>
+              )}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              {coverage === "none"
                 ? l(
-                    "Källor finns men inga bevakningsbehov är beskrivna, så inget kan bedömas som relevant för er.",
-                    "Sources exist but no monitoring requirements are described, so nothing can be judged relevant to you.",
+                    "Ingen bevakningskälla är ansluten. Vi kan därför inte säga att inget har hänt.",
+                    "No monitoring source is connected, so we cannot say that nothing has happened.",
                   )
-                : coverage === "pending"
+                : coverage === "no_requirements"
                   ? l(
-                      `${counts.pending} ${counts.pending === 1 ? "post" : "poster"} väntar på bedömning.`,
-                      `${counts.pending} ${counts.pending === 1 ? "item awaits" : "items await"} assessment.`,
+                      "Källor finns men inga bevakningsbehov är beskrivna, så inget kan bedömas som relevant för er.",
+                      "Sources exist but no monitoring requirements are described, so nothing can be judged relevant to you.",
                     )
-                  : l(
-                      "Inget obedömt i de anslutna källorna. Det gäller bara de källor som är anslutna.",
-                      "Nothing unassessed in the connected sources. That holds only for the sources that are connected.",
-                    )}
-          </p>
-          <Link
-            to="/security-work/$workspaceId/monitoring"
-            params={params}
-            className="inline-flex min-h-11 items-center text-sm text-accent underline-offset-4 hover:underline"
-          >
-            {l("Till bevakningen", "To monitoring")}
-          </Link>
+                  : coverage === "pending"
+                    ? l(
+                        `${counts.pending} ${counts.pending === 1 ? "post" : "poster"} väntar på bedömning.`,
+                        `${counts.pending} ${counts.pending === 1 ? "item awaits" : "items await"} assessment.`,
+                      )
+                    : l(
+                        "Inget obedömt i de anslutna källorna. Det gäller bara de källor som är anslutna.",
+                        "Nothing unassessed in the connected sources. That holds only for the sources that are connected.",
+                      )}
+            </p>
+          )}
+          <div className="flex flex-wrap gap-x-4">
+            <Link
+              to="/security-work/$workspaceId/impact"
+              params={params}
+              className="inline-flex min-h-11 items-center text-sm text-accent underline-offset-4 hover:underline"
+            >
+              {l("Till förändringarna", "To the changes")}
+            </Link>
+            <Link
+              to="/security-work/$workspaceId/monitoring"
+              params={params}
+              className="inline-flex min-h-11 items-center text-sm text-accent underline-offset-4 hover:underline"
+            >
+              {l("Till bevakningen", "To monitoring")}
+            </Link>
+          </div>
         </section>
 
         <section
