@@ -3601,6 +3601,27 @@ ac_expect_pass "interview case access model (after the cycles)" interview_case_a
 psql_q -d postgres -c "DROP DATABASE IF EXISTS ${TEST_DB}_pristine;" >/dev/null
 psql_q -d postgres -c "CREATE DATABASE ${TEST_DB}_pristine TEMPLATE ${TEST_DB};" >/dev/null
 
+# Monitoring to impact (20270328090000) is the newest Security Work slot, so it
+# is proven and stood down first. Its rollback must refuse adopted hosts,
+# feeds, fetched items, briefs and applications, and restore the source tables.
+echo "==> Running Security Work monitoring-to-impact assertions"
+SWMON_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_work_monitoring_impact_test.sql 2>&1)" || { echo "$SWMON_OUT"; exit 1; }
+SWMON_PASSED="$(printf '%s\n' "$SWMON_OUT" | grep -c 'NOTICE:  ok  SW-MON ' || true)"
+[ "$SWMON_PASSED" -ge 56 ] || { echo "$SWMON_OUT"; echo "FAIL: Security Work monitoring assertion shortfall: $SWMON_PASSED (floor 56)"; exit 1; }
+echo "    ok  $SWMON_PASSED Security Work monitoring assertions passed"
+TEST_DB="$TEST_DB" bash scripts/security-work-monitoring-negative-controls.sh
+SWMON_LOG="$(mktemp)"
+if psql -v ON_ERROR_STOP=1 -v sw_monitoring_keep_fixture=true -d "$TEST_DB" -f supabase/tests/security_work_monitoring_impact_test.sql -c 'RESET ROLE;' -f supabase/rollback/20270328090000_security_work_monitoring_impact_rollback.sql >"$SWMON_LOG" 2>&1; then
+  cat "$SWMON_LOG"; rm -f "$SWMON_LOG"; echo 'FAIL: adopted monitoring rollback succeeded'; exit 1
+fi
+grep -q 'SW_MONITORING_ROLLBACK_DATA_PRESENT' "$SWMON_LOG" || { cat "$SWMON_LOG"; rm -f "$SWMON_LOG"; exit 1; }
+rm -f "$SWMON_LOG"
+echo '    ok  monitoring rollback preserves adopted feeds, items and briefs'
+psql_q -d "$TEST_DB" -f supabase/rollback/20270328090000_security_work_monitoring_impact_rollback.sql >/dev/null
+SWMON_LEFT="$(psql_q -d "$TEST_DB" -Atc "SELECT (SELECT count(*) FROM pg_class WHERE relnamespace='public'::regnamespace AND relname IN ('sw_feed_hosts','sw_fetch_runs','sw_story_clusters','sw_cluster_items','sw_change_briefs','sw_review_flags','sw_change_brief_applications')) + (SELECT count(*) FROM information_schema.columns WHERE table_schema='public' AND ((table_name='sw_sources' AND column_name IN ('feed_url','poll_target_minutes','last_checked_at','feed_etag','feed_last_modified')) OR (table_name='sw_source_items' AND column_name IN ('observed_at','content_hash')))) + (SELECT count(*) FROM pg_proc WHERE proname IN ('record_fetch','apply_change_brief','guard_feed_source','guard_fetched_item','guard_change_brief','supersede_previous_brief','guard_review_flag','story_key','feed_host','sw_record_fetch','sw_apply_change_brief'))")"
+[ "$SWMON_LEFT" = 0 ] || { echo "FAIL: monitoring rollback left $SWMON_LEFT object(s)"; exit 1; }
+echo '    ok  monitoring stood down; no new object remains'
+
 # Operating profile, missions and collaboration (20270327090000) is the newest
 # Security Work slot, so it is proven and stood down first. Its rollback must
 # refuse adopted profiles, missions, preferences and invitations.
@@ -3768,6 +3789,9 @@ echo '    ok  assistant reapplied; assistant, analysis and foundation assertions
 psql_q -d "$TEST_DB" -f supabase/migrations/20270327090000_security_work_context_missions_collaboration.sql >/dev/null
 SWCTX_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_work_context_missions_test.sql -f supabase/tests/security_work_assistant_dispatch_test.sql -f supabase/tests/security_work_foundation_test.sql 2>&1)" || { echo "$SWCTX_OUT"; exit 1; }
 echo '    ok  context reapplied; context, assistant and foundation assertions pass together'
+psql_q -d "$TEST_DB" -f supabase/migrations/20270328090000_security_work_monitoring_impact.sql >/dev/null
+SWMON_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_work_monitoring_impact_test.sql -f supabase/tests/security_work_context_missions_test.sql -f supabase/tests/security_work_foundation_test.sql 2>&1)" || { echo "$SWMON_OUT"; exit 1; }
+echo '    ok  monitoring reapplied; monitoring, context and foundation assertions pass together'
 
 # Race fixtures commit to coordinate independent sessions. Give them their own
 # clone so no persistent synthetic workspace can affect later rollback proofs.
