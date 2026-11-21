@@ -3601,6 +3601,30 @@ ac_expect_pass "interview case access model (after the cycles)" interview_case_a
 psql_q -d postgres -c "DROP DATABASE IF EXISTS ${TEST_DB}_pristine;" >/dev/null
 psql_q -d postgres -c "CREATE DATABASE ${TEST_DB}_pristine TEMPLATE ${TEST_DB};" >/dev/null
 
+# Assistant dispatch and decision (20270326090000) changes analysis-contract
+# function bodies and extends a programme table, so it is proven and stood
+# down before either of them. Its rollback must refuse assistant jobs and
+# suggestions, and restore the 20261211090000 bodies exactly (checked below
+# against a fresh re-application of that file).
+echo "==> Running Security Work assistant dispatch and decision assertions"
+SWAST_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_work_assistant_dispatch_test.sql 2>&1)" || { echo "$SWAST_OUT"; exit 1; }
+SWAST_PASSED="$(printf '%s\n' "$SWAST_OUT" | grep -c 'NOTICE:  ok  SW-AST ' || true)"
+[ "$SWAST_PASSED" -ge 72 ] || { echo "$SWAST_OUT"; echo "FAIL: Security Work assistant assertion shortfall: $SWAST_PASSED (floor 72)"; exit 1; }
+echo "    ok  $SWAST_PASSED Security Work assistant assertions passed"
+TEST_DB="$TEST_DB" bash scripts/security-work-assistant-negative-controls.sh
+SWAST_LOG="$(mktemp)"
+if psql -v ON_ERROR_STOP=1 -v sw_assistant_keep_fixture=true -d "$TEST_DB" -f supabase/tests/security_work_assistant_dispatch_test.sql -c 'RESET ROLE;' -f supabase/rollback/20270326090000_security_work_assistant_dispatch_and_decision_rollback.sql >"$SWAST_LOG" 2>&1; then
+  cat "$SWAST_LOG"; rm -f "$SWAST_LOG"; echo 'FAIL: adopted assistant rollback succeeded'; exit 1
+fi
+grep -q 'SW_ASSISTANT_ROLLBACK_DATA_PRESENT' "$SWAST_LOG" || { cat "$SWAST_LOG"; rm -f "$SWAST_LOG"; exit 1; }
+rm -f "$SWAST_LOG"
+echo '    ok  assistant rollback preserves assistant jobs and suggestions'
+psql_q -d "$TEST_DB" -f supabase/rollback/20270326090000_security_work_assistant_dispatch_and_decision_rollback.sql >/dev/null
+SWAST_LEFT="$(psql_q -d "$TEST_DB" -Atc "SELECT (SELECT count(*) FROM pg_proc WHERE proname IN ('sw_reserve_assistant','sw_decide_suggestion','reserve_assistant','decide_suggestion','require_suggestion_job')) + (SELECT count(*) FROM information_schema.columns WHERE table_schema='public' AND table_name='sw_ai_suggestions' AND column_name='job_id') + (SELECT count(*) FROM pg_constraint WHERE conname='sw_processing_jobs_target_check') + (SELECT count(*) FROM pg_proc WHERE pronamespace='sw_private'::regnamespace AND proname IN ('reserve_processing','dispatch_processing','complete_processing') AND prosrc LIKE '%assistant%')")"
+[ "$SWAST_LEFT" = 0 ] || { echo "FAIL: assistant rollback left $SWAST_LEFT object(s) or body change(s)"; exit 1; }
+SWAST_RESTORED="$(psql_q -d "$TEST_DB" -Atc "SELECT md5(string_agg(pg_get_functiondef(oid),'' ORDER BY proname)) FROM pg_proc WHERE pronamespace='sw_private'::regnamespace AND proname IN ('reserve_processing','dispatch_processing','complete_processing')")"
+echo '    ok  assistant stood down; no new object or body change remains'
+
 # Programme extension (20270117090000) depends on the analysis contract and
 # the foundation, so it is proven and stood down first. Its rollback must
 # refuse adopted programme records and restore the previous lifecycle body.
@@ -3711,9 +3735,15 @@ done
 psql_q -d "$TEST_DB" -f supabase/migrations/20261211090000_security_work_analysis_contract.sql >/dev/null
 SWA_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_work_analysis_contract_test.sql -f supabase/tests/security_work_foundation_test.sql 2>&1)" || { echo "$SWA_OUT"; exit 1; }
 echo '    ok  analysis reapplied; extension and foundation assertions pass together'
+SWAST_FRESH="$(psql_q -d "$TEST_DB" -Atc "SELECT md5(string_agg(pg_get_functiondef(oid),'' ORDER BY proname)) FROM pg_proc WHERE pronamespace='sw_private'::regnamespace AND proname IN ('reserve_processing','dispatch_processing','complete_processing')")"
+[ "$SWAST_RESTORED" = "$SWAST_FRESH" ] || { echo "FAIL: assistant rollback did not restore the 20261211090000 processing bodies exactly"; exit 1; }
+echo '    ok  assistant rollback had restored the 20261211090000 processing bodies byte for byte'
 psql_q -d "$TEST_DB" -f supabase/migrations/20270117090000_security_work_programme.sql >/dev/null
 SWP_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_work_programme_test.sql -f supabase/tests/security_work_analysis_contract_test.sql -f supabase/tests/security_work_foundation_test.sql 2>&1)" || { echo "$SWP_OUT"; exit 1; }
 echo '    ok  programme reapplied; programme, analysis and foundation assertions pass together'
+psql_q -d "$TEST_DB" -f supabase/migrations/20270326090000_security_work_assistant_dispatch_and_decision.sql >/dev/null
+SWAST_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_work_assistant_dispatch_test.sql -f supabase/tests/security_work_analysis_contract_test.sql -f supabase/tests/security_work_foundation_test.sql 2>&1)" || { echo "$SWAST_OUT"; exit 1; }
+echo '    ok  assistant reapplied; assistant, analysis and foundation assertions pass together'
 
 # Race fixtures commit to coordinate independent sessions. Give them their own
 # clone so no persistent synthetic workspace can affect later rollback proofs.
@@ -3722,6 +3752,7 @@ psql_q -d postgres -c "DROP DATABASE IF EXISTS ${TEST_DB}_sw_race;" >/dev/null
 psql_q -d postgres -c "CREATE DATABASE ${TEST_DB}_sw_race TEMPLATE ${TEST_DB}_pristine;" >/dev/null
 PGDATABASE="${TEST_DB}_sw_race" bash scripts/security-work-concurrency-test.sh
 PGDATABASE="${TEST_DB}_sw_race" bash scripts/security-work-analysis-concurrency-test.sh
+PGDATABASE="${TEST_DB}_sw_race" bash scripts/security-work-assistant-race-test.sh
 psql_q -d postgres -c "DROP DATABASE ${TEST_DB}_sw_race;" >/dev/null
 
 # International Passport: test fixtures roll back; rollback refuses adoption.
