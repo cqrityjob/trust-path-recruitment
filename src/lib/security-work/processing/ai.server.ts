@@ -569,8 +569,8 @@ export async function dispatchSwAiOnce(
     readonly beforeDispatch?: (signal: AbortSignal) => Promise<void>;
   } = {},
 ): Promise<DispatchResult> {
-  if (typeof window !== "undefined") throw new SwAiError("server_only");
-  if (!externalAiAllowed()) throw new SwAiError("generative_ai_disabled");
+  // dispatchProviderOnce refuses server-side only and while generative AI is
+  // off, before any state, timer or request; nothing here runs before it.
   let inputHash: string | null = null;
   let withheldSegmentIds: string[] = [];
   const result = await dispatchProviderOnce<AnalysisOutput>(
