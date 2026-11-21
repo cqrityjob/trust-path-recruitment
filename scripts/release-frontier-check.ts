@@ -527,7 +527,14 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // risk/action) is a schema-first release awaiting the owner's merge. It approves
 // no feed host and creates no key or schedule, so nothing can be fetched after
 // installation until the owner approves a host.
-const expectedPending: string[] = ["20270328090000_security_work_monitoring_impact.sql"];
+//
+// 2026-11-21: 20270329090000 (restricted-mission scope for derived risks and
+// actions; authorised mission-review acceptance) is a forward fix awaiting the
+// owner's merge. It creates no scoped record and changes no existing row.
+const expectedPending: string[] = [
+  "20270328090000_security_work_monitoring_impact.sql",
+  "20270329090000_security_work_restricted_records.sql",
+];
 
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",

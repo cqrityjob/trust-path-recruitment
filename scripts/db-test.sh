@@ -3601,6 +3601,28 @@ ac_expect_pass "interview case access model (after the cycles)" interview_case_a
 psql_q -d postgres -c "DROP DATABASE IF EXISTS ${TEST_DB}_pristine;" >/dev/null
 psql_q -d postgres -c "CREATE DATABASE ${TEST_DB}_pristine TEMPLATE ${TEST_DB};" >/dev/null
 
+# Restricted derived records and authorised review acceptance (20270329090000)
+# is the newest Security Work slot, so it is proven and stood down first. Its
+# rollback must refuse scoped records and recorded acceptances, and restore
+# the installed functions and policies exactly.
+echo "==> Running Security Work restricted-records and review-acceptance assertions"
+SWRRC_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_work_restricted_records_test.sql 2>&1)" || { echo "$SWRRC_OUT"; exit 1; }
+SWRRC_PASSED="$(printf '%s\n' "$SWRRC_OUT" | grep -c 'NOTICE:  ok  SW-RRC ' || true)"
+[ "$SWRRC_PASSED" -ge 44 ] || { echo "$SWRRC_OUT"; echo "FAIL: Security Work restricted-records assertion shortfall: $SWRRC_PASSED (floor 44)"; exit 1; }
+echo "    ok  $SWRRC_PASSED Security Work restricted-records assertions passed"
+TEST_DB="$TEST_DB" bash scripts/security-work-restricted-records-negative-controls.sh
+SWRRC_LOG="$(mktemp)"
+if psql -v ON_ERROR_STOP=1 -v sw_restricted_keep_fixture=true -d "$TEST_DB" -f supabase/tests/security_work_restricted_records_test.sql -c 'RESET ROLE;' -f supabase/rollback/20270329090000_security_work_restricted_records_rollback.sql >"$SWRRC_LOG" 2>&1; then
+  cat "$SWRRC_LOG"; rm -f "$SWRRC_LOG"; echo 'FAIL: adopted restricted-records rollback succeeded'; exit 1
+fi
+grep -q 'SW_RESTRICTED_RECORDS_ROLLBACK_DATA_PRESENT' "$SWRRC_LOG" || { cat "$SWRRC_LOG"; rm -f "$SWRRC_LOG"; exit 1; }
+rm -f "$SWRRC_LOG"
+echo '    ok  restricted-records rollback preserves scoped records and acceptances'
+psql_q -d "$TEST_DB" -f supabase/rollback/20270329090000_security_work_restricted_records_rollback.sql >/dev/null
+SWRRC_LEFT="$(psql_q -d "$TEST_DB" -Atc "SELECT (SELECT count(*) FROM information_schema.columns WHERE table_schema='public' AND ((table_name IN ('sw_risks','sw_actions') AND column_name='access_mission_id') OR (table_name='sw_missions' AND column_name IN ('review_accepted_by','review_accepted_at')))) + (SELECT count(*) FROM pg_proc WHERE proname IN ('can_see_scope','can_see_record','record_scope','guard_record_scope','guard_assistant_scope')) + (SELECT count(*) FROM pg_policies WHERE schemaname='public' AND (qual LIKE '%can_see_scope%' OR qual LIKE '%can_see_record%' OR with_check LIKE '%can_see_scope%' OR with_check LIKE '%can_see_record%'))")"
+[ "$SWRRC_LEFT" = 0 ] || { echo "FAIL: restricted-records rollback left $SWRRC_LEFT object(s)"; exit 1; }
+echo '    ok  restricted records stood down; no new object remains'
+
 # Monitoring to impact (20270328090000) is the newest Security Work slot, so it
 # is proven and stood down first. Its rollback must refuse adopted hosts,
 # feeds, fetched items, briefs and applications, and restore the source tables.
@@ -3792,6 +3814,9 @@ echo '    ok  context reapplied; context, assistant and foundation assertions pa
 psql_q -d "$TEST_DB" -f supabase/migrations/20270328090000_security_work_monitoring_impact.sql >/dev/null
 SWMON_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_work_monitoring_impact_test.sql -f supabase/tests/security_work_context_missions_test.sql -f supabase/tests/security_work_foundation_test.sql 2>&1)" || { echo "$SWMON_OUT"; exit 1; }
 echo '    ok  monitoring reapplied; monitoring, context and foundation assertions pass together'
+psql_q -d "$TEST_DB" -f supabase/migrations/20270329090000_security_work_restricted_records.sql >/dev/null
+SWRRC_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_work_restricted_records_test.sql -f supabase/tests/security_work_monitoring_impact_test.sql -f supabase/tests/security_work_context_missions_test.sql -f supabase/tests/security_work_foundation_test.sql 2>&1)" || { echo "$SWRRC_OUT"; exit 1; }
+echo '    ok  restricted records reapplied; restricted-records, monitoring, context and foundation assertions pass together'
 
 # Race fixtures commit to coordinate independent sessions. Give them their own
 # clone so no persistent synthetic workspace can affect later rollback proofs.
@@ -6994,6 +7019,26 @@ else
     echo "FAIL: expected at least 144 admin lifecycle assertions, only ${ACC_PASSED} ran." >&2
     suite_failed "Admin Control Center lifecycle (assertion shortfall: floor 144)"
   fi
+fi
+
+# admin_delete_user_if_safe against the scanner warning: signup metadata
+# grants no role, and hostile text -- reason, confirmation, an identifier
+# reached through the catalogue -- stays data. Always rolled back.
+echo "==> Verifying account deletion stays superadmin-only and injection-safe"
+set +e
+ADS_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/admin_delete_user_safety_test.sql 2>&1)"
+ADS_RC=$?
+set -e
+ADS_PASSED="$(echo "$ADS_OUT" | grep -c "ok  ADS " || true)"
+if [ "$ADS_RC" -ne 0 ]; then
+  echo "FAIL: the account-deletion safety suite exited with code ${ADS_RC}." >&2
+  echo "$ADS_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "account deletion safety"
+elif [ "$ADS_PASSED" -lt 11 ]; then
+  echo "FAIL: expected at least 11 account-deletion safety assertions, only ${ADS_PASSED} ran." >&2
+  suite_failed "account deletion safety (assertion shortfall: floor 11)"
+else
+  echo "    ok  ${ADS_PASSED} account-deletion safety assertions passed"
 fi
 
 # ---------------------------------------------------------------------------

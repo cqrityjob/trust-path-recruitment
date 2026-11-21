@@ -77,7 +77,12 @@ UPDATE sw_missions SET execution_state='ready' WHERE id=:'m';
 UPDATE sw_missions SET execution_state='needs_review', review_state='in_review' WHERE id=:'m';
 SELECT pg_temp.fail(format('UPDATE sw_missions SET execution_state=''completed'' WHERE id=%L',:'m'),'23514','a mission under review cannot be completed before acceptance');
 SELECT pg_temp.fail(format('UPDATE sw_missions SET review_state=''not_started'' WHERE id=%L',:'m'),'23514','review cannot go back to not started');
+-- Accepting a review is an approval (enforced from 20270329090000; its suite
+-- proves an editor without approval rights is refused). The approver accepts;
+-- the editor then completes.
+SELECT pg_temp.login('57000000-0000-4000-8000-000000000001');
 UPDATE sw_missions SET review_state='accepted' WHERE id=:'m';
+SELECT pg_temp.login('57000000-0000-4000-8000-000000000002');
 UPDATE sw_missions SET execution_state='completed' WHERE id=:'m';
 SELECT pg_temp.ok((SELECT count(*)=2 FROM sw_mission_events WHERE mission_id=:'m' AND event='review_changed') AND (SELECT count(*)=3 FROM sw_mission_events WHERE mission_id=:'m' AND event='state_changed'),'every state and review change is in the mission history');
 SELECT pg_temp.fail(format('UPDATE sw_missions SET title=''Rewritten'' WHERE id=%L',:'m'),'23514','a completed mission is final');
