@@ -2615,6 +2615,16 @@ jobs:
           E2E_BASE_URL: http://localhost:3100
         run: bun run e2e:security-work-programme
 
+      # Security Work Release A: a restricted risk-assessment mission from the
+      # overview's task entrance through brief, evidence, review and completion
+      # (stale-version conflict, hidden mission, keyboard tabs), the operating
+      # profile's confirm-to-keep prefill, role focus, invitations and the
+      # invitee's code entry, in Swedish and English, desktop and 375px phone.
+      # The fixture enforces the real pure rules; hosted Supabase is blocked.
+      - name: Security Work missions browser journey
+        env:
+          E2E_BASE_URL: http://localhost:3100
+        run: bun run e2e:security-work-missions
       # Security AI after a lost answer: the operation id is kept, "check
       # again" and a repeated click send the same id, and only the explicit
       # "new request" button starts a second, separately billed operation; the

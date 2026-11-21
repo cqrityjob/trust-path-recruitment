@@ -119,6 +119,8 @@ function handle(state: State, name: string, data: Row): unknown {
       return 0;
     case "getSecurityProgramme":
       return ok(p);
+    case "listSecurityMissions":
+      return ok([]);
     case "saveSecurityMandate": {
       const { workspaceId: _w, version, ...fields } = data as Row & { version: number | null };
       const row = {
@@ -489,7 +491,7 @@ test("a new organisation walks the programme end to end, in Swedish, without AI"
         name: "Navigering för mitt säkerhetsarbete",
         exact: true,
       });
-      for (const label of ["Programme", "Löpande arbete", "Rapportering"])
+      for (const label of ["Uppdrag", "Risker och åtgärder", "Underlag", "Er verksamhet"])
         await expect(nav).toContainText(label);
     }
     for (const [segment, text] of [

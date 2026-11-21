@@ -5,6 +5,8 @@ import { Link, Outlet, useLocation } from "@tanstack/react-router";
 import {
   BookOpen,
   ArrowLeft,
+  Briefcase,
+  Building2,
   ClipboardList,
   Compass,
   FileText,
@@ -44,9 +46,9 @@ type NavItem = {
   exact?: boolean;
 };
 
-/** Navigation: Overview · Programme (mandate, assets, baseline) · Operations
- * (monitoring, analyses, gaps, risks & actions) · Reporting (reports,
- * evidence) · Settings. Every pre-existing URL is unchanged. */
+/** Navigation: Översikt · Uppdrag · Bevakning · Risker och åtgärder · Underlag ·
+ * Rapporter · Er verksamhet (with the security programme). Every pre-existing
+ * URL is unchanged. */
 export function SecurityWorkLayout({ children }: { children?: ReactNode }) {
   const { workspace, canEdit } = useSecurityWorkspace();
   const { t, lang } = useT();
@@ -66,33 +68,45 @@ export function SecurityWorkLayout({ children }: { children?: ReactNode }) {
     path: `${base}${segment}`,
     exact,
   });
+  const l = (sv: string, en: string) => (lang === "sv" ? sv : en);
+  // Primary navigation follows the work, not the modules: Översikt, Uppdrag,
+  // Bevakning, Risker och åtgärder, Underlag, Rapporter, Er verksamhet. Every
+  // earlier page keeps its URL and stays reachable inside one of these groups;
+  // the six-area programme lives on under Er verksamhet.
   const groups: { title: string | null; items: NavItem[] }[] = [
-    { title: null, items: [item("", t("sw.nav.overview"), LayoutDashboard, true)] },
     {
-      title: t("sw.prog.nav.programme"),
+      title: null,
       items: [
+        item("", t("sw.nav.overview"), LayoutDashboard, true),
+        item("/missions", l("Uppdrag", "Missions"), Briefcase),
+        item("/monitoring", t("sw.nav.monitoring"), Radio),
+      ],
+    },
+    {
+      title: l("Risker och åtgärder", "Risks and actions"),
+      items: [
+        item("/risks", t("sw.prog.nav.risks"), ListChecks),
+        item("/gaps", t("sw.prog.nav.gaps"), TriangleAlert),
+      ],
+    },
+    {
+      title: l("Underlag", "Evidence"),
+      items: [
+        item("/sources", t("sw.prog.nav.evidence"), BookOpen),
+        item("/analyses", t("sw.prog.nav.analyses"), ClipboardList),
+      ],
+    },
+    { title: null, items: [item("/reports", t("sw.prog.nav.reports"), FileText)] },
+    {
+      title: l("Er verksamhet", "Your organisation"),
+      items: [
+        item("/organisation", l("Verksamhet och team", "Organisation and team"), Building2),
         item("/mandate", t("sw.prog.nav.mandate"), Compass),
         item("/assets", t("sw.prog.nav.assets"), Target),
         item("/baseline", t("sw.prog.nav.baseline"), Gauge),
+        item("/settings", t("sw.nav.settings"), Settings2),
       ],
     },
-    {
-      title: t("sw.prog.nav.operations"),
-      items: [
-        item("/monitoring", t("sw.nav.monitoring"), Radio),
-        item("/analyses", t("sw.prog.nav.analyses"), ClipboardList),
-        item("/gaps", t("sw.prog.nav.gaps"), TriangleAlert),
-        item("/risks", t("sw.prog.nav.risks"), ListChecks),
-      ],
-    },
-    {
-      title: t("sw.prog.nav.reporting"),
-      items: [
-        item("/reports", t("sw.prog.nav.reports"), FileText),
-        item("/sources", t("sw.prog.nav.evidence"), BookOpen),
-      ],
-    },
-    { title: null, items: [item("/settings", t("sw.nav.settings"), Settings2)] },
   ];
   const navigation = (
     <nav aria-label={t("sw.nav.label")} className="space-y-4">

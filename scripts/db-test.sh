@@ -3812,6 +3812,10 @@ psql_q -d postgres -c "DROP DATABASE IF EXISTS ${TEST_DB}_sw_pgrst;" >/dev/null
 psql_q -d postgres -c "CREATE DATABASE ${TEST_DB}_sw_pgrst TEMPLATE ${TEST_DB}_pristine;" >/dev/null
 TEST_DB="${TEST_DB}_sw_pgrst" bun scripts/security-work-assistant-postgrest-check.ts
 psql_q -d postgres -c "DROP DATABASE ${TEST_DB}_sw_pgrst;" >/dev/null
+echo "==> Running Security Work Release A services over real PostgREST"
+psql_q -d postgres -c "CREATE DATABASE ${TEST_DB}_sw_pgrst TEMPLATE ${TEST_DB}_pristine;" >/dev/null
+TEST_DB="${TEST_DB}_sw_pgrst" bun scripts/security-work-release-a-postgrest-check.ts
+psql_q -d postgres -c "DROP DATABASE ${TEST_DB}_sw_pgrst;" >/dev/null
 
 # International Passport: test fixtures roll back; rollback refuses adoption.
 for passport_round in before after; do
