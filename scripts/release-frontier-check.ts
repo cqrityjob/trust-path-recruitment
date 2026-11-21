@@ -505,8 +505,14 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // awaiting the owner's merge and the official integration. It creates no
 // activation, key or worker secret, rewrites no row, and is called by no merged
 // application code.
+//
+// 2026-11-21: 20270327090000 (Security Work: operating profile, missions with
+// need-to-know, collaboration) is the next schema-first release in the same
+// chain, awaiting the owner's merge after 20270326090000. It creates no
+// provider, connector or schedule and sends nothing.
 const expectedPending: string[] = [
   "20270326090000_security_work_assistant_dispatch_and_decision.sql",
+  "20270327090000_security_work_context_missions_collaboration.sql",
 ];
 
 const hostedIdentities = [
