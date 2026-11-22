@@ -587,7 +587,7 @@ test("the app port is outside Linux's ephemeral range, so no outgoing connection
   );
   assert.match(
     run,
-    /"--port", new URL\(APP\)\.port, "--strictPort"/,
+    /"--port",\s*new URL\(APP\)\.port,\s*"--strictPort"/,
     "Vite starts on the contract's port",
   );
   assert.ok(!/\b35820\b/.test(run), "no literal app port is left behind in the runner");
