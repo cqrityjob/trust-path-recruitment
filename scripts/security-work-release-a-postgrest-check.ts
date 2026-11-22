@@ -321,7 +321,8 @@ try {
             reviewState: "accepted",
           }),
         ),
-        "ACCESS_DENIED",
+        // The application names the refusal so the person knows an approver must act.
+        "APPROVER_REQUIRED",
       );
       await missions.setMissionMember(caller(EDITOR), {
         workspaceId: workspace,

@@ -403,7 +403,13 @@ try {
         ["sw_record_versions", "risk_id"],
       ] as const)
         assert.deepEqual(
-          (await direct.from(table).select("id").eq(column, riskId)).data,
+          // Each table has its own column; "id" only narrows the union type.
+          (
+            await direct
+              .from(table)
+              .select("id")
+              .eq(column as "id", riskId)
+          ).data,
           [],
           `${table} reaches the outsider`,
         );
