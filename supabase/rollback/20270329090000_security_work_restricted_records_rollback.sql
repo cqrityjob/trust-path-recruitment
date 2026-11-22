@@ -1,17 +1,22 @@
 -- Rollback for 20270329090000_security_work_restricted_records.sql.
 -- Restores the installed definitions of 20270327090000 (guard_mission) and
 -- 20270328090000 (apply_change_brief) and the workspace-wide policies.
--- REFUSES while any risk or action carries a mission scope, or any mission
--- review acceptance is recorded: dropping the scope would make restricted
--- content readable to the whole workspace. Remove dependent application code
+-- Also restores the protected log writer of 20261210090000 (record_change)
+-- and the workspace-wide report, assistant job and suggestion policies.
+-- REFUSES while any risk or action carries a mission scope, any audit event or
+-- management report records one, or any mission review acceptance is
+-- recorded: dropping the scope would make restricted content, or the history
+-- and copies of it, readable to the whole workspace. Remove dependent application code
 -- before executing it.
 BEGIN;
-LOCK TABLE public.sw_risks, public.sw_actions, public.sw_missions IN SHARE ROW EXCLUSIVE MODE;
+LOCK TABLE public.sw_risks, public.sw_actions, public.sw_missions, public.sw_audit_events, public.sw_management_reports IN SHARE ROW EXCLUSIVE MODE;
 DO $preserve$
 BEGIN
   IF EXISTS (SELECT 1 FROM public.sw_risks WHERE access_mission_id IS NOT NULL)
      OR EXISTS (SELECT 1 FROM public.sw_actions WHERE access_mission_id IS NOT NULL)
-     OR EXISTS (SELECT 1 FROM public.sw_missions WHERE review_accepted_by IS NOT NULL) THEN
+     OR EXISTS (SELECT 1 FROM public.sw_missions WHERE review_accepted_by IS NOT NULL)
+     OR EXISTS (SELECT 1 FROM public.sw_audit_events WHERE mission_scope <> '{}')
+     OR EXISTS (SELECT 1 FROM public.sw_management_reports WHERE mission_scope <> '{}') THEN
     RAISE EXCEPTION 'SW_RESTRICTED_RECORDS_ROLLBACK_DATA_PRESENT: scoped records or recorded acceptances exist' USING ERRCODE = '23514';
   END IF;
 END $preserve$;
@@ -36,8 +41,57 @@ DROP POLICY sw_editor_insert ON public.sw_evidence_links; CREATE POLICY sw_edito
 DROP POLICY sw_editor_delete ON public.sw_evidence_links; CREATE POLICY sw_editor_delete ON public.sw_evidence_links FOR DELETE TO authenticated USING (sw_private.can_edit(workspace_id));
 DROP POLICY sw_member_read ON public.sw_audit_events; CREATE POLICY sw_member_read ON public.sw_audit_events FOR SELECT TO authenticated USING (sw_private.can_read(workspace_id));
 DROP POLICY sw_member_read ON public.sw_record_versions; CREATE POLICY sw_member_read ON public.sw_record_versions FOR SELECT TO authenticated USING (sw_private.can_read(workspace_id));
+DROP POLICY sw_member_read ON public.sw_management_reports; CREATE POLICY sw_member_read ON public.sw_management_reports FOR SELECT TO authenticated USING (sw_private.can_read(workspace_id));
+DROP POLICY sw_editor_update ON public.sw_management_reports; CREATE POLICY sw_editor_update ON public.sw_management_reports FOR UPDATE TO authenticated USING (sw_private.can_edit(workspace_id)) WITH CHECK (sw_private.can_edit(workspace_id));
+DROP POLICY sw_member_read ON public.sw_ai_suggestions; CREATE POLICY sw_member_read ON public.sw_ai_suggestions FOR SELECT TO authenticated USING (sw_private.can_read(workspace_id));
+DROP POLICY sw_member_read ON public.sw_processing_jobs; CREATE POLICY sw_member_read ON public.sw_processing_jobs FOR SELECT TO authenticated USING (sw_private.can_read(workspace_id));
 
 DROP TRIGGER sw_06_assistant_scope ON public.sw_processing_jobs;
+DROP TRIGGER sw_05_report_scope ON public.sw_management_reports;
+CREATE OR REPLACE FUNCTION sw_private.record_change() RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
+DECLARE _row jsonb; _workspace uuid; _entity uuid; _snapshot jsonb; _details jsonb := '{}';
+BEGIN
+  IF NOT coalesce(sw_private.is_human(), false) THEN RAISE EXCEPTION 'SW_HUMAN_REQUIRED' USING ERRCODE = '42501'; END IF;
+  IF TG_OP = 'DELETE' THEN _row := to_jsonb(OLD); ELSE _row := to_jsonb(NEW); END IF;
+  _workspace := CASE WHEN TG_TABLE_NAME = 'sw_workspaces' THEN (_row->>'id')::uuid ELSE (_row->>'workspace_id')::uuid END;
+  _entity := coalesce((_row->>'id')::uuid, (_row->>'user_id')::uuid);
+  IF TG_TABLE_NAME = 'sw_workspace_memberships' THEN
+    _details := jsonb_build_object(
+      'before', CASE WHEN TG_OP = 'INSERT' THEN NULL ELSE jsonb_build_object('role', OLD.role, 'active', OLD.active, 'can_approve', OLD.can_approve) END,
+      'after', CASE WHEN TG_OP = 'DELETE' THEN NULL ELSE jsonb_build_object('role', NEW.role, 'active', NEW.active, 'can_approve', NEW.can_approve) END);
+  ELSIF TG_TABLE_NAME = 'sw_intelligence_items' THEN
+    -- Preserve each attributed decision when triage moves to another state.
+    -- Rationale is byte-bounded so both sides fit the audit details limit.
+    _details := jsonb_build_object(
+      'before', CASE WHEN TG_OP = 'INSERT' THEN NULL ELSE jsonb_build_object('status', OLD.status, 'rationale', OLD.human_rationale, 'decided_by', OLD.decided_by, 'decided_at', OLD.decided_at) END,
+      'after', CASE WHEN TG_OP = 'DELETE' THEN NULL ELSE jsonb_build_object('status', NEW.status, 'rationale', NEW.human_rationale, 'decided_by', NEW.decided_by, 'decided_at', NEW.decided_at) END);
+  END IF;
+  INSERT INTO public.sw_audit_events (workspace_id, actor_user_id, entity_table, entity_id, operation, old_status, new_status, record_version, details)
+    VALUES (_workspace, auth.uid(), TG_TABLE_NAME, _entity, TG_OP, to_jsonb(OLD)->>'status', to_jsonb(NEW)->>'status', (_row->>'version')::integer, _details);
+  IF TG_TABLE_NAME IN ('sw_assessments', 'sw_risks', 'sw_actions', 'sw_reports') THEN
+    -- Snapshot includes exact approved citation rows, never dynamic foreign data.
+    _snapshot := _row;
+    IF TG_TABLE_NAME <> 'sw_actions' THEN
+      SELECT _row || jsonb_build_object('citations', coalesce(jsonb_agg(to_jsonb(c) ORDER BY c.created_at, c.id), '[]'::jsonb)) INTO _snapshot
+        FROM public.sw_citations c WHERE c.workspace_id = _workspace
+          AND CASE TG_TABLE_NAME WHEN 'sw_assessments' THEN c.assessment_id = _entity WHEN 'sw_risks' THEN c.risk_id = _entity ELSE c.report_id = _entity END;
+    END IF;
+    IF TG_TABLE_NAME = 'sw_risks' THEN
+      SELECT _snapshot || jsonb_build_object('controls', coalesce(jsonb_agg(to_jsonb(c) ORDER BY c.created_at, c.id), '[]'::jsonb)) INTO _snapshot
+        FROM public.sw_controls c WHERE c.workspace_id = _workspace AND c.risk_id = _entity;
+    END IF;
+    INSERT INTO public.sw_record_versions (workspace_id, assessment_id, risk_id, action_id, report_id, version, snapshot, actor_user_id)
+    VALUES (_workspace,
+      CASE WHEN TG_TABLE_NAME = 'sw_assessments' THEN _entity END,
+      CASE WHEN TG_TABLE_NAME = 'sw_risks' THEN _entity END,
+      CASE WHEN TG_TABLE_NAME = 'sw_actions' THEN _entity END,
+      CASE WHEN TG_TABLE_NAME = 'sw_reports' THEN _entity END,
+      (_row->>'version')::integer, _snapshot, auth.uid());
+  END IF;
+  RETURN NULL;
+END;
+$$;
 DROP TRIGGER sw_04_scope ON public.sw_risks;
 DROP TRIGGER sw_04_scope ON public.sw_actions;
 CREATE OR REPLACE FUNCTION sw_private.apply_change_brief(_workspace_id uuid, _brief_id uuid, _expected_version integer, _request_id uuid, _apply jsonb)
@@ -160,11 +214,20 @@ BEGIN
   RETURN NEW;
 END $function$;
 
+DROP FUNCTION sw_private.guard_report_scope();
+DROP FUNCTION sw_private.audit_scope(text, jsonb);
+DROP FUNCTION sw_private.can_see_refs(uuid, text, text, jsonb);
+DROP FUNCTION sw_private.refs_scopes(uuid, text, text, jsonb);
+DROP FUNCTION sw_private.ref_scopes(uuid, text, text);
+DROP FUNCTION sw_private.scope_is_restricted(uuid, uuid);
+DROP FUNCTION sw_private.can_see_scopes(uuid, uuid[]);
 DROP FUNCTION sw_private.guard_assistant_scope();
 DROP FUNCTION sw_private.guard_record_scope();
 DROP FUNCTION sw_private.can_see_record(uuid, text, uuid);
 DROP FUNCTION sw_private.record_scope(uuid, text, text);
 DROP FUNCTION sw_private.can_see_scope(uuid, uuid);
+ALTER TABLE public.sw_management_reports DROP COLUMN mission_scope;
+ALTER TABLE public.sw_audit_events DROP COLUMN mission_scope;
 ALTER TABLE public.sw_missions DROP CONSTRAINT sw_missions_completed_needs_acceptance;
 ALTER TABLE public.sw_missions DROP COLUMN review_accepted_at, DROP COLUMN review_accepted_by;
 DROP INDEX public.sw_actions_access_mission_idx;

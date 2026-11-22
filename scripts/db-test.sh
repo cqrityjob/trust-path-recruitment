@@ -3608,7 +3608,7 @@ psql_q -d postgres -c "CREATE DATABASE ${TEST_DB}_pristine TEMPLATE ${TEST_DB};"
 echo "==> Running Security Work restricted-records and review-acceptance assertions"
 SWRRC_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_work_restricted_records_test.sql 2>&1)" || { echo "$SWRRC_OUT"; exit 1; }
 SWRRC_PASSED="$(printf '%s\n' "$SWRRC_OUT" | grep -c 'NOTICE:  ok  SW-RRC ' || true)"
-[ "$SWRRC_PASSED" -ge 44 ] || { echo "$SWRRC_OUT"; echo "FAIL: Security Work restricted-records assertion shortfall: $SWRRC_PASSED (floor 44)"; exit 1; }
+[ "$SWRRC_PASSED" -ge 63 ] || { echo "$SWRRC_OUT"; echo "FAIL: Security Work restricted-records assertion shortfall: $SWRRC_PASSED (floor 63)"; exit 1; }
 echo "    ok  $SWRRC_PASSED Security Work restricted-records assertions passed"
 TEST_DB="$TEST_DB" bash scripts/security-work-restricted-records-negative-controls.sh
 SWRRC_LOG="$(mktemp)"
@@ -3619,7 +3619,7 @@ grep -q 'SW_RESTRICTED_RECORDS_ROLLBACK_DATA_PRESENT' "$SWRRC_LOG" || { cat "$SW
 rm -f "$SWRRC_LOG"
 echo '    ok  restricted-records rollback preserves scoped records and acceptances'
 psql_q -d "$TEST_DB" -f supabase/rollback/20270329090000_security_work_restricted_records_rollback.sql >/dev/null
-SWRRC_LEFT="$(psql_q -d "$TEST_DB" -Atc "SELECT (SELECT count(*) FROM information_schema.columns WHERE table_schema='public' AND ((table_name IN ('sw_risks','sw_actions') AND column_name='access_mission_id') OR (table_name='sw_missions' AND column_name IN ('review_accepted_by','review_accepted_at')))) + (SELECT count(*) FROM pg_proc WHERE proname IN ('can_see_scope','can_see_record','record_scope','guard_record_scope','guard_assistant_scope')) + (SELECT count(*) FROM pg_policies WHERE schemaname='public' AND (qual LIKE '%can_see_scope%' OR qual LIKE '%can_see_record%' OR with_check LIKE '%can_see_scope%' OR with_check LIKE '%can_see_record%'))")"
+SWRRC_LEFT="$(psql_q -d "$TEST_DB" -Atc "SELECT (SELECT count(*) FROM information_schema.columns WHERE table_schema='public' AND ((table_name IN ('sw_risks','sw_actions') AND column_name='access_mission_id') OR (table_name='sw_missions' AND column_name IN ('review_accepted_by','review_accepted_at')) OR (table_name IN ('sw_audit_events','sw_management_reports') AND column_name='mission_scope'))) + (SELECT count(*) FROM pg_proc WHERE proname IN ('can_see_scope','can_see_record','record_scope','guard_record_scope','guard_assistant_scope','guard_report_scope','can_see_scopes','scope_is_restricted','ref_scopes','refs_scopes','can_see_refs','audit_scope')) + (SELECT count(*) FROM pg_policies WHERE schemaname='public' AND (qual LIKE '%can_see_scope%' OR qual LIKE '%can_see_record%' OR qual LIKE '%can_see_refs%' OR with_check LIKE '%can_see_scope%' OR with_check LIKE '%can_see_record%')) + (SELECT count(*) FROM pg_proc WHERE proname='record_change' AND prosrc LIKE '%mission_scope%')")"
 [ "$SWRRC_LEFT" = 0 ] || { echo "FAIL: restricted-records rollback left $SWRRC_LEFT object(s)"; exit 1; }
 echo '    ok  restricted records stood down; no new object remains'
 

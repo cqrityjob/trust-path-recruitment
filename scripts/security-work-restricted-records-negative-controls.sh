@@ -73,5 +73,19 @@ control 'the stamp is the database''s' 'the acceptance stamp cannot be written b
 control 'changing the brief withdraws acceptance' 'changing the reviewed brief withdraws the acceptance' \
   "$(mutate 'sw_private.guard_mission()' "    NEW.review_state := 'changes_requested';" "")"
 
-[ "$passed" -ge 12 ] || { echo "FAIL: restricted-records negative-control shortfall: $passed (floor 12)"; exit 1; }
+control 'history is written with its scope' 'an editor outside the circle reads nothing of the derived records or what points at them' \
+  "$(mutate 'sw_private.record_change()' "sw_private.audit_scope(TG_TABLE_NAME, _row));" "'{}'::uuid[]);")"
+control 'history scope comes from the row, not a later lookup' "an editor outside the circle reads no history of the restricted record's links, assets, controls or deleted citation" \
+  "$(mutate 'sw_private.record_change()' "sw_private.audit_scope(TG_TABLE_NAME, _row));" "array_remove(ARRAY[sw_private.record_scope(_workspace, TG_TABLE_NAME, _entity::text)], NULL));")"
+control 'restricted records stay out of reports' "a restricted mission's risk never enters a workspace report, not even from inside the circle" \
+  "$(mutate 'sw_private.guard_report_scope()' "IF EXISTS (SELECT 1 FROM unnest(NEW.mission_scope) m WHERE" "IF false AND EXISTS (SELECT 1 FROM unnest(NEW.mission_scope) m WHERE")"
+control 'the report scope is the database'"'"'s' "the report's mission list is the database's, not the client's" \
+  "$(mutate 'sw_private.guard_report_scope()' "    NEW.mission_scope := OLD.mission_scope;
+    RETURN NEW;" "    RETURN NEW;")"
+control 'reports follow a restricted mission' 'once the mission is restricted its records, report, assistant result and their history leave the outsiders' \
+  'DROP POLICY sw_member_read ON public.sw_management_reports; CREATE POLICY sw_member_read ON public.sw_management_reports FOR SELECT TO authenticated USING (sw_private.can_read(workspace_id));'
+control 'assistant results follow a restricted mission' 'once the mission is restricted its records, report, assistant result and their history leave the outsiders' \
+  'DROP POLICY sw_member_read ON public.sw_ai_suggestions; CREATE POLICY sw_member_read ON public.sw_ai_suggestions FOR SELECT TO authenticated USING (sw_private.can_read(workspace_id));'
+
+[ "$passed" -ge 18 ] || { echo "FAIL: restricted-records negative-control shortfall: $passed (floor 18)"; exit 1; }
 echo "    ok  $passed restricted-records negative controls detected by their original assertions"
