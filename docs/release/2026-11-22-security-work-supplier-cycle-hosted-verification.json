@@ -1,0 +1,125 @@
+{
+  "readAt": "2026-11-22T14:44:08.917535+00:00",
+  "projectRef": "wrygicdfxwjnrugduxnt",
+  "migration": "20270330090000_security_work_supplier_cycle.sql",
+  "mergedAs": "86fae8b0 (#503)",
+  "mergedSourceMd5": "432cb2aa87a6d58a143c62cbfc0fadab",
+  "method": "Read-only SQL through the Supabase connector. The same catalogue query ran on production and on a disposable database (the 408-migration history plus the merged 20270330090000 file); entries are key=value strings aggregated by md5(string_agg(... ORDER BY key)) per category. Functions: md5(pg_get_functiondef)|prosecdef|proconfig|sorted proacl. Tables: relrowsecurity|relforcerowsecurity|sorted relacl. Policies: md5(cmd|roles|permissive|qual|with_check). Triggers: md5(pg_get_triggerdef). Columns: type|notnull|default|sorted attacl. Constraints: md5(pg_get_constraintdef)|convalidated. Indexes: md5(indexdef). Scope: the 38 functions the migration creates or replaces and every object on the 14 tables it creates or alters.",
+  "ledger": {
+    "rows": 409,
+    "latest": "20270330090000",
+    "latestName": "security_work_supplier_cycle",
+    "md5Of": "string_agg(version||':'||coalesce(name,''), E'\\n' ORDER BY version)",
+    "previous408Md5": "77b5dfb6c8b1efe842a60f99026a35e0",
+    "previous408EqualsRecordedFull408Md5Of20270329": true,
+    "full409Md5": "a6de4eb35bf1531c2a0fde07e4ccd618",
+    "committedSnapshotMd5": "a6de4eb35bf1531c2a0fde07e4ccd618",
+    "installedStatementCount": 127,
+    "installedStatementsMd5": "eab803170ac258e321309d8d79e7e1cf"
+  },
+  "catalogueComparison": {
+    "entries": 541,
+    "categories": {
+      "column": {
+        "entries": 205,
+        "production": "d0ba32195e3f3ad1bcf46fd684114613",
+        "mergedSource": "d0ba32195e3f3ad1bcf46fd684114613",
+        "identical": true
+      },
+      "constraint": {
+        "entries": 175,
+        "production": "18fdbe23b8b5de939390abff1dc031df",
+        "mergedSource": "18fdbe23b8b5de939390abff1dc031df",
+        "identical": true
+      },
+      "function": {
+        "entries": 38,
+        "production": "5ad67d275fc7c0953319e53359e15434",
+        "mergedSource": "5ad67d275fc7c0953319e53359e15434",
+        "identical": true
+      },
+      "index": {
+        "entries": 43,
+        "production": "464e7157880dd6d37b10ba8f1cd26bfc",
+        "mergedSource": "464e7157880dd6d37b10ba8f1cd26bfc",
+        "identical": true
+      },
+      "policy": {
+        "entries": 30,
+        "production": "e59414a3ac52acbb6cca5629bd14f754",
+        "mergedSource": "e59414a3ac52acbb6cca5629bd14f754",
+        "identical": true
+      },
+      "trigger": {
+        "entries": 36,
+        "production": "02f205206a668339f77b10d684d3f964",
+        "mergedSource": "02f205206a668339f77b10d684d3f964",
+        "identical": true
+      }
+    },
+    "table": {
+      "entries": 14,
+      "production": "b8acaa696a0a3a67cce1006f401f08cb",
+      "mergedSource": "86fcd3482b90a65b4313a8be527f8b69",
+      "identical": false,
+      "explained": "Row by row, RLS (on, not forced) and every grant are equal on all 14 tables. The only difference is the owner's ACL: postgres=arwdDxtm on production versus postgres=arwdDxt on the disposable database. The m (MAINTAIN) privilege is granted to the owner by Postgres 17 on every hosted table; it is not created by the migration and grants nothing to a client role."
+    },
+    "tableGrants": {
+      "authenticated": {
+        "sw_actions": "arw",
+        "sw_asset_dependencies": "rd",
+        "sw_risk_assets": "ard",
+        "sw_decisions": "r",
+        "sw_supplier_contracts": "r",
+        "sw_supplier_obligations": "r",
+        "sw_supplier_profiles": "r",
+        "sw_supplier_request_events": "r",
+        "sw_supplier_request_shares": "r",
+        "sw_supplier_requests": "r",
+        "sw_supplier_responses": "r",
+        "sw_supplier_reviews": "r",
+        "sw_supplier_verifications": "r",
+        "sw_workspace_memberships": "r"
+      },
+      "anon": "none",
+      "service_role": "none"
+    }
+  },
+  "functionExecution": {
+    "public": {
+      "functions": 10,
+      "authenticated": 10,
+      "anon": 0,
+      "service_role": 0,
+      "securityDefiner": 0,
+      "emptySearchPath": 10
+    },
+    "sw_private": {
+      "functions": 28,
+      "authenticated": 12,
+      "anon": 0,
+      "service_role": 0,
+      "securityDefiner": 27,
+      "emptySearchPath": 28
+    }
+  },
+  "data": {
+    "sw_supplier_profiles": 0,
+    "sw_supplier_requests": 0,
+    "sw_supplier_request_events": 0,
+    "sw_supplier_request_shares": 0,
+    "sw_supplier_responses": 0,
+    "sw_supplier_verifications": 0,
+    "sw_supplier_contracts": 0,
+    "sw_supplier_obligations": 0,
+    "sw_supplier_reviews": 0,
+    "sw_decisions": 0,
+    "sw_asset_dependencies": 0,
+    "membersWithExternalSharing": 0,
+    "riskAssetsWithImpactSet": 0,
+    "riskAssets": 0,
+    "note": "Counts only; no row content and no personal data was read."
+  },
+  "notVerified": "No authenticated behavioural probe against production and no request in the hosted application runtime. Behaviour is covered by supabase/tests/security_work_supplier_cycle_test.sql (78 assertions), 22 negative controls, the two-connection race test and the PostgREST pilot on disposable databases. No sharing right is granted and nothing is sent externally.",
+  "writes": "None. No production write, migration replay or activation."
+}
