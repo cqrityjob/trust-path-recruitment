@@ -310,7 +310,26 @@ try {
         ),
         "INVALID_INPUT",
       );
-      mission = await missions.transitionMission(caller(EDITOR), {
+      // Accepting a review is an approval (20270329090000): the editor, who
+      // may not approve, is refused; an approver admitted to the circle accepts.
+      assert.equal(
+        await code(
+          missions.transitionMission(caller(EDITOR), {
+            workspaceId: workspace,
+            missionId: restricted,
+            version: mission.version,
+            reviewState: "accepted",
+          }),
+        ),
+        "ACCESS_DENIED",
+      );
+      await missions.setMissionMember(caller(EDITOR), {
+        workspaceId: workspace,
+        missionId: restricted,
+        userId: OWNER,
+        member: true,
+      });
+      mission = await missions.transitionMission(caller(OWNER), {
         workspaceId: workspace,
         missionId: restricted,
         version: mission.version,
