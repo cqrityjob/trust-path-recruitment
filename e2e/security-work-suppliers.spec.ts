@@ -959,7 +959,7 @@ test("an editor without sharing or approval rights is told who must act, in Engl
     responseInstruction: "",
     verificationCriteria: "Figure given",
     requestedDue: day(5),
-    requiresSeparateVerifier: false,
+    requiresSeparateVerifier: true,
   }) as { data: Row };
   await install(page, state, "en");
   await go(page, `/supplier-requests/${request.data.id}`);
@@ -968,6 +968,10 @@ test("an editor without sharing or approval rights is told who must act, in Engl
     "Only someone with the external sharing right",
   );
   await expect(page.getByTestId("sw-approve-share")).toHaveCount(0);
+  // A critical request keeps its separate-verifier requirement: editing cannot remove it.
+  await page.getByText("Content", { exact: true }).click();
+  await expect(page.getByTestId("sw-separate-verifier")).toBeDisabled();
+  await expect(page.getByTestId("sw-edit-request")).toContainText("cannot be removed by editing");
   // Approved by someone with the right, then sent and answered: verification needs an approver.
   state.share = true;
   handle(state, "approveSecuritySupplierShare", {

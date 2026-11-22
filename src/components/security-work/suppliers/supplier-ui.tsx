@@ -227,6 +227,10 @@ export function useSupplierText() {
                 "Ärendet kräver en separat verifierare: någon annan än intern ansvarig, den som skapade begäran och den som registrerade svaret.",
                 "This request needs a separate verifier: someone other than its internal owner, its creator and whoever recorded the response.",
               ),
+              SEPARATE_VERIFIER_LOCKED: l(
+                "Kravet på separat verifierare och intern ansvarig ligger fast för ärendet.",
+                "The separate-verifier requirement and the internal owner are fixed for this request.",
+              ),
               CONFIRMED_OBLIGATION_REQUIRED: l(
                 "Kravet är inte bekräftat, eller avtalet inte verifierat. En godkännare behöver bekräfta det innan det kan åberopas.",
                 "The requirement is not confirmed, or the contract not verified. An approver needs to confirm it before it can be relied on.",

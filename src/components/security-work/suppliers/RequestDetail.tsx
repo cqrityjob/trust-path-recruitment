@@ -1120,6 +1120,7 @@ function EditContent({ detail }: { detail: Detail }) {
                 id={id}
                 className={selectClass}
                 value={f.internalOwnerId}
+                disabled={r.requires_separate_verifier}
                 onChange={(e) => setF({ ...f, internalOwnerId: e.target.value })}
               >
                 {detail.members
@@ -1136,6 +1137,8 @@ function EditContent({ detail }: { detail: Detail }) {
             <input
               type="checkbox"
               checked={f.requiresSeparateVerifier}
+              disabled={r.requires_separate_verifier}
+              data-testid="sw-separate-verifier"
               onChange={(e) => setF({ ...f, requiresSeparateVerifier: e.target.checked })}
             />
             {l(
@@ -1143,6 +1146,14 @@ function EditContent({ detail }: { detail: Detail }) {
               "Critical: needs a separate verifier",
             )}
           </label>
+          {r.requires_separate_verifier && (
+            <p className="text-xs text-muted-foreground">
+              {l(
+                "Kravet på separat verifierare och intern ansvarig ligger fast för ärendet och kan inte tas bort genom redigering.",
+                "The separate-verifier requirement and the internal owner are fixed for this request and cannot be removed by editing.",
+              )}
+            </p>
+          )}
           <WorkError code={run.error?.message} message={error(run.error?.message)} />
           <WorkButton type="submit" disabled={run.isPending}>
             {l("Spara innehåll", "Save content")}
