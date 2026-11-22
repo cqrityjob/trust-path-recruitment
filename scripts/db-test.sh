@@ -3607,7 +3607,7 @@ psql_q -d postgres -c "CREATE DATABASE ${TEST_DB}_pristine TEMPLATE ${TEST_DB};"
 echo "==> Running Security Work supplier-cycle assertions"
 SWSUP_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_work_supplier_cycle_test.sql 2>&1)" || { echo "$SWSUP_OUT"; exit 1; }
 SWSUP_PASSED="$(printf '%s\n' "$SWSUP_OUT" | grep -c 'NOTICE:  ok  SW-SUP ' || true)"
-[ "$SWSUP_PASSED" -ge 72 ] || { echo "$SWSUP_OUT"; echo "FAIL: Security Work supplier-cycle assertion shortfall: $SWSUP_PASSED (floor 72)"; exit 1; }
+[ "$SWSUP_PASSED" -ge 78 ] || { echo "$SWSUP_OUT"; echo "FAIL: Security Work supplier-cycle assertion shortfall: $SWSUP_PASSED (floor 78)"; exit 1; }
 echo "    ok  $SWSUP_PASSED Security Work supplier-cycle assertions passed"
 TEST_DB="$TEST_DB" bash scripts/security-work-supplier-cycle-negative-controls.sh
 SWSUP_LOG="$(mktemp)"

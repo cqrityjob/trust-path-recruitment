@@ -70,3 +70,39 @@ wait "$first"
 grep -q 'SW_CONFLICT' "$LOG_DIR/verify_second" || { cat "$LOG_DIR/verify_second"; echo 'FAIL: the second verifier failed for the wrong reason' >&2; exit 1; }
 [ "$(q -c "SELECT count(*)||':'||max(verified_by::text)||':'||max(outcome) FROM sw_supplier_verifications WHERE request_id='$req'")" = "1:$OWNER:accepted" ] || { echo 'FAIL: concurrent verifications left more than one outcome' >&2; exit 1; }
 echo '    ok  a concurrent second verifier waited, was refused, and exactly one verification exists'
+
+# 3. Reopen and completion of the same action, both orders. Both take the
+#    action first and its requests second, so the second always waits and
+#    then sees the first's result: never a completed action with open supplier
+#    work.
+act="$(q -c "SELECT action_id FROM sw_supplier_requests WHERE id='$req'")"
+complete="UPDATE sw_actions SET status='completed', decision_rationale='Done', completion_evidence='Verified request' WHERE id='$act'"
+v="$(q -c "SELECT version FROM sw_supplier_requests WHERE id='$req'")"
+PGAPPNAME=sws_reopen_first q -c "$(as $OWNER) BEGIN; SELECT (sw_reopen_supplier_request('$ws',gen_random_uuid(),'$req',$v,'Gothenburg reader still old')).status; SELECT pg_sleep(2); COMMIT;" >"$LOG_DIR/reopen_first" 2>&1 &
+first=$!
+sleeping sws_reopen_first
+if PGAPPNAME=sws_complete_second q -c "$(as $VERIFIER) $complete;" >"$LOG_DIR/complete_second" 2>&1 & second=$!; waited sws_complete_second; wait "$second"; then
+  cat "$LOG_DIR/complete_second"; echo 'FAIL: the action completed while its request was being reopened' >&2; exit 1
+fi
+wait "$first"
+grep -q 'SW_SUPPLIER_VERIFICATION_REQUIRED' "$LOG_DIR/complete_second" || { cat "$LOG_DIR/complete_second"; echo 'FAIL: the completion failed for the wrong reason' >&2; exit 1; }
+[ "$(q -c "SELECT a.status||':'||r.status FROM sw_actions a JOIN sw_supplier_requests r ON r.action_id=a.id WHERE r.id='$req'")" = "open:in_progress" ] || { echo 'FAIL: reopen vs completion left an inconsistent state' >&2; exit 1; }
+echo '    ok  a completion racing a reopen waited, was refused, and the action stays open with its reopened request'
+
+# Settle the second cycle, then race the other way round.
+v="$(q -c "SELECT version FROM sw_supplier_requests WHERE id='$req'")"
+q -c "$(as $OWNER) SELECT sw_record_supplier_response('$ws',gen_random_uuid(),'$req',$v,'{\"kind\":\"done\",\"authorName\":\"Race supplier\",\"origin\":\"email\",\"body\":\"Done again.\"}');" >/dev/null
+rid="$(q -c "SELECT id FROM sw_supplier_responses WHERE request_id='$req' ORDER BY seq DESC LIMIT 1")"
+v="$(q -c "SELECT version FROM sw_supplier_requests WHERE id='$req'")"
+q -c "$(as $VERIFIER) SELECT sw_verify_supplier_response('$ws',gen_random_uuid(),'$req',$v,'$rid','accepted','Checked','','');" >/dev/null
+v="$(q -c "SELECT version FROM sw_supplier_requests WHERE id='$req'")"
+PGAPPNAME=sws_complete_first q -c "$(as $VERIFIER) BEGIN; $complete; SELECT pg_sleep(2); COMMIT;" >"$LOG_DIR/complete_first" 2>&1 &
+first=$!
+sleeping sws_complete_first
+if PGAPPNAME=sws_reopen_second q -c "$(as $OWNER) SELECT (sw_reopen_supplier_request('$ws',gen_random_uuid(),'$req',$v,'Late doubt')).status;" >"$LOG_DIR/reopen_second" 2>&1 & second=$!; waited sws_reopen_second; wait "$second"; then
+  cat "$LOG_DIR/reopen_second"; echo 'FAIL: a request was reopened under an action being completed' >&2; exit 1
+fi
+wait "$first"
+grep -q 'SW_ACTION_CLOSED' "$LOG_DIR/reopen_second" || { cat "$LOG_DIR/reopen_second"; echo 'FAIL: the reopen failed for the wrong reason' >&2; exit 1; }
+[ "$(q -c "SELECT a.status||':'||r.status FROM sw_actions a JOIN sw_supplier_requests r ON r.action_id=a.id WHERE r.id='$req'")" = "completed:accepted" ] || { echo 'FAIL: completion vs reopen left an inconsistent state' >&2; exit 1; }
+echo '    ok  a reopen racing a completion waited, was refused, and the completed action keeps its accepted request'

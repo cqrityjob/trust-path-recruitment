@@ -560,6 +560,15 @@ BEGIN
   IF e.event <> _event OR (_request_id IS NOT NULL AND e.request_id <> _request_id) OR e.actor_user_id IS DISTINCT FROM auth.uid() THEN
     RAISE EXCEPTION 'SW_IDEMPOTENCY_CONFLICT' USING ERRCODE = '23505';
   END IF;
+  -- A replay returns the request as it is NOW, so the caller must still hold
+  -- every right the command needs, now: an active membership, sight of the
+  -- action (a restricted mission's circle) and the command's own right.
+  IF NOT sw_private.can_edit(_workspace_id)
+     OR NOT sw_private.can_see_supplier_request(_workspace_id, e.request_id)
+     OR (_event = 'share_approved' AND NOT sw_private.can_share(_workspace_id))
+     OR (_event IN ('verified', 'needs_revision', 'reopened') AND NOT sw_private.can_approve(_workspace_id)) THEN
+    RAISE EXCEPTION 'SW_ACCESS_DENIED' USING ERRCODE = '42501';
+  END IF;
   RETURN e.request_id;
 END $$;
 
@@ -661,6 +670,15 @@ BEGIN
   END IF;
   old := sw_private.supplier_request_locked(_workspace_id, _request_id, _expected_version);
   IF old.status IN ('accepted', 'withdrawn') THEN RAISE EXCEPTION 'SW_RECORD_FINAL' USING ERRCODE = '23514'; END IF;
+  -- Once a request needs a separate verifier it keeps that requirement, and
+  -- its internal owner, for good: an ordinary edit can neither lower it nor
+  -- move ownership away so the former owner could verify their own work.
+  -- This version has no exception path.
+  IF old.requires_separate_verifier AND (
+       (_fields->>'requiresSeparateVerifier')::boolean IS FALSE
+       OR ((_fields->>'internalOwnerId')::uuid IS NOT NULL AND (_fields->>'internalOwnerId')::uuid <> old.internal_owner_id)) THEN
+    RAISE EXCEPTION 'SW_SEPARATE_VERIFIER_LOCKED' USING ERRCODE = '23514';
+  END IF;
   UPDATE public.sw_supplier_requests SET
       title = coalesce(_fields->>'title', title), task = coalesce(_fields->>'task', task), expected_result = coalesce(_fields->>'expectedResult', expected_result),
       response_instruction = coalesce(_fields->>'responseInstruction', response_instruction),
@@ -816,15 +834,24 @@ END $$;
 CREATE FUNCTION sw_private.reopen_supplier_request(_workspace_id uuid, _operation_id uuid, _request_id uuid, _expected_version integer, _reason text)
 RETURNS public.sw_supplier_requests
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
-DECLARE r public.sw_supplier_requests; _replayed uuid; _from text;
+DECLARE r public.sw_supplier_requests; _replayed uuid; _from text; _action_status text;
 BEGIN
   _replayed := sw_private.supplier_replayed(_workspace_id, _operation_id, _request_id, 'reopened');
   IF _replayed IS NOT NULL THEN SELECT * INTO r FROM public.sw_supplier_requests WHERE workspace_id = _workspace_id AND id = _replayed; RETURN r; END IF;
+  -- Nothing is locked for a caller who may not reopen this request.
+  IF NOT sw_private.can_see_supplier_request(_workspace_id, _request_id) THEN RAISE EXCEPTION 'SW_ACCESS_DENIED' USING ERRCODE = '42501'; END IF;
+  IF NOT sw_private.can_approve(_workspace_id) THEN RAISE EXCEPTION 'SW_APPROVER_REQUIRED' USING ERRCODE = '42501'; END IF;
+  -- Lock order everywhere: the action, then its requests. Completing the
+  -- action (sw_27_supplier_work) takes the same order, so a reopen and a
+  -- completion serialise: one waits and then sees the other's result.
+  SELECT a.status INTO _action_status FROM public.sw_actions a
+   WHERE a.workspace_id = _workspace_id AND a.id = (SELECT x.action_id FROM public.sw_supplier_requests x WHERE x.workspace_id = _workspace_id AND x.id = _request_id)
+   FOR UPDATE;
   r := sw_private.supplier_request_locked(_workspace_id, _request_id, _expected_version);
   IF NOT sw_private.can_approve(_workspace_id) THEN RAISE EXCEPTION 'SW_APPROVER_REQUIRED' USING ERRCODE = '42501'; END IF;
   IF r.status <> 'accepted' THEN RAISE EXCEPTION 'SW_INVALID_TRANSITION' USING ERRCODE = '23514'; END IF;
   IF btrim(coalesce(_reason, '')) = '' OR char_length(_reason) > 2000 THEN RAISE EXCEPTION 'SW_REASON_REQUIRED' USING ERRCODE = '23514'; END IF;
-  IF EXISTS (SELECT 1 FROM public.sw_actions a WHERE a.workspace_id = _workspace_id AND a.id = r.action_id AND a.status IN ('completed', 'cancelled')) THEN
+  IF _action_status IN ('completed', 'cancelled') THEN
     RAISE EXCEPTION 'SW_ACTION_CLOSED' USING ERRCODE = '23514';
   END IF;
   _from := r.status;
@@ -885,6 +912,11 @@ END $$;
 CREATE FUNCTION sw_private.guard_action_supplier_work() RETURNS trigger
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
 BEGIN
+  IF NEW.status = 'completed' AND OLD.status <> 'completed' THEN
+    -- The action row is locked by this UPDATE; take its requests next (the
+    -- same order as reopen), so a concurrent reopen finishes first or waits.
+    PERFORM 1 FROM public.sw_supplier_requests r WHERE r.workspace_id = NEW.workspace_id AND r.action_id = NEW.id FOR SHARE;
+  END IF;
   IF NEW.status = 'completed' AND OLD.status <> 'completed'
      AND EXISTS (SELECT 1 FROM public.sw_supplier_requests r WHERE r.workspace_id = NEW.workspace_id AND r.action_id = NEW.id AND r.status NOT IN ('accepted', 'withdrawn'))
      AND NOT EXISTS (SELECT 1 FROM public.sw_decisions d WHERE d.workspace_id = NEW.workspace_id AND d.subject_kind = 'action' AND d.subject_id = NEW.id AND d.decision = 'close_with_deviation') THEN
