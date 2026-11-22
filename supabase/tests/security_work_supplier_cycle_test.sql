@@ -219,6 +219,9 @@ SELECT id AS resp3 FROM sw_supplier_responses WHERE request_id=:'req' AND cycle=
 -- Separate verifier for a critical request: the internal owner may not verify.
 SELECT pg_temp.login('5d000000-0000-4000-8000-000000000002');
 SELECT (sw_save_supplier_request(:'wa',gen_random_uuid(),:'req',:v,jsonb_build_object('requiresSeparateVerifier',true,'internalOwnerId','5d000000-0000-4000-8000-000000000003'))).version AS v \gset
+SELECT pg_temp.failmsg(format('SELECT sw_save_supplier_request(%L,gen_random_uuid(),%L,%s,%L)',:'wa',:'req',:v,jsonb_build_object('requiresSeparateVerifier',false)),'SW_SEPARATE_VERIFIER_LOCKED','an ordinary edit cannot lower the separate-verifier requirement');
+SELECT pg_temp.failmsg(format('SELECT sw_save_supplier_request(%L,gen_random_uuid(),%L,%s,%L)',:'wa',:'req',:v,jsonb_build_object('internalOwnerId','5d000000-0000-4000-8000-000000000004')),'SW_SEPARATE_VERIFIER_LOCKED','nor move ownership away so the former owner could verify');
+SELECT pg_temp.ok((SELECT requires_separate_verifier AND internal_owner_id='5d000000-0000-4000-8000-000000000003' AND version=:v FROM sw_supplier_requests WHERE id=:'req'),'the requirement and its owner are unchanged');
 SELECT pg_temp.login('5d000000-0000-4000-8000-000000000003');
 SELECT pg_temp.fail(format('SELECT sw_verify_supplier_response(%L,gen_random_uuid(),%L,%s,%L,''accepted'',''Own check'','''','''')',:'wa',:'req',:v,:'resp3'),'42501','a critical request needs a verifier other than its internal owner');
 SELECT pg_temp.login('5d000000-0000-4000-8000-000000000001');
@@ -270,6 +273,14 @@ SELECT pg_temp.fail(format('SELECT sw_withdraw_supplier_request(%L,gen_random_uu
 SELECT pg_temp.fail(format('SELECT sw_withdraw_supplier_request(%L,gen_random_uuid(),gen_random_uuid(),1,''x'')',:'wa'),'42501','the refusal is the same as for an id that does not exist');
 SELECT pg_temp.login('5d000000-0000-4000-8000-000000000004');
 SELECT pg_temp.ok(pg_temp.visible(:'secret_req')>=3,'a circle member works with it');
+-- A replay returns the request as it is now: it re-checks the caller's access now.
+SELECT (sw_change_supplier_due(:'wa','5d000000-0000-4000-8000-0000000000b1',:'secret_req',1,'requested',current_date+30,'Escalation timetable')).version AS sv \gset
+SELECT pg_temp.ok((sw_change_supplier_due(:'wa','5d000000-0000-4000-8000-0000000000b1',:'secret_req',1,'requested',current_date+30,'Escalation timetable')).version=:sv,'a circle member''s retry is replayed safely');
+SELECT pg_temp.login('5d000000-0000-4000-8000-000000000003');
+SELECT sw_set_mission_member(:'wa',:'rm','5d000000-0000-4000-8000-000000000004',false);
+SELECT (sw_save_supplier_request(:'wa',gen_random_uuid(),:'secret_req',:sv,jsonb_build_object('title','CONFIDENTIAL escalation, board decision attached'))).version AS sv \gset
+SELECT pg_temp.login('5d000000-0000-4000-8000-000000000004');
+SELECT pg_temp.fail(format('SELECT title FROM sw_change_supplier_due(%L,%L,%L,1,''requested'',%L,''Escalation timetable'')',:'wa','5d000000-0000-4000-8000-0000000000b1',:'secret_req',current_date+30),'42501','after leaving the circle, a retry of the earlier operation reveals nothing of the updated request');
 
 -- ---------------------------------------------------------------------------
 -- 8. Supplier review
@@ -281,6 +292,13 @@ SELECT pg_temp.login('5d000000-0000-4000-8000-000000000003');
 UPDATE sw_supplier_reviews SET status='approved' WHERE id=:'review';
 SELECT pg_temp.fail(format('UPDATE sw_supplier_reviews SET findings=''rewritten'' WHERE id=%L',:'review'),'23514','an approved review is final');
 SELECT pg_temp.ok((SELECT approved_by='5d000000-0000-4000-8000-000000000003' FROM sw_supplier_reviews WHERE id=:'review'),'the approver of the review is stamped');
+-- A deactivated member's retry is refused too, even with the right operation id.
+RESET ROLE;
+SELECT pg_temp.login('5d000000-0000-4000-8000-000000000001');
+UPDATE sw_workspace_memberships SET active=false WHERE workspace_id=:'wa' AND user_id='5d000000-0000-4000-8000-000000000003';
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.login('5d000000-0000-4000-8000-000000000003');
+SELECT pg_temp.fail(format('SELECT title FROM sw_verify_supplier_response(%L,%L,%L,%s,%L,''accepted'',''Versions listed; patch verified on both sites'',''Supplier statement LB-0001; site check'','''')',:'wa','5d000000-0000-4000-8000-0000000000a4',:'req',:v,:'resp2'),'42501','a deactivated member''s retry of an earlier verification returns nothing');
 RESET ROLE;
 
 \if :{?sw_supplier_keep_fixture}

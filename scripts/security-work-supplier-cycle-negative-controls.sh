@@ -85,6 +85,14 @@ control 'request history follows the action' 'an editor outside the restricted c
   "$(mutate 'sw_private.can_see_supplier_request(uuid,uuid)' "AND sw_private.can_see_record(_workspace_id, 'action', r.action_id));" "AND true);")"
 control 'commands follow the restricted action' 'nor can act on it' \
   "$(mutate 'sw_private.supplier_request_locked(uuid,uuid,integer)' "IF r.id IS NULL OR NOT sw_private.can_read(_workspace_id) OR NOT sw_private.can_see_record(_workspace_id, 'action', r.action_id) THEN" "IF r.id IS NULL THEN")"
+control 'a replay re-checks current access' 'after leaving the circle, a retry of the earlier operation reveals nothing of the updated request' \
+  "$(mutate 'sw_private.supplier_replayed(uuid,uuid,uuid,text)' "    RAISE EXCEPTION 'SW_ACCESS_DENIED' USING ERRCODE = '42501';
+  END IF;
+  RETURN e.request_id;" "    NULL;
+  END IF;
+  RETURN e.request_id;")"
+control 'the separate-verifier requirement is locked' 'an ordinary edit cannot lower the separate-verifier requirement' \
+  "$(mutate 'sw_private.save_supplier_request(uuid,uuid,uuid,integer,jsonb)' "RAISE EXCEPTION 'SW_SEPARATE_VERIFIER_LOCKED'" "RAISE NOTICE 'SW_SEPARATE_VERIFIER_LOCKED'")"
 
-[ "$passed" -ge 20 ] || { echo "FAIL: supplier-cycle negative-control shortfall: $passed (floor 20)"; exit 1; }
+[ "$passed" -ge 22 ] || { echo "FAIL: supplier-cycle negative-control shortfall: $passed (floor 22)"; exit 1; }
 echo "    ok  $passed supplier-cycle negative controls detected by their original assertions"
