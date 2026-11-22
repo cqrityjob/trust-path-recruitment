@@ -198,9 +198,17 @@ describe("native mobile preset validation", () => {
 describe("official real Supabase CI target", () => {
   test("the revised application pin is exact and old native evidence cannot stand in for it", () => {
     expect(APP_SHA).toBe("53659419a1c243c27a59540eb849569140b71365");
-    // The schema witness moved to the Security Work restricted-records slot (408 files);
+    // The schema witness moved to the Security Work supplier-cycle slot (409 files);
     // the application under this regression stays the reviewed 53659419.
-    expect(SCHEMA_SHA).toBe("32e8016d25089a806ef8629c36981b275a80c063");
+    expect(SCHEMA_SHA).toBe("6245167a34d7a987d8bba46d11c697350154fd42");
+    // Nor the restricted-records witness, before the supplier cycle (32e8016d).
+    expect(() =>
+      validateTarget(
+        { ...env, RI_REAL_RELEASE_SCHEMA_SHA: "32e8016d25089a806ef8629c36981b275a80c063" },
+        env.RI_REAL_SCHEMA_SHA,
+        APP_SHA,
+      ),
+    ).toThrow("REAL_CI_UNREVIEWED_RELEASE_SCHEMA");
     // Nor the audit-scope witness, before report scope became grow-only (959e6b75).
     expect(() =>
       validateTarget(
@@ -397,7 +405,7 @@ describe("official real Supabase CI target", () => {
     ).toThrow("UNREVIEWED_APP_HEAD");
   });
   test("release schema binding is separate from test code and requires a full SHA", () => {
-    const release = "32e8016d25089a806ef8629c36981b275a80c063";
+    const release = "6245167a34d7a987d8bba46d11c697350154fd42";
     const context = validateTarget(
       { ...env, RI_REAL_RELEASE_SCHEMA_SHA: release },
       env.RI_REAL_SCHEMA_SHA,
@@ -552,7 +560,7 @@ describe("real CI execution and publication cannot silently narrow", () => {
     expect(job["runs-on"]).toBe("ubuntu-latest");
     expect(job.if).toBeUndefined();
     expect(job["continue-on-error"]).toBeUndefined();
-    expect(job.env.RI_REAL_RELEASE_SCHEMA_SHA).toBe("32e8016d25089a806ef8629c36981b275a80c063");
+    expect(job.env.RI_REAL_RELEASE_SCHEMA_SHA).toBe("6245167a34d7a987d8bba46d11c697350154fd42");
     expect(job.steps[0].with["fetch-depth"]).toBe(0);
     expect(job.steps.every((step: { [key: string]: unknown }) => !step["continue-on-error"])).toBe(
       true,
@@ -654,8 +662,9 @@ describe("real CI execution and publication cannot silently narrow", () => {
       "20270327090000_security_work_context.sql",
       "20270328090000_security_work_monitoring.sql",
       "20270329090000_security_work_restricted_records.sql",
+      "20270330090000_security_work_supplier_cycle.sql",
     );
-    expect(requireCompleteHistory(files)).toHaveLength(408);
+    expect(requireCompleteHistory(files)).toHaveLength(409);
     expect(() => requireCompleteHistory(files.slice(0, -2))).toThrow(
       "COMPLETE_CANONICAL_HISTORY_REQUIRED",
     );
@@ -769,6 +778,13 @@ describe("real CI execution and publication cannot silently narrow", () => {
       expect(() => requireCompleteHistory(omitted)).toThrow("COMPLETE_CANONICAL_HISTORY_REQUIRED");
       expect(() => requireCompleteHistory([...omitted, "20270330100000_other.sql"])).toThrow(
         "SECURITY_WORK_RESTRICTED_RECORDS_FORWARD_REQUIRED",
+      );
+    }
+    {
+      const omitted = files.filter((name) => !name.startsWith("20270330090000_"));
+      expect(() => requireCompleteHistory(omitted)).toThrow("COMPLETE_CANONICAL_HISTORY_REQUIRED");
+      expect(() => requireCompleteHistory([...omitted, "20270331100000_other.sql"])).toThrow(
+        "SECURITY_WORK_SUPPLIER_CYCLE_FORWARD_REQUIRED",
       );
     }
     expect(() => requireCompleteHistory(files.slice(0, -1))).toThrow();
