@@ -82,18 +82,38 @@ lookup), refuses any non-public answer, and then connects to the checked
 address itself: TLS is verified for the hostname, and the name is never
 resolved again, so DNS rebinding cannot redirect the request.
 
-Tested so far:
+One deadline (10 seconds) covers DNS, the connection, TLS, every redirect and
+the body. "Hämta nu" always ends with a result or a failure in words, with what
+to do next. A response whose framing or feed cannot be read is a failed check
+("misslyckas"), never "nothing new".
 
-- controlled DNS and HTTP answers;
-- real TLS on 127.0.0.1 under Node;
-- locally, the same module inside workerd (pinned wrangler 4.147.0) against
-  public hosts:
-  - the correct name returned 200;
-  - a wrong hostname pinned to a real address was refused at TLS;
-  - a self-signed certificate was refused.
+Tested so far (all controlled, none of it hosted evidence):
 
-Not yet tested: Cloudflare's hosted network. The first fetch below is that
-check:
+- controlled DNS and HTTP answers (`scripts/security-work-release-b-check.ts`),
+  including hostile chunk framing, header limits and malformed feeds;
+- real TLS on 127.0.0.1 under Node (`scripts/security-work-pinned-https-check.ts`):
+  hostname and certificate checks, a stalled handshake, a stalled body, an
+  already-cancelled request, a close before the handshake, and the whole fetch
+  ending at its deadline;
+- the same module inside workerd, the Workers runtime (pinned wrangler
+  4.147.0, `scripts/security-work-pinned-https-workerd.ts`, in CI), against
+  local servers with a throwaway CA: a pinned request succeeds and the feed
+  parses; the same server refuses a different hostname and an untrusted
+  certificate; stalls end at the deadline; hostile framing and a malformed
+  feed are refused.
+
+Known limits, both failing closed:
+
+- **Cloudflare-served feed hosts** cannot be reached (step 3).
+- **The TLS hostname option.** Pinning relies on `startTls({ expectedServerHostname })`.
+  workerd accepts it today and verifies the certificate against that name, but
+  Cloudflare does not document the option publicly and can switch the runtime
+  to reject it. If that happens, every fetch fails with "Hämtning är inte
+  tillgänglig i den här miljön" and nothing is fetched; it never falls back to
+  an unpinned request. Report it to Claude.
+
+Not yet tested: Cloudflare's hosted network. Do not treat hosted fetching as
+working until this first supervised fetch has succeeded:
 
 - Coverage turns **aktuell** and new items appear: the integration works.
 - Coverage turns **misslyckas** with a reason: send Claude the reason.
