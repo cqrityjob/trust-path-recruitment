@@ -3601,6 +3601,27 @@ ac_expect_pass "interview case access model (after the cycles)" interview_case_a
 psql_q -d postgres -c "DROP DATABASE IF EXISTS ${TEST_DB}_pristine;" >/dev/null
 psql_q -d postgres -c "CREATE DATABASE ${TEST_DB}_pristine TEMPLATE ${TEST_DB};" >/dev/null
 
+# The supplier cycle (20270330090000) is the newest Security Work slot, so it
+# is proven and stood down first. Its rollback must refuse supplier-cycle
+# records, sharing rights and impact checks, and restore 20270329's audit scope.
+echo "==> Running Security Work supplier-cycle assertions"
+SWSUP_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_work_supplier_cycle_test.sql 2>&1)" || { echo "$SWSUP_OUT"; exit 1; }
+SWSUP_PASSED="$(printf '%s\n' "$SWSUP_OUT" | grep -c 'NOTICE:  ok  SW-SUP ' || true)"
+[ "$SWSUP_PASSED" -ge 78 ] || { echo "$SWSUP_OUT"; echo "FAIL: Security Work supplier-cycle assertion shortfall: $SWSUP_PASSED (floor 78)"; exit 1; }
+echo "    ok  $SWSUP_PASSED Security Work supplier-cycle assertions passed"
+TEST_DB="$TEST_DB" bash scripts/security-work-supplier-cycle-negative-controls.sh
+SWSUP_LOG="$(mktemp)"
+if psql -v ON_ERROR_STOP=1 -v sw_supplier_keep_fixture=true -d "$TEST_DB" -f supabase/tests/security_work_supplier_cycle_test.sql -c 'RESET ROLE;' -f supabase/rollback/20270330090000_security_work_supplier_cycle_rollback.sql >"$SWSUP_LOG" 2>&1; then
+  cat "$SWSUP_LOG"; rm -f "$SWSUP_LOG"; echo 'FAIL: adopted supplier-cycle rollback succeeded'; exit 1
+fi
+grep -q 'SW_SUPPLIER_CYCLE_ROLLBACK_DATA_PRESENT' "$SWSUP_LOG" || { cat "$SWSUP_LOG"; rm -f "$SWSUP_LOG"; exit 1; }
+rm -f "$SWSUP_LOG"
+echo '    ok  supplier-cycle rollback preserves decisions, requests, responses and verifications'
+psql_q -d "$TEST_DB" -f supabase/rollback/20270330090000_security_work_supplier_cycle_rollback.sql >/dev/null
+SWSUP_LEFT="$(psql_q -d "$TEST_DB" -Atc "SELECT (SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND (c.relname LIKE 'sw_supplier%' OR c.relname IN ('sw_decisions','sw_asset_dependencies'))) + (SELECT count(*) FROM information_schema.columns WHERE table_schema='public' AND ((table_name='sw_workspace_memberships' AND column_name='can_share_external') OR (table_name='sw_risk_assets' AND column_name LIKE 'impact_%'))) + (SELECT count(*) FROM pg_proc WHERE proname LIKE '%supplier%' OR proname IN ('can_share','set_member_sharing','set_asset_impact','sw_set_member_sharing','sw_set_asset_impact','stamp_risk_asset_impact','guard_dependency','guard_contract','guard_obligation','guard_decision','can_see_subject','subject_scope')) + (SELECT count(*) FROM pg_proc WHERE proname='audit_scope' AND prosrc LIKE '%sw_decisions%')")"
+[ "$SWSUP_LEFT" = 0 ] || { echo "FAIL: supplier-cycle rollback left $SWSUP_LEFT object(s)"; exit 1; }
+echo '    ok  supplier cycle stood down; no new object remains'
+
 # Restricted derived records and authorised review acceptance (20270329090000)
 # is the newest Security Work slot, so it is proven and stood down first. Its
 # rollback must refuse scoped records and recorded acceptances, and restore
@@ -3817,6 +3838,9 @@ echo '    ok  monitoring reapplied; monitoring, context and foundation assertion
 psql_q -d "$TEST_DB" -f supabase/migrations/20270329090000_security_work_restricted_records.sql >/dev/null
 SWRRC_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_work_restricted_records_test.sql -f supabase/tests/security_work_monitoring_impact_test.sql -f supabase/tests/security_work_context_missions_test.sql -f supabase/tests/security_work_foundation_test.sql 2>&1)" || { echo "$SWRRC_OUT"; exit 1; }
 echo '    ok  restricted records reapplied; restricted-records, monitoring, context and foundation assertions pass together'
+psql_q -d "$TEST_DB" -f supabase/migrations/20270330090000_security_work_supplier_cycle.sql >/dev/null
+SWSUP_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_work_supplier_cycle_test.sql -f supabase/tests/security_work_restricted_records_test.sql -f supabase/tests/security_work_monitoring_impact_test.sql -f supabase/tests/security_work_foundation_test.sql 2>&1)" || { echo "$SWSUP_OUT"; exit 1; }
+echo '    ok  supplier cycle reapplied; supplier-cycle, restricted-records, monitoring and foundation assertions pass together'
 
 # Race fixtures commit to coordinate independent sessions. Give them their own
 # clone so no persistent synthetic workspace can affect later rollback proofs.
@@ -3826,6 +3850,7 @@ psql_q -d postgres -c "CREATE DATABASE ${TEST_DB}_sw_race TEMPLATE ${TEST_DB}_pr
 PGDATABASE="${TEST_DB}_sw_race" bash scripts/security-work-concurrency-test.sh
 PGDATABASE="${TEST_DB}_sw_race" bash scripts/security-work-analysis-concurrency-test.sh
 PGDATABASE="${TEST_DB}_sw_race" bash scripts/security-work-assistant-race-test.sh
+PGDATABASE="${TEST_DB}_sw_race" bash scripts/security-work-supplier-race-test.sh
 psql_q -d postgres -c "DROP DATABASE ${TEST_DB}_sw_race;" >/dev/null
 
 # The assistant's application code over real PostgREST 14.15 (the same pinned
