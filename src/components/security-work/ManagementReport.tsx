@@ -198,6 +198,9 @@ export function SecurityManagementReportPage({ reportId }: { reportId: string })
             {l("Ögonblicksbild", "Snapshot")}:{" "}
             {facts.generated_at ? formatDate(facts.generated_at, lang, true) : "—"}
           </p>
+          <p className="text-xs text-muted-foreground" data-testid="sw-report-scope">
+            {t("sw.prog.report.scope")}
+          </p>
           <div className="grid gap-4 text-sm sm:grid-cols-2">
             <div>
               <h3 className="font-semibold">

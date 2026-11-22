@@ -109,6 +109,65 @@ export function useImpactText() {
         topic: l("ämne", "topic"),
         country: l("land", "country"),
       })[kind] ?? kind,
+    /** A failed check in words, with what to do next. Never a raw code. */
+    failure: (code: string | null | undefined) => {
+      const value = code ?? "";
+      if (value === "egress_timeout" || value === "egress_dns_timeout")
+        return l(
+          "Källan svarade inte i tid. Försök igen senare. Om det upprepas, kontrollera flödesadressen.",
+          "The source did not answer in time. Try again later; if it keeps happening, check the feed address.",
+        );
+      if (value === "egress_unresolved")
+        return l(
+          "Källans adress kunde inte hittas. Kontrollera flödesadressen.",
+          "The source's address could not be found. Check the feed address.",
+        );
+      if (value === "tls_failed")
+        return l(
+          "Källans identitet kunde inte verifieras (certifikatet stämmer inte). Inget hämtades. Be en administratör granska källan.",
+          "The source's identity could not be verified (its certificate does not match). Nothing was fetched. Ask an administrator to review the source.",
+        );
+      if (value === "egress_transport_unavailable")
+        return l(
+          "Hämtning är inte tillgänglig i den här miljön. Inget har hämtats.",
+          "Fetching is not available in this environment. Nothing was fetched.",
+        );
+      if (value === "egress_connection_closed" || value === "network_error")
+        return l(
+          "Det gick inte att ansluta till källan. Vissa utgivares webbplatser kan inte nås från tjänsten, till exempel när de ligger bakom Cloudflare. Försök igen senare eller be en administratör granska källan.",
+          "Could not connect to the source. Some publishers' sites cannot be reached from this service, for example when they are behind Cloudflare. Try again later or ask an administrator to review the source.",
+        );
+      if (value.startsWith("egress_") || value === "redirect_refused")
+        return l(
+          "Källan pekar på en adress som inte är tillåten, till exempel en omdirigering bort från den godkända utgivaren. Inget hämtades. Be en administratör granska källan.",
+          "The source points to an address that is not allowed, for example a redirect away from the approved publisher. Nothing was fetched. Ask an administrator to review the source.",
+        );
+      if (value === "feed_too_large")
+        return l(
+          "Flödet är större än tillåtet (2 MB). Kontrollera att adressen pekar på själva flödet.",
+          "The feed is larger than allowed (2 MB). Check that the address points to the feed itself.",
+        );
+      if (value.startsWith("feed_"))
+        return l(
+          "Svaret kunde inte läsas som ett RSS- eller Atom-flöde, så vi vet inte vad källan innehåller. Kontrollera att adressen pekar på själva flödet.",
+          "The response could not be read as an RSS or Atom feed, so we do not know what the source contains. Check that the address points to the feed itself.",
+        );
+      const http = /^http_(\d{3})$/.exec(value)?.[1];
+      if (http && http.startsWith("5"))
+        return l(
+          `Källan har ett tillfälligt fel (HTTP ${http}). Försök igen senare.`,
+          `The source has a temporary problem (HTTP ${http}). Try again later.`,
+        );
+      if (http)
+        return l(
+          `Källan svarade med ett fel (HTTP ${http}). Kontrollera flödesadressen.`,
+          `The source answered with an error (HTTP ${http}). Check the feed address.`,
+        );
+      return l(
+        "Kontrollen misslyckades. Försök igen senare.",
+        "The check failed. Try again later.",
+      );
+    },
     error: (code: string | undefined) =>
       code === "FEED_HOST_NOT_APPROVED"
         ? l(

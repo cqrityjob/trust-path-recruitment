@@ -94,6 +94,16 @@ export async function resolveAll(
   }
 }
 
+/** A certificate or handshake refusal (Node codes; workerd says so in the message). */
+function tlsFailure(error: unknown): boolean {
+  const code = String((error as { code?: unknown } | null)?.code ?? "");
+  const message = String((error as { message?: unknown } | null)?.message ?? "");
+  return (
+    /^ERR_(TLS|SSL)|CERT|SELF_SIGNED|UNABLE_TO_VERIFY|DEPTH_ZERO/.test(code) ||
+    /certificate|handshake|\btls\b|\bssl\b/i.test(message)
+  );
+}
+
 /** Rejects when the shared deadline passes first: a hung DNS answer is a timeout too. */
 function beforeDeadline<T>(
   work: Promise<T>,
@@ -145,14 +155,20 @@ export async function fetchFeed(
       };
       if (hop === 0 && source.etag) headers["if-none-match"] = source.etag;
       if (hop === 0 && source.lastModified) headers["if-modified-since"] = source.lastModified;
-      const response = await transport({
-        url,
-        address: target.address,
-        family: target.family,
-        headers,
-        signal: controller.signal,
-        maxBytes: MAX_BYTES,
-      });
+      // The connector honours the signal itself; the deadline also bounds it
+      // from outside, so a connection can never keep "Fetch now" waiting.
+      const response = await beforeDeadline(
+        transport({
+          url,
+          address: target.address,
+          family: target.family,
+          headers,
+          signal: controller.signal,
+          maxBytes: MAX_BYTES,
+        }),
+        controller.signal,
+        "egress_timeout",
+      );
       if (response.status >= 300 && response.status < 400 && response.status !== 304) {
         const location = response.headers.get("location");
         if (!location || hop >= MAX_REDIRECTS)
@@ -185,8 +201,10 @@ export async function fetchFeed(
       error instanceof EgressError || error instanceof FeedError
         ? error.code
         : controller.signal.aborted
-          ? "timeout"
-          : "network_error";
+          ? "egress_timeout"
+          : tlsFailure(error)
+            ? "tls_failed"
+            : "network_error";
     return { status: "failed", httpStatus: null, errorCode: code };
   } finally {
     clearTimeout(timer);

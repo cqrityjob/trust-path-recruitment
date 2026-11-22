@@ -178,9 +178,13 @@ export function WorkError({
               ? t("sw.error.reference")
               : code === "INVALID_INPUT"
                 ? t("sw.error.invalid")
-                : code === "SOURCE_INACTIVE"
-                  ? t("sw.sources.inactive")
-                  : t("sw.error.save"));
+                : code === "RESTRICTED_IN_REPORT"
+                  ? t("sw.error.restrictedInReport")
+                  : code === "APPROVER_REQUIRED"
+                    ? t("sw.error.approverRequired")
+                    : code === "SOURCE_INACTIVE"
+                      ? t("sw.sources.inactive")
+                      : t("sw.error.save"));
   return (
     <div
       role="alert"

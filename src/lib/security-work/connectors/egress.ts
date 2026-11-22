@@ -23,6 +23,8 @@ export class EgressError extends Error {
       | "egress_private_address"
       | "egress_unresolved"
       | "egress_dns_timeout"
+      | "egress_timeout"
+      | "egress_connection_closed"
       | "egress_transport_unavailable",
   ) {
     super(code);

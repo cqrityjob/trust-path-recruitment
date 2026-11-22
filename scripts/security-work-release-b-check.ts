@@ -10,6 +10,7 @@ import {
 import { FeedError, parseFeed } from "../src/lib/security-work/connectors/feed";
 import { fetchFeed, resolveAll } from "../src/lib/security-work/connectors/fetch.server";
 import {
+  httpGet,
   pinnedTransport,
   runtimeConnector,
   workersConnector,
@@ -169,6 +170,178 @@ await check("a document with a DTD or entity declaration is refused (no XXE)", (
     FeedError,
   );
   assert.throws(() => parseFeed("<html><body>not a feed</body></html>"), FeedError);
+});
+
+await check("a malformed feed fails fast; a valid empty feed is empty; RDF is read", () => {
+  for (const [label, xml] of [
+    ["repeated <item>", `<rss>${"<item>".repeat(85000)}</rss>`],
+    ["repeated <entry>", `<feed>${"<entry>".repeat(85000)}</feed>`],
+    ["truncated", rss("<item><title>a</title>").slice(0, -10)],
+    ["mismatched", "<rss><channel></item></channel></rss>"],
+    ["unterminated CDATA", rss("<item><title><![CDATA[a</title></item>")],
+    ["two roots", "<rss></rss><rss></rss>"],
+  ] as const) {
+    const started = performance.now();
+    assert.throws(() => parseFeed(xml), FeedError, label);
+    assert.ok(performance.now() - started < 1000, `${label} is refused in linear time`);
+  }
+  assert.deepEqual(parseFeed(rss("")), [], "a valid feed without items is empty, not an error");
+  assert.deepEqual(
+    parseFeed(`<feed xmlns="http://www.w3.org/2005/Atom"><title>T</title></feed>`),
+    [],
+  );
+  assert.throws(
+    () => parseFeed(rss("<item></item><item><link>http://x</link></item>")),
+    (error: FeedError) => error.code === "feed_no_usable_items",
+    "items without anything usable are a failed read, never 'nothing new'",
+  );
+  const rdf = parseFeed(
+    `<rdf:RDF xmlns:rdf="r"><channel><title>c</title></channel><item><title>R</title><link>https://feeds.example.test/r</link><dc:date>2026-11-01</dc:date></item></rdf:RDF>`,
+  );
+  assert.deepEqual([rdf[0].title, rdf[0].url], ["R", "https://feeds.example.test/r"]);
+  const many = parseFeed(rss("<item><title>x</title><guid>g</guid></item>".repeat(5000)));
+  assert.equal(many.length, 200, "items are capped while reading");
+});
+
+const utf8 = new TextEncoder();
+/** A raw server: the response bytes arrive in the given fragments. */
+const rawDuplex = (fragments: (string | Uint8Array)[]) => {
+  let closed = 0;
+  return {
+    get closed() {
+      return closed;
+    },
+    readable: new ReadableStream<Uint8Array>({
+      start(controller) {
+        for (const part of fragments)
+          controller.enqueue(typeof part === "string" ? utf8.encode(part) : part);
+        controller.close();
+      },
+    }),
+    writable: new WritableStream<Uint8Array>(),
+    close: () => void (closed += 1),
+  };
+};
+const get = (fragments: (string | Uint8Array)[], maxBytes = 2 * 1024 * 1024) =>
+  httpGet(
+    rawDuplex(fragments),
+    { hostname: "feeds.example.test", path: "/rss", headers: {} },
+    { maxBytes, signal: AbortSignal.timeout(5000) },
+  );
+const split = (text: string, size: number) => {
+  const parts: string[] = [];
+  for (let i = 0; i < text.length; i += size) parts.push(text.slice(i, i + size));
+  return parts;
+};
+const framing = async (fragments: (string | Uint8Array)[], maxBytes?: number) => {
+  try {
+    await get(fragments, maxBytes);
+    return "accepted";
+  } catch (error) {
+    return error instanceof FeedError ? error.code : String(error);
+  }
+};
+await check("HTTP framing is bounded and strict, not only the decoded body", async () => {
+  const CHUNKED = "HTTP/1.1 200 OK\r\ntransfer-encoding: chunked\r\n\r\n";
+  const started = performance.now();
+  assert.equal(
+    await framing([CHUNKED, ...split(`0;${"x".repeat(1024 * 1024)}\r\n\r\n`, 64)], 16),
+    "feed_unparseable",
+    "1 MiB of chunk extension under a 16-byte limit is refused (the reported reproduction)",
+  );
+  assert.ok(performance.now() - started < 1000, "and refused without quadratic rescanning");
+  const cases: [string, (string | Uint8Array)[], string][] = [
+    ["an over-long chunk size", [CHUNKED, "123456789\r\nx"], "feed_unparseable"],
+    ["a chunk without its CRLF", [CHUNKED, "3\r\nabcXY0\r\n\r\n"], "feed_unparseable"],
+    ["a non-hex chunk size", [CHUNKED, "zz\r\n"], "feed_unparseable"],
+    [
+      "Content-Length with Transfer-Encoding",
+      [
+        "HTTP/1.1 200 OK\r\ncontent-length: 3\r\ntransfer-encoding: chunked\r\n\r\n3\r\nabc\r\n0\r\n\r\n",
+      ],
+      "feed_unparseable",
+    ],
+    [
+      "an unsupported transfer coding",
+      ["HTTP/1.1 200 OK\r\ntransfer-encoding: gzip, chunked\r\n\r\n"],
+      "feed_unparseable",
+    ],
+    [
+      "a compressed body",
+      ["HTTP/1.1 200 OK\r\ncontent-encoding: gzip\r\ncontent-length: 1\r\n\r\nx"],
+      "feed_unparseable",
+    ],
+    [
+      "a malformed Content-Length",
+      ["HTTP/1.1 200 OK\r\ncontent-length: 1,1\r\n\r\nx"],
+      "feed_unparseable",
+    ],
+    [
+      "a folded header",
+      ["HTTP/1.1 200 OK\r\nx-a: 1\r\n folded\r\ncontent-length: 0\r\n\r\n"],
+      "feed_unparseable",
+    ],
+    [
+      "a head beyond 64 KiB",
+      ["HTTP/1.1 200 OK\r\n", ...split(`x-a: ${"a".repeat(70 * 1024)}`, 512)],
+      "feed_unparseable",
+    ],
+    ["a protocol switch", ["HTTP/1.1 101 Switching\r\n\r\n"], "feed_unparseable"],
+    ["a truncated body", ["HTTP/1.1 200 OK\r\ncontent-length: 10\r\n\r\nabc"], "feed_unparseable"],
+    [
+      "a declared length over the limit",
+      ["HTTP/1.1 200 OK\r\ncontent-length: 99\r\n\r\n"],
+      "feed_too_large",
+    ],
+  ];
+  for (const [label, fragments, expected] of cases)
+    assert.equal(await framing(fragments, 64), expected, label);
+  // Legitimate responses, delivered one byte at a time.
+  const body = rss(
+    `<item><title>Road closed</title><guid>g1</guid><description>E6 closed</description></item>`,
+  );
+  const bytes = (text: string) => [...utf8.encode(text)].map((b) => Uint8Array.of(b));
+  const byLength = await get(
+    bytes(`HTTP/1.1 200 OK\r\ncontent-length: ${utf8.encode(body).length}\r\n\r\n${body}`),
+  );
+  assert.equal(new TextDecoder().decode(byLength.body), body, "Content-Length, fragmented");
+  const chunks = split(body, 7)
+    .map((part) => `${utf8.encode(part).length.toString(16)};ext=1\r\n${part}\r\n`)
+    .join("");
+  const byChunks = await get(bytes(`${CHUNKED}${chunks}0\r\n\r\n`));
+  assert.equal(
+    new TextDecoder().decode(byChunks.body),
+    body,
+    "chunked with extensions, fragmented",
+  );
+  const byClose = await get(bytes(`HTTP/1.1 200 OK\r\n\r\n${body}`));
+  assert.equal(new TextDecoder().decode(byClose.body), body, "read to close, fragmented");
+  const interim = await get([
+    `HTTP/1.1 103 Early Hints\r\nlink: </a>\r\n\r\nHTTP/1.1 200 OK\r\ncontent-length: 2\r\n\r\nok`,
+  ]);
+  assert.deepEqual(
+    [interim.status, new TextDecoder().decode(interim.body)],
+    [200, "ok"],
+    "an interim response is skipped",
+  );
+  // A full 2 MiB chunked feed in small pieces stays fast (linear buffering).
+  const large = "y".repeat(2 * 1024 * 1024 - 64);
+  const t = performance.now();
+  const big = await get([
+    CHUNKED,
+    ...split(
+      split(large, 8192)
+        .map((p) => `2000\r\n${p}\r\n`)
+        .join("")
+        .replace(
+          /2000\r\n(y*)\r\n$/,
+          (_m, last: string) => `${last.length.toString(16)}\r\n${last}\r\n`,
+        ) + "0\r\n\r\n",
+      1500,
+    ),
+  ]);
+  assert.equal(big.body.length, large.length);
+  assert.ok(performance.now() - t < 3000, "2 MiB in 1500-byte pieces is read in linear time");
 });
 
 type Reply = {
@@ -402,7 +575,7 @@ await check("an oversized body and a stalled response fail as coverage facts", a
       transport: transport({}, [], true),
     },
   );
-  assert.equal(slow.errorCode, "timeout");
+  assert.equal(slow.errorCode, "egress_timeout");
   for (const shape of [{ chunked: true }, { untilClose: true }]) {
     const over = await fetchFeed(
       { feedUrl: "https://feeds.example.test/rss", etag: null, lastModified: null },

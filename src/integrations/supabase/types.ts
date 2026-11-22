@@ -19216,6 +19216,7 @@ export type Database = {
           entity_id: string
           entity_table: string
           id: string
+          mission_scope: string[]
           new_status: string | null
           old_status: string | null
           operation: string
@@ -19229,6 +19230,7 @@ export type Database = {
           entity_id: string
           entity_table: string
           id?: string
+          mission_scope?: string[]
           new_status?: string | null
           old_status?: string | null
           operation: string
@@ -19242,6 +19244,7 @@ export type Database = {
           entity_id?: string
           entity_table?: string
           id?: string
+          mission_scope?: string[]
           new_status?: string | null
           old_status?: string | null
           operation?: string
@@ -20278,6 +20281,7 @@ export type Database = {
           facts: Json
           id: string
           language: string
+          mission_scope: string[]
           narrative: Json
           period_end: string | null
           period_start: string | null
@@ -20298,6 +20302,7 @@ export type Database = {
           facts?: Json
           id?: string
           language?: string
+          mission_scope?: string[]
           narrative?: Json
           period_end?: string | null
           period_start?: string | null
@@ -20318,6 +20323,7 @@ export type Database = {
           facts?: Json
           id?: string
           language?: string
+          mission_scope?: string[]
           narrative?: Json
           period_end?: string | null
           period_start?: string | null

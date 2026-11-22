@@ -645,15 +645,23 @@ export async function savePlan(
 // ── Management reports ───────────────────────────────────────────────────────
 /**
  * A management report is read by the whole workspace and its facts are
- * frozen, so a risk or action scoped to a mission (derived from that
- * mission's impact brief) never enters it - not even when the person who
- * builds the report is in the mission's circle and can see it. Links and gap
- * references to such records are dropped with them. Ordinary records are
- * untouched.
+ * frozen. An open mission's risks and actions are ordinary workspace work and
+ * belong in it. A restricted mission's never do - not even when the person
+ * who builds the report is in its circle - and neither do the links and gap
+ * references that point at them. A mission this caller cannot see, or that
+ * cannot be found, counts as restricted. The database enforces the same rule
+ * (SW_RESTRICTED_IN_REPORT) and records the missions a report drew on, so the
+ * report follows a mission that is restricted later.
  */
-export function workspaceWideFacts(snapshot: ProgrammeSnapshot): ProgrammeSnapshot {
-  const risks = new Set(snapshot.risks.filter((r) => r.access_mission_id).map((r) => r.id));
-  const actions = new Set(snapshot.actions.filter((a) => a.access_mission_id).map((a) => a.id));
+export function workspaceWideFacts(
+  snapshot: ProgrammeSnapshot,
+  openMissionIds: ReadonlySet<string>,
+): ProgrammeSnapshot {
+  const hidden = (mission: string | null) => Boolean(mission) && !openMissionIds.has(mission!);
+  const risks = new Set(snapshot.risks.filter((r) => hidden(r.access_mission_id)).map((r) => r.id));
+  const actions = new Set(
+    snapshot.actions.filter((a) => hidden(a.access_mission_id)).map((a) => a.id),
+  );
   if (!risks.size && !actions.size) return snapshot;
   return {
     ...snapshot,
@@ -673,6 +681,35 @@ export function workspaceWideFacts(snapshot: ProgrammeSnapshot): ProgrammeSnapsh
         : gap,
     ),
   };
+}
+/** The open missions among those the snapshot's records are scoped to. */
+async function openMissions(
+  caller: SecurityWorkCaller,
+  workspaceId: string,
+  snapshot: ProgrammeSnapshot,
+): Promise<Set<string>> {
+  const ids = [
+    ...new Set(
+      [...snapshot.risks, ...snapshot.actions]
+        .map((record) => record.access_mission_id)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  ];
+  if (!ids.length) return new Set();
+  const rows =
+    checked(
+      await caller.supabase
+        .from("sw_missions")
+        .select("id,restricted")
+        .eq("workspace_id", workspaceId)
+        .in("id", ids)
+        .limit(ids.length),
+    ) ?? [];
+  return new Set(rows.filter((row) => !row.restricted).map((row) => row.id));
+}
+async function reportSnapshot(caller: SecurityWorkCaller, workspaceId: string) {
+  const snapshot = await readProgramme(caller, workspaceId);
+  return workspaceWideFacts(snapshot, await openMissions(caller, workspaceId, snapshot));
 }
 async function latestApprovedReport(
   caller: SecurityWorkCaller,
@@ -696,7 +733,7 @@ export async function createManagementReport(
   data: inputs.CreateManagementReportInput,
 ): Promise<ManagementReport> {
   await access(caller, data.workspaceId, true);
-  const snapshot = workspaceWideFacts(await readProgramme(caller, data.workspaceId));
+  const snapshot = await reportSnapshot(caller, data.workspaceId);
   const previous = await latestApprovedReport(caller, data.workspaceId, data.id);
   const built = buildManagementReportData(snapshot, previous);
   const created = checked(
@@ -745,7 +782,7 @@ export async function saveManagementReport(
   }
   let refreshed: { facts: Json; computed: Json } | null = null;
   if (data.refreshData) {
-    const snapshot = workspaceWideFacts(await readProgramme(caller, data.workspaceId));
+    const snapshot = await reportSnapshot(caller, data.workspaceId);
     const previous = await latestApprovedReport(caller, data.workspaceId, data.id);
     const built = buildManagementReportData(snapshot, previous);
     refreshed = {

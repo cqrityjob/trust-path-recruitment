@@ -4,15 +4,24 @@
 // a name that has no DNS at all. TLS must verify the certificate against the
 // hostname: a different name or an untrusted certificate is refused. Nothing
 // leaves this machine.
+//
+// Cancellation over real sockets: a server that accepts TCP and never
+// completes TLS, a server that closes before the handshake, a body that
+// stalls, and a signal that is already aborted. Each must end promptly with a
+// clear code, release the socket and leave no abort listener behind; the
+// whole fetch must end within its deadline.
 import assert from "node:assert/strict";
 import cp from "node:child_process";
 import fs from "node:fs";
 import https from "node:https";
+import net from "node:net";
 import os from "node:os";
 import path from "node:path";
+import { fetchFeed } from "../src/lib/security-work/connectors/fetch.server";
 import {
   nodeConnector,
   pinnedTransport,
+  type PinnedTransport,
 } from "../src/lib/security-work/connectors/pinned-https.server";
 
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), "sw-pinned-"));
@@ -44,6 +53,11 @@ const body = `<?xml version="1.0"?><rss version="2.0"><channel><title>T</title><
 const seenHosts: string[] = [];
 const server = https.createServer({ key: fs.readFileSync(key), cert: ca }, (req, res) => {
   seenHosts.push(String(req.headers.host));
+  if (req.url === "/stall-body") {
+    res.writeHead(200, { "content-length": 1000 });
+    res.write("abc"); // and nothing more
+    return;
+  }
   if (req.url === "/chunked") {
     res.writeHead(200, { "content-type": "application/rss+xml" });
     res.write(body.slice(0, 40));
@@ -99,10 +113,125 @@ try {
     "an untrusted certificate is refused",
   );
   checks++;
+  // ── Cancellation over real sockets ───────────────────────────────────────
+  const sockets = new Set<net.Socket>();
+  const stalled = net.createServer((socket) => {
+    sockets.add(socket);
+    socket.on("error", () => undefined);
+    socket.on("close", () => sockets.delete(socket));
+  });
+  const closing = net.createServer((socket) => socket.destroy());
+  const listen = (srv: net.Server) =>
+    new Promise<number>((resolve) =>
+      srv.listen(0, "127.0.0.1", () => resolve((srv.address() as net.AddressInfo).port)),
+    );
+  const stalledPort = await listen(stalled);
+  const closingPort = await listen(closing);
+  // A deadline like fetchFeed's own (controller + timer). Bun does not always
+  // fire AbortSignal.timeout for an otherwise idle request.
+  const deadline = (ms: number) => {
+    const controller = new AbortController();
+    setTimeout(() => controller.abort(), ms).unref?.();
+    return controller.signal;
+  };
+  /**
+   * A signal that tracks its abort listeners. A leak only matters while the
+   * signal can still fire, so it is asserted where the request ended without
+   * an abort (success, early close).
+   */
+  const counted = (signal: AbortSignal) => {
+    const live = new Set<unknown>();
+    const add = signal.addEventListener.bind(signal);
+    const remove = signal.removeEventListener.bind(signal);
+    signal.addEventListener = ((type: string, fn: EventListener, opts?: unknown) => {
+      if (type === "abort") live.add(fn);
+      add(type, fn, opts as AddEventListenerOptions);
+    }) as typeof signal.addEventListener;
+    signal.removeEventListener = ((type: string, fn: EventListener) => {
+      if (type === "abort") live.delete(fn);
+      remove(type, fn);
+    }) as typeof signal.removeEventListener;
+    return { signal, live: () => live.size };
+  };
+  const timed = async (run: () => Promise<unknown>) => {
+    const started = performance.now();
+    const code = await refusal(run());
+    return { code, ms: performance.now() - started };
+  };
+  const via = (port: number, route: string, signal: AbortSignal) =>
+    pinnedTransport(nodeConnector({ ca }))({
+      url: new URL(`https://feeds.example.test:${port}${route}`),
+      address: "127.0.0.1",
+      family: 4,
+      headers: {},
+      signal,
+      maxBytes: 2 * 1024 * 1024,
+    });
+
+  const handshake = counted(deadline(300));
+  const stall = await timed(() => via(stalledPort, "/rss", handshake.signal));
+  assert.equal(stall.code, "egress_timeout", "a stalled TLS handshake ends at the deadline");
+  assert.ok(stall.ms < 1500, `promptly (${Math.round(stall.ms)} ms)`);
+  await new Promise((r) => setTimeout(r, 100));
+  assert.equal(sockets.size, 0, "the stalled socket is closed");
+  checks++;
+
+  const already = new AbortController();
+  already.abort();
+  const before = sockets.size;
+  const pre = await timed(() => via(stalledPort, "/rss", already.signal));
+  assert.equal(pre.code, "egress_timeout", "an already-aborted request is refused");
+  assert.ok(pre.ms < 100, "at once");
+  await new Promise((r) => setTimeout(r, 50));
+  assert.equal(sockets.size, before, "without opening a connection");
+  checks++;
+
+  const early = counted(deadline(5000));
+  const closed = await timed(() => via(closingPort, "/rss", early.signal));
+  assert.match(
+    closed.code,
+    /egress_connection_closed|ECONNRESET/,
+    "a close before the handshake is a clear failure",
+  );
+  assert.ok(closed.ms < 1000, "promptly, not at the deadline");
+  assert.equal(early.live(), 0, "no abort listener is left behind");
+  checks++;
+
+  const stallSignal = counted(deadline(300));
+  const midway = await timed(() => via(port, "/stall-body", stallSignal.signal));
+  assert.equal(midway.code, "egress_timeout", "a body that stalls ends at the deadline");
+  assert.ok(midway.ms < 1500, "promptly");
+  const ok2 = counted(deadline(5000));
+  await via(port, "/rss", ok2.signal);
+  assert.equal(ok2.live(), 0, "a successful request leaves no abort listener either");
+  checks++;
+
+  // The whole fetch: DNS, connection, TLS and body under one deadline. The
+  // feed URL is the production shape (port 443); the test transport sends the
+  // real pinned connection to the stalled local server instead.
+  const toStalled: PinnedTransport = (request) =>
+    pinnedTransport(nodeConnector({ ca }))({
+      ...request,
+      url: new URL(`https://feeds.example.test:${stalledPort}/rss`),
+      address: "127.0.0.1",
+    });
+  const started = performance.now();
+  const run = await fetchFeed(
+    { feedUrl: "https://feeds.example.test/rss", etag: null, lastModified: null },
+    ["feeds.example.test"],
+    { resolve: async () => ["93.184.216.34"], transport: toStalled, timeoutMs: 400 },
+  );
+  assert.deepEqual([run.status, run.errorCode], ["failed", "egress_timeout"]);
+  assert.ok(performance.now() - started < 1500, '"Fetch now" ends with a clear failure');
+  checks++;
+
+  stalled.close();
+  closing.close();
+  for (const socket of sockets) socket.destroy();
 } finally {
   server.close();
   fs.rmSync(dir, { recursive: true, force: true });
 }
 console.log(
-  `Security Work pinned HTTPS: ${checks} checks over real TLS on 127.0.0.1 passed; hostname verified, address pinned.`,
+  `Security Work pinned HTTPS: ${checks} checks over real TLS on 127.0.0.1 passed; hostname verified, address pinned, cancellation and deadline proven.`,
 );

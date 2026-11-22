@@ -216,7 +216,17 @@ function handle(state: State, name: string, data: Row): unknown {
     }
     case "fetchSecurityFeedNow": {
       const source = state.sources.find((s) => s.id === data.sourceId)!;
-      const parsed = parseFeed(state.nextFeed);
+      let parsed: ReturnType<typeof parseFeed>;
+      try {
+        parsed = parseFeed(state.nextFeed);
+      } catch (error) {
+        // As the server does: a feed that cannot be read is a failed run,
+        // recorded as coverage, never "nothing new".
+        const code = (error as { code: string }).code;
+        source.last_checked_at = source.last_failure_at = now();
+        source.last_failure = code;
+        return ok({ id: randomUUID(), status: "failed", error_code: code, items_new: 0 });
+      }
       let fresh = 0;
       for (const entry of parsed) {
         if (state.items.some((i) => i.guid === entry.guid)) continue;
@@ -501,6 +511,21 @@ test("an official feed to a reviewed risk and actions, with follow-up, export an
     await form.getByRole("button", { name: "Anslut" }).click();
     await expect(page.getByTestId("sw-coverage")).toHaveAttribute("data-coverage", "never_checked");
     await expect(page.getByTestId("sw-feed")).toHaveAttribute("data-state", "never_checked");
+  });
+
+  await test.step("A feed that cannot be read is a failed check with a next step, then a retry succeeds", async () => {
+    const good = state.nextFeed;
+    state.nextFeed = `<rss>${"<item>".repeat(5000)}</rss>`;
+    await page.getByTestId("sw-fetch-now").click();
+    const failed = page.getByTestId("sw-fetch-result");
+    await expect(failed).toHaveAttribute("data-status", "failed");
+    await expect(failed).toContainText("kunde inte läsas som ett RSS- eller Atom-flöde");
+    await expect(failed).toContainText("Kontrollera att adressen pekar på själva flödet");
+    await expect(failed).not.toContainText("feed_");
+    await expect(page.getByTestId("sw-coverage")).toHaveAttribute("data-coverage", "failing");
+    await expect(page.getByTestId("sw-coverage")).toContainText("kan vara ofullständigt");
+    await shot(page, "02a-fetch-failed-clear-next-step");
+    state.nextFeed = good;
   });
 
   await test.step("Fetch now: coverage becomes current and relevance is explained term by term", async () => {

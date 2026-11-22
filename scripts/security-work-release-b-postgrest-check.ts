@@ -9,6 +9,7 @@ import crypto from "node:crypto";
 import { fetchSourceNow } from "../src/lib/security-work/connectors/fetch.server";
 import * as impact from "../src/lib/security-work/impact/services";
 import * as missions from "../src/lib/security-work/missions/services";
+import * as programme from "../src/lib/security-work/programme/services";
 import * as context from "../src/lib/security-work/operating-context/services";
 import { emptyProfile } from "../src/lib/security-work/operating-context/schema";
 import {
@@ -228,7 +229,8 @@ try {
             decisionNote: "",
           }),
         ),
-        "ACCESS_DENIED",
+        "APPROVER_REQUIRED",
+        "an editor without approval rights is told an approver must decide",
       );
       assert.equal(
         await failureCode(
@@ -326,6 +328,30 @@ try {
       // receipt, through the services or PostgREST directly, and resolves
       // nothing.
       const flagId = flags.find((f) => f.brief_id === briefId)!.id;
+      // While the mission is open its risk is ordinary work: a management
+      // report built by an editor outside any circle includes it, and the
+      // database records the mission the report drew on.
+      const openRisk = psql(
+        `SELECT risk_id FROM sw_change_brief_applications WHERE brief_id='${briefId}'`,
+      );
+      const reportId = crypto.randomUUID();
+      const report = await programme.createManagementReport(caller(OUTSIDE), {
+        workspaceId: workspace,
+        id: reportId,
+        title: "Weekly status",
+        language: "en",
+        period_start: "2026-11-01",
+        period_end: "2026-11-30",
+      });
+      const facts = report.facts as { risks: { id: string; title: string }[] };
+      assert.ok(
+        facts.risks.some((r) => r.id === openRisk),
+        "an open mission's risk is in the workspace report",
+      );
+      assert.equal(
+        psql(`SELECT mission_scope::text FROM sw_management_reports WHERE id='${reportId}'`),
+        `{${mission}}`,
+      );
       psql(
         `${asUser(EDITOR)} SET ROLE authenticated; UPDATE sw_missions SET restricted=true WHERE id='${mission}';`,
       );
@@ -386,6 +412,47 @@ try {
           .data,
         [],
         "the outsider changes nothing",
+      );
+      // Its history stays with it, the links' history included, and the report
+      // that drew on it while it was open follows the restriction.
+      const linkIds = psql(
+        `SELECT string_agg(id::text, ',') FROM sw_evidence_links WHERE target_id='${riskId}' OR target_id IN (SELECT id FROM sw_actions WHERE risk_id='${riskId}')`,
+      ).split(",");
+      assert.ok(
+        linkIds.length > 0 && linkIds[0],
+        "fixture: the derived records have evidence links",
+      );
+      assert.deepEqual(
+        (await direct.from("sw_audit_events").select("id").in("entity_id", linkIds)).data,
+        [],
+        "the evidence links' history does not reach the outsider",
+      );
+      assert.deepEqual(
+        (await direct.from("sw_management_reports").select("id").eq("id", reportId)).data,
+        [],
+        "the report that drew on the now-restricted mission leaves the outsider",
+      );
+      assert.equal(
+        (
+          await caller(EDITOR)
+            .supabase.from("sw_management_reports")
+            .select("id")
+            .eq("id", reportId)
+        ).data?.length,
+        1,
+        "the circle keeps it",
+      );
+      const later = await programme.createManagementReport(caller(EDITOR), {
+        workspaceId: workspace,
+        id: crypto.randomUUID(),
+        title: "Status after restriction",
+        language: "en",
+        period_start: "2026-11-01",
+        period_end: "2026-11-30",
+      });
+      assert.ok(
+        !(later.facts as { risks: { id: string }[] }).risks.some((r) => r.id === riskId),
+        "a new workspace report built inside the circle leaves the restricted risk out",
       );
       assert.equal(
         (await caller(EDITOR).supabase.from("sw_risks").select("title").eq("id", riskId)).data?.[0]

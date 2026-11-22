@@ -372,6 +372,12 @@ export const securityWorkSv = {
     "Arbetsytans AI-budget för i dag är förbrukad. Ingen fråga skickades. Du kan fortsätta utan AI.",
   "sw.prog.error.restrictedContext":
     "Posten tillhör ett begränsat uppdrag. AI-svar kan läsas av hela arbetsytan, så den skickas inte till AI. Inget skickades.",
+  "sw.prog.report.scope":
+    "Underlaget omfattar arbetsytans poster och poster från öppna uppdrag. Poster från begränsade uppdrag ingår aldrig i en rapport som hela arbetsytan läser.",
+  "sw.error.restrictedInReport":
+    "Ett uppdrag blev begränsat medan rapporten togs fram, så den sparades inte. Uppdatera fakta och försök igen.",
+  "sw.error.approverRequired":
+    "Bara en person som får godkänna kan fatta det här beslutet. Be en godkännare i arbetsytan att göra det.",
 } as const;
 
 export const securityWorkEn: { [K in keyof typeof securityWorkSv]: string } = {
@@ -751,4 +757,10 @@ export const securityWorkEn: { [K in keyof typeof securityWorkSv]: string } = {
     "The workspace's AI budget for today is used up. Nothing was sent. You can continue without AI.",
   "sw.prog.error.restrictedContext":
     "This record belongs to a restricted mission. AI answers are readable by the whole workspace, so it is not sent to AI. Nothing was sent.",
+  "sw.prog.report.scope":
+    "Covers the workspace's records and records from open missions. Records from restricted missions are never included in a report the whole workspace reads.",
+  "sw.error.restrictedInReport":
+    "A mission became restricted while the report was being prepared, so it was not saved. Refresh the facts and try again.",
+  "sw.error.approverRequired":
+    "Only a person who may approve can make this decision. Ask an approver in the workspace to do it.",
 };

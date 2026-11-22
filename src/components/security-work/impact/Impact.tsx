@@ -290,18 +290,42 @@ function FeedRow({
             ` · mål var ${source.targetMinutes}:e minut`,
             ` · target every ${source.targetMinutes} min`,
           )}
-          {source.failure && ` · ${source.failure}`}
         </p>
-        {fetchNow.data && (
-          <p className="text-xs" role="status" data-testid="sw-fetch-result">
-            {fetchNow.data.status === "not_modified"
-              ? l("Inget nytt sedan förra kontrollen.", "Nothing new since the last check.")
-              : l(
-                  `${fetchNow.data.items_new} nya poster hämtade.`,
-                  `${fetchNow.data.items_new} new items fetched.`,
-                )}
+        {source.failure && !fetchNow.data && (
+          <p className="text-xs text-destructive" data-testid="sw-feed-failure">
+            {text.failure(source.failure)}
           </p>
         )}
+        {fetchNow.data &&
+          (fetchNow.data.status === "failed" ? (
+            <p
+              className="text-xs text-destructive"
+              role="alert"
+              data-testid="sw-fetch-result"
+              data-status="failed"
+            >
+              {text.failure(fetchNow.data.error_code)}
+            </p>
+          ) : (
+            <p
+              className="text-xs"
+              role="status"
+              data-testid="sw-fetch-result"
+              data-status={fetchNow.data.status}
+            >
+              {fetchNow.data.status === "not_modified"
+                ? l("Inget nytt sedan förra kontrollen.", "Nothing new since the last check.")
+                : fetchNow.data.items_new === 0
+                  ? l(
+                      "Källan kontrollerades. Inga nya poster.",
+                      "The source was checked. No new items.",
+                    )
+                  : l(
+                      `${fetchNow.data.items_new} nya poster hämtade.`,
+                      `${fetchNow.data.items_new} new items fetched.`,
+                    )}
+            </p>
+          ))}
         <WorkError code={fetchNow.error?.message} message={text.error(fetchNow.error?.message)} />
       </div>
       {canEdit && (
