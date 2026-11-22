@@ -78,7 +78,7 @@ control 'history is written with its scope' 'an editor outside the circle reads 
 control 'history scope comes from the row, not a later lookup' "an editor outside the circle reads no history of the restricted record's links, assets, controls or deleted citation" \
   "$(mutate 'sw_private.record_change()' "sw_private.audit_scope(TG_TABLE_NAME, _row));" "array_remove(ARRAY[sw_private.record_scope(_workspace, TG_TABLE_NAME, _entity::text)], NULL));")"
 control 'restricted records stay out of reports' "a restricted mission's risk never enters a workspace report, not even from inside the circle" \
-  "$(mutate 'sw_private.guard_report_scope()' "IF EXISTS (SELECT 1 FROM unnest(NEW.mission_scope) m WHERE" "IF false AND EXISTS (SELECT 1 FROM unnest(NEW.mission_scope) m WHERE")"
+  "$(mutate 'sw_private.guard_report_scope()' "IF EXISTS (SELECT 1 FROM unnest(_sources) m WHERE" "IF false AND EXISTS (SELECT 1 FROM unnest(_sources) m WHERE")"
 control 'the report scope is the database'"'"'s' "the report's mission list is the database's, not the client's" \
   "$(mutate 'sw_private.guard_report_scope()' "    NEW.mission_scope := OLD.mission_scope;
     RETURN NEW;" "    RETURN NEW;")"
@@ -86,6 +86,8 @@ control 'reports follow a restricted mission' 'once the mission is restricted it
   'DROP POLICY sw_member_read ON public.sw_management_reports; CREATE POLICY sw_member_read ON public.sw_management_reports FOR SELECT TO authenticated USING (sw_private.can_read(workspace_id));'
 control 'assistant results follow a restricted mission' 'once the mission is restricted its records, report, assistant result and their history leave the outsiders' \
   'DROP POLICY sw_member_read ON public.sw_ai_suggestions; CREATE POLICY sw_member_read ON public.sw_ai_suggestions FOR SELECT TO authenticated USING (sw_private.can_read(workspace_id));'
+control 'a report scope only grows' "the circle refreshes the facts; the report keeps the restricted mission in its scope" \
+  "$(mutate 'sw_private.guard_report_scope()' "FROM unnest(_previous || _sources) m;" "FROM unnest(_sources) m;")"
 
-[ "$passed" -ge 18 ] || { echo "FAIL: restricted-records negative-control shortfall: $passed (floor 18)"; exit 1; }
+[ "$passed" -ge 19 ] || { echo "FAIL: restricted-records negative-control shortfall: $passed (floor 19)"; exit 1; }
 echo "    ok  $passed restricted-records negative controls detected by their original assertions"

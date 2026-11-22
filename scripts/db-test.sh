@@ -3608,7 +3608,7 @@ psql_q -d postgres -c "CREATE DATABASE ${TEST_DB}_pristine TEMPLATE ${TEST_DB};"
 echo "==> Running Security Work restricted-records and review-acceptance assertions"
 SWRRC_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_work_restricted_records_test.sql 2>&1)" || { echo "$SWRRC_OUT"; exit 1; }
 SWRRC_PASSED="$(printf '%s\n' "$SWRRC_OUT" | grep -c 'NOTICE:  ok  SW-RRC ' || true)"
-[ "$SWRRC_PASSED" -ge 63 ] || { echo "$SWRRC_OUT"; echo "FAIL: Security Work restricted-records assertion shortfall: $SWRRC_PASSED (floor 63)"; exit 1; }
+[ "$SWRRC_PASSED" -ge 70 ] || { echo "$SWRRC_OUT"; echo "FAIL: Security Work restricted-records assertion shortfall: $SWRRC_PASSED (floor 70)"; exit 1; }
 echo "    ok  $SWRRC_PASSED Security Work restricted-records assertions passed"
 TEST_DB="$TEST_DB" bash scripts/security-work-restricted-records-negative-controls.sh
 SWRRC_LOG="$(mktemp)"

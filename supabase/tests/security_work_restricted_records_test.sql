@@ -261,6 +261,11 @@ SELECT pg_temp.login('5c000000-0000-4000-8000-000000000004');
 SELECT pg_temp.produce(:'wa','5c000000-0000-4000-8000-0000000000c1',pg_temp.manifest('risk_scenario','risk',:'orisk','Describe'),'{"threat_scenario":"Scenario","description":"Description","missing_information":[],"questions":[]}') AS osug \gset
 SELECT pg_temp.login('5c000000-0000-4000-8000-000000000005');
 SELECT pg_temp.ok((SELECT count(*)=1 FROM sw_processing_jobs WHERE id=:'osug') AND (SELECT count(*)=1 FROM sw_ai_suggestions WHERE id=:'osug'),'the assistant works on an open mission''s risk and the workspace reads the result');
+-- The report gets its own text and an assistant draft of it while the mission is open.
+SELECT pg_temp.login('5c000000-0000-4000-8000-000000000004');
+UPDATE sw_management_reports SET narrative='{"executive_position":{"text":"Deliveries on the coastal route are slower","origin":"user"}}' WHERE id=:'rep';
+SELECT pg_temp.produce(:'wa','5c000000-0000-4000-8000-0000000000c2',pg_temp.manifest('report_narrative','management_report',:'rep','Draft'),'{"sections":{"executive_position":"Coastal route slower"},"caveats":[]}') AS nsug \gset
+SELECT pg_temp.ok((SELECT narrative->'executive_position'->>'text' IS NOT NULL FROM sw_management_reports WHERE id=:'rep') AND (SELECT count(*)=1 FROM sw_ai_suggestions WHERE id=:'nsug'),'while the mission is open the report gets its own text and an assistant draft');
 -- The mission's creator restricts it: the records and every copy follow.
 SELECT pg_temp.login('5c000000-0000-4000-8000-000000000002');
 UPDATE sw_missions SET restricted=true WHERE id=:'om';
@@ -279,6 +284,25 @@ SELECT pg_temp.login('5c000000-0000-4000-8000-000000000002');
 SELECT sw_set_mission_member(:'wa',:'om','5c000000-0000-4000-8000-000000000005',false);
 SELECT pg_temp.login('5c000000-0000-4000-8000-000000000005');
 SELECT pg_temp.ok((SELECT count(*)=0 FROM sw_management_reports WHERE id=:'rep') AND (SELECT count(*)=0 FROM sw_ai_suggestions WHERE id=:'osug'),'removing the member removes the report and the assistant result');
+-- A refresh by the circle drops the restricted risk from the facts, but the
+-- report's text still says what it said: the report stays need-to-know.
+SELECT pg_temp.login('5c000000-0000-4000-8000-000000000002');
+UPDATE sw_management_reports SET facts=jsonb_build_object('risks',jsonb_build_array(jsonb_build_object('id',:'plain')),'actions','[]'::jsonb), title='Status Q1 refreshed' WHERE id=:'rep';
+SELECT pg_temp.ok((SELECT title='Status Q1 refreshed' AND :'om'::uuid = ANY(mission_scope) FROM sw_management_reports WHERE id=:'rep'),'the circle refreshes the facts; the report keeps the restricted mission in its scope');
+UPDATE sw_management_reports SET facts=jsonb_build_object('risks',jsonb_build_array(jsonb_build_object('id',:'orisk'),jsonb_build_object('id',:'plain')),'actions','[]'::jsonb) WHERE id=:'rep';
+SELECT pg_temp.ok((SELECT count(*)=1 FROM sw_management_reports WHERE id=:'rep' AND facts->'risks'->0->>'id'=:'orisk'),'the circle may keep the mission''s own records in a report already in its circle');
+SELECT pg_temp.fail(format('UPDATE sw_management_reports SET facts=%L WHERE id=%L',jsonb_build_object('risks',jsonb_build_array(jsonb_build_object('id',:'risk'))),:'rep'),'42501','another restricted mission''s records still cannot enter it');
+SELECT pg_temp.login('5c000000-0000-4000-8000-000000000004');
+SELECT pg_temp.ok((SELECT count(*)=0 FROM sw_management_reports WHERE id=:'rep') AND (SELECT count(*)=0 FROM sw_ai_suggestions WHERE id IN (:'osug',:'nsug'))
+  AND (SELECT count(*)=0 FROM sw_processing_jobs WHERE id IN (:'osug',:'nsug')) AND (SELECT count(*)=0 FROM sw_audit_events WHERE entity_id IN (:'rep',:'nsug')),'after a fact refresh outsiders still read neither the report, its text, its earlier assistant results nor their history');
+SELECT pg_temp.login('5c000000-0000-4000-8000-000000000005');
+SELECT pg_temp.ok((SELECT count(*)=0 FROM sw_management_reports WHERE id=:'rep') AND (SELECT count(*)=0 FROM sw_ai_suggestions WHERE id IN (:'osug',:'nsug')),'nor does an outside viewer');
+SELECT pg_temp.login('5c000000-0000-4000-8000-000000000004');
+INSERT INTO sw_management_reports(workspace_id,title,language,facts,computed,narrative) VALUES(:'wa','Ordinary status','sv',
+  jsonb_build_object('risks',jsonb_build_array(jsonb_build_object('id',:'plain'))),'{}','{}') RETURNING id AS orep \gset
+UPDATE sw_management_reports SET facts=jsonb_build_object('risks','[]'::jsonb), title='Ordinary status, refreshed' WHERE id=:'orep';
+SELECT pg_temp.login('5c000000-0000-4000-8000-000000000005');
+SELECT pg_temp.ok((SELECT title='Ordinary status, refreshed' AND mission_scope='{}' FROM sw_management_reports WHERE id=:'orep'),'an ordinary report is created, refreshed and read by the workspace as before');
 SELECT pg_temp.ok((SELECT count(*)=1 FROM sw_risks WHERE id=:'plain'),'ordinary records are untouched by all of this');
 
 RESET ROLE;
