@@ -48,7 +48,6 @@ const NAMED_REFUSALS = new Set([
   "SW_EVIDENCE_NOT_IN_WORKSPACE",
   "SW_SUPPLIER_ASSET_REQUIRED",
   "SW_CONTRACT_KEY_IN_USE",
-  "SW_OWNER_REQUIRED",
   "SW_IDEMPOTENCY_CONFLICT",
 ]);
 export function checked<T>(result: {

@@ -224,7 +224,7 @@ try {
       await failureCode(
         suppliers.setSharing(caller(CHIEF), { workspaceId: ws, userId: CHIEF, allowed: true }),
       ),
-      "OWNER_REQUIRED",
+      "ACCESS_DENIED",
     );
     await suppliers.setSharing(caller(OWNER), { workspaceId: ws, userId: OWNER, allowed: true });
     version = (
