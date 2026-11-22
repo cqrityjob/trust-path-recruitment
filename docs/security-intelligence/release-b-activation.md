@@ -7,10 +7,12 @@ is fetched and nothing is billed. No step here activates AI or document
 processing. Those stay behind their own activations (see
 `processing-activation.md`).
 
-Read-only state of production at 2026-11-21T21:07:43.931516+00:00: 20270328090000 is
-**installed and verified** after #500 merged. The 13 function bodies match the
-merged source, and the restricted-brief policies and privileges are verified.
-See [hosted verification](../release/2026-11-21-security-work-monitoring-hosted-verification.json).
+Read-only state of production at 2026-11-22T09:40:17Z: 20270328090000 and
+20270329090000 are **installed and verified**. 20270329 was installed after #502
+merged; all 15 functions, 27 policies, triggers, columns and constraints match
+the merged source, and the 408-row ledger keeps every earlier entry. See
+[monitoring](../release/2026-11-21-security-work-monitoring-hosted-verification.json)
+and [restricted records](../release/2026-11-22-security-work-restricted-records-hosted-verification.json).
 `sw_private.worker_keys` still has **0 active rows**, and no feed host is approved.
 Installation has not activated fetching.
 
@@ -18,9 +20,9 @@ Installation has not activated fetching.
 
 1. #500 is merged and 20270328090000 is installed. Its read-only verification
    and applied registration are recorded in #501; do not rerun the migration.
-2. Merge #502 (20270329090000, the restricted-records and review-acceptance
-   fix). The official integration installs it; Claude verifies it read-only and
-   records it in #501. #501's schema-first gate stays red until then.
+2. #502 is merged and 20270329090000 (restricted records, review acceptance,
+   durable audit and report scope) is installed. Its read-only verification is
+   recorded in #501; do not rerun the migration.
 3. Merge #501, then **Publish** in Lovable. Lovable does not publish on merge.
 
 ## 2. Worker signing key (once)
