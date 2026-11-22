@@ -71,6 +71,29 @@ const OUTPUT_CONTRACTS: Record<SuggestionKind, string> = {
 
 const settled = (value: string, max = 4000) => value.replace(/\s+/g, " ").trim().slice(0, max);
 
+/**
+ * Assistant results are read by the whole workspace. A record from an open
+ * mission is ordinary context; one from a restricted mission (or a mission
+ * that cannot be found) is never sent. The database refuses it too, and makes
+ * the result need-to-know if the mission is restricted later.
+ */
+async function requireOpenScope(
+  caller: SecurityWorkCaller,
+  workspaceId: string,
+  missionId: string | null,
+) {
+  if (!missionId) return;
+  const mission = checked(
+    await caller.supabase
+      .from("sw_missions")
+      .select("restricted")
+      .eq("workspace_id", workspaceId)
+      .eq("id", missionId)
+      .maybeSingle(),
+  );
+  if (!mission || mission.restricted) throw new AnalysisFailure("RESTRICTED_CONTEXT");
+}
+
 async function collectContext(
   caller: SecurityWorkCaller,
   workspaceId: string,
@@ -131,12 +154,13 @@ async function collectContext(
     const risk = checked(
       await db
         .from("sw_risks")
-        .select("id,title,description,threat_scenario,uncertainty")
+        .select("id,title,description,threat_scenario,uncertainty,access_mission_id")
         .eq("workspace_id", workspaceId)
         .eq("id", contextId)
         .maybeSingle(),
     );
     if (!risk) throw new AnalysisFailure("ACCESS_DENIED");
+    await requireOpenScope(caller, workspaceId, risk.access_mission_id);
     sources.push({ table: "sw_risks", id: risk.id });
     const links =
       checked(
@@ -200,12 +224,13 @@ async function collectContext(
     const action = checked(
       await db
         .from("sw_actions")
-        .select("id,title,description,priority,status")
+        .select("id,title,description,priority,status,access_mission_id")
         .eq("workspace_id", workspaceId)
         .eq("id", contextId)
         .maybeSingle(),
     );
     if (!action) throw new AnalysisFailure("ACCESS_DENIED");
+    await requireOpenScope(caller, workspaceId, action.access_mission_id);
     sources.push({ table: "sw_actions", id: action.id });
     context.action = {
       title: settled(action.title, 500),

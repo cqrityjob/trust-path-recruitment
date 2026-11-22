@@ -1,0 +1,394 @@
+{
+  "migration": "20270328090000_security_work_monitoring_impact.sql",
+  "pullRequest": "https://github.com/cqrityjob/trust-path-recruitment/pull/500",
+  "mergeCommit": "3d34b6261191ab548feb8d31e50aaf26fa95822f",
+  "mergedSourceBlob": "19ff942541b9a86e28a0cc22e2a39c66a1b1181a",
+  "projectRef": "wrygicdfxwjnrugduxnt",
+  "readAt": "2026-11-21T21:07:43.931516+00:00",
+  "method": "Read-only SELECT queries through the Supabase management connector. No production writes, migration replay, role impersonation, feed fetch, key provisioning or activation.",
+  "ledger": {
+    "rows": 407,
+    "latest": "20270328090000",
+    "previous406Md5": "784b7817d50af710ccdc4d413510c149",
+    "previous406EqualsCommittedSnapshot": true,
+    "full407Md5": "3f69b7dc012055e130e4b95e0d79cc49",
+    "md5Of": "string_agg(version||':'||coalesce(name,''), E'\\n' ORDER BY version)"
+  },
+  "functionComparison": "pg_proc.prosrc was compared directly to each function body extracted verbatim from the merged migration. All 13 bodies, SECURITY DEFINER/INVOKER attributes, languages and search_path settings match.",
+  "functions": [
+    {
+      "identity": "public.sw_apply_change_brief(uuid,uuid,integer,uuid,jsonb)",
+      "present": true,
+      "body_matches": true,
+      "body_md5": "eb4a0fe2263afe3c554a5a3381c6f17f",
+      "security_matches": true,
+      "language_matches": true,
+      "settings": [
+        "search_path=\"\""
+      ],
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "service_role_execute": false
+    },
+    {
+      "identity": "public.sw_record_fetch(uuid,uuid,uuid,text,text,text)",
+      "present": true,
+      "body_matches": true,
+      "body_md5": "02a58d305dba630423481a3d7241e0e5",
+      "security_matches": true,
+      "language_matches": true,
+      "settings": [
+        "search_path=\"\""
+      ],
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "service_role_execute": false
+    },
+    {
+      "identity": "sw_private.apply_change_brief(uuid,uuid,integer,uuid,jsonb)",
+      "present": true,
+      "body_matches": true,
+      "body_md5": "b0e690dc41f5d1c2279e44c241b2a86e",
+      "security_matches": true,
+      "language_matches": true,
+      "settings": [
+        "search_path=\"\""
+      ],
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "service_role_execute": false
+    },
+    {
+      "identity": "sw_private.can_see_brief(uuid,uuid)",
+      "present": true,
+      "body_matches": true,
+      "body_md5": "36bf56beaef7dede0690be2a148f4d0f",
+      "security_matches": true,
+      "language_matches": true,
+      "settings": [
+        "search_path=\"\""
+      ],
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "service_role_execute": false
+    },
+    {
+      "identity": "sw_private.feed_host(text)",
+      "present": true,
+      "body_matches": true,
+      "body_md5": "450421d15eadd7a6b04feeef9b9b8f72",
+      "security_matches": true,
+      "language_matches": true,
+      "settings": [
+        "search_path=\"\""
+      ],
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_role_execute": false
+    },
+    {
+      "identity": "sw_private.guard_change_brief()",
+      "present": true,
+      "body_matches": true,
+      "body_md5": "d6356b87cc5ac131d156a3272efa9607",
+      "security_matches": true,
+      "language_matches": true,
+      "settings": [
+        "search_path=\"\""
+      ],
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_role_execute": false
+    },
+    {
+      "identity": "sw_private.guard_feed_source()",
+      "present": true,
+      "body_matches": true,
+      "body_md5": "f029268564e48a1764b1811bd3fd3db8",
+      "security_matches": true,
+      "language_matches": true,
+      "settings": [
+        "search_path=\"\""
+      ],
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_role_execute": false
+    },
+    {
+      "identity": "sw_private.guard_fetched_item()",
+      "present": true,
+      "body_matches": true,
+      "body_md5": "372bc0233d6ac723c034f9d795f9b57b",
+      "security_matches": true,
+      "language_matches": true,
+      "settings": [
+        "search_path=\"\""
+      ],
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_role_execute": false
+    },
+    {
+      "identity": "sw_private.guard_review_flag()",
+      "present": true,
+      "body_matches": true,
+      "body_md5": "8093692367e17c2eb65dc29afeb63b3a",
+      "security_matches": true,
+      "language_matches": true,
+      "settings": [
+        "search_path=\"\""
+      ],
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_role_execute": false
+    },
+    {
+      "identity": "sw_private.record_brief_mission_event()",
+      "present": true,
+      "body_matches": true,
+      "body_md5": "ef26746cf5e5eaf759f81813eeac187f",
+      "security_matches": true,
+      "language_matches": true,
+      "settings": [
+        "search_path=\"\""
+      ],
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_role_execute": false
+    },
+    {
+      "identity": "sw_private.record_fetch(uuid,uuid,uuid,text,text,text)",
+      "present": true,
+      "body_matches": true,
+      "body_md5": "8a8ca1f9b66abad80c6e7b1d6684c962",
+      "security_matches": true,
+      "language_matches": true,
+      "settings": [
+        "search_path=\"\""
+      ],
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "service_role_execute": false
+    },
+    {
+      "identity": "sw_private.story_key(text)",
+      "present": true,
+      "body_matches": true,
+      "body_md5": "d55d56f5661f978d40d6fb0db825225f",
+      "security_matches": true,
+      "language_matches": true,
+      "settings": [
+        "search_path=\"\""
+      ],
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_role_execute": false
+    },
+    {
+      "identity": "sw_private.supersede_previous_brief()",
+      "present": true,
+      "body_matches": true,
+      "body_md5": "e7d9e12445ee2e346009b81b393cf124",
+      "security_matches": true,
+      "language_matches": true,
+      "settings": [
+        "search_path=\"\""
+      ],
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_role_execute": false
+    }
+  ],
+  "tables": [
+    {
+      "rls": true,
+      "table": "sw_change_brief_applications",
+      "anonAnyPrivilege": false,
+      "authenticatedRead": true,
+      "authenticatedTableWrite": false,
+      "serviceRoleAnyPrivilege": false
+    },
+    {
+      "rls": true,
+      "table": "sw_change_briefs",
+      "anonAnyPrivilege": false,
+      "authenticatedRead": true,
+      "authenticatedTableWrite": true,
+      "serviceRoleAnyPrivilege": false
+    },
+    {
+      "rls": true,
+      "table": "sw_cluster_items",
+      "anonAnyPrivilege": false,
+      "authenticatedRead": true,
+      "authenticatedTableWrite": false,
+      "serviceRoleAnyPrivilege": false
+    },
+    {
+      "rls": true,
+      "table": "sw_feed_hosts",
+      "anonAnyPrivilege": false,
+      "authenticatedRead": true,
+      "authenticatedTableWrite": false,
+      "serviceRoleAnyPrivilege": false
+    },
+    {
+      "rls": true,
+      "table": "sw_fetch_runs",
+      "anonAnyPrivilege": false,
+      "authenticatedRead": true,
+      "authenticatedTableWrite": false,
+      "serviceRoleAnyPrivilege": false
+    },
+    {
+      "rls": true,
+      "table": "sw_review_flags",
+      "anonAnyPrivilege": false,
+      "authenticatedRead": true,
+      "authenticatedTableWrite": false,
+      "serviceRoleAnyPrivilege": false
+    },
+    {
+      "rls": true,
+      "table": "sw_story_clusters",
+      "anonAnyPrivilege": false,
+      "authenticatedRead": true,
+      "authenticatedTableWrite": false,
+      "serviceRoleAnyPrivilege": false
+    }
+  ],
+  "policies": [
+    {
+      "cmd": "SELECT",
+      "name": "sw_application_read",
+      "roles": [
+        "authenticated"
+      ],
+      "table": "sw_change_brief_applications",
+      "using": "sw_private.can_see_brief(workspace_id, brief_id)",
+      "withCheck": null
+    },
+    {
+      "cmd": "INSERT",
+      "name": "sw_brief_insert",
+      "roles": [
+        "authenticated"
+      ],
+      "table": "sw_change_briefs",
+      "using": null,
+      "withCheck": "(sw_private.can_edit(workspace_id) AND ((mission_id IS NULL) OR sw_private.can_see_mission(workspace_id, mission_id)))"
+    },
+    {
+      "cmd": "SELECT",
+      "name": "sw_brief_read",
+      "roles": [
+        "authenticated"
+      ],
+      "table": "sw_change_briefs",
+      "using": "(sw_private.can_read(workspace_id) AND ((mission_id IS NULL) OR sw_private.can_see_mission(workspace_id, mission_id)))",
+      "withCheck": null
+    },
+    {
+      "cmd": "UPDATE",
+      "name": "sw_brief_update",
+      "roles": [
+        "authenticated"
+      ],
+      "table": "sw_change_briefs",
+      "using": "(sw_private.can_edit(workspace_id) AND ((mission_id IS NULL) OR sw_private.can_see_mission(workspace_id, mission_id)))",
+      "withCheck": "(sw_private.can_edit(workspace_id) AND ((mission_id IS NULL) OR sw_private.can_see_mission(workspace_id, mission_id)))"
+    },
+    {
+      "cmd": "SELECT",
+      "name": "sw_member_read",
+      "roles": [
+        "authenticated"
+      ],
+      "table": "sw_cluster_items",
+      "using": "sw_private.can_read(workspace_id)",
+      "withCheck": null
+    },
+    {
+      "cmd": "SELECT",
+      "name": "sw_active_hosts",
+      "roles": [
+        "authenticated"
+      ],
+      "table": "sw_feed_hosts",
+      "using": "active",
+      "withCheck": null
+    },
+    {
+      "cmd": "SELECT",
+      "name": "sw_member_read",
+      "roles": [
+        "authenticated"
+      ],
+      "table": "sw_fetch_runs",
+      "using": "sw_private.can_read(workspace_id)",
+      "withCheck": null
+    },
+    {
+      "cmd": "SELECT",
+      "name": "sw_flag_read",
+      "roles": [
+        "authenticated"
+      ],
+      "table": "sw_review_flags",
+      "using": "sw_private.can_see_brief(workspace_id, brief_id)",
+      "withCheck": null
+    },
+    {
+      "cmd": "UPDATE",
+      "name": "sw_flag_resolve",
+      "roles": [
+        "authenticated"
+      ],
+      "table": "sw_review_flags",
+      "using": "(sw_private.can_edit(workspace_id) AND sw_private.can_see_brief(workspace_id, brief_id))",
+      "withCheck": "(sw_private.can_edit(workspace_id) AND sw_private.can_see_brief(workspace_id, brief_id))"
+    },
+    {
+      "cmd": "SELECT",
+      "name": "sw_member_read",
+      "roles": [
+        "authenticated"
+      ],
+      "table": "sw_story_clusters",
+      "using": "sw_private.can_read(workspace_id)",
+      "withCheck": null
+    }
+  ],
+  "briefAuditTriggers": [
+    {
+      "name": "sw_10_guard",
+      "definition": "CREATE TRIGGER sw_10_guard BEFORE INSERT OR UPDATE ON sw_change_briefs FOR EACH ROW EXECUTE FUNCTION sw_private.guard_record()"
+    },
+    {
+      "name": "sw_20_brief",
+      "definition": "CREATE TRIGGER sw_20_brief BEFORE INSERT OR UPDATE ON sw_change_briefs FOR EACH ROW EXECUTE FUNCTION sw_private.guard_change_brief()"
+    },
+    {
+      "name": "sw_80_supersede",
+      "definition": "CREATE TRIGGER sw_80_supersede AFTER UPDATE ON sw_change_briefs FOR EACH ROW EXECUTE FUNCTION sw_private.supersede_previous_brief()"
+    },
+    {
+      "name": "sw_90_audit",
+      "definition": "CREATE TRIGGER sw_90_audit AFTER INSERT OR UPDATE ON sw_change_briefs FOR EACH ROW WHEN (new.mission_id IS NULL) EXECUTE FUNCTION sw_private.record_change()"
+    },
+    {
+      "name": "sw_91_mission_audit",
+      "definition": "CREATE TRIGGER sw_91_mission_audit AFTER INSERT OR UPDATE ON sw_change_briefs FOR EACH ROW WHEN (new.mission_id IS NOT NULL) EXECUTE FUNCTION sw_private.record_brief_mission_event()"
+    }
+  ],
+  "missionEventConstraint": "CHECK ((event = ANY (ARRAY['created'::text, 'state_changed'::text, 'review_changed'::text, 'brief_changed'::text, 'member_added'::text, 'member_removed'::text, 'link_added'::text, 'link_removed'::text, 'restriction_changed'::text, 'owner_changed'::text, 'impact_brief_changed'::text])))",
+  "dataCounts": {
+    "briefs": 0,
+    "feedHosts": 0,
+    "fetchRuns": 0,
+    "fetchedItems": 0,
+    "activeWorkerKeys": 0,
+    "officialFeedSources": 0
+  },
+  "notVerified": "No authenticated behavioural probe against production or signed fetch in the hosted application runtime. Existing SQL and PostgREST regressions exercise the behaviour on disposable databases; feed activation still needs the owner-approved key and host."
+}

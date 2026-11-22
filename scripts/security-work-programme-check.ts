@@ -119,6 +119,7 @@ function risk(n: number, over: Partial<Risk> = {}): Risk {
     owner_id: U,
     threat_scenario: "",
     source_kind: "programme",
+    access_mission_id: null,
     ...stamp,
     ...over,
   };
@@ -144,6 +145,7 @@ function action(n: number, over: Partial<Action> = {}): Action {
     source_kind: "manual",
     approval_required: false,
     approval_note: "",
+    access_mission_id: null,
     ...stamp,
     ...over,
   };
@@ -177,6 +179,7 @@ function report(over: Partial<ManagementReport> = {}): ManagementReport {
     workspace_id: W,
     title: "Q3",
     language: "sv",
+    mission_scope: [],
     content_version: "management-report-v1",
     period_start: null,
     period_end: null,

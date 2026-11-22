@@ -1,5 +1,5 @@
-base: efd5a6de7651a21f7794dc65e9224856c84117d7
-suite: a4a8cddf3419239d5288493ec1b9e4f19fddd1f5
+base: 3d34b6261191ab548feb8d31e50aaf26fa95822f
+suite: ae0da57256380754149dcab860b50fee4d22ac2b
 instrument: head (spec, fixture, harness, playwright.config.ts)
 src-tree: 511465cc42befd233c6acf8749f4711188237621
 mode: before

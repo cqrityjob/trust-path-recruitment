@@ -13,8 +13,8 @@
   ],
   "source": "Supabase connector read-only SQL, explicit project wrygicdfxwjnrugduxnt",
   "projectRef": "wrygicdfxwjnrugduxnt",
-  "readAt": "2026-11-21T15:28:37.553994+00:00",
-  "readBy": "Claude Code read-only verification after #498 merged as f58952db on 2026-11-21. Ledger 406 rows ending 20270327090000. The previous 405 version/name entries are unchanged, verified by live md5 113579a85086f6bf335edc4a25d26195 equal to the committed snapshot; the new canonical row was appended and the complete snapshot hashes to 784b7817d50af710ccdc4d413510c149. See docs/release/2026-11-21-security-work-context-hosted-verification.json.",
+  "readAt": "2026-11-22T09:40:17.639458+00:00",
+  "readBy": "Claude Code read-only verification after #502 merged as e6b34306 on 2026-11-22. Ledger 408 rows ending 20270329090000. The previous 407 version:name entries are unchanged, verified by live md5 3f69b7dc012055e130e4b95e0d79cc49 equal to the committed snapshot; the appended row is canonical 20270329090000:security_work_restricted_records. Full ledger md5 77b5dfb6c8b1efe842a60f99026a35e0. See docs/release/2026-11-22-security-work-restricted-records-hosted-verification.json.",
   "versions": [
     {
       "version": "20260716153446",
@@ -1639,6 +1639,14 @@
     {
       "name": "security_work_context_missions_collaboration",
       "version": "20270327090000"
+    },
+    {
+      "name": "security_work_monitoring_impact",
+      "version": "20270328090000"
+    },
+    {
+      "name": "security_work_restricted_records",
+      "version": "20270329090000"
     }
   ]
 }

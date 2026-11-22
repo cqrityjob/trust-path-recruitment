@@ -50,6 +50,7 @@
         "embla-carousel-react": "^8.6.0",
         "fflate": "0.8.2",
         "input-otp": "^1.4.2",
+        "ipaddr.js": "1.9.1",
         "jose": "6.2.12",
         "lucide-react": "^0.575.0",
         "pdfjs-dist": "6.3.289",

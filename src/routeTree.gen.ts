@@ -194,6 +194,8 @@ import { Route as AuthenticatedEmployerEmployerSlugWorkforcePersonIdRouteImport 
 import { Route as AuthenticatedPassportEntryKindEntryIdRouteImport } from './routes/_authenticated.passport.entry.$kind.$entryId'
 import { Route as AuthenticatedSecurityWorkWorkspaceIdAnalysesIndexRouteImport } from './routes/_authenticated.security-work.$workspaceId.analyses.index'
 import { Route as AuthenticatedSecurityWorkWorkspaceIdAnalysesAnalysisIdRouteImport } from './routes/_authenticated.security-work.$workspaceId.analyses.$analysisId'
+import { Route as AuthenticatedSecurityWorkWorkspaceIdImpactIndexRouteImport } from './routes/_authenticated.security-work.$workspaceId.impact.index'
+import { Route as AuthenticatedSecurityWorkWorkspaceIdImpactBriefIdRouteImport } from './routes/_authenticated.security-work.$workspaceId.impact.$briefId'
 import { Route as AuthenticatedSecurityWorkWorkspaceIdMissionsIndexRouteImport } from './routes/_authenticated.security-work.$workspaceId.missions.index'
 import { Route as AuthenticatedSecurityWorkWorkspaceIdMissionsMissionIdRouteImport } from './routes/_authenticated.security-work.$workspaceId.missions.$missionId'
 import { Route as AuthenticatedSecurityWorkWorkspaceIdReportsIndexRouteImport } from './routes/_authenticated.security-work.$workspaceId.reports.index'
@@ -1286,6 +1288,18 @@ const AuthenticatedSecurityWorkWorkspaceIdAnalysesAnalysisIdRoute =
     path: '/analyses/$analysisId',
     getParentRoute: () => AuthenticatedSecurityWorkWorkspaceIdRoute,
   } as any)
+const AuthenticatedSecurityWorkWorkspaceIdImpactIndexRoute =
+  AuthenticatedSecurityWorkWorkspaceIdImpactIndexRouteImport.update({
+    id: '/impact/',
+    path: '/impact/',
+    getParentRoute: () => AuthenticatedSecurityWorkWorkspaceIdRoute,
+  } as any)
+const AuthenticatedSecurityWorkWorkspaceIdImpactBriefIdRoute =
+  AuthenticatedSecurityWorkWorkspaceIdImpactBriefIdRouteImport.update({
+    id: '/impact/$briefId',
+    path: '/impact/$briefId',
+    getParentRoute: () => AuthenticatedSecurityWorkWorkspaceIdRoute,
+  } as any)
 const AuthenticatedSecurityWorkWorkspaceIdMissionsIndexRoute =
   AuthenticatedSecurityWorkWorkspaceIdMissionsIndexRouteImport.update({
     id: '/missions/',
@@ -1669,6 +1683,7 @@ export interface FileRoutesByFullPath {
   '/employer/$employerSlug/workforce/$personId': typeof AuthenticatedEmployerEmployerSlugWorkforcePersonIdRoute
   '/passport/entry/$kind/$entryId': typeof AuthenticatedPassportEntryKindEntryIdRoute
   '/security-work/$workspaceId/analyses/$analysisId': typeof AuthenticatedSecurityWorkWorkspaceIdAnalysesAnalysisIdRoute
+  '/security-work/$workspaceId/impact/$briefId': typeof AuthenticatedSecurityWorkWorkspaceIdImpactBriefIdRoute
   '/security-work/$workspaceId/missions/$missionId': typeof AuthenticatedSecurityWorkWorkspaceIdMissionsMissionIdRoute
   '/security-work/$workspaceId/reports/$reportId': typeof AuthenticatedSecurityWorkWorkspaceIdReportsReportIdRoute
   '/security-work/$workspaceId/sources/$sourceId': typeof AuthenticatedSecurityWorkWorkspaceIdSourcesSourceIdRoute
@@ -1681,6 +1696,7 @@ export interface FileRoutesByFullPath {
   '/employer/$employerSlug/training/': typeof AuthenticatedEmployerEmployerSlugTrainingIndexRoute
   '/employer/$employerSlug/workforce/': typeof AuthenticatedEmployerEmployerSlugWorkforceIndexRoute
   '/security-work/$workspaceId/analyses/': typeof AuthenticatedSecurityWorkWorkspaceIdAnalysesIndexRoute
+  '/security-work/$workspaceId/impact/': typeof AuthenticatedSecurityWorkWorkspaceIdImpactIndexRoute
   '/security-work/$workspaceId/missions/': typeof AuthenticatedSecurityWorkWorkspaceIdMissionsIndexRoute
   '/security-work/$workspaceId/reports/': typeof AuthenticatedSecurityWorkWorkspaceIdReportsIndexRoute
   '/security-work/$workspaceId/sources/': typeof AuthenticatedSecurityWorkWorkspaceIdSourcesIndexRoute
@@ -1859,6 +1875,7 @@ export interface FileRoutesByTo {
   '/employer/$employerSlug/workforce/$personId': typeof AuthenticatedEmployerEmployerSlugWorkforcePersonIdRoute
   '/passport/entry/$kind/$entryId': typeof AuthenticatedPassportEntryKindEntryIdRoute
   '/security-work/$workspaceId/analyses/$analysisId': typeof AuthenticatedSecurityWorkWorkspaceIdAnalysesAnalysisIdRoute
+  '/security-work/$workspaceId/impact/$briefId': typeof AuthenticatedSecurityWorkWorkspaceIdImpactBriefIdRoute
   '/security-work/$workspaceId/missions/$missionId': typeof AuthenticatedSecurityWorkWorkspaceIdMissionsMissionIdRoute
   '/security-work/$workspaceId/reports/$reportId': typeof AuthenticatedSecurityWorkWorkspaceIdReportsReportIdRoute
   '/security-work/$workspaceId/sources/$sourceId': typeof AuthenticatedSecurityWorkWorkspaceIdSourcesSourceIdRoute
@@ -1871,6 +1888,7 @@ export interface FileRoutesByTo {
   '/employer/$employerSlug/training': typeof AuthenticatedEmployerEmployerSlugTrainingIndexRoute
   '/employer/$employerSlug/workforce': typeof AuthenticatedEmployerEmployerSlugWorkforceIndexRoute
   '/security-work/$workspaceId/analyses': typeof AuthenticatedSecurityWorkWorkspaceIdAnalysesIndexRoute
+  '/security-work/$workspaceId/impact': typeof AuthenticatedSecurityWorkWorkspaceIdImpactIndexRoute
   '/security-work/$workspaceId/missions': typeof AuthenticatedSecurityWorkWorkspaceIdMissionsIndexRoute
   '/security-work/$workspaceId/reports': typeof AuthenticatedSecurityWorkWorkspaceIdReportsIndexRoute
   '/security-work/$workspaceId/sources': typeof AuthenticatedSecurityWorkWorkspaceIdSourcesIndexRoute
@@ -2074,6 +2092,7 @@ export interface FileRoutesById {
   '/_authenticated/employer/$employerSlug/workforce/$personId': typeof AuthenticatedEmployerEmployerSlugWorkforcePersonIdRoute
   '/_authenticated/passport/entry/$kind/$entryId': typeof AuthenticatedPassportEntryKindEntryIdRoute
   '/_authenticated/security-work/$workspaceId/analyses/$analysisId': typeof AuthenticatedSecurityWorkWorkspaceIdAnalysesAnalysisIdRoute
+  '/_authenticated/security-work/$workspaceId/impact/$briefId': typeof AuthenticatedSecurityWorkWorkspaceIdImpactBriefIdRoute
   '/_authenticated/security-work/$workspaceId/missions/$missionId': typeof AuthenticatedSecurityWorkWorkspaceIdMissionsMissionIdRoute
   '/_authenticated/security-work/$workspaceId/reports/$reportId': typeof AuthenticatedSecurityWorkWorkspaceIdReportsReportIdRoute
   '/_authenticated/security-work/$workspaceId/sources/$sourceId': typeof AuthenticatedSecurityWorkWorkspaceIdSourcesSourceIdRoute
@@ -2086,6 +2105,7 @@ export interface FileRoutesById {
   '/_authenticated/employer/$employerSlug/training/': typeof AuthenticatedEmployerEmployerSlugTrainingIndexRoute
   '/_authenticated/employer/$employerSlug/workforce/': typeof AuthenticatedEmployerEmployerSlugWorkforceIndexRoute
   '/_authenticated/security-work/$workspaceId/analyses/': typeof AuthenticatedSecurityWorkWorkspaceIdAnalysesIndexRoute
+  '/_authenticated/security-work/$workspaceId/impact/': typeof AuthenticatedSecurityWorkWorkspaceIdImpactIndexRoute
   '/_authenticated/security-work/$workspaceId/missions/': typeof AuthenticatedSecurityWorkWorkspaceIdMissionsIndexRoute
   '/_authenticated/security-work/$workspaceId/reports/': typeof AuthenticatedSecurityWorkWorkspaceIdReportsIndexRoute
   '/_authenticated/security-work/$workspaceId/sources/': typeof AuthenticatedSecurityWorkWorkspaceIdSourcesIndexRoute
@@ -2289,6 +2309,7 @@ export interface FileRouteTypes {
     | '/employer/$employerSlug/workforce/$personId'
     | '/passport/entry/$kind/$entryId'
     | '/security-work/$workspaceId/analyses/$analysisId'
+    | '/security-work/$workspaceId/impact/$briefId'
     | '/security-work/$workspaceId/missions/$missionId'
     | '/security-work/$workspaceId/reports/$reportId'
     | '/security-work/$workspaceId/sources/$sourceId'
@@ -2301,6 +2322,7 @@ export interface FileRouteTypes {
     | '/employer/$employerSlug/training/'
     | '/employer/$employerSlug/workforce/'
     | '/security-work/$workspaceId/analyses/'
+    | '/security-work/$workspaceId/impact/'
     | '/security-work/$workspaceId/missions/'
     | '/security-work/$workspaceId/reports/'
     | '/security-work/$workspaceId/sources/'
@@ -2479,6 +2501,7 @@ export interface FileRouteTypes {
     | '/employer/$employerSlug/workforce/$personId'
     | '/passport/entry/$kind/$entryId'
     | '/security-work/$workspaceId/analyses/$analysisId'
+    | '/security-work/$workspaceId/impact/$briefId'
     | '/security-work/$workspaceId/missions/$missionId'
     | '/security-work/$workspaceId/reports/$reportId'
     | '/security-work/$workspaceId/sources/$sourceId'
@@ -2491,6 +2514,7 @@ export interface FileRouteTypes {
     | '/employer/$employerSlug/training'
     | '/employer/$employerSlug/workforce'
     | '/security-work/$workspaceId/analyses'
+    | '/security-work/$workspaceId/impact'
     | '/security-work/$workspaceId/missions'
     | '/security-work/$workspaceId/reports'
     | '/security-work/$workspaceId/sources'
@@ -2693,6 +2717,7 @@ export interface FileRouteTypes {
     | '/_authenticated/employer/$employerSlug/workforce/$personId'
     | '/_authenticated/passport/entry/$kind/$entryId'
     | '/_authenticated/security-work/$workspaceId/analyses/$analysisId'
+    | '/_authenticated/security-work/$workspaceId/impact/$briefId'
     | '/_authenticated/security-work/$workspaceId/missions/$missionId'
     | '/_authenticated/security-work/$workspaceId/reports/$reportId'
     | '/_authenticated/security-work/$workspaceId/sources/$sourceId'
@@ -2705,6 +2730,7 @@ export interface FileRouteTypes {
     | '/_authenticated/employer/$employerSlug/training/'
     | '/_authenticated/employer/$employerSlug/workforce/'
     | '/_authenticated/security-work/$workspaceId/analyses/'
+    | '/_authenticated/security-work/$workspaceId/impact/'
     | '/_authenticated/security-work/$workspaceId/missions/'
     | '/_authenticated/security-work/$workspaceId/reports/'
     | '/_authenticated/security-work/$workspaceId/sources/'
@@ -4071,6 +4097,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSecurityWorkWorkspaceIdAnalysesAnalysisIdRouteImport
       parentRoute: typeof AuthenticatedSecurityWorkWorkspaceIdRoute
     }
+    '/_authenticated/security-work/$workspaceId/impact/': {
+      id: '/_authenticated/security-work/$workspaceId/impact/'
+      path: '/impact'
+      fullPath: '/security-work/$workspaceId/impact/'
+      preLoaderRoute: typeof AuthenticatedSecurityWorkWorkspaceIdImpactIndexRouteImport
+      parentRoute: typeof AuthenticatedSecurityWorkWorkspaceIdRoute
+    }
+    '/_authenticated/security-work/$workspaceId/impact/$briefId': {
+      id: '/_authenticated/security-work/$workspaceId/impact/$briefId'
+      path: '/impact/$briefId'
+      fullPath: '/security-work/$workspaceId/impact/$briefId'
+      preLoaderRoute: typeof AuthenticatedSecurityWorkWorkspaceIdImpactBriefIdRouteImport
+      parentRoute: typeof AuthenticatedSecurityWorkWorkspaceIdRoute
+    }
     '/_authenticated/security-work/$workspaceId/missions/': {
       id: '/_authenticated/security-work/$workspaceId/missions/'
       path: '/missions'
@@ -4831,10 +4871,12 @@ interface AuthenticatedSecurityWorkWorkspaceIdRouteChildren {
   AuthenticatedSecurityWorkWorkspaceIdSettingsRoute: typeof AuthenticatedSecurityWorkWorkspaceIdSettingsRoute
   AuthenticatedSecurityWorkWorkspaceIdIndexRoute: typeof AuthenticatedSecurityWorkWorkspaceIdIndexRoute
   AuthenticatedSecurityWorkWorkspaceIdAnalysesAnalysisIdRoute: typeof AuthenticatedSecurityWorkWorkspaceIdAnalysesAnalysisIdRoute
+  AuthenticatedSecurityWorkWorkspaceIdImpactBriefIdRoute: typeof AuthenticatedSecurityWorkWorkspaceIdImpactBriefIdRoute
   AuthenticatedSecurityWorkWorkspaceIdMissionsMissionIdRoute: typeof AuthenticatedSecurityWorkWorkspaceIdMissionsMissionIdRoute
   AuthenticatedSecurityWorkWorkspaceIdReportsReportIdRoute: typeof AuthenticatedSecurityWorkWorkspaceIdReportsReportIdRoute
   AuthenticatedSecurityWorkWorkspaceIdSourcesSourceIdRoute: typeof AuthenticatedSecurityWorkWorkspaceIdSourcesSourceIdRoute
   AuthenticatedSecurityWorkWorkspaceIdAnalysesIndexRoute: typeof AuthenticatedSecurityWorkWorkspaceIdAnalysesIndexRoute
+  AuthenticatedSecurityWorkWorkspaceIdImpactIndexRoute: typeof AuthenticatedSecurityWorkWorkspaceIdImpactIndexRoute
   AuthenticatedSecurityWorkWorkspaceIdMissionsIndexRoute: typeof AuthenticatedSecurityWorkWorkspaceIdMissionsIndexRoute
   AuthenticatedSecurityWorkWorkspaceIdReportsIndexRoute: typeof AuthenticatedSecurityWorkWorkspaceIdReportsIndexRoute
   AuthenticatedSecurityWorkWorkspaceIdSourcesIndexRoute: typeof AuthenticatedSecurityWorkWorkspaceIdSourcesIndexRoute
@@ -4865,6 +4907,8 @@ const AuthenticatedSecurityWorkWorkspaceIdRouteChildren: AuthenticatedSecurityWo
       AuthenticatedSecurityWorkWorkspaceIdIndexRoute,
     AuthenticatedSecurityWorkWorkspaceIdAnalysesAnalysisIdRoute:
       AuthenticatedSecurityWorkWorkspaceIdAnalysesAnalysisIdRoute,
+    AuthenticatedSecurityWorkWorkspaceIdImpactBriefIdRoute:
+      AuthenticatedSecurityWorkWorkspaceIdImpactBriefIdRoute,
     AuthenticatedSecurityWorkWorkspaceIdMissionsMissionIdRoute:
       AuthenticatedSecurityWorkWorkspaceIdMissionsMissionIdRoute,
     AuthenticatedSecurityWorkWorkspaceIdReportsReportIdRoute:
@@ -4873,6 +4917,8 @@ const AuthenticatedSecurityWorkWorkspaceIdRouteChildren: AuthenticatedSecurityWo
       AuthenticatedSecurityWorkWorkspaceIdSourcesSourceIdRoute,
     AuthenticatedSecurityWorkWorkspaceIdAnalysesIndexRoute:
       AuthenticatedSecurityWorkWorkspaceIdAnalysesIndexRoute,
+    AuthenticatedSecurityWorkWorkspaceIdImpactIndexRoute:
+      AuthenticatedSecurityWorkWorkspaceIdImpactIndexRoute,
     AuthenticatedSecurityWorkWorkspaceIdMissionsIndexRoute:
       AuthenticatedSecurityWorkWorkspaceIdMissionsIndexRoute,
     AuthenticatedSecurityWorkWorkspaceIdReportsIndexRoute:

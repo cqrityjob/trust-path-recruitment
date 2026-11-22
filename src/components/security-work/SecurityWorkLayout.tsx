@@ -15,6 +15,7 @@ import {
   LayoutDashboard,
   Menu,
   Radio,
+  Activity,
   Settings2,
   Target,
   TriangleAlert,
@@ -70,7 +71,7 @@ export function SecurityWorkLayout({ children }: { children?: ReactNode }) {
   });
   const l = (sv: string, en: string) => (lang === "sv" ? sv : en);
   // Primary navigation follows the work, not the modules: Översikt, Uppdrag,
-  // Bevakning, Risker och åtgärder, Underlag, Rapporter, Er verksamhet. Every
+  // Förändringar, Bevakning, Risker och åtgärder, Underlag, Rapporter, Er verksamhet. Every
   // earlier page keeps its URL and stays reachable inside one of these groups;
   // the six-area programme lives on under Er verksamhet.
   const groups: { title: string | null; items: NavItem[] }[] = [
@@ -79,6 +80,7 @@ export function SecurityWorkLayout({ children }: { children?: ReactNode }) {
       items: [
         item("", t("sw.nav.overview"), LayoutDashboard, true),
         item("/missions", l("Uppdrag", "Missions"), Briefcase),
+        item("/impact", l("Förändringar", "Changes"), Activity),
         item("/monitoring", t("sw.nav.monitoring"), Radio),
       ],
     },

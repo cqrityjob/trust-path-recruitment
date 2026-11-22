@@ -18491,6 +18491,7 @@ export type Database = {
           updated_at: string
           version: number
           workspace_id: string
+          access_mission_id: string | null
         }
         Insert: {
           approval_note?: string
@@ -18516,6 +18517,7 @@ export type Database = {
           updated_at?: string
           version?: number
           workspace_id: string
+          access_mission_id?: string | null
         }
         Update: {
           approval_note?: string
@@ -18541,6 +18543,7 @@ export type Database = {
           updated_at?: string
           version?: number
           workspace_id?: string
+          access_mission_id?: string | null
         }
         Relationships: [
           {
@@ -19213,6 +19216,7 @@ export type Database = {
           entity_id: string
           entity_table: string
           id: string
+          mission_scope: string[]
           new_status: string | null
           old_status: string | null
           operation: string
@@ -19226,6 +19230,7 @@ export type Database = {
           entity_id: string
           entity_table: string
           id?: string
+          mission_scope?: string[]
           new_status?: string | null
           old_status?: string | null
           operation: string
@@ -19239,6 +19244,7 @@ export type Database = {
           entity_id?: string
           entity_table?: string
           id?: string
+          mission_scope?: string[]
           new_status?: string | null
           old_status?: string | null
           operation?: string
@@ -19362,6 +19368,177 @@ export type Database = {
           },
         ]
       }
+      sw_change_brief_applications: {
+        Row: {
+          action_ids: string[]
+          applied_at: string
+          applied_by: string
+          brief_id: string
+          id: string
+          request_hash: string
+          risk_id: string | null
+          workspace_id: string
+        }
+        Insert: {
+          action_ids?: string[]
+          applied_at?: string
+          applied_by: string
+          brief_id: string
+          id: string
+          request_hash: string
+          risk_id?: string | null
+          workspace_id: string
+        }
+        Update: {
+          action_ids?: string[]
+          applied_at?: string
+          applied_by?: string
+          brief_id?: string
+          id?: string
+          request_hash?: string
+          risk_id?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sw_change_brief_applications_workspace_id_brief_id_fkey"
+            columns: ["workspace_id", "brief_id"]
+            isOneToOne: false
+            referencedRelation: "sw_change_briefs"
+            referencedColumns: ["workspace_id", "id"]
+          },
+        ]
+      }
+      sw_change_briefs: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          cluster_id: string | null
+          created_at: string
+          created_by: string
+          decision_note: string
+          evidence: Json
+          evidence_item_ids: string[]
+          id: string
+          known: string
+          mission_id: string | null
+          operating_profile_version: number | null
+          proposed_actions: Json
+          relevance: Json
+          requirement_id: string | null
+          status: string
+          submitted_at: string | null
+          submitted_by: string | null
+          supersedes_id: string | null
+          title: string
+          uncertain: string
+          updated_at: string
+          version: number
+          what_changed: string
+          why_it_matters: string
+          workspace_id: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          cluster_id?: string | null
+          created_at?: string
+          created_by?: string
+          decision_note?: string
+          evidence?: Json
+          evidence_item_ids?: string[]
+          id?: string
+          known?: string
+          mission_id?: string | null
+          operating_profile_version?: number | null
+          proposed_actions?: Json
+          relevance?: Json
+          requirement_id?: string | null
+          status?: string
+          submitted_at?: string | null
+          submitted_by?: string | null
+          supersedes_id?: string | null
+          title: string
+          uncertain?: string
+          updated_at?: string
+          version?: number
+          what_changed?: string
+          why_it_matters?: string
+          workspace_id: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          cluster_id?: string | null
+          created_at?: string
+          created_by?: string
+          decision_note?: string
+          evidence?: Json
+          evidence_item_ids?: string[]
+          id?: string
+          known?: string
+          mission_id?: string | null
+          operating_profile_version?: number | null
+          proposed_actions?: Json
+          relevance?: Json
+          requirement_id?: string | null
+          status?: string
+          submitted_at?: string | null
+          submitted_by?: string | null
+          supersedes_id?: string | null
+          title?: string
+          uncertain?: string
+          updated_at?: string
+          version?: number
+          what_changed?: string
+          why_it_matters?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sw_change_briefs_workspace_id_cluster_id_fkey"
+            columns: ["workspace_id", "cluster_id"]
+            isOneToOne: false
+            referencedRelation: "sw_story_clusters"
+            referencedColumns: ["workspace_id", "id"]
+          },
+          {
+            foreignKeyName: "sw_change_briefs_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "sw_workspaces"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sw_change_briefs_workspace_id_mission_id_fkey"
+            columns: ["workspace_id", "mission_id"]
+            isOneToOne: false
+            referencedRelation: "sw_missions"
+            referencedColumns: ["workspace_id", "id"]
+          },
+          {
+            foreignKeyName: "sw_change_briefs_workspace_id_operating_profile_version_fkey"
+            columns: ["workspace_id", "operating_profile_version"]
+            isOneToOne: false
+            referencedRelation: "sw_operating_profiles"
+            referencedColumns: ["workspace_id", "profile_version"]
+          },
+          {
+            foreignKeyName: "sw_change_briefs_workspace_id_requirement_id_fkey"
+            columns: ["workspace_id", "requirement_id"]
+            isOneToOne: false
+            referencedRelation: "sw_intelligence_requirements"
+            referencedColumns: ["workspace_id", "id"]
+          },
+          {
+            foreignKeyName: "sw_change_briefs_workspace_id_supersedes_id_fkey"
+            columns: ["workspace_id", "supersedes_id"]
+            isOneToOne: false
+            referencedRelation: "sw_change_briefs"
+            referencedColumns: ["workspace_id", "id"]
+          },
+        ]
+      }
       sw_citations: {
         Row: {
           assessment_id: string | null
@@ -19443,6 +19620,39 @@ export type Database = {
           },
           {
             foreignKeyName: "sw_citations_workspace_id_source_item_id_fkey"
+            columns: ["workspace_id", "source_item_id"]
+            isOneToOne: false
+            referencedRelation: "sw_source_items"
+            referencedColumns: ["workspace_id", "id"]
+          },
+        ]
+      }
+      sw_cluster_items: {
+        Row: {
+          cluster_id: string
+          source_item_id: string
+          workspace_id: string
+        }
+        Insert: {
+          cluster_id: string
+          source_item_id: string
+          workspace_id: string
+        }
+        Update: {
+          cluster_id?: string
+          source_item_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sw_cluster_items_workspace_id_cluster_id_fkey"
+            columns: ["workspace_id", "cluster_id"]
+            isOneToOne: false
+            referencedRelation: "sw_story_clusters"
+            referencedColumns: ["workspace_id", "id"]
+          },
+          {
+            foreignKeyName: "sw_cluster_items_workspace_id_source_item_id_fkey"
             columns: ["workspace_id", "source_item_id"]
             isOneToOne: false
             referencedRelation: "sw_source_items"
@@ -19669,6 +19879,91 @@ export type Database = {
             columns: ["workspace_id", "job_id"]
             isOneToOne: false
             referencedRelation: "sw_processing_jobs"
+            referencedColumns: ["workspace_id", "id"]
+          },
+        ]
+      }
+      sw_feed_hosts: {
+        Row: {
+          active: boolean
+          approval_note: string
+          created_at: string
+          host: string
+          publisher: string
+          terms_reference: string
+        }
+        Insert: {
+          active?: boolean
+          approval_note: string
+          created_at?: string
+          host: string
+          publisher: string
+          terms_reference: string
+        }
+        Update: {
+          active?: boolean
+          approval_note?: string
+          created_at?: string
+          host?: string
+          publisher?: string
+          terms_reference?: string
+        }
+        Relationships: [
+        ]
+      }
+      sw_fetch_runs: {
+        Row: {
+          created_at: string
+          created_by: string
+          error_code: string | null
+          http_status: number | null
+          id: string
+          items_new: number
+          items_seen: number
+          payload_hash: string
+          source_id: string
+          status: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string
+          error_code?: string | null
+          http_status?: number | null
+          id: string
+          items_new?: number
+          items_seen?: number
+          payload_hash: string
+          source_id: string
+          status: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          error_code?: string | null
+          http_status?: number | null
+          id?: string
+          items_new?: number
+          items_seen?: number
+          payload_hash?: string
+          source_id?: string
+          status?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sw_fetch_runs_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "sw_workspaces"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sw_fetch_runs_workspace_id_source_id_fkey"
+            columns: ["workspace_id", "source_id"]
+            isOneToOne: false
+            referencedRelation: "sw_sources"
             referencedColumns: ["workspace_id", "id"]
           },
         ]
@@ -19986,6 +20281,7 @@ export type Database = {
           facts: Json
           id: string
           language: string
+          mission_scope: string[]
           narrative: Json
           period_end: string | null
           period_start: string | null
@@ -20006,6 +20302,7 @@ export type Database = {
           facts?: Json
           id?: string
           language?: string
+          mission_scope?: string[]
           narrative?: Json
           period_end?: string | null
           period_start?: string | null
@@ -20026,6 +20323,7 @@ export type Database = {
           facts?: Json
           id?: string
           language?: string
+          mission_scope?: string[]
           narrative?: Json
           period_end?: string | null
           period_start?: string | null
@@ -20237,6 +20535,8 @@ export type Database = {
           updated_at: string
           version: number
           workspace_id: string
+          review_accepted_at: string | null
+          review_accepted_by: string | null
         }
         Insert: {
           brief?: Json
@@ -20255,6 +20555,8 @@ export type Database = {
           updated_at?: string
           version?: number
           workspace_id: string
+          review_accepted_at?: string | null
+          review_accepted_by?: string | null
         }
         Update: {
           brief?: Json
@@ -20273,6 +20575,8 @@ export type Database = {
           updated_at?: string
           version?: number
           workspace_id?: string
+          review_accepted_at?: string | null
+          review_accepted_by?: string | null
         }
         Relationships: [
           {
@@ -20930,6 +21234,60 @@ export type Database = {
           },
         ]
       }
+      sw_review_flags: {
+        Row: {
+          brief_id: string
+          created_at: string
+          id: string
+          reason: string
+          resolution_note: string
+          resolved_at: string | null
+          resolved_by: string | null
+          source_item_id: string
+          status: string
+          workspace_id: string
+        }
+        Insert: {
+          brief_id: string
+          created_at?: string
+          id?: string
+          reason: string
+          resolution_note?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          source_item_id: string
+          status?: string
+          workspace_id: string
+        }
+        Update: {
+          brief_id?: string
+          created_at?: string
+          id?: string
+          reason?: string
+          resolution_note?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          source_item_id?: string
+          status?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sw_review_flags_workspace_id_brief_id_fkey"
+            columns: ["workspace_id", "brief_id"]
+            isOneToOne: false
+            referencedRelation: "sw_change_briefs"
+            referencedColumns: ["workspace_id", "id"]
+          },
+          {
+            foreignKeyName: "sw_review_flags_workspace_id_source_item_id_fkey"
+            columns: ["workspace_id", "source_item_id"]
+            isOneToOne: false
+            referencedRelation: "sw_source_items"
+            referencedColumns: ["workspace_id", "id"]
+          },
+        ]
+      }
       sw_revision_requests: {
         Row: {
           created_at: string
@@ -21034,6 +21392,7 @@ export type Database = {
           updated_at: string
           version: number
           workspace_id: string
+          access_mission_id: string | null
         }
         Insert: {
           accepted_at?: string | null
@@ -21056,6 +21415,7 @@ export type Database = {
           updated_at?: string
           version?: number
           workspace_id: string
+          access_mission_id?: string | null
         }
         Update: {
           accepted_at?: string | null
@@ -21078,6 +21438,7 @@ export type Database = {
           updated_at?: string
           version?: number
           workspace_id?: string
+          access_mission_id?: string | null
         }
         Relationships: [
           {
@@ -21178,6 +21539,7 @@ export type Database = {
         Row: {
           author: string | null
           canonical_url: string | null
+          content_hash: string | null
           created_at: string
           created_by: string
           deduplication_key: string
@@ -21185,6 +21547,7 @@ export type Database = {
           geography: string[]
           id: string
           language: string
+          observed_at: string | null
           original_title: string
           published_at: string | null
           publisher: string
@@ -21196,6 +21559,7 @@ export type Database = {
         Insert: {
           author?: string | null
           canonical_url?: string | null
+          content_hash?: string | null
           created_at?: string
           created_by?: string
           deduplication_key: string
@@ -21203,6 +21567,7 @@ export type Database = {
           geography?: string[]
           id?: string
           language?: string
+          observed_at?: string | null
           original_title: string
           published_at?: string | null
           publisher?: string
@@ -21214,6 +21579,7 @@ export type Database = {
         Update: {
           author?: string | null
           canonical_url?: string | null
+          content_hash?: string | null
           created_at?: string
           created_by?: string
           deduplication_key?: string
@@ -21221,6 +21587,7 @@ export type Database = {
           geography?: string[]
           id?: string
           language?: string
+          observed_at?: string | null
           original_title?: string
           published_at?: string | null
           publisher?: string
@@ -21252,13 +21619,18 @@ export type Database = {
           canonical_url: string | null
           created_at: string
           created_by: string
+          feed_etag: string | null
+          feed_last_modified: string | null
+          feed_url: string | null
           geography: string[]
           id: string
           language: string
+          last_checked_at: string | null
           last_failure: string | null
           last_failure_at: string | null
           last_success_at: string | null
           name: string
+          poll_target_minutes: number | null
           publisher: string
           reliability_category: string
           source_type: string
@@ -21273,13 +21645,18 @@ export type Database = {
           canonical_url?: string | null
           created_at?: string
           created_by?: string
+          feed_etag?: string | null
+          feed_last_modified?: string | null
+          feed_url?: string | null
           geography?: string[]
           id?: string
           language?: string
+          last_checked_at?: string | null
           last_failure?: string | null
           last_failure_at?: string | null
           last_success_at?: string | null
           name: string
+          poll_target_minutes?: number | null
           publisher?: string
           reliability_category?: string
           source_type?: string
@@ -21294,13 +21671,18 @@ export type Database = {
           canonical_url?: string | null
           created_at?: string
           created_by?: string
+          feed_etag?: string | null
+          feed_last_modified?: string | null
+          feed_url?: string | null
           geography?: string[]
           id?: string
           language?: string
+          last_checked_at?: string | null
           last_failure?: string | null
           last_failure_at?: string | null
           last_success_at?: string | null
           name?: string
+          poll_target_minutes?: number | null
           publisher?: string
           reliability_category?: string
           source_type?: string
@@ -21313,6 +21695,50 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "sw_sources_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "sw_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sw_story_clusters: {
+        Row: {
+          first_seen_at: string
+          has_copies: boolean
+          id: string
+          independent_sources: number
+          item_count: number
+          latest_item_at: string
+          story_key: string
+          title: string
+          workspace_id: string
+        }
+        Insert: {
+          first_seen_at?: string
+          has_copies?: boolean
+          id?: string
+          independent_sources?: number
+          item_count?: number
+          latest_item_at?: string
+          story_key: string
+          title: string
+          workspace_id: string
+        }
+        Update: {
+          first_seen_at?: string
+          has_copies?: boolean
+          id?: string
+          independent_sources?: number
+          item_count?: number
+          latest_item_at?: string
+          story_key?: string
+          title?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sw_story_clusters_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "sw_workspaces"
@@ -26086,6 +26512,31 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      sw_apply_change_brief: {
+        Args: {
+          _apply: Json
+          _brief_id: string
+          _expected_version: number
+          _request_id: string
+          _workspace_id: string
+        }
+        Returns: {
+          action_ids: string[]
+          applied_at: string
+          applied_by: string
+          brief_id: string
+          id: string
+          request_hash: string
+          risk_id: string | null
+          workspace_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "sw_change_brief_applications"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       sw_approve_report: {
         Args: {
           _expected_bundle_hash: string
@@ -26240,6 +26691,35 @@ export type Database = {
       sw_preview_report: {
         Args: { _report_id: string; _workspace_id: string }
         Returns: Json
+      }
+      sw_record_fetch: {
+        Args: {
+          _key_id: string
+          _payload: string
+          _run_id: string
+          _signature: string
+          _source_id: string
+          _workspace_id: string
+        }
+        Returns: {
+          created_at: string
+          created_by: string
+          error_code: string | null
+          http_status: number | null
+          id: string
+          items_new: number
+          items_seen: number
+          payload_hash: string
+          source_id: string
+          status: string
+          workspace_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "sw_fetch_runs"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       sw_reserve_assistant: {
         Args: {

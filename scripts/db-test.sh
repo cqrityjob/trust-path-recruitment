@@ -3841,6 +3841,13 @@ echo "==> Running Security Work Release A services over real PostgREST"
 psql_q -d postgres -c "CREATE DATABASE ${TEST_DB}_sw_pgrst TEMPLATE ${TEST_DB}_pristine;" >/dev/null
 TEST_DB="${TEST_DB}_sw_pgrst" bun scripts/security-work-release-a-postgrest-check.ts
 psql_q -d postgres -c "DROP DATABASE ${TEST_DB}_sw_pgrst;" >/dev/null
+# Release B: approved feed -> signed fetch (controlled DNS and HTTP, real
+# HMAC receipt) -> relevance and coverage -> brief -> approver -> risk and
+# actions once -> follow-up -> review flag -> superseding revision.
+echo "==> Running Security Work Release B journey over real PostgREST"
+psql_q -d postgres -c "CREATE DATABASE ${TEST_DB}_sw_pgrst TEMPLATE ${TEST_DB}_pristine;" >/dev/null
+TEST_DB="${TEST_DB}_sw_pgrst" bun scripts/security-work-release-b-postgrest-check.ts
+psql_q -d postgres -c "DROP DATABASE ${TEST_DB}_sw_pgrst;" >/dev/null
 
 # International Passport: test fixtures roll back; rollback refuses adoption.
 for passport_round in before after; do

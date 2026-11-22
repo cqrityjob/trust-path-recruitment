@@ -487,9 +487,11 @@ export function SecurityAssistantPanel() {
               ? t("sw.prog.error.aiUnknown")
               : error === "AI_BUDGET_EXCEEDED"
                 ? t("sw.prog.error.aiBudget")
-                : error?.startsWith("AI_")
-                  ? t("sw.prog.error.ai")
-                  : undefined
+                : error === "RESTRICTED_CONTEXT"
+                  ? t("sw.prog.error.restrictedContext")
+                  : error?.startsWith("AI_")
+                    ? t("sw.prog.error.ai")
+                    : undefined
           }
         />
         {unknown && error === "AI_OUTCOME_UNKNOWN" && (
