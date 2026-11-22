@@ -22,6 +22,23 @@ CREATE OR REPLACE FUNCTION pg_temp.visible(_risk uuid) RETURNS integer LANGUAGE 
        + (SELECT count(*) FROM public.sw_audit_events WHERE entity_id=_risk OR entity_id IN (SELECT a.id FROM public.sw_actions a WHERE a.risk_id=_risk))::int
        + (SELECT count(*) FROM public.sw_record_versions WHERE risk_id=_risk)::int $$;
 
+-- Reserve, dispatch, sign, complete and store an assistant result (the legitimate path).
+CREATE OR REPLACE FUNCTION pg_temp.sign(_job uuid,_fence uuid,_payload text) RETURNS text LANGUAGE sql SECURITY DEFINER SET search_path='' AS $$
+  SELECT sw_private.receipt_mac('assistant'||E'\n'||_job::text||E'\n'||_fence::text||E'\n'||sw_private.hash_text(_payload),repeat('synthetic-only-',4)) $$;
+CREATE OR REPLACE FUNCTION pg_temp.manifest(_kind text,_ck text,_cid text,_req text) RETURNS jsonb LANGUAGE sql AS $$
+  SELECT jsonb_build_object('kind',_kind,'capability',_kind,'contextKind',_ck,'contextId',_cid,'requestText',_req,'language','sv',
+    'promptVersion','sw-rrc-test','decisionRequired',true,'context',jsonb_build_object('note','synthetic'),'sources','[]'::jsonb) $$;
+CREATE OR REPLACE FUNCTION pg_temp.produce(_w uuid,_id uuid,_m jsonb,_output jsonb) RETURNS uuid LANGUAGE plpgsql AS $$
+DECLARE f uuid; p text := jsonb_build_object('status','succeeded','output',_output,'provider','synthetic','model','synthetic-model','inputTokens',10,'outputTokens',20,'costMicros',40)::text;
+BEGIN
+  PERFORM public.sw_reserve_assistant(_w,_id,'5c000000-0000-4000-8000-000000000040',_m);
+  f := (public.sw_dispatch_processing(_w,_id)->'job'->>'fence')::uuid;
+  PERFORM public.sw_complete_processing(_w,_id,f,'synthetic-test-key',p,pg_temp.sign(_id,f,p));
+  INSERT INTO public.sw_ai_suggestions(id,workspace_id,job_id,kind,context_kind,context_id,request_text,content,source_records,provider,model,prompt_version,decision_required)
+  VALUES(_id,_w,_id,_m->>'kind',_m->>'contextKind',(_m->>'contextId')::uuid,_m->>'requestText',_output,_m->'sources','synthetic','synthetic-model','sw-rrc-test',true);
+  RETURN _id;
+END $$;
+
 -- 1 owner (approver, OUTSIDE the circle), 2 approving editor (creates the
 -- circle), 3 editor without approval (in the circle), 4 editor outside,
 -- 5 viewer outside, 6 viewer in the circle, 7 owner of another workspace.
@@ -189,6 +206,81 @@ SELECT pg_temp.fail(format('UPDATE sw_missions SET review_state=''accepted'' WHE
 SELECT pg_temp.login('5c000000-0000-4000-8000-000000000002');
 UPDATE sw_missions SET review_state='accepted' WHERE id=:'rm';
 SELECT pg_temp.ok((SELECT review_accepted_by='5c000000-0000-4000-8000-000000000002' FROM sw_missions WHERE id=:'rm'),'an approver in the circle accepts it');
+-- ---------------------------------------------------------------------------
+-- History keeps the scope it was written with: links, assets, controls and a
+-- deleted citation never fall back to the workspace
+-- ---------------------------------------------------------------------------
+SELECT pg_temp.login('5c000000-0000-4000-8000-000000000003');
+INSERT INTO sw_citations(workspace_id,risk_id,source_item_id,claim,excerpt) VALUES(:'wa',:'risk',:'item','CONFIDENTIAL claim','key supplier may be insolvent') RETURNING id AS cit \gset
+DELETE FROM sw_citations WHERE id=:'cit';
+INSERT INTO sw_evidence_links(workspace_id,source_id,target_kind,target_id) VALUES(:'wa',:'src','action',:'later') RETURNING id AS alink \gset
+DELETE FROM sw_evidence_links WHERE id=:'alink';
+RESET ROLE;
+CREATE TEMP TABLE rrc_children ON COMMIT DROP AS
+  SELECT id FROM sw_risk_assets WHERE risk_id=:'risk'
+  UNION ALL SELECT id FROM sw_controls WHERE risk_id=:'risk'
+  UNION ALL SELECT id FROM sw_evidence_links WHERE target_id=:'risk' OR target_id IN (SELECT id FROM sw_actions WHERE risk_id=:'risk')
+  UNION ALL SELECT :'cit'::uuid UNION ALL SELECT :'alink'::uuid;
+GRANT SELECT ON rrc_children TO authenticated;
+SELECT count(*) AS child_events FROM sw_audit_events e JOIN rrc_children c ON c.id=e.entity_id \gset
+SELECT pg_temp.ok(:child_events>=7 AND (SELECT count(*)>=3 FROM sw_audit_events e JOIN rrc_children c ON c.id=e.entity_id WHERE e.entity_table IN ('sw_evidence_links','sw_risk_assets'))
+  AND (SELECT count(*)=2 FROM sw_audit_events WHERE entity_id=:'cit'),'fixture: the restricted record''s links, asset link, control and deleted citation have history');
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.login('5c000000-0000-4000-8000-000000000004');
+SELECT pg_temp.ok((SELECT count(*)=0 FROM sw_audit_events e JOIN rrc_children c ON c.id=e.entity_id),'an editor outside the circle reads no history of the restricted record''s links, assets, controls or deleted citation');
+SELECT pg_temp.login('5c000000-0000-4000-8000-000000000005');
+SELECT pg_temp.ok((SELECT count(*)=0 FROM sw_audit_events e JOIN rrc_children c ON c.id=e.entity_id),'a viewer outside the circle reads none of that history');
+SELECT pg_temp.login('5c000000-0000-4000-8000-000000000001');
+SELECT pg_temp.ok((SELECT count(*)=0 FROM sw_audit_events e JOIN rrc_children c ON c.id=e.entity_id),'a workspace owner outside the circle reads none of that history');
+SELECT pg_temp.login('5c000000-0000-4000-8000-000000000003');
+SELECT pg_temp.ok((SELECT count(*)=:child_events FROM sw_audit_events e JOIN rrc_children c ON c.id=e.entity_id),'the circle keeps the whole history, the deleted citation''s included');
+SELECT pg_temp.login('5c000000-0000-4000-8000-000000000004');
+INSERT INTO sw_evidence_links(workspace_id,source_id,target_kind,target_id) VALUES(:'wa',:'src','risk',:'plain') RETURNING id AS plink \gset
+DELETE FROM sw_evidence_links WHERE id=:'plink';
+SELECT pg_temp.login('5c000000-0000-4000-8000-000000000005');
+SELECT pg_temp.ok((SELECT count(*)=2 FROM sw_audit_events WHERE entity_id=:'plink') AND (SELECT count(*)>=1 FROM sw_audit_events WHERE entity_id=:'plain'),'ordinary history stays workspace-readable, a deleted link''s included');
+
+-- ---------------------------------------------------------------------------
+-- An open mission's work is ordinary work: reports and the assistant use it.
+-- Restricting the mission later takes the copies into the circle with it.
+-- ---------------------------------------------------------------------------
+SELECT pg_temp.login('5c000000-0000-4000-8000-000000000004');
+INSERT INTO sw_management_reports(workspace_id,title,language,facts,computed,narrative,mission_scope) VALUES(:'wa','Status','sv',
+  jsonb_build_object('risks',jsonb_build_array(jsonb_build_object('id',:'orisk'),jsonb_build_object('id',:'plain')),'actions','[]'::jsonb),'{}','{}','{}') RETURNING id AS rep \gset
+SELECT pg_temp.ok((SELECT mission_scope=ARRAY[:'om'::uuid] FROM sw_management_reports WHERE id=:'rep'),'an open mission''s risk enters a workspace report, which records the mission it drew on');
+UPDATE sw_management_reports SET mission_scope='{}', title='Status Q1' WHERE id=:'rep';
+SELECT pg_temp.ok((SELECT mission_scope=ARRAY[:'om'::uuid] AND title='Status Q1' FROM sw_management_reports WHERE id=:'rep'),'the report''s mission list is the database''s, not the client''s');
+SELECT pg_temp.login('5c000000-0000-4000-8000-000000000005');
+SELECT pg_temp.ok((SELECT count(*)=1 FROM sw_management_reports WHERE id=:'rep'),'a viewer outside every circle reads the open-mission report');
+SELECT pg_temp.login('5c000000-0000-4000-8000-000000000003');
+SELECT pg_temp.fail(format('INSERT INTO sw_management_reports(workspace_id,title,language,facts,computed,narrative) VALUES(%L,''Leak'',''sv'',%L,''{}'',''{}'')',:'wa',
+  jsonb_build_object('risks',jsonb_build_array(jsonb_build_object('id',:'risk')))),'42501','a restricted mission''s risk never enters a workspace report, not even from inside the circle');
+SELECT pg_temp.fail(format('UPDATE sw_management_reports SET facts=%L WHERE id=%L',jsonb_build_object('actions',jsonb_build_array(jsonb_build_object('id',:'later'))),:'rep'),'42501','nor is it added to an existing report');
+-- The assistant: an open mission's risk is context; a restricted one is not.
+SELECT pg_temp.login('5c000000-0000-4000-8000-000000000004');
+SELECT pg_temp.produce(:'wa','5c000000-0000-4000-8000-0000000000c1',pg_temp.manifest('risk_scenario','risk',:'orisk','Describe'),'{"threat_scenario":"Scenario","description":"Description","missing_information":[],"questions":[]}') AS osug \gset
+SELECT pg_temp.login('5c000000-0000-4000-8000-000000000005');
+SELECT pg_temp.ok((SELECT count(*)=1 FROM sw_processing_jobs WHERE id=:'osug') AND (SELECT count(*)=1 FROM sw_ai_suggestions WHERE id=:'osug'),'the assistant works on an open mission''s risk and the workspace reads the result');
+-- The mission's creator restricts it: the records and every copy follow.
+SELECT pg_temp.login('5c000000-0000-4000-8000-000000000002');
+UPDATE sw_missions SET restricted=true WHERE id=:'om';
+SELECT pg_temp.login('5c000000-0000-4000-8000-000000000004');
+SELECT pg_temp.ok((SELECT count(*)=0 FROM sw_risks WHERE id=:'orisk') AND (SELECT count(*)=0 FROM sw_management_reports WHERE id=:'rep')
+  AND (SELECT count(*)=0 FROM sw_processing_jobs WHERE id=:'osug') AND (SELECT count(*)=0 FROM sw_ai_suggestions WHERE id=:'osug')
+  AND (SELECT count(*)=0 FROM sw_audit_events WHERE entity_id IN (:'orisk',:'rep',:'osug')),'once the mission is restricted its records, report, assistant result and their history leave the outsiders');
+SELECT pg_temp.ok(pg_temp.changed(format('UPDATE sw_management_reports SET title=''Outsider'' WHERE id=%L',:'rep'))=0,'an outside editor cannot change that report any more');
+SELECT pg_temp.fail(format('SELECT sw_reserve_assistant(%L,gen_random_uuid(),''5c000000-0000-4000-8000-000000000040'',%L)',:'wa',pg_temp.manifest('report_narrative','management_report',:'rep','Draft')),'42501','the assistant refuses a report that drew on a now-restricted mission');
+SELECT pg_temp.login('5c000000-0000-4000-8000-000000000002');
+SELECT pg_temp.ok((SELECT count(*)=1 FROM sw_management_reports WHERE id=:'rep') AND (SELECT count(*)=1 FROM sw_ai_suggestions WHERE id=:'osug'),'the mission''s circle keeps the report and the assistant result');
+SELECT sw_set_mission_member(:'wa',:'om','5c000000-0000-4000-8000-000000000005',true);
+SELECT pg_temp.login('5c000000-0000-4000-8000-000000000005');
+SELECT pg_temp.ok((SELECT count(*)=1 FROM sw_management_reports WHERE id=:'rep'),'a member added to the circle reads the report');
+SELECT pg_temp.login('5c000000-0000-4000-8000-000000000002');
+SELECT sw_set_mission_member(:'wa',:'om','5c000000-0000-4000-8000-000000000005',false);
+SELECT pg_temp.login('5c000000-0000-4000-8000-000000000005');
+SELECT pg_temp.ok((SELECT count(*)=0 FROM sw_management_reports WHERE id=:'rep') AND (SELECT count(*)=0 FROM sw_ai_suggestions WHERE id=:'osug'),'removing the member removes the report and the assistant result');
+SELECT pg_temp.ok((SELECT count(*)=1 FROM sw_risks WHERE id=:'plain'),'ordinary records are untouched by all of this');
+
 RESET ROLE;
 
 \if :{?sw_restricted_keep_fixture}
