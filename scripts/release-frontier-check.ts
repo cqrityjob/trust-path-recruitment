@@ -538,7 +538,12 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // The 408-row ledger preserves the previous 407 entries; all 15 functions, 27
 // policies, 4 triggers, 6 columns and 3 constraints match the merged source.
 // Evidence: docs/release/2026-11-22-security-work-restricted-records-hosted-verification.json.
-const expectedPending: string[] = [];
+//
+// 2026-11-22: 20270330090000 (the supplier cycle: supplier profile, asset
+// relations, contracts, obligations, decisions, command-only supplier requests)
+// is a schema-first release awaiting the owner's merge. It creates no sharing
+// right, mail, portal, provider or schedule.
+const expectedPending: string[] = ["20270330090000_security_work_supplier_cycle.sql"];
 
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",

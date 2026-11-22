@@ -4496,6 +4496,124 @@
       "rollback": "supabase/rollback/20270329090000_security_work_restricted_records_rollback.sql",
       "note": "Security Work forward fix on the installed 20270327090000 and 20270328090000 (neither edited). (1) A risk or action created from a restricted mission's impact brief kept workspace-wide policies, so an editor, viewer or owner outside the mission's circle could read and change it. sw_apply_change_brief now stamps access_mission_id from the brief; the scope is immutable, inherited by actions from their risk, cannot join an assessment (whose revision copies risks), and is read through sw_private.can_see_mission - for the risk and action themselves and for controls, citations, asset links, evidence links, audit events and version snapshots that point at them. Removing a mission link changes nothing. The assistant refuses a scoped record as context (its results are workspace-readable). Ordinary records (scope NULL) are unchanged. (2) Accepting a mission review now requires sw_private.can_approve; the database stamps review_accepted_by/at, completion requires that stamp, and changing the reviewed brief or title withdraws the acceptance. Production had 0 missions, briefs, applications and monitoring risks when this was written; no backfill. Install after 20270328090000.",
       "verify": "Full-history replay plus supabase/tests/security_work_restricted_records_test.sql (70 assertions as real roles: circle editor/viewer, editor/viewer/owner outside the circle, another workspace, membership removal, open missions, ordinary records, retry and atomic apply, durable audit scope including deleted citations and links, open-mission reports and assistant results, a later restriction and a fact refresh that never sheds scope, review acceptance), scripts/security-work-restricted-records-negative-controls.sh (19 planted defects each caught by its named assertion), adopted-data rollback refusal, a rollback restoring the installed functions and every public policy exactly, and re-application with the monitoring, context and foundation suites. After installation confirm: both access_mission_id columns and both acceptance columns exist; sw_private.can_see_scope and can_see_record are executable by authenticated only, record_scope and the guards by nobody; the sw_risks/sw_actions policies reference can_see_scope; sw_04_scope and sw_06_assistant_scope triggers exist; no risk or action has a scope yet."
+    },
+    {
+      "introduces": [
+        {
+          "object": "sw_supplier_profiles", 
+          "kind": "table"
+        }, 
+        {
+          "object": "sw_asset_dependencies", 
+          "kind": "table"
+        }, 
+        {
+          "object": "sw_supplier_contracts", 
+          "kind": "table"
+        }, 
+        {
+          "object": "sw_supplier_obligations", 
+          "kind": "table"
+        }, 
+        {
+          "object": "sw_decisions", 
+          "kind": "table"
+        }, 
+        {
+          "object": "sw_supplier_requests", 
+          "kind": "table"
+        }, 
+        {
+          "object": "sw_supplier_request_events", 
+          "kind": "table"
+        }, 
+        {
+          "object": "sw_supplier_request_shares", 
+          "kind": "table"
+        }, 
+        {
+          "object": "sw_supplier_responses", 
+          "kind": "table"
+        }, 
+        {
+          "object": "sw_supplier_verifications", 
+          "kind": "table"
+        }, 
+        {
+          "object": "sw_supplier_reviews", 
+          "kind": "table"
+        }, 
+        {
+          "object": "sw_set_member_sharing(uuid,uuid,boolean)", 
+          "kind": "function"
+        }, 
+        {
+          "object": "sw_set_asset_impact(uuid,uuid,text,text)", 
+          "kind": "function"
+        }, 
+        {
+          "object": "sw_save_supplier_request(uuid,uuid,uuid,integer,jsonb)", 
+          "kind": "function"
+        }, 
+        {
+          "object": "sw_approve_supplier_share(uuid,uuid,uuid,integer,text,text)", 
+          "kind": "function"
+        }, 
+        {
+          "object": "sw_record_supplier_dispatch(uuid,uuid,uuid,integer,text,text,timestamptz)", 
+          "kind": "function"
+        }, 
+        {
+          "object": "sw_record_supplier_response(uuid,uuid,uuid,integer,jsonb)", 
+          "kind": "function"
+        }, 
+        {
+          "object": "sw_verify_supplier_response(uuid,uuid,uuid,integer,uuid,text,text,text,text)", 
+          "kind": "function"
+        }, 
+        {
+          "object": "sw_reopen_supplier_request(uuid,uuid,uuid,integer,text)", 
+          "kind": "function"
+        }, 
+        {
+          "object": "sw_withdraw_supplier_request(uuid,uuid,uuid,integer,text)", 
+          "kind": "function"
+        }, 
+        {
+          "object": "sw_change_supplier_due(uuid,uuid,uuid,integer,text,date,text)", 
+          "kind": "function"
+        }, 
+        {
+          "object": "can_share_external", 
+          "kind": "column", 
+          "table": "sw_workspace_memberships"
+        }, 
+        {
+          "object": "impact_status", 
+          "kind": "column", 
+          "table": "sw_risk_assets"
+        }, 
+        {
+          "object": "impact_note", 
+          "kind": "column", 
+          "table": "sw_risk_assets"
+        }, 
+        {
+          "object": "impact_checked_by", 
+          "kind": "column", 
+          "table": "sw_risk_assets"
+        }, 
+        {
+          "object": "impact_checked_at", 
+          "kind": "column", 
+          "table": "sw_risk_assets"
+        }
+      ], 
+      "rollback": "supabase/rollback/20270330090000_security_work_supplier_cycle_rollback.sql", 
+      "verify": "Full-history replay plus supabase/tests/security_work_supplier_cycle_test.sql (72 assertions as real roles: the synthetic pilot with an insufficient answer, an objection on contract scope, a scope/cost decision, revision, reopening, a separate verifier, another customer, a restricted mission and a viewer), scripts/security-work-supplier-cycle-negative-controls.sh (20 planted defects each caught by its named assertion), scripts/security-work-supplier-race-test.sh (two real connections: a repeated response replays, a second verifier conflicts), adopted-data rollback refusal, a rollback restoring the pre-migration catalogue exactly, and re-application with the restricted-records, monitoring and foundation suites. After installation confirm: eleven tables with RLS and no anon/service_role privilege; the request tables writable by no client; the commands executable by authenticated only; sw_27_supplier_work on sw_actions; no supplier-cycle row and no sharing right exists.", 
+      "note": "Security Work supplier cycle (technical vision plan v1, stages A-B; docs/security-intelligence/supplier-cycle-reuse-map.md). A supplier is an asset of category suppliers with a profile; typed asset relations and risk-asset impact status (unconfirmed/confirmed/ruled out) are confirmed by a person. Contracts are immutable versions verified by an approver; obligations become binding only once an approver confirms them. Decisions are append-only (accept risk, scope/cost and close-with-deviation need the approval right; scope/cost records amount, currency, scope and mandate and buys nothing). A supplier request is the communication and verification part of an existing action: command-only (save, approve share with the explicit external sharing right, record dispatch, record response, verify, reopen, withdraw, change due), idempotent per operation id, version-checked, with an append-only event history; the action cannot complete while a request is unverified unless an approver documents a deviation. Everything follows the action's mission scope (#502). No mail, portal, provider or schedule is created. Install after 20270329090000.", 
+      "hostedState": "pending", 
+      "file": "20270330090000_security_work_supplier_cycle.sql"
     }
   ],
   "policyVersion": 2, 
