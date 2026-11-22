@@ -200,7 +200,15 @@ describe("official real Supabase CI target", () => {
     expect(APP_SHA).toBe("53659419a1c243c27a59540eb849569140b71365");
     // The schema witness moved to the Security Work restricted-records slot (408 files);
     // the application under this regression stays the reviewed 53659419.
-    expect(SCHEMA_SHA).toBe("959e6b757f45011f9a7c362badb52d67d5a93ff2");
+    expect(SCHEMA_SHA).toBe("32e8016d25089a806ef8629c36981b275a80c063");
+    // Nor the audit-scope witness, before report scope became grow-only (959e6b75).
+    expect(() =>
+      validateTarget(
+        { ...env, RI_REAL_RELEASE_SCHEMA_SHA: "959e6b757f45011f9a7c362badb52d67d5a93ff2" },
+        env.RI_REAL_SCHEMA_SHA,
+        APP_SHA,
+      ),
+    ).toThrow("REAL_CI_UNREVIEWED_RELEASE_SCHEMA");
     // Nor the first restricted-records witness, before the audit-scope review (205718a8).
     expect(() =>
       validateTarget(
@@ -389,7 +397,7 @@ describe("official real Supabase CI target", () => {
     ).toThrow("UNREVIEWED_APP_HEAD");
   });
   test("release schema binding is separate from test code and requires a full SHA", () => {
-    const release = "959e6b757f45011f9a7c362badb52d67d5a93ff2";
+    const release = "32e8016d25089a806ef8629c36981b275a80c063";
     const context = validateTarget(
       { ...env, RI_REAL_RELEASE_SCHEMA_SHA: release },
       env.RI_REAL_SCHEMA_SHA,
@@ -544,7 +552,7 @@ describe("real CI execution and publication cannot silently narrow", () => {
     expect(job["runs-on"]).toBe("ubuntu-latest");
     expect(job.if).toBeUndefined();
     expect(job["continue-on-error"]).toBeUndefined();
-    expect(job.env.RI_REAL_RELEASE_SCHEMA_SHA).toBe("959e6b757f45011f9a7c362badb52d67d5a93ff2");
+    expect(job.env.RI_REAL_RELEASE_SCHEMA_SHA).toBe("32e8016d25089a806ef8629c36981b275a80c063");
     expect(job.steps[0].with["fetch-depth"]).toBe(0);
     expect(job.steps.every((step: { [key: string]: unknown }) => !step["continue-on-error"])).toBe(
       true,

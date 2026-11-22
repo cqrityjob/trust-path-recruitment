@@ -18,9 +18,10 @@
 --    computed by the protected writer from the row, OLD on delete), so a
 --    deleted citation or link never makes its history workspace-readable.
 -- 1b. Copies that leave the record: a management report and an assistant job
---    or suggestion carry the missions whose records they used. A restricted
---    mission's records are refused as their input; when a mission becomes
---    restricted later, those copies become need-to-know with it.
+--    or suggestion carry the missions whose records they used (a report's
+--    list only grows). A restricted mission's records are refused as their
+--    input; when a mission becomes restricted later, those copies become
+--    need-to-know with it and stay so when the facts are refreshed.
 -- 2. Accepting a mission review requires an approver; the database stamps who
 --    accepted, completion requires that stamp, and changing the reviewed
 --    brief withdraws the acceptance.
@@ -52,7 +53,7 @@ ALTER TABLE public.sw_missions ADD CONSTRAINT sw_missions_completed_needs_accept
 ALTER TABLE public.sw_audit_events ADD COLUMN mission_scope uuid[] NOT NULL DEFAULT '{}';
 ALTER TABLE public.sw_management_reports ADD COLUMN mission_scope uuid[] NOT NULL DEFAULT '{}';
 COMMENT ON COLUMN public.sw_audit_events.mission_scope IS 'Missions whose records the event is about, fixed by sw_private.record_change when the event is written (from OLD on delete). The event is visible exactly as all of them are.';
-COMMENT ON COLUMN public.sw_management_reports.mission_scope IS 'Missions whose risks/actions are in facts, computed by the database on every facts change. The report is visible exactly as all of them are; a restricted mission''s records are refused.';
+COMMENT ON COLUMN public.sw_management_reports.mission_scope IS 'Missions whose risks/actions the report has ever had in its facts, kept by the database and only ever extended (narrative and decisions may still carry what a dropped fact said). The report is visible exactly as all of them are; a restricted mission''s records are refused unless the report already belongs to its circle.';
 
 -- -----------------------------------------------------------------------------
 -- 2. Visibility helpers (policy expressions; callable like can_see_mission)
@@ -195,17 +196,23 @@ BEGIN
 END $$;
 CREATE TRIGGER sw_06_assistant_scope BEFORE INSERT ON public.sw_processing_jobs FOR EACH ROW EXECUTE FUNCTION sw_private.guard_assistant_scope();
 
--- A management report's mission list is the database's: recomputed from the
--- facts whenever they change, kept otherwise, never taken from the client. A
--- restricted mission's records never enter a workspace report.
+-- A management report's mission list is the database's, never the client's,
+-- and it only grows. On every facts change it becomes the previous list plus
+-- the missions of the risks and actions now in the facts: a refresh can drop a
+-- record from the facts, but the narrative, decisions and earlier versions may
+-- still carry what it said, so the report stays as need-to-know as anything it
+-- ever drew on. A restricted mission's records never enter a report that did
+-- not already belong to that mission's circle.
 CREATE FUNCTION sw_private.guard_report_scope() RETURNS trigger
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
+DECLARE _previous uuid[] := CASE WHEN TG_OP = 'UPDATE' THEN OLD.mission_scope ELSE '{}' END;
+        _sources uuid[];
 BEGIN
   IF TG_OP = 'UPDATE' AND NEW.facts IS NOT DISTINCT FROM OLD.facts THEN
     NEW.mission_scope := OLD.mission_scope;
     RETURN NEW;
   END IF;
-  SELECT coalesce(array_agg(DISTINCT s), '{}') INTO NEW.mission_scope FROM (
+  SELECT coalesce(array_agg(DISTINCT s), '{}') INTO _sources FROM (
     SELECT r.access_mission_id AS s
       FROM jsonb_array_elements(CASE WHEN jsonb_typeof(NEW.facts->'risks') = 'array' THEN NEW.facts->'risks' ELSE '[]' END) e
       JOIN public.sw_risks r ON r.workspace_id = NEW.workspace_id AND r.id::text = e->>'id'
@@ -214,9 +221,11 @@ BEGIN
       FROM jsonb_array_elements(CASE WHEN jsonb_typeof(NEW.facts->'actions') = 'array' THEN NEW.facts->'actions' ELSE '[]' END) e
       JOIN public.sw_actions a ON a.workspace_id = NEW.workspace_id AND a.id::text = e->>'id'
   ) x WHERE s IS NOT NULL;
-  IF EXISTS (SELECT 1 FROM unnest(NEW.mission_scope) m WHERE sw_private.scope_is_restricted(NEW.workspace_id, m)) THEN
+  IF EXISTS (SELECT 1 FROM unnest(_sources) m WHERE NOT m = ANY(_previous) AND sw_private.scope_is_restricted(NEW.workspace_id, m)) THEN
     RAISE EXCEPTION 'SW_RESTRICTED_IN_REPORT' USING ERRCODE = '42501';
   END IF;
+  SELECT coalesce(array_agg(DISTINCT m ORDER BY m), '{}') INTO NEW.mission_scope
+    FROM unnest(_previous || _sources) m;
   RETURN NEW;
 END $$;
 CREATE TRIGGER sw_05_report_scope BEFORE INSERT OR UPDATE ON public.sw_management_reports FOR EACH ROW EXECUTE FUNCTION sw_private.guard_report_scope();
