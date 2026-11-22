@@ -7,7 +7,11 @@ export const SCHEMA_SHA = "06568b47ba96a5772474d67df5522b4d414155fd";
 export const APP_SHA = "53659419a1c243c27a59540eb849569140b71365";
 export const PROJECT = "cqj-ri-native-op09-20261008";
 export const API = "http://127.0.0.1:55820";
-export const APP = "http://127.0.0.1:35820";
+// Below Linux's ephemeral range (32768-60999): the kernel never gives this port
+// to an outgoing connection, so the app can always bind it. 35820 sat inside
+// the range, and an outgoing local connection holding it made Vite's
+// --strictPort listen fail (EADDRINUSE, OP09_NATIVE_APP_EXITED, run 45028429474).
+export const APP = "http://127.0.0.1:31820";
 export const CLI_VERSION = "2.111.0";
 export const EXCLUDED =
   "realtime,imgproxy,mailpit,postgres-meta,studio,edge-runtime,logflare,vector,supavisor";

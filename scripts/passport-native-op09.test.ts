@@ -6,6 +6,7 @@ import os from "node:os";
 import path from "node:path";
 import { execFileSync, spawnSync } from "node:child_process";
 import {
+  APP,
   API,
   APP_SHA,
   SCHEMA_SHA,
@@ -571,4 +572,23 @@ test("native consumers retain explicit environment isolation and reject removal 
     assert.notEqual(changed, runner);
     assert.throws(() => isolatedConsumerLaunchers(changed));
   }
+});
+
+test("the app port is outside Linux's ephemeral range, so no outgoing connection can hold it", () => {
+  // An outgoing local connection takes a source port from 32768-60999 (the
+  // runner default). If the app port were in that range, one such connection
+  // could hold it when Vite binds with --strictPort: EADDRINUSE, and the app
+  // exits (OP09_NATIVE_APP_EXITED, run 45028429474, app port 35820).
+  const port = Number(new URL(APP).port);
+  assert.ok(port > 1024 && port < 32768, `app port ${port} must be below 32768`);
+  const run = fs.readFileSync(
+    path.join(import.meta.dirname, "passport-native-op09-run.mjs"),
+    "utf8",
+  );
+  assert.match(
+    run,
+    /"--port", new URL\(APP\)\.port, "--strictPort"/,
+    "Vite starts on the contract's port",
+  );
+  assert.ok(!/\b35820\b/.test(run), "no literal app port is left behind in the runner");
 });

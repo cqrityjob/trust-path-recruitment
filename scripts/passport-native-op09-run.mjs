@@ -185,7 +185,7 @@ function safety() {
 }
 try {
   await stage("official_native_stack", async () => {
-    for (const port of [55819, 55820, 55821, 35820]) await freePort(port);
+    for (const port of [55819, 55820, 55821, Number(new URL(APP).port)]) await freePort(port);
     if (output("supabase", ["--version"], "cli-version") !== CLI_VERSION)
       throw Error("OP09_NATIVE_CLI_VERSION_MISMATCH");
     fs.writeFileSync(path.join(context.stackRoot, "supabase/config.toml"), CONFIG);
@@ -359,7 +359,14 @@ try {
     const fd = fs.openSync(file("app.log"), "w", 0o600);
     appChild = cp.spawn(
       "node",
-      ["node_modules/vite/bin/vite.js", "--host", "127.0.0.1", "--port", "35820", "--strictPort"],
+      [
+        "node_modules/vite/bin/vite.js",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        new URL(APP).port,
+        "--strictPort",
+      ],
       { cwd: context.appRoot, env: appEnvironment(context, status), stdio: ["ignore", fd, fd] },
     );
     fs.closeSync(fd);
