@@ -163,7 +163,13 @@ export function requestTimes(
   const resp = mine(responses).sort((a, b) => a.received_at.localeCompare(b.received_at));
   const ver = mine(verifications).sort((a, b) => a.verified_at.localeCompare(b.verified_at));
   const dispatch = ev.find((e) => e.event === "dispatched");
-  const first = dispatch ? resp.find((x) => x.received_at >= dispatch.created_at) : undefined;
+  // When it was sent (as recorded by the person), not when it was recorded.
+  const sentAt = dispatch
+    ? String((dispatch.details as { sentAt?: unknown } | null)?.sentAt ?? dispatch.created_at)
+    : null;
+  const first = sentAt
+    ? resp.find((x) => Date.parse(x.received_at) >= Date.parse(sentAt))
+    : undefined;
   const dones = resp.filter((x) => x.kind === "done");
   const lastDone = dones.at(-1) ?? null;
   const lastVerification = lastDone ? ver.find((v) => v.response_id === lastDone.id) : undefined;
@@ -171,7 +177,7 @@ export function requestTimes(
   const held = dueDate(r);
   const firstVerification = ver[0];
   return {
-    firstResponseHours: dispatch && first ? hours(dispatch.created_at, first.received_at) : null,
+    firstResponseHours: sentAt && first ? hours(sentAt, first.received_at) : null,
     verificationWaitHours: lastDone
       ? hours(lastDone.received_at, lastVerification?.verified_at ?? now)
       : null,

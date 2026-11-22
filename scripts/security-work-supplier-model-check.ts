@@ -128,6 +128,23 @@ check("the supplier's time and the customer's verification time are measured sep
   assert.equal(t.acceptedFirstTime, false);
   assert.equal(t.revisions, 1);
 });
+check(
+  "the supplier's time starts when the request was sent, not when the sending was recorded",
+  () => {
+    const recordedLate = [
+      {
+        ...events[0],
+        created_at: "2026-11-06T08:00:00Z",
+        details: { sentAt: "2026-11-02T08:00:00Z" },
+      },
+    ];
+    assert.equal(
+      requestTimes(base, recordedLate, responses, verifications, "2026-11-20T00:00:00Z")
+        .firstResponseHours,
+      72,
+    );
+  },
+);
 check("figures name their denominators and say when data is missing", () => {
   const f = supplierFigures(
     [base],

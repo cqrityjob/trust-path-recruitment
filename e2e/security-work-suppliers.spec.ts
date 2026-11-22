@@ -678,6 +678,9 @@ test("the supplier cycle from a warning to a verified action and a review, in Sw
   });
 
   await test.step("An empty supplier list explains the next step; a supplier is added", async () => {
+    // On a phone the section navigation sits behind the menu button.
+    const menu = page.getByRole("button", { name: "Öppna arbetsytans meny" });
+    if (await menu.isVisible()) await menu.click();
     await page.getByRole("link", { name: "Leverantörer" }).first().click();
     await slow(page.getByTestId("sw-suppliers")).toBeVisible();
     await expect(page.getByTestId("sw-suppliers")).toContainText(
@@ -857,6 +860,7 @@ test("the supplier cycle from a warning to a verified action and a review, in Sw
     );
     await expect(page.getByTestId("sw-request-now")).toHaveAttribute("data-step", "done");
     await expect(page.getByTestId("sw-request-times")).toContainText("Er verifiering");
+    await expect(page.getByTestId("sw-request-times")).not.toContainText("underlag saknas");
     await shot(page, "05-verified");
   });
 
