@@ -368,3 +368,45 @@ export function shareToMarkdown(
   );
   return lines.filter((line): line is string => line !== null).join("\n") + "\n";
 }
+
+const escapeHtml = (value: string) =>
+  value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+
+/**
+ * The external print document: a complete, standalone HTML page built ONLY
+ * from the approved share version (the same fields as the Markdown export).
+ * It is printed from its own frame, never from the request page, so nothing
+ * internal on that page - decisions, criteria, history, impacts - can reach
+ * the printout. No script, no external resource.
+ */
+export function shareToPrintHtml(
+  content: ShareContent,
+  meta: { shareVersion: number; recipient: string; approvedAt: string },
+  lang: "sv" | "en",
+): string {
+  const markdown = shareToMarkdown(content, meta, lang);
+  const lines = markdown.trimEnd().split("\n");
+  const body = lines
+    .map((line) => {
+      if (line.startsWith("# ")) return `<h1>${escapeHtml(line.slice(2))}</h1>`;
+      if (line.startsWith("## ")) return `<h2>${escapeHtml(line.slice(3))}</h2>`;
+      if (line === "---") return "<hr>";
+      if (line === "") return "";
+      return `<p>${escapeHtml(line)}</p>`;
+    })
+    .join("\n");
+  return `<!doctype html>
+<html lang="${lang}"><head><meta charset="utf-8"><title>${escapeHtml(content.reference)}</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'">
+<style>body{font-family:system-ui,sans-serif;max-width:42rem;margin:2rem auto;padding:0 1rem;line-height:1.5;color:#111}
+h1{font-size:1.5rem}h2{font-size:1.1rem;margin-top:1.5rem}p{margin:.25rem 0;white-space:pre-wrap}hr{margin:2rem 0}</style>
+</head><body data-print="supplier-share">
+${body}
+</body></html>
+`;
+}

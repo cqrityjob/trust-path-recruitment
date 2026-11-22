@@ -18,6 +18,7 @@ import {
   nextStep,
   requestTimes,
   shareToMarkdown,
+  shareToPrintHtml,
   type ShareContent,
 } from "@/lib/security-work/suppliers/model";
 import type { RequestDetail as Detail } from "@/lib/security-work/suppliers/services";
@@ -422,6 +423,28 @@ function ShareView({ detail }: { detail: Detail }) {
     },
     lang,
   );
+  // Printed from its own frame holding only the approved version: the
+  // request page around it (decisions, criteria, history) is never printed.
+  const print = () => {
+    document.getElementById("sw-share-print")?.remove();
+    const frame = document.createElement("iframe");
+    frame.id = "sw-share-print";
+    frame.name = "sw-share-print";
+    frame.title = content.reference;
+    frame.setAttribute("aria-hidden", "true");
+    frame.style.cssText = "position:fixed;width:0;height:0;border:0;right:0;bottom:0";
+    frame.onload = () => frame.contentWindow?.print();
+    frame.srcdoc = shareToPrintHtml(
+      content,
+      {
+        shareVersion: share.share_version,
+        recipient: share.recipient,
+        approvedAt: share.approved_at,
+      },
+      lang,
+    );
+    document.body.appendChild(frame);
+  };
   const download = () => {
     const url = URL.createObjectURL(new Blob([markdown], { type: "text/markdown;charset=utf-8" }));
     const a = document.createElement("a");
@@ -457,8 +480,8 @@ function ShareView({ detail }: { detail: Detail }) {
         <WorkButton variant="outline" onClick={download} data-testid="sw-share-download">
           {l("Ladda ner (Markdown)", "Download (Markdown)")}
         </WorkButton>
-        <WorkButton variant="outline" onClick={() => window.print()}>
-          {l("Skriv ut", "Print")}
+        <WorkButton variant="outline" onClick={print} data-testid="sw-share-print">
+          {l("Skriv ut extern version", "Print external version")}
         </WorkButton>
       </div>
     </div>

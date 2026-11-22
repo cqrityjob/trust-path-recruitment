@@ -12,7 +12,8 @@
  * journey, its states and copy in both languages and phone layouts.
  */
 import { expect, test, type Page, type Route } from "@playwright/test";
-import { mkdirSync, readFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 import { randomUUID } from "node:crypto";
 import { fromJSON, toCrossJSON } from "seroval";
 import {
@@ -655,6 +656,16 @@ async function shot(page: Page, name: string) {
     scale: "css",
   });
 }
+/** The text of a real PDF, as a reader would extract it (spacing normalised). */
+async function pdfText(bytes: Buffer): Promise<string> {
+  const pdf = await getDocument({ data: new Uint8Array(bytes), useSystemFonts: true }).promise;
+  let text = "";
+  for (let n = 1; n <= pdf.numPages; n += 1) {
+    const content = await (await pdf.getPage(n)).getTextContent();
+    text += content.items.map((item) => ("str" in item ? item.str : "")).join(" ") + "\n";
+  }
+  return text.replace(/\s+/g, " ");
+}
 const go = (page: Page, segment = "") => page.goto(`/security-work/${WORKSPACE}${segment}`);
 
 test("the supplier cycle from a warning to a verified action and a review, in Swedish", async ({
@@ -818,7 +829,7 @@ test("the supplier cycle from a warning to a verified action and a review, in Sw
     await decision.getByLabel("Beslut").selectOption("scope_cost");
     await decision
       .getByLabel("Motivering")
-      .fill("Uppgraderingen ligger utanför avtalet; beställs separat");
+      .fill("INTERNT-BESLUT: uppgraderingen ligger utanför avtalet; beställs separat");
     await decision.getByLabel("Belopp").fill("48000");
     await decision.getByLabel("Omfattning").fill("Uppgradering 4.3, båda kontoren");
     await decision.getByLabel("Mandat").fill("CFO-mandat 2026-11");
@@ -833,7 +844,7 @@ test("the supplier cycle from a warning to a verified action and a review, in Sw
       .locator("summary", { hasText: "Ändra datum" })
       .click();
     const changeDue = page.getByTestId("sw-change-due");
-    await changeDue.getByLabel("Motivering").fill("Överenskommet per telefon");
+    await changeDue.getByLabel("Motivering").fill("INTERNT-DATUMSKÄL: överenskommet per telefon");
     await changeDue.getByRole("button", { name: "Spara datum" }).click();
     await expect(page.getByTestId("sw-request-dates")).not.toContainText("inte överenskommet");
     await expect(page.getByTestId("sw-request-history")).toContainText("Datum ändrat");
@@ -862,6 +873,36 @@ test("the supplier cycle from a warning to a verified action and a review, in Sw
     await expect(page.getByTestId("sw-request-times")).toContainText("Er verifiering");
     await expect(page.getByTestId("sw-request-times")).not.toContainText("underlag saknas");
     await shot(page, "05-verified");
+  });
+
+  await test.step("The printout is the approved external version and nothing internal", async () => {
+    await page.getByTestId("sw-share-print").click();
+    await expect.poll(() => page.frames().some((f) => f.name() === "sw-share-print")).toBe(true);
+    const frame = page.frames().find((f) => f.name() === "sw-share-print")!;
+    await frame.waitForSelector("body[data-print='supplier-share']", { state: "attached" });
+    const printPage = await page.context().newPage();
+    await printPage.setContent(await frame.content());
+    const pdf = await printPage.pdf({ format: "A4" });
+    await printPage.close();
+    writeFileSync(`${out}/${test.info().project.name}-external-printout.pdf`, pdf);
+    const text = await pdfText(pdf);
+    expect(text).toContain("LB-2026-0001");
+    expect(text).toContain("Bekräfta om version 4.2");
+    expect(text).toContain("punkt 7.2");
+    // Internal on the request page right now, and never in the printout.
+    await expect(page.getByTestId("sw-supplier-request")).toContainText("INTERNT-BESLUT");
+    await expect(page.getByTestId("sw-request-history")).toContainText("INTERNT-DATUMSKÄL");
+    for (const internal of [
+      "INTERNT",
+      "Verifieringskriterier",
+      "Historik",
+      "Omfattnings- och kostnadsbeslut",
+      "48000",
+      "Vakt vid",
+      "J. Berg",
+      "Kompletteringar",
+    ])
+      expect(text, `the printout must not contain "${internal}"`).not.toContain(internal);
   });
 
   await test.step("The supplier page shows follow-up with denominators and a review", async () => {
