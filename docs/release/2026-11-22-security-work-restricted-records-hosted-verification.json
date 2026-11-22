@@ -1,0 +1,324 @@
+{
+  "notVerified": "No authenticated behavioural probe against production and no fetch in the hosted application runtime. The behaviour is covered by the SQL suites (70 assertions, 19 negative controls) and the PostgREST checks on disposable databases; feed activation still needs the owner-approved worker key and feed host.",
+  "readAt": "2026-11-22T09:40:17.639458+00:00",
+  "ledger": {
+    "latestName": "security_work_restricted_records",
+    "previous407EqualsCommittedSnapshot": true,
+    "previous407EqualsRecordedFull407Md5Of20270328": true,
+    "rows": 408,
+    "md5Of": "string_agg(version||':'||coalesce(name,''), E'\\n' ORDER BY version)",
+    "previous407Md5": "3f69b7dc012055e130e4b95e0d79cc49",
+    "latest": "20270329090000",
+    "full408Md5": "77b5dfb6c8b1efe842a60f99026a35e0"
+  },
+  "catalogueComparison": {
+    "identical": true,
+    "constraints": [
+      {
+        "validated": true,
+        "md5": "79e059360a757592935f00d8070ddccd",
+        "constraint": "sw_actions.sw_actions_access_mission_fkey"
+      },
+      {
+        "validated": false,
+        "md5": "3fd6b1c4b8497ed44a15c91f4eb9d012",
+        "constraint": "sw_missions.sw_missions_completed_needs_acceptance"
+      },
+      {
+        "validated": true,
+        "md5": "79e059360a757592935f00d8070ddccd",
+        "constraint": "sw_risks.sw_risks_access_mission_fkey"
+      }
+    ],
+    "policies": [
+      {
+        "policy": "sw_actions.sw_editor_insert",
+        "md5": "27bf8b88c7456a87eea95d7c3e4c15fd"
+      },
+      {
+        "policy": "sw_actions.sw_editor_update",
+        "md5": "0f54418530cc9977dc456fd8dfeceddb"
+      },
+      {
+        "policy": "sw_actions.sw_member_read",
+        "md5": "def422ffb5ef4fae389151714fe0bbb8"
+      },
+      {
+        "policy": "sw_ai_suggestions.sw_editor_insert",
+        "md5": "f8727bc0e6852b0bacad4533dd761aab"
+      },
+      {
+        "policy": "sw_ai_suggestions.sw_editor_update",
+        "md5": "64e6d7a75040544beba8c20a31b537de"
+      },
+      {
+        "policy": "sw_ai_suggestions.sw_member_read",
+        "md5": "726c88eae504b52e0b1ae05dd4b84ea1"
+      },
+      {
+        "policy": "sw_audit_events.sw_member_read",
+        "md5": "7812b9903c0825decca287dda7db94c9"
+      },
+      {
+        "policy": "sw_citations.sw_editor_delete",
+        "md5": "5652681a651fc9ca7fba789e2e572683"
+      },
+      {
+        "policy": "sw_citations.sw_editor_insert",
+        "md5": "d08ee8577875720997a7c3ad4c0c64bf"
+      },
+      {
+        "policy": "sw_citations.sw_member_read",
+        "md5": "a40bf9edcee01e32dbffab79c28ea8df"
+      },
+      {
+        "policy": "sw_controls.sw_editor_insert",
+        "md5": "d08ee8577875720997a7c3ad4c0c64bf"
+      },
+      {
+        "policy": "sw_controls.sw_editor_update",
+        "md5": "95c085cad43a34202995b489e8264fc7"
+      },
+      {
+        "policy": "sw_controls.sw_member_read",
+        "md5": "a40bf9edcee01e32dbffab79c28ea8df"
+      },
+      {
+        "policy": "sw_evidence_links.sw_editor_delete",
+        "md5": "3b4c3ba11eb8aea6f5586443266dce72"
+      },
+      {
+        "policy": "sw_evidence_links.sw_editor_insert",
+        "md5": "cd448faa1b920781f69364bad0302f03"
+      },
+      {
+        "policy": "sw_evidence_links.sw_member_read",
+        "md5": "48f5f174b3fcf6a2861a1a81b3ba8835"
+      },
+      {
+        "policy": "sw_management_reports.sw_editor_insert",
+        "md5": "f8727bc0e6852b0bacad4533dd761aab"
+      },
+      {
+        "policy": "sw_management_reports.sw_editor_update",
+        "md5": "3802cf8003f276d5f652a57b597b4c92"
+      },
+      {
+        "policy": "sw_management_reports.sw_member_read",
+        "md5": "7812b9903c0825decca287dda7db94c9"
+      },
+      {
+        "policy": "sw_processing_jobs.sw_member_read",
+        "md5": "89da3058fed1fcecf88a76d52e0fdc44"
+      },
+      {
+        "policy": "sw_record_versions.sw_member_read",
+        "md5": "0790342507766a7857bfa74fd73dd0c4"
+      },
+      {
+        "policy": "sw_risk_assets.sw_editor_delete",
+        "md5": "5652681a651fc9ca7fba789e2e572683"
+      },
+      {
+        "policy": "sw_risk_assets.sw_editor_insert",
+        "md5": "d08ee8577875720997a7c3ad4c0c64bf"
+      },
+      {
+        "policy": "sw_risk_assets.sw_member_read",
+        "md5": "a40bf9edcee01e32dbffab79c28ea8df"
+      },
+      {
+        "policy": "sw_risks.sw_editor_insert",
+        "md5": "27bf8b88c7456a87eea95d7c3e4c15fd"
+      },
+      {
+        "policy": "sw_risks.sw_editor_update",
+        "md5": "0f54418530cc9977dc456fd8dfeceddb"
+      },
+      {
+        "policy": "sw_risks.sw_member_read",
+        "md5": "def422ffb5ef4fae389151714fe0bbb8"
+      }
+    ],
+    "functions": [
+      {
+        "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+        "definitionMd5": "aed33c97af3739c4af8ad62a273ca397",
+        "settings": "search_path=\"\"",
+        "identity": "sw_private.apply_change_brief(uuid,uuid,integer,uuid,jsonb)",
+        "securityDefiner": true
+      },
+      {
+        "acl": "{postgres=X/postgres}",
+        "definitionMd5": "a0085c006e08cfcadf484c92fc41a1ae",
+        "settings": "search_path=\"\"",
+        "identity": "sw_private.audit_scope(text,jsonb)",
+        "securityDefiner": true
+      },
+      {
+        "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+        "definitionMd5": "7b2b39718b5a67d233ab326bc0287188",
+        "settings": "search_path=\"\"",
+        "identity": "sw_private.can_see_record(uuid,text,uuid)",
+        "securityDefiner": true
+      },
+      {
+        "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+        "definitionMd5": "e2b910e62ff54abcf91997f70616d2e8",
+        "settings": "search_path=\"\"",
+        "identity": "sw_private.can_see_refs(uuid,text,text,jsonb)",
+        "securityDefiner": true
+      },
+      {
+        "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+        "definitionMd5": "06c280603bdb7cd6723b18cbf44303ed",
+        "settings": "search_path=\"\"",
+        "identity": "sw_private.can_see_scope(uuid,uuid)",
+        "securityDefiner": true
+      },
+      {
+        "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+        "definitionMd5": "e8397fc0d637dd57a5c73feacb97dbb7",
+        "settings": "search_path=\"\"",
+        "identity": "sw_private.can_see_scopes(uuid,uuid[])",
+        "securityDefiner": true
+      },
+      {
+        "acl": "{postgres=X/postgres}",
+        "definitionMd5": "bdfe3e84fae9b6dd80389d726bdbf09d",
+        "settings": "search_path=\"\"",
+        "identity": "sw_private.guard_assistant_scope()",
+        "securityDefiner": true
+      },
+      {
+        "acl": "{postgres=X/postgres}",
+        "definitionMd5": "1aa385662f0dc07c39bd1d04dd6c4942",
+        "settings": "search_path=\"\"",
+        "identity": "sw_private.guard_mission()",
+        "securityDefiner": true
+      },
+      {
+        "acl": "{postgres=X/postgres}",
+        "definitionMd5": "0e74c212fa03841233b6c4b91bfa12d5",
+        "settings": "search_path=\"\"",
+        "identity": "sw_private.guard_record_scope()",
+        "securityDefiner": true
+      },
+      {
+        "acl": "{postgres=X/postgres}",
+        "definitionMd5": "2e45ec44478d79b079cae23466240b5f",
+        "settings": "search_path=\"\"",
+        "identity": "sw_private.guard_report_scope()",
+        "securityDefiner": true
+      },
+      {
+        "acl": "{postgres=X/postgres}",
+        "definitionMd5": "2fa6f8162de95c83fbe84c56cbf03664",
+        "settings": "search_path=\"\"",
+        "identity": "sw_private.record_change()",
+        "securityDefiner": true
+      },
+      {
+        "acl": "{postgres=X/postgres}",
+        "definitionMd5": "c7baa63cadb15a433050daac96b6e614",
+        "settings": "search_path=\"\"",
+        "identity": "sw_private.record_scope(uuid,text,text)",
+        "securityDefiner": true
+      },
+      {
+        "acl": "{postgres=X/postgres}",
+        "definitionMd5": "1f2801040bff25a1a8c4b6b1b5ad67d1",
+        "settings": "search_path=\"\"",
+        "identity": "sw_private.ref_scopes(uuid,text,text)",
+        "securityDefiner": true
+      },
+      {
+        "acl": "{postgres=X/postgres}",
+        "definitionMd5": "b190b9d16d5538bac4394513b6d17961",
+        "settings": "search_path=\"\"",
+        "identity": "sw_private.refs_scopes(uuid,text,text,jsonb)",
+        "securityDefiner": true
+      },
+      {
+        "acl": "{postgres=X/postgres}",
+        "definitionMd5": "b629ee0d6efcf3fdefe3048421d798b4",
+        "settings": "search_path=\"\"",
+        "identity": "sw_private.scope_is_restricted(uuid,uuid)",
+        "securityDefiner": true
+      }
+    ],
+    "query": "md5(pg_get_functiondef) with prosecdef, proconfig and proacl for the 15 created or replaced sw_private functions; md5(qual|with_check|cmd|roles) for every policy on the 11 affected public tables; data type, nullability and default of the six new columns; md5(pg_get_triggerdef) and enabled state of the three new triggers (four rows); md5(pg_get_constraintdef) and validated state of the three new constraints",
+    "triggers": [
+      {
+        "trigger": "sw_actions.sw_04_scope",
+        "md5": "b4bd605c7031995eda7f58bc119be4ab",
+        "enabled": true
+      },
+      {
+        "trigger": "sw_management_reports.sw_05_report_scope",
+        "md5": "3407cea8674162801ca8a5ebc1c82f7b",
+        "enabled": true
+      },
+      {
+        "trigger": "sw_processing_jobs.sw_06_assistant_scope",
+        "md5": "3b636ba05e6c0113f2a791ca62aea170",
+        "enabled": true
+      },
+      {
+        "trigger": "sw_risks.sw_04_scope",
+        "md5": "54ceea5d92178fbd5e33d23b067228dd",
+        "enabled": true
+      }
+    ],
+    "columns": [
+      {
+        "definition": "uuid|YES|",
+        "column": "sw_actions.access_mission_id"
+      },
+      {
+        "definition": "ARRAY|NO|'{}'::uuid[]",
+        "column": "sw_audit_events.mission_scope"
+      },
+      {
+        "definition": "ARRAY|NO|'{}'::uuid[]",
+        "column": "sw_management_reports.mission_scope"
+      },
+      {
+        "definition": "timestamp with time zone|YES|",
+        "column": "sw_missions.review_accepted_at"
+      },
+      {
+        "definition": "uuid|YES|",
+        "column": "sw_missions.review_accepted_by"
+      },
+      {
+        "definition": "uuid|YES|",
+        "column": "sw_risks.access_mission_id"
+      }
+    ],
+    "rowsCompared": 55
+  },
+  "reviewedHead": "1162923fb02e614dae97b3aa9bda2d93d3998f4d",
+  "projectRef": "wrygicdfxwjnrugduxnt",
+  "security": {
+    "anonOrServiceRoleTableGrants": 0,
+    "anonOrServiceRoleExecuteOnNewHelpers": 0,
+    "rlsEnabled": "all 12 affected tables (sw_actions, sw_ai_suggestions, sw_audit_events, sw_citations, sw_controls, sw_evidence_links, sw_management_reports, sw_missions, sw_processing_jobs, sw_record_versions, sw_risk_assets, sw_risks)",
+    "authenticatedExecute": "can_see_scope, can_see_scopes, can_see_record, can_see_refs (policy helpers) and apply_change_brief only"
+  },
+  "mergeCommit": "e6b34306f16b819246975b151cac06d0144849f1",
+  "migration": "20270329090000_security_work_restricted_records.sql",
+  "method": "Read-only SELECT queries through the Supabase management connector. The merged migration was applied to a disposable local database built from the previous 407 migrations, and the same catalogue query was run on both; the outputs were compared row by row. No production writes, migration replay, role impersonation, feed fetch, key provisioning or activation. No personal data was read (counts and catalogue only).",
+  "pullRequest": "https://github.com/cqrityjob/trust-path-recruitment/pull/502",
+  "notes": "sw_missions_completed_needs_acceptance is NOT VALID by design (it constrains new completions; no mission exists).",
+  "mergedSourceBlob": "0a3f012941b98e70dbdbd30040dafb20d34ca6aa",
+  "dataCounts": {
+    "activeWorkerKeys": 0,
+    "scopedAuditEvents": 0,
+    "scopedRisksAndActions": 0,
+    "missions": 0,
+    "recordedAcceptances": 0,
+    "activeFeedHosts": 0,
+    "managementReports": 0
+  }
+}

@@ -534,7 +534,11 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // 2026-11-21: 20270329090000 (restricted-mission scope for derived risks and
 // actions; authorised mission-review acceptance) is a forward fix awaiting the
 // owner's merge (#502). It creates no scoped record and changes no existing row.
-const expectedPending: string[] = ["20270329090000_security_work_restricted_records.sql"];
+// Installed after #502 merged as e6b34306 and verified read-only at 2026-11-22T09:40:17.639458+00:00.
+// The 408-row ledger preserves the previous 407 entries; all 15 functions, 27
+// policies, 4 triggers, 6 columns and 3 constraints match the merged source.
+// Evidence: docs/release/2026-11-22-security-work-restricted-records-hosted-verification.json.
+const expectedPending: string[] = [];
 
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
