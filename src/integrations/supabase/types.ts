@@ -19208,6 +19208,79 @@ export type Database = {
           },
         ]
       }
+      sw_asset_dependencies: {
+        Row: {
+          confirmed: boolean
+          confirmed_at: string | null
+          confirmed_by: string | null
+          created_at: string
+          created_by: string
+          from_asset_id: string
+          id: string
+          last_verified_at: string | null
+          relation: string
+          source_note: string
+          to_asset_id: string
+          updated_at: string
+          version: number
+          workspace_id: string
+        }
+        Insert: {
+          confirmed?: boolean
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          created_by?: string
+          from_asset_id: string
+          id?: string
+          last_verified_at?: string | null
+          relation: string
+          source_note?: string
+          to_asset_id: string
+          updated_at?: string
+          version?: number
+          workspace_id: string
+        }
+        Update: {
+          confirmed?: boolean
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          created_by?: string
+          from_asset_id?: string
+          id?: string
+          last_verified_at?: string | null
+          relation?: string
+          source_note?: string
+          to_asset_id?: string
+          updated_at?: string
+          version?: number
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sw_asset_dependencies_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "sw_workspaces"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sw_asset_dependencies_workspace_id_from_asset_id_fkey"
+            columns: ["workspace_id", "from_asset_id"]
+            isOneToOne: false
+            referencedRelation: "sw_protected_assets"
+            referencedColumns: ["workspace_id", "id"]
+          },
+          {
+            foreignKeyName: "sw_asset_dependencies_workspace_id_to_asset_id_fkey"
+            columns: ["workspace_id", "to_asset_id"]
+            isOneToOne: false
+            referencedRelation: "sw_protected_assets"
+            referencedColumns: ["workspace_id", "id"]
+          },
+        ]
+      }
       sw_audit_events: {
         Row: {
           actor_user_id: string
@@ -19710,6 +19783,72 @@ export type Database = {
             columns: ["workspace_id", "risk_id"]
             isOneToOne: false
             referencedRelation: "sw_risks"
+            referencedColumns: ["workspace_id", "id"]
+          },
+        ]
+      }
+      sw_decisions: {
+        Row: {
+          amount: number | null
+          cost_scope: string | null
+          currency: string | null
+          decided_at: string
+          decided_by: string
+          decision: string
+          id: string
+          mandate: string | null
+          rationale: string
+          review_at: string | null
+          subject_id: string
+          subject_kind: string
+          supersedes_id: string | null
+          workspace_id: string
+        }
+        Insert: {
+          amount?: number | null
+          cost_scope?: string | null
+          currency?: string | null
+          decided_at?: string
+          decided_by: string
+          decision: string
+          id?: string
+          mandate?: string | null
+          rationale: string
+          review_at?: string | null
+          subject_id: string
+          subject_kind: string
+          supersedes_id?: string | null
+          workspace_id: string
+        }
+        Update: {
+          amount?: number | null
+          cost_scope?: string | null
+          currency?: string | null
+          decided_at?: string
+          decided_by?: string
+          decision?: string
+          id?: string
+          mandate?: string | null
+          rationale?: string
+          review_at?: string | null
+          subject_id?: string
+          subject_kind?: string
+          supersedes_id?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sw_decisions_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "sw_workspaces"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sw_decisions_workspace_id_supersedes_id_fkey"
+            columns: ["workspace_id", "supersedes_id"]
+            isOneToOne: false
+            referencedRelation: "sw_decisions"
             referencedColumns: ["workspace_id", "id"]
           },
         ]
@@ -21327,6 +21466,10 @@ export type Database = {
           created_at: string
           created_by: string
           id: string
+          impact_checked_at: string | null
+          impact_checked_by: string | null
+          impact_note: string
+          impact_status: string
           risk_id: string
           workspace_id: string
         }
@@ -21335,6 +21478,10 @@ export type Database = {
           created_at?: string
           created_by?: string
           id?: string
+          impact_checked_at?: string | null
+          impact_checked_by?: string | null
+          impact_note?: string
+          impact_status?: string
           risk_id: string
           workspace_id: string
         }
@@ -21343,6 +21490,10 @@ export type Database = {
           created_at?: string
           created_by?: string
           id?: string
+          impact_checked_at?: string | null
+          impact_checked_by?: string | null
+          impact_note?: string
+          impact_status?: string
           risk_id?: string
           workspace_id?: string
         }
@@ -21746,10 +21897,688 @@ export type Database = {
           },
         ]
       }
+      sw_supplier_contracts: {
+        Row: {
+          contract_key: string
+          contract_version: number
+          created_at: string
+          created_by: string
+          document_ref: string
+          id: string
+          owner_id: string | null
+          summary: string
+          supplier_asset_id: string
+          title: string
+          valid_from: string | null
+          valid_to: string | null
+          verified: boolean
+          verified_at: string | null
+          verified_by: string | null
+          workspace_id: string
+        }
+        Insert: {
+          contract_key: string
+          contract_version: number
+          created_at?: string
+          created_by?: string
+          document_ref?: string
+          id?: string
+          owner_id?: string | null
+          summary?: string
+          supplier_asset_id: string
+          title: string
+          valid_from?: string | null
+          valid_to?: string | null
+          verified?: boolean
+          verified_at?: string | null
+          verified_by?: string | null
+          workspace_id: string
+        }
+        Update: {
+          contract_key?: string
+          contract_version?: number
+          created_at?: string
+          created_by?: string
+          document_ref?: string
+          id?: string
+          owner_id?: string | null
+          summary?: string
+          supplier_asset_id?: string
+          title?: string
+          valid_from?: string | null
+          valid_to?: string | null
+          verified?: boolean
+          verified_at?: string | null
+          verified_by?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sw_supplier_contracts_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "sw_workspaces"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sw_supplier_contracts_workspace_id_owner_id_fkey"
+            columns: ["workspace_id", "owner_id"]
+            isOneToOne: false
+            referencedRelation: "sw_workspace_memberships"
+            referencedColumns: ["workspace_id", "user_id"]
+          },
+          {
+            foreignKeyName: "sw_supplier_contracts_workspace_id_supplier_asset_id_fkey"
+            columns: ["workspace_id", "supplier_asset_id"]
+            isOneToOne: false
+            referencedRelation: "sw_supplier_profiles"
+            referencedColumns: ["workspace_id", "asset_id"]
+          },
+        ]
+      }
+      sw_supplier_obligations: {
+        Row: {
+          basis_note: string
+          clause: string
+          completion_days: number | null
+          confirmed: boolean
+          confirmed_at: string | null
+          confirmed_by: string | null
+          contract_id: string | null
+          created_at: string
+          created_by: string
+          expected_result: string
+          id: string
+          response_days: number | null
+          scope: string
+          status: string
+          supplier_asset_id: string
+          time_rule: string
+          updated_at: string
+          verification_method: string
+          workspace_id: string
+        }
+        Insert: {
+          basis_note?: string
+          clause?: string
+          completion_days?: number | null
+          confirmed?: boolean
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          contract_id?: string | null
+          created_at?: string
+          created_by?: string
+          expected_result: string
+          id?: string
+          response_days?: number | null
+          scope: string
+          status?: string
+          supplier_asset_id: string
+          time_rule?: string
+          updated_at?: string
+          verification_method: string
+          workspace_id: string
+        }
+        Update: {
+          basis_note?: string
+          clause?: string
+          completion_days?: number | null
+          confirmed?: boolean
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          contract_id?: string | null
+          created_at?: string
+          created_by?: string
+          expected_result?: string
+          id?: string
+          response_days?: number | null
+          scope?: string
+          status?: string
+          supplier_asset_id?: string
+          time_rule?: string
+          updated_at?: string
+          verification_method?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sw_supplier_obligations_workspace_id_contract_id_fkey"
+            columns: ["workspace_id", "contract_id"]
+            isOneToOne: false
+            referencedRelation: "sw_supplier_contracts"
+            referencedColumns: ["workspace_id", "id"]
+          },
+          {
+            foreignKeyName: "sw_supplier_obligations_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "sw_workspaces"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sw_supplier_obligations_workspace_id_supplier_asset_id_fkey"
+            columns: ["workspace_id", "supplier_asset_id"]
+            isOneToOne: false
+            referencedRelation: "sw_supplier_profiles"
+            referencedColumns: ["workspace_id", "asset_id"]
+          },
+        ]
+      }
+      sw_supplier_profiles: {
+        Row: {
+          asset_id: string
+          contact_route: string
+          created_at: string
+          created_by: string
+          id: string
+          internal_owner_id: string | null
+          services: string
+          status: string
+          updated_at: string
+          version: number
+          workspace_id: string
+        }
+        Insert: {
+          asset_id: string
+          contact_route?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          internal_owner_id?: string | null
+          services?: string
+          status?: string
+          updated_at?: string
+          version?: number
+          workspace_id: string
+        }
+        Update: {
+          asset_id?: string
+          contact_route?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          internal_owner_id?: string | null
+          services?: string
+          status?: string
+          updated_at?: string
+          version?: number
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sw_supplier_profiles_workspace_id_asset_id_fkey"
+            columns: ["workspace_id", "asset_id"]
+            isOneToOne: true
+            referencedRelation: "sw_protected_assets"
+            referencedColumns: ["workspace_id", "id"]
+          },
+          {
+            foreignKeyName: "sw_supplier_profiles_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "sw_workspaces"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sw_supplier_profiles_workspace_id_internal_owner_id_fkey"
+            columns: ["workspace_id", "internal_owner_id"]
+            isOneToOne: false
+            referencedRelation: "sw_workspace_memberships"
+            referencedColumns: ["workspace_id", "user_id"]
+          },
+        ]
+      }
+      sw_supplier_request_events: {
+        Row: {
+          actor_user_id: string
+          created_at: string
+          cycle: number
+          details: Json
+          event: string
+          from_status: string | null
+          id: string
+          operation_id: string
+          request_id: string
+          to_status: string | null
+          workspace_id: string
+        }
+        Insert: {
+          actor_user_id: string
+          created_at?: string
+          cycle: number
+          details?: Json
+          event: string
+          from_status?: string | null
+          id?: string
+          operation_id: string
+          request_id: string
+          to_status?: string | null
+          workspace_id: string
+        }
+        Update: {
+          actor_user_id?: string
+          created_at?: string
+          cycle?: number
+          details?: Json
+          event?: string
+          from_status?: string | null
+          id?: string
+          operation_id?: string
+          request_id?: string
+          to_status?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sw_supplier_request_events_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "sw_workspaces"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sw_supplier_request_events_workspace_id_request_id_fkey"
+            columns: ["workspace_id", "request_id"]
+            isOneToOne: false
+            referencedRelation: "sw_supplier_requests"
+            referencedColumns: ["workspace_id", "id"]
+          },
+        ]
+      }
+      sw_supplier_request_shares: {
+        Row: {
+          approved_at: string
+          approved_by: string
+          content: Json
+          id: string
+          purpose: string
+          recipient: string
+          request_id: string
+          share_version: number
+          workspace_id: string
+        }
+        Insert: {
+          approved_at?: string
+          approved_by: string
+          content: Json
+          id?: string
+          purpose: string
+          recipient: string
+          request_id: string
+          share_version: number
+          workspace_id: string
+        }
+        Update: {
+          approved_at?: string
+          approved_by?: string
+          content?: Json
+          id?: string
+          purpose?: string
+          recipient?: string
+          request_id?: string
+          share_version?: number
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sw_supplier_request_shares_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "sw_workspaces"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sw_supplier_request_shares_workspace_id_request_id_fkey"
+            columns: ["workspace_id", "request_id"]
+            isOneToOne: false
+            referencedRelation: "sw_supplier_requests"
+            referencedColumns: ["workspace_id", "id"]
+          },
+        ]
+      }
+      sw_supplier_requests: {
+        Row: {
+          action_id: string
+          agreed_due: string | null
+          basis_kind: string
+          basis_note: string
+          change_decision_id: string | null
+          created_at: string
+          created_by: string
+          cycle: number
+          expected_result: string
+          id: string
+          internal_owner_id: string
+          obligation_id: string | null
+          reference: string
+          requested_due: string
+          requires_separate_verifier: boolean
+          response_instruction: string
+          share_stale: boolean
+          share_version: number | null
+          status: string
+          supplier_asset_id: string
+          supplier_proposed_due: string | null
+          task: string
+          title: string
+          updated_at: string
+          verification_criteria: string
+          version: number
+          workspace_id: string
+        }
+        Insert: {
+          action_id: string
+          agreed_due?: string | null
+          basis_kind: string
+          basis_note?: string
+          change_decision_id?: string | null
+          created_at?: string
+          created_by?: string
+          cycle?: number
+          expected_result: string
+          id?: string
+          internal_owner_id: string
+          obligation_id?: string | null
+          reference: string
+          requested_due: string
+          requires_separate_verifier?: boolean
+          response_instruction?: string
+          share_stale?: boolean
+          share_version?: number | null
+          status?: string
+          supplier_asset_id: string
+          supplier_proposed_due?: string | null
+          task: string
+          title: string
+          updated_at?: string
+          verification_criteria: string
+          version?: number
+          workspace_id: string
+        }
+        Update: {
+          action_id?: string
+          agreed_due?: string | null
+          basis_kind?: string
+          basis_note?: string
+          change_decision_id?: string | null
+          created_at?: string
+          created_by?: string
+          cycle?: number
+          expected_result?: string
+          id?: string
+          internal_owner_id?: string
+          obligation_id?: string | null
+          reference?: string
+          requested_due?: string
+          requires_separate_verifier?: boolean
+          response_instruction?: string
+          share_stale?: boolean
+          share_version?: number | null
+          status?: string
+          supplier_asset_id?: string
+          supplier_proposed_due?: string | null
+          task?: string
+          title?: string
+          updated_at?: string
+          verification_criteria?: string
+          version?: number
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sw_supplier_requests_workspace_id_action_id_fkey"
+            columns: ["workspace_id", "action_id"]
+            isOneToOne: false
+            referencedRelation: "sw_actions"
+            referencedColumns: ["workspace_id", "id"]
+          },
+          {
+            foreignKeyName: "sw_supplier_requests_workspace_id_change_decision_id_fkey"
+            columns: ["workspace_id", "change_decision_id"]
+            isOneToOne: false
+            referencedRelation: "sw_decisions"
+            referencedColumns: ["workspace_id", "id"]
+          },
+          {
+            foreignKeyName: "sw_supplier_requests_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "sw_workspaces"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sw_supplier_requests_workspace_id_internal_owner_id_fkey"
+            columns: ["workspace_id", "internal_owner_id"]
+            isOneToOne: false
+            referencedRelation: "sw_workspace_memberships"
+            referencedColumns: ["workspace_id", "user_id"]
+          },
+          {
+            foreignKeyName: "sw_supplier_requests_workspace_id_obligation_id_fkey"
+            columns: ["workspace_id", "obligation_id"]
+            isOneToOne: false
+            referencedRelation: "sw_supplier_obligations"
+            referencedColumns: ["workspace_id", "id"]
+          },
+          {
+            foreignKeyName: "sw_supplier_requests_workspace_id_supplier_asset_id_fkey"
+            columns: ["workspace_id", "supplier_asset_id"]
+            isOneToOne: false
+            referencedRelation: "sw_supplier_profiles"
+            referencedColumns: ["workspace_id", "asset_id"]
+          },
+        ]
+      }
+      sw_supplier_responses: {
+        Row: {
+          author_name: string
+          body: string
+          claimed_done_at: string | null
+          cycle: number
+          evidence_source_ids: string[]
+          id: string
+          kind: string
+          origin: string
+          proposed_due: string | null
+          received_at: string
+          recorded_at: string
+          recorded_by: string
+          request_id: string
+          seq: number
+          workspace_id: string
+        }
+        Insert: {
+          author_name: string
+          body: string
+          claimed_done_at?: string | null
+          cycle: number
+          evidence_source_ids?: string[]
+          id?: string
+          kind: string
+          origin: string
+          proposed_due?: string | null
+          received_at: string
+          recorded_at?: string
+          recorded_by: string
+          request_id: string
+          seq: number
+          workspace_id: string
+        }
+        Update: {
+          author_name?: string
+          body?: string
+          claimed_done_at?: string | null
+          cycle?: number
+          evidence_source_ids?: string[]
+          id?: string
+          kind?: string
+          origin?: string
+          proposed_due?: string | null
+          received_at?: string
+          recorded_at?: string
+          recorded_by?: string
+          request_id?: string
+          seq?: number
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sw_supplier_responses_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "sw_workspaces"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sw_supplier_responses_workspace_id_request_id_fkey"
+            columns: ["workspace_id", "request_id"]
+            isOneToOne: false
+            referencedRelation: "sw_supplier_requests"
+            referencedColumns: ["workspace_id", "id"]
+          },
+        ]
+      }
+      sw_supplier_reviews: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          created_by: string
+          decisions_text: string
+          findings: string
+          id: string
+          next_review_at: string | null
+          period_end: string
+          period_start: string
+          requirement_changes: string
+          status: string
+          supplier_asset_id: string
+          updated_at: string
+          version: number
+          workspace_id: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          created_by?: string
+          decisions_text?: string
+          findings?: string
+          id?: string
+          next_review_at?: string | null
+          period_end: string
+          period_start: string
+          requirement_changes?: string
+          status?: string
+          supplier_asset_id: string
+          updated_at?: string
+          version?: number
+          workspace_id: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          created_by?: string
+          decisions_text?: string
+          findings?: string
+          id?: string
+          next_review_at?: string | null
+          period_end?: string
+          period_start?: string
+          requirement_changes?: string
+          status?: string
+          supplier_asset_id?: string
+          updated_at?: string
+          version?: number
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sw_supplier_reviews_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "sw_workspaces"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sw_supplier_reviews_workspace_id_supplier_asset_id_fkey"
+            columns: ["workspace_id", "supplier_asset_id"]
+            isOneToOne: false
+            referencedRelation: "sw_supplier_profiles"
+            referencedColumns: ["workspace_id", "asset_id"]
+          },
+        ]
+      }
+      sw_supplier_verifications: {
+        Row: {
+          checked_evidence: string
+          criteria_checked: string
+          cycle: number
+          id: string
+          outcome: string
+          remaining_deviation: string
+          request_id: string
+          response_id: string
+          verified_at: string
+          verified_by: string
+          workspace_id: string
+        }
+        Insert: {
+          checked_evidence?: string
+          criteria_checked: string
+          cycle: number
+          id?: string
+          outcome: string
+          remaining_deviation?: string
+          request_id: string
+          response_id: string
+          verified_at?: string
+          verified_by: string
+          workspace_id: string
+        }
+        Update: {
+          checked_evidence?: string
+          criteria_checked?: string
+          cycle?: number
+          id?: string
+          outcome?: string
+          remaining_deviation?: string
+          request_id?: string
+          response_id?: string
+          verified_at?: string
+          verified_by?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sw_supplier_verifications_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "sw_workspaces"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sw_supplier_verifications_workspace_id_request_id_fkey"
+            columns: ["workspace_id", "request_id"]
+            isOneToOne: false
+            referencedRelation: "sw_supplier_requests"
+            referencedColumns: ["workspace_id", "id"]
+          },
+          {
+            foreignKeyName: "sw_supplier_verifications_workspace_id_response_id_fkey"
+            columns: ["workspace_id", "response_id"]
+            isOneToOne: false
+            referencedRelation: "sw_supplier_responses"
+            referencedColumns: ["workspace_id", "id"]
+          },
+        ]
+      }
       sw_workspace_memberships: {
         Row: {
           active: boolean
           can_approve: boolean
+          can_share_external: boolean
           created_at: string
           role: string
           updated_at: string
@@ -21759,6 +22588,7 @@ export type Database = {
         Insert: {
           active?: boolean
           can_approve?: boolean
+          can_share_external?: boolean
           created_at?: string
           role: string
           updated_at?: string
@@ -21768,6 +22598,7 @@ export type Database = {
         Update: {
           active?: boolean
           can_approve?: boolean
+          can_share_external?: boolean
           created_at?: string
           role?: string
           updated_at?: string
@@ -26561,6 +27392,97 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      sw_approve_supplier_share: {
+        Args: {
+          _expected_version: number
+          _operation_id: string
+          _purpose: string
+          _recipient: string
+          _request_id: string
+          _workspace_id: string
+        }
+        Returns: {
+          action_id: string
+          agreed_due: string | null
+          basis_kind: string
+          basis_note: string
+          change_decision_id: string | null
+          created_at: string
+          created_by: string
+          cycle: number
+          expected_result: string
+          id: string
+          internal_owner_id: string
+          obligation_id: string | null
+          reference: string
+          requested_due: string
+          requires_separate_verifier: boolean
+          response_instruction: string
+          share_stale: boolean
+          share_version: number | null
+          status: string
+          supplier_asset_id: string
+          supplier_proposed_due: string | null
+          task: string
+          title: string
+          updated_at: string
+          verification_criteria: string
+          version: number
+          workspace_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "sw_supplier_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      sw_change_supplier_due: {
+        Args: {
+          _due: string
+          _expected_version: number
+          _operation_id: string
+          _reason: string
+          _request_id: string
+          _which: string
+          _workspace_id: string
+        }
+        Returns: {
+          action_id: string
+          agreed_due: string | null
+          basis_kind: string
+          basis_note: string
+          change_decision_id: string | null
+          created_at: string
+          created_by: string
+          cycle: number
+          expected_result: string
+          id: string
+          internal_owner_id: string
+          obligation_id: string | null
+          reference: string
+          requested_due: string
+          requires_separate_verifier: boolean
+          response_instruction: string
+          share_stale: boolean
+          share_version: number | null
+          status: string
+          supplier_asset_id: string
+          supplier_proposed_due: string | null
+          task: string
+          title: string
+          updated_at: string
+          verification_criteria: string
+          version: number
+          workspace_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "sw_supplier_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       sw_complete_processing: {
         Args: {
           _fence: string
@@ -26721,6 +27643,140 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      sw_record_supplier_dispatch: {
+        Args: {
+          _channel: string
+          _expected_version: number
+          _operation_id: string
+          _recipient: string
+          _request_id: string
+          _sent_at: string
+          _workspace_id: string
+        }
+        Returns: {
+          action_id: string
+          agreed_due: string | null
+          basis_kind: string
+          basis_note: string
+          change_decision_id: string | null
+          created_at: string
+          created_by: string
+          cycle: number
+          expected_result: string
+          id: string
+          internal_owner_id: string
+          obligation_id: string | null
+          reference: string
+          requested_due: string
+          requires_separate_verifier: boolean
+          response_instruction: string
+          share_stale: boolean
+          share_version: number | null
+          status: string
+          supplier_asset_id: string
+          supplier_proposed_due: string | null
+          task: string
+          title: string
+          updated_at: string
+          verification_criteria: string
+          version: number
+          workspace_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "sw_supplier_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      sw_record_supplier_response: {
+        Args: {
+          _expected_version: number
+          _operation_id: string
+          _request_id: string
+          _response: Json
+          _workspace_id: string
+        }
+        Returns: {
+          action_id: string
+          agreed_due: string | null
+          basis_kind: string
+          basis_note: string
+          change_decision_id: string | null
+          created_at: string
+          created_by: string
+          cycle: number
+          expected_result: string
+          id: string
+          internal_owner_id: string
+          obligation_id: string | null
+          reference: string
+          requested_due: string
+          requires_separate_verifier: boolean
+          response_instruction: string
+          share_stale: boolean
+          share_version: number | null
+          status: string
+          supplier_asset_id: string
+          supplier_proposed_due: string | null
+          task: string
+          title: string
+          updated_at: string
+          verification_criteria: string
+          version: number
+          workspace_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "sw_supplier_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      sw_reopen_supplier_request: {
+        Args: {
+          _expected_version: number
+          _operation_id: string
+          _reason: string
+          _request_id: string
+          _workspace_id: string
+        }
+        Returns: {
+          action_id: string
+          agreed_due: string | null
+          basis_kind: string
+          basis_note: string
+          change_decision_id: string | null
+          created_at: string
+          created_by: string
+          cycle: number
+          expected_result: string
+          id: string
+          internal_owner_id: string
+          obligation_id: string | null
+          reference: string
+          requested_due: string
+          requires_separate_verifier: boolean
+          response_instruction: string
+          share_stale: boolean
+          share_version: number | null
+          status: string
+          supplier_asset_id: string
+          supplier_proposed_due: string | null
+          task: string
+          title: string
+          updated_at: string
+          verification_criteria: string
+          version: number
+          workspace_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "sw_supplier_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       sw_reserve_assistant: {
         Args: {
           _activation_id: string
@@ -26847,11 +27903,89 @@ export type Database = {
         Args: { _invitation_id: string; _workspace_id: string }
         Returns: boolean
       }
+      sw_save_supplier_request: {
+        Args: {
+          _expected_version: number
+          _fields: Json
+          _operation_id: string
+          _request_id: string
+          _workspace_id: string
+        }
+        Returns: {
+          action_id: string
+          agreed_due: string | null
+          basis_kind: string
+          basis_note: string
+          change_decision_id: string | null
+          created_at: string
+          created_by: string
+          cycle: number
+          expected_result: string
+          id: string
+          internal_owner_id: string
+          obligation_id: string | null
+          reference: string
+          requested_due: string
+          requires_separate_verifier: boolean
+          response_instruction: string
+          share_stale: boolean
+          share_version: number | null
+          status: string
+          supplier_asset_id: string
+          supplier_proposed_due: string | null
+          task: string
+          title: string
+          updated_at: string
+          verification_criteria: string
+          version: number
+          workspace_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "sw_supplier_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      sw_set_asset_impact: {
+        Args: {
+          _link_id: string
+          _note: string
+          _status: string
+          _workspace_id: string
+        }
+        Returns: {
+          asset_id: string
+          created_at: string
+          created_by: string
+          id: string
+          impact_checked_at: string | null
+          impact_checked_by: string | null
+          impact_note: string
+          impact_status: string
+          risk_id: string
+          workspace_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "sw_risk_assets"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       sw_set_member_role: {
         Args: {
           _active: boolean
           _can_approve: boolean
           _role: string
+          _user_id: string
+          _workspace_id: string
+        }
+        Returns: boolean
+      }
+      sw_set_member_sharing: {
+        Args: {
+          _allowed: boolean
           _user_id: string
           _workspace_id: string
         }
@@ -26865,6 +27999,98 @@ export type Database = {
           _workspace_id: string
         }
         Returns: boolean
+      }
+      sw_verify_supplier_response: {
+        Args: {
+          _checked_evidence: string
+          _criteria_checked: string
+          _expected_version: number
+          _operation_id: string
+          _outcome: string
+          _remaining_deviation: string
+          _request_id: string
+          _response_id: string
+          _workspace_id: string
+        }
+        Returns: {
+          action_id: string
+          agreed_due: string | null
+          basis_kind: string
+          basis_note: string
+          change_decision_id: string | null
+          created_at: string
+          created_by: string
+          cycle: number
+          expected_result: string
+          id: string
+          internal_owner_id: string
+          obligation_id: string | null
+          reference: string
+          requested_due: string
+          requires_separate_verifier: boolean
+          response_instruction: string
+          share_stale: boolean
+          share_version: number | null
+          status: string
+          supplier_asset_id: string
+          supplier_proposed_due: string | null
+          task: string
+          title: string
+          updated_at: string
+          verification_criteria: string
+          version: number
+          workspace_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "sw_supplier_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      sw_withdraw_supplier_request: {
+        Args: {
+          _expected_version: number
+          _operation_id: string
+          _reason: string
+          _request_id: string
+          _workspace_id: string
+        }
+        Returns: {
+          action_id: string
+          agreed_due: string | null
+          basis_kind: string
+          basis_note: string
+          change_decision_id: string | null
+          created_at: string
+          created_by: string
+          cycle: number
+          expected_result: string
+          id: string
+          internal_owner_id: string
+          obligation_id: string | null
+          reference: string
+          requested_due: string
+          requires_separate_verifier: boolean
+          response_instruction: string
+          share_stale: boolean
+          share_version: number | null
+          status: string
+          supplier_asset_id: string
+          supplier_proposed_due: string | null
+          task: string
+          title: string
+          updated_at: string
+          verification_criteria: string
+          version: number
+          workspace_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "sw_supplier_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       sweep_analytics_retention: {
         Args: never

@@ -19,6 +19,7 @@ import {
   Settings2,
   Target,
   TriangleAlert,
+  Truck,
   X,
 } from "lucide-react";
 import { useT } from "@/i18n/context";
@@ -89,6 +90,7 @@ export function SecurityWorkLayout({ children }: { children?: ReactNode }) {
       items: [
         item("/risks", t("sw.prog.nav.risks"), ListChecks),
         item("/gaps", t("sw.prog.nav.gaps"), TriangleAlert),
+        item("/suppliers", l("Leverantörer", "Suppliers"), Truck),
       ],
     },
     {

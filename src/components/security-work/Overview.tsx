@@ -23,6 +23,7 @@ import {
 import type { ProgrammeAreaId } from "@/lib/security-work/programme/types";
 import { AssistanceStatus } from "./AssistanceStatus";
 import { WorkEntrance } from "./missions/WorkEntrance";
+import { WorkQueue } from "./suppliers/WorkQueue";
 import { useSecurityWorkspace } from "./context";
 import { usePortfolio, useWorkText, WorkStatus } from "./analysis-ui";
 import { AREA_ROUTES, AreaStatus, useProgramme } from "./programme-ui";
@@ -166,6 +167,7 @@ export function SecurityOverview() {
           {l("Byt arbetsyta", "Switch workspace")}
         </Link>
       </div>
+      <WorkQueue />
       <WorkEntrance facts={facts} />
       <WorkError code={programme.error?.message} onRetry={() => void programme.refetch()} />
       {programme.isPending || !facts || !status || !next ? (

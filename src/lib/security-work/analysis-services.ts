@@ -30,12 +30,34 @@ export async function analysisResult<T>(operation: () => Promise<T>) {
     };
   }
 }
+// Refusals the supplier cycle explains to the person in words (20270330090000).
+const NAMED_REFUSALS = new Set([
+  "SW_SHARE_RIGHT_REQUIRED",
+  "SW_APPROVED_SHARE_REQUIRED",
+  "SW_SUPPLIER_VERIFICATION_REQUIRED",
+  "SW_SEPARATE_VERIFIER_REQUIRED",
+  "SW_CONFIRMED_OBLIGATION_REQUIRED",
+  "SW_SCOPE_COST_DECISION_REQUIRED",
+  "SW_LATEST_DONE_RESPONSE_REQUIRED",
+  "SW_REASON_REQUIRED",
+  "SW_ACTION_CLOSED",
+  "SW_ACTIVE_SUPPLIER_REQUIRED",
+  "SW_ACTIVE_OWNER_REQUIRED",
+  "SW_IMPACT_NOTE_REQUIRED",
+  "SW_EVIDENCE_NOT_IN_WORKSPACE",
+  "SW_SUPPLIER_ASSET_REQUIRED",
+  "SW_CONTRACT_KEY_IN_USE",
+  "SW_OWNER_REQUIRED",
+  "SW_IDEMPOTENCY_CONFLICT",
+]);
 export function checked<T>(result: {
   data: T;
   error: { code?: string; message?: string } | null;
 }): T {
   if (result.error) {
     const code = result.error.code;
+    if (result.error.message && NAMED_REFUSALS.has(result.error.message))
+      throw new AnalysisFailure(result.error.message.slice(3));
     throw new AnalysisFailure(
       code === "23514" && result.error.message === "SW_AI_BUDGET_EXCEEDED"
         ? "AI_BUDGET_EXCEEDED"
