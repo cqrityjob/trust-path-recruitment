@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { setSecurityMemberSharing } from "@/lib/security-work/suppliers/functions";
 import { useT } from "@/i18n/context";
 import {
   createSecurityInvitation,
@@ -411,6 +412,7 @@ function TeamSection() {
   const invite = useServerFn(createSecurityInvitation);
   const revoke = useServerFn(revokeSecurityInvitation);
   const setRole = useServerFn(setSecurityMemberRole);
+  const setSharing = useServerFn(setSecurityMemberSharing);
   const [email, setEmail] = useState("");
   const [role, setRoleChoice] = useState<"editor" | "viewer">("viewer");
   const [code, setCode] = useState<string | null>(null);
@@ -448,6 +450,9 @@ function TeamSection() {
                     ? l("Redigerare", "Editor")
                     : l("Läsare", "Viewer")}
                 {member.can_approve ? l(" · får godkänna", " · may approve") : ""}
+                {member.can_share_external
+                  ? l(" · får dela externt", " · may share externally")
+                  : ""}
                 {!member.active ? l(" · inaktiv", " · inactive") : ""}
               </span>
             </span>
@@ -470,6 +475,28 @@ function TeamSection() {
                 }}
               >
                 {member.active ? l("Inaktivera", "Deactivate") : l("Återaktivera", "Reactivate")}
+              </WorkButton>
+            )}
+            {data.canManage && member.active && member.role !== "viewer" && (
+              <WorkButton
+                variant="ghost"
+                data-testid="sw-team-sharing"
+                onClick={async () => {
+                  setError(null);
+                  const result = await setSharing({
+                    data: {
+                      workspaceId: workspace.id,
+                      userId: member.user_id,
+                      allowed: !member.can_share_external,
+                    },
+                  });
+                  if (!result.ok) setError(result.code);
+                  await refresh();
+                }}
+              >
+                {member.can_share_external
+                  ? l("Ta bort rätt att dela externt", "Remove external sharing right")
+                  : l("Ge rätt att dela externt", "Grant external sharing right")}
               </WorkButton>
             )}
           </li>

@@ -2642,6 +2642,16 @@ jobs:
         env:
           E2E_BASE_URL: http://localhost:3100
         run: bun run e2e:security-work-impact
+      # The supplier cycle: the work list with professional views, a supplier
+      # with a verified contract and a confirmed requirement, a request on an
+      # existing action, the minimised external version, a recorded dispatch,
+      # an insufficient answer, an objection with a scope and cost decision, a
+      # verified answer and a review; an editor is told who must act.
+      # Stubbed server functions.
+      - name: Security Work supplier cycle browser journey
+        env:
+          E2E_BASE_URL: http://localhost:3100
+        run: bun run e2e:security-work-suppliers
 
       # "Utforska nu" on the Career Discovery recommendation is a real link
       # to the occupation's page (its guide, or its reviewed catalogue page

@@ -3874,6 +3874,15 @@ psql_q -d postgres -c "CREATE DATABASE ${TEST_DB}_sw_pgrst TEMPLATE ${TEST_DB}_p
 TEST_DB="${TEST_DB}_sw_pgrst" bun scripts/security-work-release-b-postgrest-check.ts
 psql_q -d postgres -c "DROP DATABASE ${TEST_DB}_sw_pgrst;" >/dev/null
 
+# The supplier cycle's application services (20270330090000): the synthetic
+# pilot from an unconfirmed impact to a verified action and a review, with the
+# sharing right, approver-only decisions, another customer and a restricted
+# mission, over real PostgREST with minted JWTs.
+echo "==> Running Security Work supplier cycle over real PostgREST"
+psql_q -d postgres -c "CREATE DATABASE ${TEST_DB}_sw_pgrst TEMPLATE ${TEST_DB}_pristine;" >/dev/null
+TEST_DB="${TEST_DB}_sw_pgrst" bun scripts/security-work-supplier-postgrest-check.ts
+psql_q -d postgres -c "DROP DATABASE ${TEST_DB}_sw_pgrst;" >/dev/null
+
 # International Passport: test fixtures roll back; rollback refuses adoption.
 for passport_round in before after; do
   for passport_suite in international_foundation international_wallet credential_sharing_v2 closed_catalogue organisation_roles pilot_scope catalogue_completeness hayat_assessments india_national_qualifications public_pilot_availability open_uk_dubai open_abu_dhabi catalogue_research; do

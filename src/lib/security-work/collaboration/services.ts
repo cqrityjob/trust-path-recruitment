@@ -40,6 +40,8 @@ export interface TeamMember {
   role: string;
   active: boolean;
   can_approve: boolean;
+  /** Explicit right to approve what is shared externally (20270330090000). */
+  can_share_external: boolean;
 }
 export interface Invitation {
   id: string;
@@ -86,7 +88,25 @@ export async function readTeam(caller: SecurityWorkCaller, workspaceId: string):
           .limit(100),
       )
     : null;
-  return { members: members ?? [], invitations: invitations ?? (canManage ? [] : null), canManage };
+  const sharing = new Map(
+    (
+      checked(
+        await caller.supabase
+          .from("sw_workspace_memberships")
+          .select("user_id,can_share_external")
+          .eq("workspace_id", workspaceId)
+          .limit(500),
+      ) ?? []
+    ).map((m) => [m.user_id, m.can_share_external]),
+  );
+  return {
+    members: (members ?? []).map((m) => ({
+      ...m,
+      can_share_external: sharing.get(m.user_id) ?? false,
+    })),
+    invitations: invitations ?? (canManage ? [] : null),
+    canManage,
+  };
 }
 
 /** The code is returned exactly once, to the owner, who hands it over in person. */

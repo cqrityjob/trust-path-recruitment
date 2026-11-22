@@ -204,6 +204,8 @@ console.log("\n4 · source");
   //
   // Each is login, sharing, language, return-to or unfinished-work state:
   //   cqrityjob.lang                         the language the person chose
+  //   cqrityjob.sw.view                      Security Work work-list view (all, security
+  //                                          manager, CISO); a display filter, grants nothing
   //   cqrityjob.lastEmployerSlug             which employer's page to return to
   //   cqrityjob.career-center.return         where to return in the Career Center
   //   cqj:auth:oauth-return:v1, :oauth-org-intent:v1, :pending-confirmation:v1
@@ -235,6 +237,7 @@ console.log("\n4 · source");
     "cqrityjob.career-center.return",
     "cqrityjob.lang",
     "cqrityjob.lastEmployerSlug",
+    "cqrityjob.sw.view",
   ];
   const found = new Set<string>();
   for (const file of src) {
